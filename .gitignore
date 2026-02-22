@@ -19,6 +19,7 @@ credentials.txt
 # 2. Infrastructure (OpenTofu & Terragrunt)
 # ------------------------------------------
 # Local execution directories
+.terraform/
 **/.terraform/
 .terragrunt-cache/
 

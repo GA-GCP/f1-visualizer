@@ -20,6 +20,7 @@
         <maven.compiler.target>25</maven.compiler.target>
         <springdoc-openapi-maven-plugin.version>1.5</springdoc-openapi-maven-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <lombok.version>1.18.42</lombok.version>
     </properties>
 
     <dependencyManagement>
@@ -27,13 +28,29 @@
             <dependency>
                 <groupId>com.elysianarts.f1.visualizer</groupId>
                 <artifactId>f1v-commons-bom</artifactId>
-                <type>bom</type>
+                <version>${project.version}</version>
+                <type>pom</type>
                 <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
 
     <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
                 <plugin>

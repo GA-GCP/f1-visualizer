@@ -18,4 +18,15 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <dependencies>
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>spring-cloud-gcp-starter-data-firestore</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.elysianarts.f1.visualizer.commons</groupId>
+            <artifactId>f1v-commons-base</artifactId>
+        </dependency>
+    </dependencies>
+
 </project>

@@ -1,0 +1,123 @@
+# ==========================================
+# F1 Visualizer Master .gitignore
+# ==========================================
+
+# ------------------------------------------
+# 1. Secrets & Local Environments (CRITICAL)
+# ------------------------------------------
+*.env
+*.env.local
+*.env.development
+*.env.test
+*.env.production
+*.pem
+*.key
+secrets.json
+credentials.txt
+
+# ------------------------------------------
+# 2. Infrastructure (OpenTofu & Terragrunt)
+# ------------------------------------------
+# Local execution directories
+**/.terraform/
+.terragrunt-cache/
+
+# State files (Must be remote!)
+*.tfstate
+*.tfstate.*
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Variable files (Often contain secrets)
+*.tfvars
+*.tfvars.json
+
+# Lock files and local overrides
+.terraform.lock.hcl
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# ------------------------------------------
+# 3. Frontend (React 19 / Vite / Node)
+# ------------------------------------------
+# Dependencies
+**/node_modules/
+.pnp
+.pnp.js
+
+# Production builds
+**/dist/
+**/build/
+
+# Logs and Caches
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+.yarn-integrity
+
+# ------------------------------------------
+# 4. Backend (Java 25 / Spring Boot / Maven)
+# ------------------------------------------
+# Compiled class files
+*.class
+
+# Log files
+*.log
+
+# Compiled archives
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Maven specific
+**/target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+
+# ------------------------------------------
+# 5. IDEs & Operating System
+# ------------------------------------------
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# VS Code
+.vscode/
+
+# Eclipse
+.project
+.classpath
+.settings/
+.metadata/
+bin/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/

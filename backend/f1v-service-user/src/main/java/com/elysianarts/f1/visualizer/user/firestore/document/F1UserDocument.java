@@ -16,7 +16,6 @@ import java.util.List;
 @AllArgsConstructor
 @Document(collectionName = "users")
 public class F1UserDocument {
-
     @DocumentId
     private String oktaSubId;
 

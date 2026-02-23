@@ -36,8 +36,10 @@
         <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring-boot.version>4.0.3</spring-boot.version>
-        <spring-cloud-gcp.version>7.4.4</spring-cloud-gcp.version>
+        <spring-cloud-gcp.version>7.4.5</spring-cloud-gcp.version>
         <springdoc.version>3.0.1</springdoc.version>
+        <spring-security-test.version>7.0.3</spring-security-test.version>
+        <lombok.version>1.18.42</lombok.version>
         <f1v-commons-api-openaf1.version>1.0.0-SNAPSHOT</f1v-commons-api-openaf1.version>
         <f1v-commons-base.version>1.0.0-SNAPSHOT</f1v-commons-base.version>
         <f1v-commons-exception.version>1.0.0-SNAPSHOT</f1v-commons-exception.version>
@@ -64,7 +66,7 @@
             </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-starter-web</artifactId>
+                <artifactId>spring-boot-starter-webmvc</artifactId>
                 <version>${spring-boot.version}</version>
             </dependency>
             <dependency>
@@ -98,12 +100,25 @@
                 <version>${spring-boot.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-starter-test</artifactId>
-                <version>${spring-boot.version}</version>
-                <scope>test</scope>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
             </dependency>
-
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-test-autoconfigure</artifactId>
+                <version>${spring-boot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-security-test</artifactId>
+                <version>${spring-boot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-webmvc-test</artifactId>
+                <version>${spring-boot.version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.elysianarts.f1.visualizer.commons</groupId>
                 <artifactId>f1v-commons-api-openf1</artifactId>

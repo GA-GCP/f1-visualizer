@@ -2,7 +2,6 @@ package com.elysianarts.f1.visualizer.user.controller.v1;
 
 import com.elysianarts.f1.visualizer.user.firestore.document.F1UserDocument;
 import com.elysianarts.f1.visualizer.user.service.UserService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;

@@ -9,10 +9,8 @@ import java.time.Instant;
 
 @Service
 public class UserService {
-
     private final F1UserRepository userRepository;
 
-    // Explicit public constructor - no Lombok needed!
     public UserService(F1UserRepository userRepository) {
         this.userRepository = userRepository;
     }

@@ -6,11 +6,8 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
-import tools.jackson.databind.DefaultTyping;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
-import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
-import tools.jackson.databind.jsontype.PolymorphicTypeValidator;
 
 @Configuration
 public class RedisConfig {
@@ -21,20 +18,9 @@ public class RedisConfig {
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
-
-        // 1. String Keys
         template.setKeySerializer(new StringRedisSerializer());
 
-        // 2. Jackson 3 Configuration (Identical to Telemetry Service)
-        PolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
-                .allowIfBaseType(Object.class)
-                .build();
-
-        ObjectMapper mapper = JsonMapper.builder()
-                .activateDefaultTyping(ptv, DefaultTyping.NON_FINAL)
-                .build();
-
-        // 3. Native Jackson 3 Serializer
+        ObjectMapper mapper = JsonMapper.builder().build();
         GenericJacksonJsonRedisSerializer valueSerializer = new GenericJacksonJsonRedisSerializer(mapper);
 
         template.setValueSerializer(valueSerializer);

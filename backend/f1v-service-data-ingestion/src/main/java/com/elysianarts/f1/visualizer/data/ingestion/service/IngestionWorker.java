@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
-import java.util.Comparator;
+import java.time.ZoneOffset;
 import java.util.List;
 
 @Slf4j
@@ -22,50 +22,47 @@ public class IngestionWorker {
     private final OpenF1Client openF1Client;
     private final RedisTemplate<String, Object> redisTemplate;
 
-    // Hardcoded Session ID for testing (Singapore 2023).
-    // In the future, we would dynamically fetch the "latest/live" session key.
     private static final long TARGET_SESSION_KEY = 9165;
 
-    // Track timestamps separately
-    private OffsetDateTime lastCarDataTime = null;
-    private OffsetDateTime lastLocationTime = null;
+    // Singapore 2023 Race Start (approx 12:00 UTC)
+    // We maintain a single "Game Clock" for the simulation
+    private OffsetDateTime currentSimTime = OffsetDateTime.of(2023, 9, 17, 12, 0, 0, 0, ZoneOffset.UTC);
 
-    @Scheduled(fixedRate = 2000)
+    @Scheduled(fixedRate = 2000) // Run every 2 seconds
     public void ingestTelemetryLoop() {
-        log.info("⚡ Cycle Start: Polling OpenF1 for Session {}...", TARGET_SESSION_KEY);
+        // Define a 2-second window (matching our poll rate)
+        OffsetDateTime windowEnd = currentSimTime.plusSeconds(2);
 
-        // 1. Process Car Data (Physics)
-        processCarData();
+        log.info("⚡ Simulating Race Time: {} to {}", currentSimTime, windowEnd);
 
-        // 2. Process Location Data (Coordinates)
-        processLocationData();
+        // 1. Fetch & Publish
+        processCarData(windowEnd);
+        processLocationData(windowEnd);
+
+        // 2. Advance the Game Clock
+        // We do this regardless of whether data was found, to skip over gaps (red flags, etc.)
+        this.currentSimTime = windowEnd;
     }
 
-    private void processCarData() {
-        List<OpenF1CarData> newPackets = openF1Client.getCarData(TARGET_SESSION_KEY, lastCarDataTime)
+    private void processCarData(OffsetDateTime windowEnd) {
+        // Pass the explicit window (Start -> End)
+        List<OpenF1CarData> packets = openF1Client.getCarData(TARGET_SESSION_KEY, currentSimTime, windowEnd)
                 .collectList().block();
 
-        if (newPackets != null && !newPackets.isEmpty()) {
-            log.info("   -> Received {} Car Data packets.", newPackets.size());
-            for (OpenF1CarData packet : newPackets) {
-                redisTemplate.convertAndSend(RedisConfig.TELEMETRY_TOPIC, packet);
-            }
-            newPackets.stream().max(Comparator.comparing(OpenF1CarData::getDate))
-                    .ifPresent(latest -> this.lastCarDataTime = latest.getDate());
+        if (packets != null && !packets.isEmpty()) {
+            log.info("   -> [Telemetry] {} packets", packets.size());
+            packets.forEach(p -> redisTemplate.convertAndSend(RedisConfig.TELEMETRY_TOPIC, p));
         }
     }
 
-    private void processLocationData() {
-        List<OpenF1LocationData> newPackets = openF1Client.getLocationData(TARGET_SESSION_KEY, lastLocationTime)
+    private void processLocationData(OffsetDateTime windowEnd) {
+        // Pass the explicit window (Start -> End)
+        List<OpenF1LocationData> packets = openF1Client.getLocationData(TARGET_SESSION_KEY, currentSimTime, windowEnd)
                 .collectList().block();
 
-        if (newPackets != null && !newPackets.isEmpty()) {
-            log.info("   -> Received {} Location packets.", newPackets.size());
-            for (OpenF1LocationData packet : newPackets) {
-                redisTemplate.convertAndSend(RedisConfig.LOCATION_TOPIC, packet);
-            }
-            newPackets.stream().max(Comparator.comparing(OpenF1LocationData::getDate))
-                    .ifPresent(latest -> this.lastLocationTime = latest.getDate());
+        if (packets != null && !packets.isEmpty()) {
+            log.info("   -> [Location]  {} packets", packets.size());
+            packets.forEach(p -> redisTemplate.convertAndSend(RedisConfig.LOCATION_TOPIC, p));
         }
     }
 }

@@ -25,6 +25,7 @@ public class RedisConfig {
         template.setConnectionFactory(connectionFactory);
         template.setKeySerializer(new StringRedisSerializer());
 
+        // Configure Jackson 3
         PolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
                 .allowIfBaseType(Object.class)
                 .build();
@@ -33,6 +34,7 @@ public class RedisConfig {
                 .activateDefaultTyping(ptv, DefaultTyping.NON_FINAL)
                 .build();
 
+        // Native Support: This now works because both sides use tools.jackson
         GenericJacksonJsonRedisSerializer valueSerializer = new GenericJacksonJsonRedisSerializer(mapper);
 
         template.setValueSerializer(valueSerializer);

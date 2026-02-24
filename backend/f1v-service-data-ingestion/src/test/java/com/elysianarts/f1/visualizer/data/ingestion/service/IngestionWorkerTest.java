@@ -3,6 +3,7 @@ package com.elysianarts.f1.visualizer.data.ingestion.service;
 import com.elysianarts.f1.visualizer.data.ingestion.client.OpenF1Client;
 import com.elysianarts.f1.visualizer.data.ingestion.config.RedisConfig;
 import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1CarData;
+import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1LocationData;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,18 +32,32 @@ class IngestionWorkerTest {
 
     @Test
     void ingestTelemetryLoop_FetchesAndPublishesData() {
-        // Arrange
-        OpenF1CarData packet = new OpenF1CarData();
-        packet.setDriverNumber(1);
-        packet.setSpeed(300);
-        packet.setDate(OffsetDateTime.now());
+        // Arrange - 1. Setup Telemetry Data
+        OpenF1CarData carPacket = new OpenF1CarData();
+        carPacket.setDriverNumber(1);
+        carPacket.setSpeed(300);
+        carPacket.setDate(OffsetDateTime.now());
 
-        when(openF1Client.getCarData(eq(9165L), any())).thenReturn(Flux.just(packet));
+        // Arrange - 2. Setup Location Data (The missing piece!)
+        OpenF1LocationData locPacket = new OpenF1LocationData();
+        locPacket.setDriverNumber(1);
+        locPacket.setX(1000);
+        locPacket.setY(2000);
+        locPacket.setDate(OffsetDateTime.now());
+
+        // Arrange - 3. Stub the Client calls
+        when(openF1Client.getCarData(eq(9165L), any())).thenReturn(Flux.just(carPacket));
+
+        // This is the line that fixes the NullPointerException:
+        when(openF1Client.getLocationData(eq(9165L), any())).thenReturn(Flux.just(locPacket));
 
         // Act
         ingestionWorker.ingestTelemetryLoop();
 
         // Assert
-        verify(redisTemplate, times(1)).convertAndSend(eq(RedisConfig.TELEMETRY_TOPIC), eq(packet));
+        // Verify Telemetry was sent
+        verify(redisTemplate, times(1)).convertAndSend(eq(RedisConfig.TELEMETRY_TOPIC), eq(carPacket));
+        // Verify Location was sent
+        verify(redisTemplate, times(1)).convertAndSend(eq(RedisConfig.LOCATION_TOPIC), eq(locPacket));
     }
 }

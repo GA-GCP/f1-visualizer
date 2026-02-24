@@ -1,7 +1,6 @@
 package com.elysianarts.f1.visualizer.telemetry.controller;
 
 import com.elysianarts.f1.visualizer.telemetry.config.RedisConfig;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,9 +12,12 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/debug")
-@RequiredArgsConstructor
 public class TelemetryDebugController {
     private final RedisTemplate<String, Object> redisTemplate;
+
+    public TelemetryDebugController(RedisTemplate<String, Object> redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
 
     // Call this endpoint to manually simulate an F1 car update!
     // POST /api/v1/debug/publish

@@ -1,4 +1,4 @@
-package com.elysianarts.f1.visualizer.user.config;
+package com.elysianarts.f1.visualizer.telemetry.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

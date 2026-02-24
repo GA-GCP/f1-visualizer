@@ -3,7 +3,6 @@ package com.elysianarts.f1.visualizer.user.controller.v1;
 import com.elysianarts.f1.visualizer.commons.security.config.F1VisualizerSecurityConfig;
 import com.elysianarts.f1.visualizer.user.firestore.document.F1UserDocument;
 import com.elysianarts.f1.visualizer.user.service.UserService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -13,6 +12,8 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
 
@@ -33,7 +34,7 @@ class UserControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper objectMapper;
 
     @MockitoBean
     private UserService userService;

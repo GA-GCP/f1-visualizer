@@ -37,6 +37,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring-boot.version>4.0.3</spring-boot.version>
         <spring-cloud-gcp.version>7.4.5</spring-cloud-gcp.version>
+        <jackson-3.version>3.1.0-rc1</jackson-3.version>
         <springdoc.version>3.0.1</springdoc.version>
         <spring-security-test.version>7.0.3</spring-security-test.version>
         <lombok.version>1.18.42</lombok.version>
@@ -61,6 +62,13 @@
                 <groupId>com.google.cloud</groupId>
                 <artifactId>spring-cloud-gcp-dependencies</artifactId>
                 <version>${spring-cloud-gcp.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>tools.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson-3.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

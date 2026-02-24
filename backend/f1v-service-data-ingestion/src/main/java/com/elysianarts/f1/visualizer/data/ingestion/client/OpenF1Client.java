@@ -1,6 +1,7 @@
 package com.elysianarts.f1.visualizer.data.ingestion.client;
 
 import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1CarData;
+import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1LocationData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -13,7 +14,6 @@ import java.time.format.DateTimeFormatter;
 @Slf4j
 @Component
 public class OpenF1Client {
-
     private final WebClient webClient;
 
     @Autowired
@@ -50,6 +50,19 @@ public class OpenF1Client {
                 .bodyToFlux(OpenF1CarData.class)
                 .onErrorResume(e -> {
                     log.error("Error fetching data from OpenF1: {}", e.getMessage());
+                    return Flux.empty();
+                });
+    }
+
+    public Flux<OpenF1LocationData> getLocationData(long sessionKey, OffsetDateTime afterTime) {
+        String uri = "/location?session_key=" + sessionKey;
+        if (afterTime != null) {
+            uri += "&date>=" + afterTime.format(DateTimeFormatter.ISO_DATE_TIME);
+        }
+        log.debug("Polling OpenF1 Location: {}", uri);
+        return webClient.get().uri(uri).retrieve().bodyToFlux(OpenF1LocationData.class)
+                .onErrorResume(e -> {
+                    log.error("Error fetching Location Data: {}", e.getMessage());
                     return Flux.empty();
                 });
     }

@@ -14,8 +14,8 @@ import tools.jackson.databind.jsontype.PolymorphicTypeValidator;
 
 @Configuration
 public class RedisConfig {
-
     public static final String TELEMETRY_TOPIC = "live_telemetry";
+    public static final String LOCATION_TOPIC = "live_location";
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {

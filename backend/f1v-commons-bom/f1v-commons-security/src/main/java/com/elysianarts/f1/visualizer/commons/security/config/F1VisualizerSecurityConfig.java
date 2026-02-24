@@ -34,6 +34,7 @@ public class F1VisualizerSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health").permitAll() // Allow Load Balancer health checks
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // OpenAPI generation
+                        .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated() // Everything else requires a valid Okta JWT
                 )
 

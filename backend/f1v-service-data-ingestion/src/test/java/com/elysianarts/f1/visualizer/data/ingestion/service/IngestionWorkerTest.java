@@ -46,10 +46,10 @@ class IngestionWorkerTest {
         locPacket.setDate(OffsetDateTime.now());
 
         // Arrange - 3. Stub the Client calls
-        when(openF1Client.getCarData(eq(9165L), any())).thenReturn(Flux.just(carPacket));
+        when(openF1Client.getCarData(eq(9165L), any(), any())).thenReturn(Flux.just(carPacket));
 
         // This is the line that fixes the NullPointerException:
-        when(openF1Client.getLocationData(eq(9165L), any())).thenReturn(Flux.just(locPacket));
+        when(openF1Client.getLocationData(eq(9165L), any(), any())).thenReturn(Flux.just(locPacket));
 
         // Act
         ingestionWorker.ingestTelemetryLoop();

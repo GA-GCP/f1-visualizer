@@ -10,11 +10,28 @@ import reactor.core.publisher.Flux;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 
 @Slf4j
 @Component
 public class OpenF1Client {
+
     private final WebClient webClient;
+
+    // Strict ISO 8601 Formatter (e.g. 2023-09-17T12:00:00.123+00:00)
+    // Truncates extra nanoseconds that cause 422s
+    private static final DateTimeFormatter API_DATE_FORMATTER = new DateTimeFormatterBuilder()
+            .append(DateTimeFormatter.ISO_LOCAL_DATE)
+            .appendLiteral('T')
+            .appendValue(ChronoField.HOUR_OF_DAY, 2)
+            .appendLiteral(':')
+            .appendValue(ChronoField.MINUTE_OF_HOUR, 2)
+            .appendLiteral(':')
+            .appendValue(ChronoField.SECOND_OF_MINUTE, 2)
+            .appendFraction(ChronoField.MILLI_OF_SECOND, 3, 3, true)
+            .appendOffset("+HH:MM", "+00:00") // Critical: Keep the Timezone
+            .toFormatter();
 
     @Autowired
     public OpenF1Client(WebClient.Builder webClientBuilder) {
@@ -25,41 +42,29 @@ public class OpenF1Client {
         this.webClient = webClient;
     }
 
-    /**
-     * Fetches car data (telemetry) for a specific session after a specific time.
-     * This allows us to "poll" for only the newest packets.
-     *
-     * @param sessionKey The ID of the race session (e.g., 9165 for Singapore 2023)
-     * @param afterTime  The timestamp of the last packet we received.
-     * @return A stream of new car data packets.
-     */
-    public Flux<OpenF1CarData> getCarData(long sessionKey, OffsetDateTime afterTime) {
-        String uri = "/car_data?session_key=" + sessionKey;
+    // UPDATED: Accepts start AND end time
+    public Flux<OpenF1CarData> getCarData(long sessionKey, OffsetDateTime startTime, OffsetDateTime endTime) {
+        String uri = "/car_data?session_key=" + sessionKey +
+                "&date>=" + startTime.format(API_DATE_FORMATTER) +
+                "&date<" + endTime.format(API_DATE_FORMATTER);
 
-        // If we have a 'last seen' time, append it to filter the query
-        if (afterTime != null) {
-            // OpenF1 expects ISO-8601 format
-            uri += "&date>=" + afterTime.format(DateTimeFormatter.ISO_DATE_TIME);
-        }
+        log.debug("Polling Car Data Window: {} -> {}", startTime, endTime);
 
-        log.debug("Polling OpenF1: {}", uri);
-
-        return webClient.get()
-                .uri(uri)
-                .retrieve()
-                .bodyToFlux(OpenF1CarData.class)
+        return webClient.get().uri(uri).retrieve().bodyToFlux(OpenF1CarData.class)
                 .onErrorResume(e -> {
-                    log.error("Error fetching data from OpenF1: {}", e.getMessage());
+                    log.error("Error fetching Car Data: {}", e.getMessage());
                     return Flux.empty();
                 });
     }
 
-    public Flux<OpenF1LocationData> getLocationData(long sessionKey, OffsetDateTime afterTime) {
-        String uri = "/location?session_key=" + sessionKey;
-        if (afterTime != null) {
-            uri += "&date>=" + afterTime.format(DateTimeFormatter.ISO_DATE_TIME);
-        }
-        log.debug("Polling OpenF1 Location: {}", uri);
+    // UPDATED: Accepts start AND end time
+    public Flux<OpenF1LocationData> getLocationData(long sessionKey, OffsetDateTime startTime, OffsetDateTime endTime) {
+        String uri = "/location?session_key=" + sessionKey +
+                "&date>=" + startTime.format(API_DATE_FORMATTER) +
+                "&date<" + endTime.format(API_DATE_FORMATTER);
+
+        log.debug("Polling Location Window: {} -> {}", startTime, endTime);
+
         return webClient.get().uri(uri).retrieve().bodyToFlux(OpenF1LocationData.class)
                 .onErrorResume(e -> {
                     log.error("Error fetching Location Data: {}", e.getMessage());

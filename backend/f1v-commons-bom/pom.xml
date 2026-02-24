@@ -37,6 +37,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring-boot.version>4.0.3</spring-boot.version>
         <spring-cloud-gcp.version>7.4.5</spring-cloud-gcp.version>
+        <spring-cloud-gcp-bigquery.version>7.4.5</spring-cloud-gcp-bigquery.version>
         <jackson-3.version>3.1.0-rc1</jackson-3.version>
         <springdoc.version>3.0.1</springdoc.version>
         <spring-security-test.version>7.0.3</spring-security-test.version>
@@ -123,6 +124,11 @@
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>spring-cloud-gcp-bigquery</artifactId>
+                <version>${spring-cloud-gcp-bigquery.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>

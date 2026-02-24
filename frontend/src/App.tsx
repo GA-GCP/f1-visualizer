@@ -1,13 +1,25 @@
+import React from 'react';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, useNavigate } from 'react-router-dom';
+import { Security } from '@okta/okta-react';
+import { OktaAuth, toRelativeUrl } from '@okta/okta-auth-js';
 import LayoutMain from './components/layout/LayoutMain';
-import Home from './pages/Home';
+import { AxiosAuthInterceptor } from './auth/AuthHandler';
+
+// --- OKTA CONFIGURATION ---
+// PlACE-HOLDERS for initial dev-purposes, OKTA ISS and CLIENT_ID
+const oktaAuth = new OktaAuth({
+    issuer: 'YOUR_TENANT_HERE',
+    clientId: 'YOUR_CLIENT_ID_HERE',
+    redirectUri: window.location.origin + '/login/callback',
+    scopes: ['openid', 'profile', 'email']
+});
 
 const darkTheme = createTheme({
     palette: {
         mode: 'dark',
-        primary: { main: '#e10600' }, // F1 Red
-        secondary: { main: '#FF8700' }, // McLaren Papaya
+        primary: { main: '#e10600' },
+        secondary: { main: '#FF8700' },
         background: { default: '#121212', paper: '#1e1e1e' },
         text: { primary: '#ffffff', secondary: '#b0b0b0' },
     },
@@ -25,18 +37,25 @@ const darkTheme = createTheme({
     }
 });
 
+const AppWithRouterAccess: React.FC = () => {
+    const navigate = useNavigate();
+    const restoreOriginalUri = async (_oktaAuth: any, originalUri: string) => {
+        navigate(toRelativeUrl(originalUri || '/', window.location.origin));
+    };
+    return (
+        <Security oktaAuth={oktaAuth} restoreOriginalUri={restoreOriginalUri}>
+            <AxiosAuthInterceptor />
+            <LayoutMain />
+        </Security>
+    );
+};
+
 function App() {
     return (
         <ThemeProvider theme={darkTheme}>
             <CssBaseline />
             <BrowserRouter>
-                <Routes>
-                    <Route path="/" element={<LayoutMain />}>
-                        <Route index element={<Home />} />
-                        {/* Placeholder for future Historical Data page */}
-                        <Route path="historical" element={<Home />} />
-                    </Route>
-                </Routes>
+                <AppWithRouterAccess />
             </BrowserRouter>
         </ThemeProvider>
     );

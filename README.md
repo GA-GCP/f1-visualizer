@@ -33,7 +33,7 @@ This project utilizes a unified monorepo approach to ensure atomic, full-stack c
 ## 🚀 Quick Start (Local Development)
 To get the development environment running on your local machine:
 
-1. **Clone the repository:** `git clone https://github.com/yourusername/f1-visualizer.git`
+1. **Clone the repository:** `git clone https://github.com/GA-GCP/f1-visualizer.git`
 2. **Backend Setup:** Navigate to `/backend` and execute `mvn clean install` (requires JDK 25 and Docker for Testcontainers).
 3. **Frontend Setup:** Navigate to `/frontend` and execute `yarn install` followed by `yarn dev`.
 

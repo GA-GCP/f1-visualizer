@@ -21,26 +21,20 @@ public class F1VisualizerSecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // 1. Disable CSRF (Not needed for stateless JWT APIs)
                 .csrf(AbstractHttpConfigurer::disable)
-
-                // 2. Configure CORS for our Frontend
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-                // 3. Enforce Stateless Sessions (No JSESSIONID cookies!)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-                // 4. Route Authorization (Deny by Default)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health").permitAll() // Allow Load Balancer health checks
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // OpenAPI generation
-                        .requestMatchers("/ws/**").permitAll()
-                        .anyRequest().authenticated() // Everything else requires a valid Okta JWT
+                        .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+
+                        // TEMPORARY for initial dev-purposes, will be removed in next several commits
+//                        .requestMatchers("/ws/**").permitAll()
+//                        .requestMatchers("/api/v1/analysis/**").permitAll()
+
+                        .anyRequest().authenticated()
                 )
-
-                // 5. Enable OAuth2 Resource Server for JWT Validation
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
-
         return http.build();
     }
 

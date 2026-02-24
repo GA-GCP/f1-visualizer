@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, Typography, Paper, Grid, Chip } from '@mui/material';
 import { useTelemetry } from '../hooks/useTelemetry';
 import { useLocation } from '../hooks/useLocation';
+import CircuitTrace from './CircuitTrace';
 import type { TelemetryPacket, LocationPacket } from '../types/telemetry';
 
 const RaceSimulator: React.FC = () => {
@@ -12,16 +13,28 @@ const RaceSimulator: React.FC = () => {
     const [telemetryCount, setTelemetryCount] = useState(0);
     const [locationCount, setLocationCount] = useState(0);
 
-    // 1. Hook into Physics Stream
+    // 🎯 DEFINE A TARGET DRIVER
+    // In the future, this will be a dropdown selector
+    const TARGET_DRIVER = 1;
+
+    // 1. Hook into Physics Stream (Filter by Driver)
     const { isConnected: isTelemetryConnected } = useTelemetry((data) => {
-        setTelemetryCount(prev => prev + 1);
-        setLastTelemetry(data);
+        setTelemetryCount(prev => prev + 1); // Count all traffic
+
+        // ONLY update UI if it matches our driver
+        if (data.driver_number === TARGET_DRIVER) {
+            setLastTelemetry(data);
+        }
     });
 
-    // 2. Hook into Spatial Stream
+    // 2. Hook into Spatial Stream (Filter by Driver)
     const { isConnected: isLocationConnected } = useLocation((data) => {
-        setLocationCount(prev => prev + 1);
-        setLastLocation(data);
+        setLocationCount(prev => prev + 1); // Count all traffic
+
+        // ONLY trace if it matches our driver
+        if (data.driver_number === TARGET_DRIVER) {
+            setLastLocation(data);
+        }
     });
 
     return (
@@ -65,52 +78,46 @@ const RaceSimulator: React.FC = () => {
 
                 {/* Left Column: Physics Data */}
                 <Grid size={{ xs: 12, md: 6 }}>
-                    <Paper sx={{ p: 3, bgcolor: '#1e1e1e', color: 'white', minHeight: '300px' }}>
+                    <Paper sx={{ p: 3, bgcolor: '#1e1e1e', color: 'white', minHeight: '450px' }}>
                         <Typography variant="h6" color="secondary" sx={{ mb: 2 }}>
                             LIVE TELEMETRY
                         </Typography>
                         {lastTelemetry ? (
                             <Box>
-                                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                                    {/* FIX: snake_case to match wire JSON */}
-                                    Driver: #{lastTelemetry.driver_number}
+                                {/* Visualizing Speed as a big number */}
+                                <Typography variant="h1" sx={{ fontWeight: 'bold', color: 'white' }}>
+                                    {lastTelemetry.speed} <span style={{fontSize: '1.5rem', color: '#666'}}>KM/H</span>
                                 </Typography>
-                                <pre style={{ fontFamily: 'monospace', fontSize: '0.9rem', overflowX: 'auto' }}>
+
+                                <Grid container spacing={2} sx={{ mt: 2 }}>
+                                    <Grid size={4}>
+                                        <Typography variant="caption" color="text.secondary">RPM</Typography>
+                                        <Typography variant="h6">{lastTelemetry.rpm}</Typography>
+                                    </Grid>
+                                    <Grid size={4}>
+                                        <Typography variant="caption" color="text.secondary">GEAR</Typography>
+                                        <Typography variant="h6">{lastTelemetry.gear}</Typography>
+                                    </Grid>
+                                    <Grid size={4}>
+                                        <Typography variant="caption" color="text.secondary">THROTTLE</Typography>
+                                        <Typography variant="h6">{lastTelemetry.throttle}%</Typography>
+                                    </Grid>
+                                </Grid>
+
+                                <Box sx={{ mt: 4, p: 2, bgcolor: '#000', borderRadius: 1, fontFamily: 'monospace' }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{display: 'block', mb: 1}}>RAW PACKET</Typography>
                                     {JSON.stringify(lastTelemetry, null, 2)}
-                                </pre>
+                                </Box>
                             </Box>
                         ) : (
-                            <Typography color="text.secondary">Waiting for car physics...</Typography>
+                            <Typography color="text.secondary">Waiting for telemetry...</Typography>
                         )}
                     </Paper>
                 </Grid>
 
-                {/* Right Column: Spatial Data */}
+                {/* Right Column: CIRCUIT TRACE */}
                 <Grid size={{ xs: 12, md: 6 }}>
-                    <Paper sx={{ p: 3, bgcolor: '#1e1e1e', color: 'white', minHeight: '300px' }}>
-                        <Typography variant="h6" color="info.main" sx={{ mb: 2 }}>
-                            LIVE GPS COORDINATES
-                        </Typography>
-                        {lastLocation ? (
-                            <Box>
-                                <Typography variant="h3" sx={{ fontFamily: 'monospace', mb: 1 }}>
-                                    X: {lastLocation.x}
-                                </Typography>
-                                <Typography variant="h3" sx={{ fontFamily: 'monospace', mb: 1 }}>
-                                    Y: {lastLocation.y}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                                    {/* FIX: snake_case to match wire JSON */}
-                                    Driver: #{lastLocation.driver_number}
-                                </Typography>
-                                <pre style={{ marginTop: '20px', fontSize: '0.8rem', opacity: 0.7 }}>
-                                    {JSON.stringify(lastLocation, null, 2)}
-                                </pre>
-                            </Box>
-                        ) : (
-                            <Typography color="text.secondary">Waiting for GPS fix...</Typography>
-                        )}
-                    </Paper>
+                    <CircuitTrace latestLocation={lastLocation} />
                 </Grid>
             </Grid>
         </Box>

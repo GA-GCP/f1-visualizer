@@ -41,7 +41,9 @@
         <springdoc.version>3.0.1</springdoc.version>
         <spring-security-test.version>7.0.3</spring-security-test.version>
         <lombok.version>1.18.42</lombok.version>
-        <f1v-commons-api-openaf1.version>1.0.0-SNAPSHOT</f1v-commons-api-openaf1.version>
+        <io-reactor-test.version>3.8.3</io-reactor-test.version>
+        <mockwebserver.version>5.3.2</mockwebserver.version>
+        <f1v-commons-api-openf1.version>1.0.0-SNAPSHOT</f1v-commons-api-openf1.version>
         <f1v-commons-base.version>1.0.0-SNAPSHOT</f1v-commons-base.version>
         <f1v-commons-exception.version>1.0.0-SNAPSHOT</f1v-commons-exception.version>
         <f1v-commons-gcp-bq.version>1.0.0-SNAPSHOT</f1v-commons-gcp-bq.version>
@@ -104,6 +106,11 @@
             </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-webflux</artifactId>
+                <version>${spring-boot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-websocket</artifactId>
                 <version>${spring-boot.version}</version>
             </dependency>
@@ -143,9 +150,19 @@
                 <version>${spring-boot.version}</version>
             </dependency>
             <dependency>
+                <groupId>io.projectreactor</groupId>
+                <artifactId>reactor-test</artifactId>
+                <version>${io-reactor-test.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>mockwebserver</artifactId>
+                <version>${mockwebserver.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.elysianarts.f1.visualizer.commons</groupId>
                 <artifactId>f1v-commons-api-openf1</artifactId>
-                <version>${f1v-commons-base.version}</version>
+                <version>${f1v-commons-api-openf1.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.elysianarts.f1.visualizer.commons</groupId>

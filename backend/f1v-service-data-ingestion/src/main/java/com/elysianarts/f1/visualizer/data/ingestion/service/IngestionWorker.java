@@ -23,6 +23,7 @@ public class IngestionWorker {
     private final OpenF1Client openF1Client;
     private final RedisTemplate<String, Object> redisTemplate;
     private final ReplayEngine replayEngine;
+    private final LiveStreamService liveStreamService;
 
     private static final long TARGET_SESSION_KEY = 9165;
 
@@ -37,22 +38,36 @@ public class IngestionWorker {
     private static final long LIVE_SESSION_KEY = 9165; // Placeholder
     private OffsetDateTime currentLiveTime = OffsetDateTime.of(2023, 9, 17, 12, 0, 0, 0, ZoneOffset.UTC);
 
-    @Scheduled(fixedRate = 250) // Increased to 4Hz (250ms) for smoother UI
-    public void runLoop() {
-        if (currentMode == IngestionMode.SIMULATION) {
-            replayEngine.tick();
-        } else {
-            runLiveIngestion();
+    // Run this once on startup to establish the connection if we are LIVE
+    // @PostConstruct
+    public void init() {
+        if (currentMode == IngestionMode.LIVE) {
+            liveStreamService.connect(LIVE_SESSION_KEY);
         }
     }
 
-    private void runLiveIngestion() {
-        // ... (Existing Logic moved here) ...
-        // Note: For brevity in this step, assume previous logic is encapsulated here
-        // querying openF1Client based on currentLiveTime
+    @Scheduled(fixedRate = 250)
+    public void runLoop() {
+        // Only tick the Replay Engine.
+        // The Live MQTT service runs on its own thread/callback system once connected.
+        if (currentMode == IngestionMode.SIMULATION) {
+            replayEngine.tick();
+        }
     }
 
-    @Scheduled(fixedRate = 2000) // Run every 2 seconds
+    public void startSimulation(long sessionKey) {
+        log.info("Switching to SIMULATION mode for session {}", sessionKey);
+        this.currentMode = IngestionMode.SIMULATION;
+        replayEngine.loadSession(sessionKey);
+    }
+
+    public void startLiveStream(long sessionKey) {
+        log.info("Switching to LIVE mode for session {}", sessionKey);
+        this.currentMode = IngestionMode.LIVE;
+        liveStreamService.connect(sessionKey);
+    }
+
+
     public void ingestTelemetryLoop() {
         // Define a 2-second window (matching our poll rate)
         OffsetDateTime windowEnd = currentSimTime.plusSeconds(2);

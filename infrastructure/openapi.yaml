@@ -1,0 +1,91 @@
+swagger: '2.0'
+info:
+  title: F1 Visualizer API
+  description: The central API Gateway routing traffic to F1V microservices.
+  version: 1.0.0
+schemes:
+  - https
+produces:
+  - application/json
+securityDefinitions:
+  # We define the Okta security scheme here
+  okta_jwt:
+    authorizationUrl: ""
+    flow: "implicit"
+    type: "oauth2"
+    x-google-issuer: "https://integrator-7997251.okta.com/oauth2/default"
+    x-google-jwks_uri: "https://integrator-7997251.okta.com/oauth2/default/v1/keys"
+    x-google-audiences: "api.f1visualizer.com"
+
+paths:
+  # ============================================================================
+  # 1. ANALYSIS SERVICE (Historical Data)
+  # ============================================================================
+  /api/v1/analysis/session/{sessionKey}/laps:
+    get:
+      summary: Get historical lap times
+      operationId: getSessionLaps
+      parameters:
+        - name: sessionKey
+          in: path
+          required: true
+          type: integer
+      x-google-backend:
+        # This PLACEHOLDER is replaced by 'sed' in our Cloud Build pipeline
+        address: ANALYSIS_SERVICE_URL_PLACEHOLDER
+        deadline: 15.0 # Seconds
+      responses:
+        '200':
+          description: A list of lap records
+          schema:
+            type: array
+            items:
+              type: object
+        '401':
+          description: Unauthorized
+      # Enforce Okta Security
+      security:
+        - okta_jwt: []
+
+  # ============================================================================
+  # 2. USER SERVICE (Profiles & Preferences)
+  # ============================================================================
+  /api/v1/users/me:
+    get:
+      summary: Get current user profile
+      operationId: getCurrentUser
+      x-google-backend:
+        # We need to add the USER_URL replacement logic to the pipeline later
+        address: USER_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: User profile
+      security:
+        - okta_jwt: []
+
+    # Enable CORS for the frontend (handled by Gateway)
+    options:
+      operationId: corsUsers
+      x-google-backend:
+        address: USER_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '204':
+          description: No Content
+
+  # ============================================================================
+  # 3. TELEMETRY SERVICE (REST Debugging Only)
+  # Note: Actual WebSockets bypass this Gateway.
+  # ============================================================================
+  /api/v1/debug/publish:
+    post:
+      summary: Manually inject telemetry packet
+      operationId: publishDebugTelemetry
+      x-google-backend:
+        address: TELEMETRY_SERVICE_URL_PLACEHOLDER
+      responses:
+        '200':
+          description: Packet published
+      security:
+        - okta_jwt: []

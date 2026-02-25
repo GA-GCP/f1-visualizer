@@ -8,14 +8,16 @@ steps:
         # Get URLs for our deployed services
         TELEMETRY_URL=$(gcloud run services describe f1v-service-telemetry-dev --region=us-central1 --format='value(status.url)')
         ANALYSIS_URL=$(gcloud run services describe f1v-service-data-analysis-dev --region=us-central1 --format='value(status.url)')
+        USER_URL=$(gcloud run services describe f1v-service-user-dev --region=us-central1 --format='value(status.url)') # <--- NEW
         
         echo "Detected Telemetry URL: $TELEMETRY_URL"
         echo "Detected Analysis URL: $ANALYSIS_URL"
+        echo "Detected User URL: $USER_URL"
         
         # 2. Inject URLs into OpenAPI Spec
-        # We use sed to replace placeholders in the yaml file
         sed -i "s|TELEMETRY_SERVICE_URL_PLACEHOLDER|$TELEMETRY_URL|g" infrastructure/openapi.yaml
         sed -i "s|ANALYSIS_SERVICE_URL_PLACEHOLDER|$ANALYSIS_URL|g" infrastructure/openapi.yaml
+        sed -i "s|USER_SERVICE_URL_PLACEHOLDER|$USER_URL|g" infrastructure/openapi.yaml # <--- NEW
         
         # 3. Deploy API Gateway Config
         gcloud api-gateway api-configs create f1v-config-$SHORT_SHA \

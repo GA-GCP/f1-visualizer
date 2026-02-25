@@ -22,7 +22,8 @@ const VersusMode: React.FC = () => {
 
             {/* Selectors */}
             <Grid container spacing={4} sx={{ mb: 6 }}>
-                <Grid item xs={12} md={6}>
+                {/* FIX: Removed 'item', changed 'xs/md' to 'size={{ xs: ..., md: ... }}' */}
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Paper sx={{ p: 3, bgcolor: '#1e1e1e', borderLeft: `4px solid ${driverA.teamColor}` }}>
                         <DriverSelector
                             label="DRIVER A"
@@ -31,7 +32,8 @@ const VersusMode: React.FC = () => {
                         />
                     </Paper>
                 </Grid>
-                <Grid item xs={12} md={6}>
+                {/* FIX: Removed 'item', changed 'xs/md' to 'size={{ xs: ..., md: ... }}' */}
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Paper sx={{ p: 3, bgcolor: '#1e1e1e', borderRight: `4px solid ${driverB.teamColor}` }}>
                         <DriverSelector
                             label="DRIVER B"
@@ -45,7 +47,8 @@ const VersusMode: React.FC = () => {
             {/* Analysis Dashboard */}
             <Grid container spacing={4}>
                 {/* Center: Radar Chart */}
-                <Grid item xs={12} md={5}>
+                {/* FIX: Removed 'item', changed 'xs/md' to 'size={{ xs: ..., md: ... }}' */}
+                <Grid size={{ xs: 12, md: 5 }}>
                     <Paper sx={{ p: 3, bgcolor: '#1e1e1e', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <Typography variant="h6" color="text.secondary" gutterBottom>
                             ATTRIBUTE MAPPING
@@ -60,7 +63,8 @@ const VersusMode: React.FC = () => {
                 </Grid>
 
                 {/* Right: Stat Bars */}
-                <Grid item xs={12} md={7}>
+                {/* FIX: Removed 'item', changed 'xs/md' to 'size={{ xs: ..., md: ... }}' */}
+                <Grid size={{ xs: 12, md: 7 }}>
                     <Paper sx={{ p: 4, bgcolor: '#1e1e1e', height: '100%' }}>
                         <Typography variant="h6" color="text.secondary" gutterBottom sx={{ mb: 4 }}>
                             CAREER STATISTICS

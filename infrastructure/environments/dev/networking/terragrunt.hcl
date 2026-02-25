@@ -5,7 +5,7 @@ include "root" {
 
 # 2. Point to the reusable OpenTofu module (We'll start with networking)
 terraform {
-  source = "../../modules/networking"
+  source = "../../../modules/networking"
 }
 
 # 3. Pass in the DEV-specific variables

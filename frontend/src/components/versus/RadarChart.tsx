@@ -38,10 +38,11 @@ const RadarChart: React.FC<RadarChartProps> = ({ driverA, driverB }) => {
                 .data(features)
                 .enter()
                 .append("line")
-                .attr("x1", (d, i) => levelFactor * (1 - 1 * Math.sin(i * angleSlice)))
-                .attr("y1", (d, i) => levelFactor * (1 - 1 * Math.cos(i * angleSlice)))
-                .attr("x2", (d, i) => levelFactor * (1 - 1 * Math.sin((i + 1) * angleSlice)))
-                .attr("y2", (d, i) => levelFactor * (1 - 1 * Math.cos((i + 1) * angleSlice)))
+                // FIX: Replaced unused 'd' with '_'
+                .attr("x1", (_, i) => levelFactor * (1 - 1 * Math.sin(i * angleSlice)))
+                .attr("y1", (_, i) => levelFactor * (1 - 1 * Math.cos(i * angleSlice)))
+                .attr("x2", (_, i) => levelFactor * (1 - 1 * Math.sin((i + 1) * angleSlice)))
+                .attr("y2", (_, i) => levelFactor * (1 - 1 * Math.cos((i + 1) * angleSlice)))
                 .style("stroke", "#333")
                 .style("stroke-width", "1px");
         }
@@ -56,8 +57,9 @@ const RadarChart: React.FC<RadarChartProps> = ({ driverA, driverB }) => {
         axis.append("line")
             .attr("x1", 0)
             .attr("y1", 0)
-            .attr("x2", (d, i) => rScale(100) * Math.cos(angleSlice * i - Math.PI / 2))
-            .attr("y2", (d, i) => rScale(100) * Math.sin(angleSlice * i - Math.PI / 2))
+            // FIX: Replaced unused 'd' with '_'
+            .attr("x2", (_, i) => rScale(100) * Math.cos(angleSlice * i - Math.PI / 2))
+            .attr("y2", (_, i) => rScale(100) * Math.sin(angleSlice * i - Math.PI / 2))
             .attr("class", "line")
             .style("stroke", "#444")
             .style("stroke-width", "2px");
@@ -68,8 +70,9 @@ const RadarChart: React.FC<RadarChartProps> = ({ driverA, driverB }) => {
             .style("fill", "#888")
             .attr("text-anchor", "middle")
             .attr("dy", "0.35em")
-            .attr("x", (d, i) => rScale(115) * Math.cos(angleSlice * i - Math.PI / 2))
-            .attr("y", (d, i) => rScale(115) * Math.sin(angleSlice * i - Math.PI / 2))
+            // FIX: Replaced unused 'd' with '_'
+            .attr("x", (_, i) => rScale(115) * Math.cos(angleSlice * i - Math.PI / 2))
+            .attr("y", (_, i) => rScale(115) * Math.sin(angleSlice * i - Math.PI / 2))
             .text(d => d.toUpperCase());
 
         // 3. Draw Data Blobs

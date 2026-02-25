@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import DriverSelector from '../selectors/DriverSelector';
 import { MOCK_DRIVERS } from '@/data/mockDrivers.ts';
 import { vi } from 'vitest';

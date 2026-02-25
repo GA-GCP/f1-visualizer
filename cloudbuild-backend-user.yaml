@@ -1,0 +1,30 @@
+steps:
+  # 1. HARD STOP: Run Tests
+  - name: 'maven:3.9-eclipse-temurin-25'
+    entrypoint: 'mvn'
+    args: ['clean', 'test']
+    dir: 'backend'
+
+  # 2. Build Docker Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'MODULE=f1v-service-user'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/user:$SHORT_SHA'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/user:latest'
+      - '-f'
+      - 'backend/Dockerfile'
+      - 'backend'
+
+  # 3. Push Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/user'
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/user:$SHORT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/user:latest'

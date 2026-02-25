@@ -1,0 +1,26 @@
+# Build Output
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# IDE & Tools
+.idea/
+.vscode/
+.DS_Store
+*.iml
+
+# Logs
+logs/
+*.log
+
+# Git
+.git/
+.gitignore
+
+# Secrets & Configs
+.env
+.env.local
+**/application-dev.yml
+**/application-local.yml

@@ -1,0 +1,31 @@
+steps:
+  # 1. HARD STOP: Run All Backend Tests
+  # Using the full JDK image to ensure tests run in the correct environment
+  - name: 'maven:3.9-eclipse-temurin-25'
+    entrypoint: 'mvn'
+    args: ['clean', 'test']
+    dir: 'backend'
+
+  # 2. Build Telemetry Docker Image (Using Layered Jar Strategy)
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'MODULE=f1v-service-telemetry'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:$SHORT_SHA'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:latest'
+      - '-f'
+      - 'backend/Dockerfile'
+      - 'backend' # Sets build context to the backend root so parent POMs are visible
+
+  # 3. Push Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry'
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:$SHORT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:latest'

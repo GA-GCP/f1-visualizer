@@ -12,3 +12,8 @@ output "subnetwork_id" {
   description = "The ID of the primary Subnet"
   value       = google_compute_subnetwork.f1v_subnet.id
 }
+
+output "vpc_access_connector_id" {
+  description = "The ID of the VPC Access Connector"
+  value       = google_vpc_access_connector.connector.id
+}

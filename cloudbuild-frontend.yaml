@@ -1,0 +1,35 @@
+steps:
+  # 1. Install Dependencies
+  - name: 'node:22-alpine'
+    entrypoint: 'yarn'
+    args: ['install', '--frozen-lockfile']
+    dir: 'frontend'
+
+  # 2. HARD STOP: Run Unit Tests
+  # Fails the build immediately if tests fail
+  - name: 'node:22-alpine'
+    entrypoint: 'yarn'
+    args: ['test:ci']
+    dir: 'frontend'
+
+  # 3. Build Docker Image (Multi-Stage)
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:$SHORT_SHA'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:latest'
+      - '.'
+    dir: 'frontend'
+
+  # 4. Push Image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend'
+
+# Images to be displayed in the Cloud Build dashboard
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:$SHORT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:latest'

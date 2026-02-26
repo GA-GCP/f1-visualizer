@@ -16,7 +16,7 @@ securityDefinitions:
     type: "oauth2"
     x-google-issuer: "https://integrator-7997251.okta.com/oauth2/default"
     x-google-jwks_uri: "https://integrator-7997251.okta.com/oauth2/default/v1/keys"
-    x-google-audiences: "api.f1visualizer.com"
+    x-google-audiences: "dev.api.f1visualizer.com"
 paths:
   /v1/telemetry/**:
     get:

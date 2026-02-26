@@ -8,4 +8,5 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: https://integrator-7997251.okta.com/oauth2/default
+          issuer-uri: https://integrator-7997251.okta.com/oauth2/aus10dj3jwaXRs0xm698
+          audiences: dev.api.f1visualizer.com

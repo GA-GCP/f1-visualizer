@@ -34,3 +34,13 @@ variable "container_concurrency" {
   type        = number
   default     = 80
 }
+variable "deletion_protection" {
+  description = "Prevent the service from being destroyed"
+  type        = bool
+  default     = false # Default to false for DEV/UAT agility
+}
+variable "service_account_email" {
+  description = "The IAM Service Account email that this Cloud Run service will run as"
+  type        = string
+  default     = null # Optional (but we will enforce it in Terragrunt)
+}

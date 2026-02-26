@@ -14,20 +14,23 @@ steps:
     args:
       - '-c'
       - |
-        # Dynamic Lookup using ${_ENV} suffix
+        # Dynamic Lookup using ${_ENV} suffix (Keep single $ for _ENV)
         TELEMETRY_URL=$(gcloud run services describe f1v-service-telemetry-${_ENV} --region=us-central1 --format='value(status.url)')
         DATA_ANALYSIS_URL=$(gcloud run services describe f1v-service-data-analysis-${_ENV} --region=us-central1 --format='value(status.url)')
         USER_URL=$(gcloud run services describe f1v-service-user-${_ENV} --region=us-central1 --format='value(status.url)')
         
         echo "Environment: ${_ENV}"
-        echo "Detected Telemetry URL: $TELEMETRY_URL"
-        echo "Detected Data Analysis URL: $DATA_ANALYSIS_URL"
-        echo "Detected User URL: $USER_URL"
+        # FIX: Use $$ for shell variables so Cloud Build ignores them
+        echo "Detected Telemetry URL: $$TELEMETRY_URL"
+        echo "Detected Data Analysis URL: $$DATA_ANALYSIS_URL"
+        echo "Detected User URL: $$USER_URL"
         
-        # 2. Inject URLs into OpenAPI Spec
-        sed -i "s|TELEMETRY_SERVICE_URL_PLACEHOLDER|$TELEMETRY_URL|g" infrastructure/openapi.yaml
-        sed -i "s|DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER|$DATA_ANALYSIS_URL|g" infrastructure/openapi.yaml
-        sed -i "s|USER_SERVICE_URL_PLACEHOLDER|$USER_URL|g" infrastructure/openapi.yaml
+        # 2. Inject URLs into OpenAPI Spec (Check your path here!)
+        # Assuming you run this from root, the path should likely be 'infrastructure/openapi.yaml'
+        # If you are getting "No such file" errors next, remove the "../" prefix.
+        sed -i "s|TELEMETRY_SERVICE_URL_PLACEHOLDER|$$TELEMETRY_URL|g" infrastructure/openapi.yaml
+        sed -i "s|DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER|$$DATA_ANALYSIS_URL|g" infrastructure/openapi.yaml
+        sed -i "s|USER_SERVICE_URL_PLACEHOLDER|$$USER_URL|g" infrastructure/openapi.yaml
         
         # 3. Deploy API Gateway Config (Naming config with env and SHA)
         gcloud api-gateway api-configs create f1v-config-${_ENV}-${_SHORT_SHA} \
@@ -43,6 +46,7 @@ steps:
       - 'gateways'
       - 'update'
       - 'f1v-gateway-${_ENV}'
+      - '--api=f1v-gateway-${_ENV}'
       - '--api-config=f1v-config-${_ENV}-${_SHORT_SHA}'
       - '--location=us-central1'
       - '--project=$PROJECT_ID'

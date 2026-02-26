@@ -3,7 +3,6 @@ package com.elysianarts.f1.visualizer.user.service;
 import com.elysianarts.f1.visualizer.user.firestore.document.F1UserDocument;
 import com.elysianarts.f1.visualizer.user.firestore.repository.F1UserRepository;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
 
 import java.time.Instant;
 
@@ -16,26 +15,29 @@ public class UserService {
     }
 
     public F1UserDocument getOrCreateUser(String oktaSubId, String email) {
-        return userRepository.findById(oktaSubId)
-                .switchIfEmpty(
-                        Mono.defer(() -> userRepository.save(
-                                F1UserDocument.builder()
-                                        .oktaSubId(oktaSubId)
-                                        .email(email)
-                                        .createdAt(Instant.now())
-                                        .preferences(new F1UserDocument.UserPreferences())
-                                        .build()
-                        ))
-                )
-                .block();
+        // 1. Try to find existing
+        F1UserDocument existing = userRepository.findById(oktaSubId);
+        if (existing != null) {
+            return existing;
+        }
+
+        // 2. Create new if not found
+        F1UserDocument newUser = F1UserDocument.builder()
+                .oktaSubId(oktaSubId)
+                .email(email)
+                .createdAt(Instant.now())
+                .preferences(new F1UserDocument.UserPreferences())
+                .build();
+
+        return userRepository.save(newUser);
     }
 
     public F1UserDocument updatePreferences(String oktaSubId, F1UserDocument.UserPreferences newPreferences) {
-        F1UserDocument existingUser = userRepository.findById(oktaSubId).block();
+        F1UserDocument existingUser = userRepository.findById(oktaSubId);
 
         if (existingUser != null) {
             existingUser.setPreferences(newPreferences);
-            return userRepository.save(existingUser).block();
+            return userRepository.save(existingUser);
         }
         throw new RuntimeException("User profile not found for Okta ID: " + oktaSubId);
     }

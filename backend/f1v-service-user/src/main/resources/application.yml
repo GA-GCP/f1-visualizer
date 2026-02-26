@@ -1,4 +1,9 @@
 spring:
+  cloud:
+    gcp:
+      firestore:
+        project-id: f1-visualizer-488201
+        database-id: f1-visualizer-db-dev
   security:
     oauth2:
       resourceserver:

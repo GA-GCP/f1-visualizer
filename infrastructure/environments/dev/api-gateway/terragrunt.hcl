@@ -11,12 +11,15 @@ inputs = {
   region     = "us-central1"
   gateway_id = "f1v-gateway-dev"
 
-  # Placeholder Spec - We will overwrite this via CI/CD later using 'gcloud api-gateway api-configs create'
+  # BOOTSTRAP CONFIGURATION:
+  # We use this simple "Health Check" spec just to get the infrastructure created.
+  # The REAL routing spec (with Cloud Run backends) is injected later by the
+  # 'cloudbuild/api-gateway.yaml' pipeline.
   openapi_spec = <<EOF
 swagger: '2.0'
 info:
-  title: F1 Visualizer API (Placeholder)
-  description: Initial placeholder configuration
+  title: F1 Visualizer API (Bootstrap)
+  description: Initial placeholder configuration to bootstrap the Gateway infrastructure.
   version: 1.0.0
 schemes:
   - https
@@ -25,8 +28,12 @@ paths:
     get:
       summary: Health Check
       operationId: healthCheck
+      x-google-backend:
+        address: https://placeholder.com
+        path_translation: APPEND_PATH_TO_ADDRESS
       responses:
         '200':
           description: OK
 EOF
 }
+

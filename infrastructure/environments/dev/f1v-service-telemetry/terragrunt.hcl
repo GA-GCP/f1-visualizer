@@ -6,7 +6,15 @@ terraform {
   source = "../../../modules/cloud-run"
 }
 
-# 1. Dependency on Networking (For VPC Access Connector)
+# 1. Dependency on IAM module
+dependency "iam" {
+  config_path = "../iam_and_secrets"
+  mock_outputs = {
+    sa_telemetry_email = "sa-f1v-telemetry-dev@f1-visualizer-488201.iam.gserviceaccount.com"
+  }
+}
+
+# 2. Dependency on Networking (For VPC Access Connector)
 dependency "networking" {
   config_path = "../networking"
   mock_outputs = {
@@ -14,7 +22,7 @@ dependency "networking" {
   }
 }
 
-# 2. Dependency on Redis (For Host/Port Environment Variables)
+# 3. Dependency on Redis (For Host/Port Environment Variables)
 dependency "redis" {
   config_path = "../redis"
   mock_outputs = {
@@ -27,6 +35,7 @@ inputs = {
   project_id   = "f1-visualizer-488201"
   region       = "us-central1"
   service_name = "f1v-service-telemetry-dev"
+  service_account_email = dependency.iam.outputs.sa_telemetry_email
 
   # Pointing to the Artifact Registry repo we created
   image_url    = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/telemetry:latest"

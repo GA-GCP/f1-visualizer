@@ -6,8 +6,7 @@ import { OktaAuth, toRelativeUrl } from '@okta/okta-auth-js';
 import LayoutMain from './components/layout/LayoutMain';
 import { AxiosAuthInterceptor } from './auth/AuthHandler';
 
-// --- OKTA CONFIGURATION ---
-// PlACE-HOLDERS for initial dev-purposes, OKTA ISS and CLIENT_ID
+// --- OKTA CONFIGURATION (Keep as is) ---
 const oktaAuth = new OktaAuth({
     issuer: 'YOUR_TENANT_HERE',
     clientId: 'YOUR_CLIENT_ID_HERE',
@@ -15,23 +14,76 @@ const oktaAuth = new OktaAuth({
     scopes: ['openid', 'profile', 'email']
 });
 
-const darkTheme = createTheme({
+// --- THE BROADCAST THEME ---
+const broadcastTheme = createTheme({
     palette: {
         mode: 'dark',
-        primary: { main: '#e10600' },
-        secondary: { main: '#FF8700' },
-        background: { default: '#121212', paper: '#1e1e1e' },
-        text: { primary: '#ffffff', secondary: '#b0b0b0' },
+        primary: { main: '#e10600' }, // F1 Crimson
+        secondary: { main: '#ffffff' }, // Pure White for contrast
+        background: {
+            default: '#101010', // Deep dark, almost black
+            paper: 'rgba(20, 20, 20, 0.6)' // Glass base
+        },
+        text: {
+            primary: '#ffffff',
+            secondary: 'rgba(255,255,255,0.7)',
+        },
     },
     typography: {
         fontFamily: '"Titillium Web", "Roboto", "Helvetica", "Arial", sans-serif',
-        h4: { textTransform: 'uppercase', letterSpacing: '0.05em' },
-        h6: { textTransform: 'uppercase' }
+        h1: { fontWeight: 700, fontStyle: 'italic', letterSpacing: '-0.02em' },
+        h4: { fontWeight: 700, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '0.05em' },
+        h6: { fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' },
+        body1: { fontSize: '1.1rem' },
+    },
+    shape: {
+        borderRadius: 4, // Subtle rounding, but we will often override this
     },
     components: {
+        MuiCssBaseline: {
+            styleOverrides: {
+                body: {
+                    // Global dark radial gradient to give it depth (like a TV studio background)
+                    background: 'radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000000 100%)',
+                    backgroundAttachment: 'fixed',
+                    minHeight: '100vh',
+                },
+            },
+        },
+        MuiPaper: {
+            styleOverrides: {
+                root: {
+                    // THE GLASS EFFECT
+                    backdropFilter: 'blur(12px)',
+                    backgroundColor: 'rgba(30, 30, 30, 0.6)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+                },
+            },
+        },
         MuiAppBar: {
             styleOverrides: {
-                root: { backgroundColor: '#181818' }
+                root: {
+                    background: 'rgba(0, 0, 0, 0.8)', // Darker glass for header
+                    backdropFilter: 'blur(20px)',
+                    borderBottom: '2px solid #e10600', // The "Red Line" signature
+                    boxShadow: 'none',
+                }
+            }
+        },
+        MuiChip: {
+            styleOverrides: {
+                root: {
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                },
+                filledSuccess: {
+                    backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                    color: '#00ff00',
+                    border: '1px solid #00ff00',
+                    boxShadow: '0 0 10px rgba(0, 255, 0, 0.2)', // Neon Glow
+                }
             }
         }
     }
@@ -52,7 +104,7 @@ const AppWithRouterAccess: React.FC = () => {
 
 function App() {
     return (
-        <ThemeProvider theme={darkTheme}>
+        <ThemeProvider theme={broadcastTheme}>
             <CssBaseline />
             <BrowserRouter>
                 <AppWithRouterAccess />

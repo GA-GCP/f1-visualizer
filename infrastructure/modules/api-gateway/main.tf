@@ -1,6 +1,6 @@
 resource "google_api_gateway_api" "api" {
   provider = google-beta
-  api_id   = "${var.gateway_id}-api"
+  api_id   = var.gateway_id
   project  = var.project_id
 }
 

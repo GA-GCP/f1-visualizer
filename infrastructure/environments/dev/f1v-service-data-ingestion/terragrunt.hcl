@@ -6,6 +6,13 @@ terraform {
   source = "../../../modules/cloud-run"
 }
 
+dependency "iam" {
+  config_path = "../iam_and_secrets"
+  mock_outputs = {
+    sa_data_ingestion_email = "sa-f1v-data-ingestion-dev@f1-visualizer-488201.iam.gserviceaccount.com"
+  }
+}
+
 dependency "networking" {
   config_path = "../networking"
   mock_outputs = {
@@ -25,7 +32,8 @@ inputs = {
   project_id   = "f1-visualizer-488201"
   region       = "us-central1"
   service_name = "f1v-service-data-ingestion-dev"
-  image_url    = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/ingestion:latest"
+  service_account_email = dependency.iam.outputs.sa_data_ingestion_email
+  image_url    = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/data-ingestion:latest"
 
   # Needs VPC access to write to Redis
   vpc_connector_id = dependency.networking.outputs.vpc_access_connector_id

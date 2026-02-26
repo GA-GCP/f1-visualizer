@@ -1,0 +1,49 @@
+serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com'
+
+substitutions:
+  _ENV: 'dev'
+  _SHORT_SHA: 'manual-build'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  # 1. Fetch Cloud Run URLs (Dynamic Discovery based on _ENV)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Dynamic Lookup using ${_ENV} suffix
+        TELEMETRY_URL=$(gcloud run services describe f1v-service-telemetry-${_ENV} --region=us-central1 --format='value(status.url)')
+        DATA_ANALYSIS_URL=$(gcloud run services describe f1v-service-data-analysis-${_ENV} --region=us-central1 --format='value(status.url)')
+        USER_URL=$(gcloud run services describe f1v-service-user-${_ENV} --region=us-central1 --format='value(status.url)')
+        
+        echo "Environment: ${_ENV}"
+        echo "Detected Telemetry URL: $TELEMETRY_URL"
+        echo "Detected Data Analysis URL: $DATA_ANALYSIS_URL"
+        echo "Detected User URL: $USER_URL"
+        
+        # 2. Inject URLs into OpenAPI Spec
+        sed -i "s|TELEMETRY_SERVICE_URL_PLACEHOLDER|$TELEMETRY_URL|g" infrastructure/openapi.yaml
+        sed -i "s|DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER|$DATA_ANALYSIS_URL|g" infrastructure/openapi.yaml
+        sed -i "s|USER_SERVICE_URL_PLACEHOLDER|$USER_URL|g" infrastructure/openapi.yaml
+        
+        # 3. Deploy API Gateway Config (Naming config with env and SHA)
+        gcloud api-gateway api-configs create f1v-config-${_ENV}-${_SHORT_SHA} \
+          --api=f1v-gateway-${_ENV} \
+          --openapi-spec=infrastructure/openapi.yaml \
+          --project=$PROJECT_ID --quiet
+
+  # 4. Update Gateway to use new Config
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'api-gateway'
+      - 'gateways'
+      - 'update'
+      - 'f1v-gateway-${_ENV}'
+      - '--api-config=f1v-config-${_ENV}-${_SHORT_SHA}'
+      - '--location=us-central1'
+      - '--project=$PROJECT_ID'
+      - '--quiet'

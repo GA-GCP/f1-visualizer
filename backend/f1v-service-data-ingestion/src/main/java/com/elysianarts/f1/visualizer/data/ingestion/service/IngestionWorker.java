@@ -2,7 +2,7 @@ package com.elysianarts.f1.visualizer.data.ingestion.service;
 
 import com.elysianarts.f1.visualizer.data.ingestion.client.OpenF1Client;
 import com.elysianarts.f1.visualizer.data.ingestion.config.RedisConfig;
-import com.elysianarts.f1.visualizer.data.ingestion.model.IngestionMode;
+import com.elysianarts.f1.visualizer.data.ingestion.model.constant.IngestionMode;
 import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1CarData;
 import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1LocationData;
 import lombok.RequiredArgsConstructor;

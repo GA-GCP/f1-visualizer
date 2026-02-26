@@ -1,4 +1,4 @@
-package com.elysianarts.f1.visualizer.data.ingestion.model;
+package com.elysianarts.f1.visualizer.data.ingestion.model.constant;
 
 public enum IngestionMode {
     LIVE,       // Polls OpenF1 API (Real-time)

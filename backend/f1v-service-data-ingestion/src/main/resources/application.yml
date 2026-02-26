@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: f1v-service-data-ingestion
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}

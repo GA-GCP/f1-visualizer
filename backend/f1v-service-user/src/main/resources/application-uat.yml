@@ -1,0 +1,11 @@
+spring:
+  cloud:
+    gcp:
+      firestore:
+        project-id: f1-visualizer-488201
+        database-id: f1-visualizer-db-prod
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://integrator-7997251.okta.com/oauth2/default

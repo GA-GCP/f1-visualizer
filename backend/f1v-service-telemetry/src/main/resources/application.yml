@@ -1,6 +1,5 @@
 spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: https://integrator-7997251.okta.com/oauth2/default
+  application:
+    name: f1v-service-telemetry
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}

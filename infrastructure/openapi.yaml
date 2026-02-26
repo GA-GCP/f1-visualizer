@@ -7,66 +7,88 @@ schemes:
   - https
 produces:
   - application/json
+consumes:
+  - application/json
 securityDefinitions:
   okta_jwt:
-    authorizationUrl: ""
+    authorizationUrl: "https://integrator-7997251.okta.com/oauth2/default/v1/authorize"
     flow: "implicit"
     type: "oauth2"
     x-google-issuer: "https://integrator-7997251.okta.com/oauth2/default"
     x-google-jwks_uri: "https://integrator-7997251.okta.com/oauth2/default/v1/keys"
     x-google-audiences: "api.f1visualizer.com"
 paths:
-  /api/v1/analysis/session/{sessionKey}/laps:
+  /v1/telemetry/**:
     get:
-      summary: Get historical lap times
-      operationId: getSessionLaps
-      parameters:
-        - name: sessionKey
-          in: path
-          required: true
-          type: integer
+      summary: Proxy for Telemetry Service
+      operationId: telemetryProxy
       x-google-backend:
-        address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
-        deadline: 15.0
-      responses:
-        '200':
-          description: A list of lap records
-          schema:
-            type: array
-            items:
-              type: object
-        '401':
-          description: Unauthorized
-      security:
-        - okta_jwt: []
-  /api/v1/users/me:
-    get:
-      summary: Get current user profile
-      operationId: getCurrentUser
-      x-google-backend:
-        address: USER_SERVICE_URL_PLACEHOLDER
+        address: TELEMETRY_SERVICE_URL_PLACEHOLDER
         path_translation: APPEND_PATH_TO_ADDRESS
       responses:
         '200':
-          description: User profile
+          description: OK
       security:
         - okta_jwt: []
     options:
-      operationId: corsUsers
+      summary: CORS support
+      operationId: telemetryOptions
+      x-google-backend:
+        address: TELEMETRY_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: OK
+  /v1/analysis/**:
+    get:
+      summary: Proxy for Analysis Service
+      operationId: analysisProxy
+      x-google-backend:
+        address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: OK
+      security:
+        - okta_jwt: []
+    options:
+      summary: CORS support
+      operationId: analysisOptions
+      x-google-backend:
+        address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: OK
+  /v1/user/**:
+    get:
+      summary: Proxy for User Service (Read)
+      operationId: userProxy
       x-google-backend:
         address: USER_SERVICE_URL_PLACEHOLDER
         path_translation: APPEND_PATH_TO_ADDRESS
       responses:
-        '204':
-          description: No Content
-  /api/v1/debug/publish:
-    post:
-      summary: Manually inject telemetry packet
-      operationId: publishDebugTelemetry
-      x-google-backend:
-        address: TELEMETRY_SERVICE_URL_PLACEHOLDER
-      responses:
         '200':
-          description: Packet published
+          description: OK
       security:
         - okta_jwt: []
+    post:
+      summary: Proxy for User Service (Write)
+      operationId: userCreateProxy
+      x-google-backend:
+        address: USER_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: OK
+      security:
+        - okta_jwt: []
+    options:
+      summary: CORS support
+      operationId: userOptions
+      x-google-backend:
+        address: USER_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: OK

@@ -96,10 +96,14 @@ const broadcastTheme = createTheme({
 
 const AppWithRouterAccess: React.FC = () => {
     const navigate = useNavigate();
+
+    // 1. Keep the callback properly typed
     const restoreOriginalUri = async (_oktaAuth: OktaAuth, originalUri: string) => {
         navigate(toRelativeUrl(originalUri || '/', window.location.origin));
     };
+
     return (
+        // 2. Pass it as a prop (Ignore the harmless dev-mode console warning)
         <Security oktaAuth={oktaAuth} restoreOriginalUri={restoreOriginalUri}>
             <AxiosAuthInterceptor />
             <LayoutMain />

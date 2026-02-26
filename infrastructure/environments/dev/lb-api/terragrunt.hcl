@@ -11,5 +11,5 @@ inputs = {
   name_prefix      = "f1v-api-dev"
   domain           = "dev.api.f1visualizer.com"
 
-  api_gateway_fqdn = "https://f1v-gateway-dev-2udaafhz.uc.gateway.dev"
+  api_gateway_fqdn = "f1v-gateway-dev-2udaafhz.uc.gateway.dev"
 }

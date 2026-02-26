@@ -11,12 +11,12 @@ consumes:
   - application/json
 securityDefinitions:
   okta_jwt:
-    authorizationUrl: "https://integrator-7997251.okta.com/oauth2/default/v1/authorize"
+    authorizationUrl: "OKTA_ISSUER_URI_PLACEHOLDER/v1/authorize"
     flow: "implicit"
     type: "oauth2"
-    x-google-issuer: "https://integrator-7997251.okta.com/oauth2/default"
-    x-google-jwks_uri: "https://integrator-7997251.okta.com/oauth2/default/v1/keys"
-    x-google-audiences: "dev.api.f1visualizer.com"
+    x-google-issuer: "OKTA_ISSUER_URI_PLACEHOLDER"
+    x-google-jwks_uri: "OKTA_ISSUER_URI_PLACEHOLDER/v1/keys"
+    x-google-audiences: "OKTA_AUDIENCE_PLACEHOLDER"
 paths:
   /v1/telemetry/**:
     get:
@@ -88,6 +88,27 @@ paths:
       operationId: userOptions
       x-google-backend:
         address: USER_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: OK
+  /v1/ingestion/**:
+    post:
+      summary: Proxy for Data Ingestion Service (Commands)
+      operationId: ingestionCommandProxy
+      x-google-backend:
+        address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: OK
+      security:
+        - okta_jwt: [ ]
+    options:
+      summary: CORS support
+      operationId: ingestionOptions
+      x-google-backend:
+        address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
         path_translation: APPEND_PATH_TO_ADDRESS
       responses:
         '200':

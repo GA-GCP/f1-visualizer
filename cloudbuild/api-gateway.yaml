@@ -18,21 +18,37 @@ steps:
         TELEMETRY_URL=$(gcloud run services describe f1v-service-telemetry-${_ENV} --region=us-central1 --format='value(status.url)')
         DATA_ANALYSIS_URL=$(gcloud run services describe f1v-service-data-analysis-${_ENV} --region=us-central1 --format='value(status.url)')
         USER_URL=$(gcloud run services describe f1v-service-user-${_ENV} --region=us-central1 --format='value(status.url)')
+        DATA_INGESTION_URL=$(gcloud run services describe f1v-service-data-ingestion-${_ENV} --region=us-central1 --format='value(status.url)')
+        
+        # --- NEW: Map Okta Custom Authorization Servers based on Environment ---
+        if [ "${_ENV}" == "dev" ]; then
+          OKTA_ISSUER="https://integrator-7997251.okta.com/oauth2/aus10dj3jwaXRs0xm698"
+          OKTA_AUDIENCE="dev.api.f1visualizer.com"
+        elif [ "${_ENV}" == "uat" ]; then
+          OKTA_ISSUER="https://integrator-7997251.okta.com/oauth2/aus10ie9658X0CXQp698"
+          OKTA_AUDIENCE="uat.api.f1visualizer.com"
+        elif [ "${_ENV}" == "prod" ]; then
+          OKTA_ISSUER="https://integrator-7997251.okta.com/oauth2/aus10ieis44U2jKgM698"
+          OKTA_AUDIENCE="api.f1visualizer.com"
+        else
+          echo "Unknown environment: ${_ENV}"
+          exit 1
+        fi
         
         echo "Environment: ${_ENV}"
-        # FIX: Use $$ for shell variables so Cloud Build ignores them
-        echo "Detected Telemetry URL: $$TELEMETRY_URL"
-        echo "Detected Data Analysis URL: $$DATA_ANALYSIS_URL"
-        echo "Detected User URL: $$USER_URL"
+        echo "Configuring Gateway for Audience: $$OKTA_AUDIENCE"
         
-        # 2. Inject URLs into OpenAPI Spec (Check your path here!)
-        # Assuming you run this from root, the path should likely be 'infrastructure/openapi.yaml'
-        # If you are getting "No such file" errors next, remove the "../" prefix.
+        # 2. Inject URLs into OpenAPI Spec
         sed -i "s|TELEMETRY_SERVICE_URL_PLACEHOLDER|$$TELEMETRY_URL|g" infrastructure/openapi.yaml
         sed -i "s|DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER|$$DATA_ANALYSIS_URL|g" infrastructure/openapi.yaml
         sed -i "s|USER_SERVICE_URL_PLACEHOLDER|$$USER_URL|g" infrastructure/openapi.yaml
+        sed -i "s|DATA_INGESTION_SERVICE_URL_PLACEHOLDER|$$DATA_INGESTION_URL|g" infrastructure/openapi.yaml
         
-        # 3. Deploy API Gateway Config (Naming config with env and SHA)
+        # 3. Inject Okta Identity values into OpenAPI Spec
+        sed -i "s|OKTA_ISSUER_URI_PLACEHOLDER|$$OKTA_ISSUER|g" infrastructure/openapi.yaml
+        sed -i "s|OKTA_AUDIENCE_PLACEHOLDER|$$OKTA_AUDIENCE|g" infrastructure/openapi.yaml
+        
+        # 4. Deploy API Gateway Config
         gcloud api-gateway api-configs create f1v-config-${_ENV}-${_SHORT_SHA} \
           --api=f1v-gateway-${_ENV} \
           --openapi-spec=infrastructure/openapi.yaml \

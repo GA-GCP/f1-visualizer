@@ -4,5 +4,3 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: https://example-okta-org.okta.com/oauth2/default
-server:
-  port: 8080

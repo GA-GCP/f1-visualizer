@@ -23,6 +23,8 @@ credentials.txt
 **/.terraform/
 .terragrunt-cache/
 
+.claude
+
 # State files (Must be remote!)
 *.tfstate
 *.tfstate.*

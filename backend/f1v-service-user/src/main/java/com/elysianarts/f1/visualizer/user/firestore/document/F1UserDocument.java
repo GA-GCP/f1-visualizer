@@ -1,12 +1,9 @@
 package com.elysianarts.f1.visualizer.user.firestore.document;
 
-import com.google.cloud.firestore.annotation.DocumentId;
-import com.google.cloud.spring.data.firestore.Document;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.time.Instant;
 import java.util.List;
 
@@ -14,12 +11,14 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collectionName = "users")
+// Removed @Document, @DocumentId (Native client doesn't use them)
 public class F1UserDocument {
-    @DocumentId
+
+    // We will handle the ID manually in the Repository layer
     private String oktaSubId;
 
     private String email;
+    // Note: Native client handles java.time.Instant conversion automatically
     private Instant createdAt;
     private UserPreferences preferences;
 

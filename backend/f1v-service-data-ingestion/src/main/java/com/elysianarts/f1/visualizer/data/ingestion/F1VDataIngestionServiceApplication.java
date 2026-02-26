@@ -7,7 +7,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableScheduling
 @SpringBootApplication
-@ComponentScan(basePackages = {"com.elysianarts.f1.visualizer.data.ingestion", "com.elysianarts.f1.visualizer.data.ingestion.config"})
+@ComponentScan(basePackages = {"com.elysianarts.f1.visualizer.data.ingestion", "com.elysianarts.f1.visualizer.data.ingestion.config", "com.elysianarts.f1.visualizer.commons"})
 public class F1VDataIngestionServiceApplication {
     public static void main(String[] args) {
         SpringApplication.run(F1VDataIngestionServiceApplication.class, args);

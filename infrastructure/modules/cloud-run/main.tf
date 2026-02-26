@@ -4,6 +4,8 @@ resource "google_cloud_run_v2_service" "service" {
   project  = var.project_id
   ingress  = "INGRESS_TRAFFIC_ALL"
 
+  deletion_protection = var.deletion_protection
+
   template {
     # Scaling settings
     scaling {
@@ -19,6 +21,8 @@ resource "google_cloud_run_v2_service" "service" {
         egress    = "PRIVATE_RANGES_ONLY"
       }
     }
+
+    service_account = var.service_account_email
 
     containers {
       image = var.image_url

@@ -6,10 +6,10 @@ import { OktaAuth, toRelativeUrl } from '@okta/okta-auth-js';
 import LayoutMain from './components/layout/LayoutMain';
 import { AxiosAuthInterceptor } from './auth/AuthHandler';
 
-// --- OKTA CONFIGURATION (Keep as is) ---
+// --- DYNAMIC OKTA CONFIGURATION ---
 const oktaAuth = new OktaAuth({
-    issuer: 'YOUR_TENANT_HERE',
-    clientId: 'YOUR_CLIENT_ID_HERE',
+    issuer: import.meta.env.VITE_OKTA_ISSUER,
+    clientId: import.meta.env.VITE_OKTA_CLIENT_ID,
     redirectUri: window.location.origin + '/login/callback',
     scopes: ['openid', 'profile', 'email']
 });
@@ -77,21 +77,26 @@ const broadcastTheme = createTheme({
                     fontWeight: 700,
                     textTransform: 'uppercase',
                     border: '1px solid rgba(255,255,255,0.2)',
-                },
-                filledSuccess: {
-                    backgroundColor: 'rgba(0, 255, 0, 0.1)',
-                    color: '#00ff00',
-                    border: '1px solid #00ff00',
-                    boxShadow: '0 0 10px rgba(0, 255, 0, 0.2)', // Neon Glow
                 }
-            }
+            },
+            variants: [
+                {
+                    props: { variant: 'filled', color: 'success' },
+                    style: {
+                        backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                        color: '#00ff00',
+                        border: '1px solid #00ff00',
+                        boxShadow: '0 0 10px rgba(0, 255, 0, 0.2)', // Neon Glow
+                    }
+                }
+            ]
         }
     }
 });
 
 const AppWithRouterAccess: React.FC = () => {
     const navigate = useNavigate();
-    const restoreOriginalUri = async (_oktaAuth: any, originalUri: string) => {
+    const restoreOriginalUri = async (_oktaAuth: OktaAuth, originalUri: string) => {
         navigate(toRelativeUrl(originalUri || '/', window.location.origin));
     };
     return (

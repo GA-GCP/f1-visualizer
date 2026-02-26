@@ -1,0 +1,39 @@
+serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com'
+
+substitutions:
+  _ENV: 'dev'
+  _SHORT_SHA: 'manual-build'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  # 1. HARD STOP: Run Tests
+  - name: 'maven:3.9-eclipse-temurin-25'
+    entrypoint: 'mvn'
+    args: ['clean', 'test']
+    dir: 'backend'
+
+  # 2. Build Docker Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'MODULE=f1v-service-data-analysis'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/data-analysis:${_SHORT_SHA}'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/data-analysis:latest'
+      - '-f'
+      - 'backend/Dockerfile'
+      - 'backend'
+
+  # 3. Push Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/data-analysis'
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/data-analysis:${_SHORT_SHA}'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/data-analysis:latest'

@@ -1,24 +1,32 @@
+serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com'
+
+substitutions:
+  _ENV: 'dev'
+  _SHORT_SHA: 'manual-build'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
 steps:
-  # 1. HARD STOP: Run All Backend Tests
-  # Using the full JDK image to ensure tests run in the correct environment
+  # 1. HARD STOP: Run Tests
   - name: 'maven:3.9-eclipse-temurin-25'
     entrypoint: 'mvn'
     args: ['clean', 'test']
     dir: 'backend'
 
-  # 2. Build Telemetry Docker Image (Using Layered Jar Strategy)
+  # 2. Build Docker Image
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '--build-arg'
       - 'MODULE=f1v-service-telemetry'
       - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:$SHORT_SHA'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:${_SHORT_SHA}'
       - '-t'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:latest'
       - '-f'
       - 'backend/Dockerfile'
-      - 'backend' # Sets build context to the backend root so parent POMs are visible
+      - 'backend'
 
   # 3. Push Image
   - name: 'gcr.io/cloud-builders/docker'
@@ -27,5 +35,5 @@ steps:
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry'
 
 images:
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:$SHORT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:${_SHORT_SHA}'
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:latest'

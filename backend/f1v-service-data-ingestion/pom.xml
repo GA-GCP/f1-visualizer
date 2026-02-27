@@ -26,6 +26,10 @@
         </dependency>
         <dependency>
             <groupId>com.elysianarts.f1.visualizer.commons</groupId>
+            <artifactId>f1v-commons-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.elysianarts.f1.visualizer.commons</groupId>
             <artifactId>f1v-commons-gcp-memorystore-redis</artifactId>
         </dependency>
         <dependency>
@@ -61,6 +65,21 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

@@ -45,6 +45,7 @@
         <spring-security-test.version>7.0.3</spring-security-test.version>
         <spring-data-commons.version>4.0.3</spring-data-commons.version>
         <spring-tx.version>7.0.5</spring-tx.version>
+        <junit-jupiter-api.version>6.0.3</junit-jupiter-api.version>
         <lombok.version>1.18.42</lombok.version>
         <eclipse-paho-mqtt3-client.version>1.2.5</eclipse-paho-mqtt3-client.version>
         <io-reactor-test.version>3.8.3</io-reactor-test.version>
@@ -170,6 +171,12 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-webmvc-test</artifactId>
                 <version>${spring-boot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-api</artifactId>
+                <version>${junit-jupiter-api.version}</version>
+                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>

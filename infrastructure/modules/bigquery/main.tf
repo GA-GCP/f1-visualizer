@@ -60,3 +60,38 @@ resource "google_bigquery_table" "telemetry" {
 ]
 EOF
 }
+
+# 3. DRIVERS TABLE (Reference Data)
+resource "google_bigquery_table" "drivers" {
+  dataset_id = google_bigquery_dataset.f1_dataset.dataset_id
+  table_id   = "drivers"
+  project    = var.project_id
+
+  schema = <<EOF
+[
+  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
+  { "name": "broadcast_name", "type": "STRING", "mode": "NULLABLE" },
+  { "name": "team_name", "type": "STRING", "mode": "NULLABLE" },
+  { "name": "team_colour", "type": "STRING", "mode": "NULLABLE" },
+  { "name": "country_code", "type": "STRING", "mode": "NULLABLE" }
+]
+EOF
+}
+
+# 4. SESSIONS TABLE (Reference Data)
+resource "google_bigquery_table" "sessions" {
+  dataset_id = google_bigquery_dataset.f1_dataset.dataset_id
+  table_id   = "sessions"
+  project    = var.project_id
+
+  schema = <<EOF
+[
+  { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
+  { "name": "session_name", "type": "STRING", "mode": "NULLABLE" },
+  { "name": "meeting_key", "type": "INTEGER", "mode": "NULLABLE" },
+  { "name": "meeting_name", "type": "STRING", "mode": "NULLABLE" },
+  { "name": "year", "type": "INTEGER", "mode": "NULLABLE" },
+  { "name": "country_name", "type": "STRING", "mode": "NULLABLE" }
+]
+EOF
+}

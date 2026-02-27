@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, Container, Button, IconButton, Tooltip } from '@mui/material';
 import { Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
 import SpeedIcon from '@mui/icons-material/Speed';
 import StorageIcon from '@mui/icons-material/Storage';
 import LogoutIcon from '@mui/icons-material/Logout';
-import { useOktaAuth } from '@okta/okta-react'; // NEW: Import Okta hook
+import SettingsIcon from '@mui/icons-material/Settings';
+import { useOktaAuth } from '@okta/okta-react';
+import UserSettingsModal from './UserSettingsModal';
 
 const LayoutMain: React.FC = () => {
     const location = useLocation();
     const { oktaAuth } = useOktaAuth(); // NEW: Destructure the auth instance
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     const handleLogout = async () => {
         await oktaAuth.signOut();
@@ -39,6 +42,13 @@ const LayoutMain: React.FC = () => {
                         <NavButton to="/" label="Live Console" icon={<SpeedIcon />} currentPath={location.pathname} />
                         <NavButton to="/historical" label="Data Vault" icon={<StorageIcon />} currentPath={location.pathname} />
 
+                        {/* NEW: Settings Button */}
+                        <Tooltip title="User Preferences">
+                            <IconButton onClick={() => setIsSettingsOpen(true)} sx={{ ml: 2, color: 'text.secondary', '&:hover': { color: 'primary.main' } }}>
+                                <SettingsIcon />
+                            </IconButton>
+                        </Tooltip>
+
                         {/* NEW: Logout Button */}
                         <Tooltip title="Secure Logout">
                             <IconButton
@@ -51,6 +61,9 @@ const LayoutMain: React.FC = () => {
                     </Toolbar>
                 </Container>
             </AppBar>
+
+            {/* NEW: Modal Component */}
+            <UserSettingsModal open={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
             {/* 2. Content Area */}
             <Container maxWidth="xl" sx={{ flexGrow: 1, py: 4, position: 'relative', zIndex: 1 }}>

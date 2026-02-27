@@ -35,11 +35,9 @@ class ReferenceDataControllerTest {
     @MockitoBean
     private ReferenceDataService referenceDataService;
 
-    // Required to satisfy the @EnableWebSecurity
     @MockitoBean
     private JwtDecoder jwtDecoder;
 
-    // Required to prevent ApplicationContext failure from GCP auto-configuration
     @MockitoBean
     private BigQuery bigQuery;
 

@@ -4,6 +4,7 @@ import com.elysianarts.f1.visualizer.data.ingestion.model.constant.IngestionMode
 import com.elysianarts.f1.visualizer.data.ingestion.model.request.IngestionCommandRequest;
 import com.elysianarts.f1.visualizer.data.ingestion.service.HistoricalDataLoader;
 import com.elysianarts.f1.visualizer.data.ingestion.service.IngestionWorker;
+import com.elysianarts.f1.visualizer.data.ingestion.service.ReplayEngine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -14,35 +15,48 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/ingestion")
 @RequiredArgsConstructor
 public class IngestionController {
-
     private final IngestionWorker ingestionWorker;
     private final HistoricalDataLoader historicalDataLoader;
+    private final ReplayEngine replayEngine;
 
     @PostMapping("/command")
     public ResponseEntity<String> issueIngestionCommand(@RequestBody IngestionCommandRequest request) {
         log.info("Received Ingestion Command: Mode={}, SessionKey={}", request.getMode(), request.getSessionKey());
-
         if (request.getSessionKey() == null) {
             return ResponseEntity.badRequest().body("sessionKey is required.");
         }
-
         if (request.getMode() == IngestionMode.SIMULATION) {
             ingestionWorker.startSimulation(request.getSessionKey());
             return ResponseEntity.ok("Simulation initiated for session: " + request.getSessionKey());
         }
-
         if (request.getMode() == IngestionMode.LIVE) {
             ingestionWorker.startLiveStream(request.getSessionKey());
             return ResponseEntity.ok("Live stream connection initiated for session: " + request.getSessionKey());
         }
-
         return ResponseEntity.badRequest().body("Invalid ingestion mode.");
     }
 
     @PostMapping("/load-historical")
     public ResponseEntity<String> loadHistoricalData(@RequestParam Long sessionKey) {
-        // Kicks off the @Async batch job
         historicalDataLoader.loadSessionIntoBigQuery(sessionKey);
         return ResponseEntity.ok("Batch ingestion started in the background for session: " + sessionKey);
+    }
+
+    @PostMapping("/playback/pause")
+    public ResponseEntity<String> pauseSimulation() {
+        replayEngine.pause();
+        return ResponseEntity.ok("Simulation paused.");
+    }
+
+    @PostMapping("/playback/play")
+    public ResponseEntity<String> playSimulation() {
+        replayEngine.play();
+        return ResponseEntity.ok("Simulation playing.");
+    }
+
+    @PostMapping("/playback/seek")
+    public ResponseEntity<String> seekSimulation(@RequestParam int percentage) {
+        replayEngine.seek(percentage);
+        return ResponseEntity.ok("Simulation seeked to " + percentage + "%");
     }
 }

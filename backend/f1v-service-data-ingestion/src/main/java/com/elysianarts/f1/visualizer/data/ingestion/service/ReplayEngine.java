@@ -8,10 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.OffsetDateTime;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
 
 @Slf4j
 @Service
@@ -22,12 +20,14 @@ public class ReplayEngine {
     private final RedisTemplate<String, Object> redisTemplate;
 
     // In-Memory Buffer for the active simulation
-    private final Queue<OpenF1CarData> replayBuffer = new LinkedList<>();
+    private final List<OpenF1CarData> replayBuffer = new ArrayList<>();
     private boolean isRunning = false;
+    private int currentIndex = 0;
 
     public void loadSession(long sessionKey) {
         this.isRunning = false;
         this.replayBuffer.clear();
+        this.currentIndex = 0;
 
         List<OpenF1CarData> data = historicalRepository.fetchSessionTelemetry(sessionKey);
         this.replayBuffer.addAll(data);
@@ -36,28 +36,47 @@ public class ReplayEngine {
         log.info("Simulation loaded for session {}. Buffer size: {}", sessionKey, replayBuffer.size());
     }
 
+    public void pause() {
+        this.isRunning = false;
+        log.info("Simulation paused at index {}", currentIndex);
+    }
+
+    public void play() {
+        if (!replayBuffer.isEmpty() && currentIndex < replayBuffer.size()) {
+            this.isRunning = true;
+            log.info("Simulation playing from index {}", currentIndex);
+        }
+    }
+
+    public void seek(int percentage) {
+        if (replayBuffer.isEmpty()) return;
+
+        // Ensure percentage is between 0 and 100
+        int safePercentage = Math.max(0, Math.min(100, percentage));
+        this.currentIndex = (int) ((safePercentage / 100.0) * (replayBuffer.size() - 1));
+        log.info("Simulation seeked to {}% (Index: {})", safePercentage, currentIndex);
+    }
+
     /**
-     * Called by the main loop. Pops the next set of packets "due" for the current timeframe.
+     * Called by the main loop. Pushes the next set of packets.
      */
     public void tick() {
-        if (!isRunning || replayBuffer.isEmpty()) return;
+        if (!isRunning || replayBuffer.isEmpty() || currentIndex >= replayBuffer.size()) return;
 
-        // In a real sophisticated engine, we would check timestamps.
-        // For V1.0 MVP, we "burst" 5 packets per tick (approx realtime speed at 4Hz)
+        // V1.0 MVP: "burst" 5 packets per tick (approx realtime speed at 4Hz)
         int burstRate = 5;
 
         for (int i = 0; i < burstRate; i++) {
-            OpenF1CarData packet = replayBuffer.poll();
-            if (packet == null) break;
+            if (currentIndex >= replayBuffer.size()) {
+                log.info("Simulation finished. Pausing.");
+                this.isRunning = false;
+                break;
+            }
 
+            OpenF1CarData packet = replayBuffer.get(currentIndex);
             // Publish to the SAME topic the frontend listens to
             redisTemplate.convertAndSend(RedisConfig.TELEMETRY_TOPIC, packet);
-        }
-
-        if (replayBuffer.isEmpty()) {
-            log.info("Simulation finished. Restarting loop...");
-            // Optional: loop indefinitely?
-            // isRunning = false;
+            currentIndex++;
         }
     }
 }

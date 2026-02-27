@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import type {DriverProfile} from '@/data/mockDrivers.ts';
+import type { DriverProfile } from '@/api/referenceApi.ts';
 
 interface StatComparisonBarProps {
     label: string;

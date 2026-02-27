@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Button, Typography, ToggleButton, ToggleButtonGroup, CircularProgress, Autocomplete, TextField } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SensorsIcon from '@mui/icons-material/Sensors';
 import HistoryIcon from '@mui/icons-material/History';
 import { sendIngestionCommand } from '@/api/ingestionApi.ts';
-import { MOCK_SESSIONS, type RaceSession } from '@/data/mockSessions.ts';
+import { fetchSessions, type RaceSession } from '@/api/referenceApi.ts';
 
 interface SessionControlPanelProps {
     onStreamStarted: (sessionKey: number, mode: 'LIVE' | 'SIMULATION') => void;
@@ -12,16 +12,24 @@ interface SessionControlPanelProps {
 
 const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStarted }) => {
     const [mode, setMode] = useState<'LIVE' | 'SIMULATION'>('SIMULATION');
-    const [selectedSession, setSelectedSession] = useState<RaceSession | null>(MOCK_SESSIONS[0]);
+    const [sessions, setSessions] = useState<RaceSession[]>([]);
+    const [selectedSession, setSelectedSession] = useState<RaceSession | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        fetchSessions().then(data => {
+            setSessions(data);
+            if (data.length > 0) setSelectedSession(data[0]);
+        });
+    }, []);
 
     const handleStart = async () => {
         if (!selectedSession) return;
 
         setIsLoading(true);
         try {
-            await sendIngestionCommand({ mode, sessionKey: selectedSession.session_key });
-            onStreamStarted(selectedSession.session_key, mode);
+            await sendIngestionCommand({ mode, sessionKey: selectedSession.sessionKey });
+            onStreamStarted(selectedSession.sessionKey, mode);
         } catch (error) {
             alert("Failed to connect to ingestion engine. Check console for details.");
         } finally {
@@ -51,14 +59,14 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
             </ToggleButtonGroup>
 
             <Autocomplete
-                options={MOCK_SESSIONS}
-                getOptionLabel={(option) => `${option.year} ${option.meeting_name} - ${option.session_name}`}
+                options={sessions}
+                getOptionLabel={(option) => `${option.year} ${option.meetingName} - ${option.sessionName}`}
                 value={selectedSession}
                 onChange={(_, newValue) => setSelectedSession(newValue)}
                 renderOption={(props, option) => (
-                    <Box component="li" {...props} key={option.session_key}>
-                        <Typography variant="body1">{option.year} {option.meeting_name}</Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>[{option.session_name}]</Typography>
+                    <Box component="li" {...props} key={option.sessionKey}>
+                        <Typography variant="body1">{option.year} {option.meetingName}</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>[{option.sessionName}]</Typography>
                     </Box>
                 )}
                 renderInput={(params) => (

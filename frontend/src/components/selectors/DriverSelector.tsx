@@ -1,17 +1,18 @@
 import React from 'react';
 import { Autocomplete, TextField, Box, Typography } from '@mui/material';
-import { MOCK_DRIVERS, type DriverProfile } from '../../data/mockDrivers';
+import type { DriverProfile } from '@/api/referenceApi.ts';
 
 interface DriverSelectorProps {
     label: string;
+    options: DriverProfile[];
     value: DriverProfile | null;
     onChange: (driver: DriverProfile | null) => void;
 }
 
-const DriverSelector: React.FC<DriverSelectorProps> = ({ label, value, onChange }) => {
+const DriverSelector: React.FC<DriverSelectorProps> = ({ label, options, value, onChange }) => {
     return (
         <Autocomplete
-            options={MOCK_DRIVERS}
+            options={options}
             getOptionLabel={(option) => `${option.code} - ${option.name}`}
             value={value}
             onChange={(_, newValue) => onChange(newValue)}

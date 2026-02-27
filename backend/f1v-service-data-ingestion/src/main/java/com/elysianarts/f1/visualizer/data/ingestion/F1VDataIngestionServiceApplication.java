@@ -8,7 +8,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableAsync
 @EnableScheduling
-@SpringBootApplication
+//@SpringBootApplication
+@SpringBootApplication(excludeName = {
+        "org.springframework.cloud.autoconfigure.LifecycleMvcEndpointAutoConfiguration",
+        "org.springframework.cloud.autoconfigure.RefreshAutoConfiguration"
+})
 @ComponentScan(basePackages = {"com.elysianarts.f1.visualizer.data.ingestion", "com.elysianarts.f1.visualizer.data.ingestion.config", "com.elysianarts.f1.visualizer.commons"})
 public class F1VDataIngestionServiceApplication {
     public static void main(String[] args) {

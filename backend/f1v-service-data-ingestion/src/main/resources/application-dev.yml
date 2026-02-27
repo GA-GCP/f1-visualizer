@@ -1,4 +1,8 @@
 spring:
+  cloud:
+    gcp:
+      bigquery:
+        dataset-name: f1_dataset
   data:
     redis:
       host: ${SPRING_REDIS_HOST}

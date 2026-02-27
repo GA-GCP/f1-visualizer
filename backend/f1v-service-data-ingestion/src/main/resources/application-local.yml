@@ -1,6 +1,10 @@
 server:
   port: 8081
 spring:
+  cloud:
+    gcp:
+      bigquery:
+        dataset-name: f1_dataset
   security:
     oauth2:
       resourceserver:

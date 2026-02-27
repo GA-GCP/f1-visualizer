@@ -1,5 +1,6 @@
 package com.elysianarts.f1.visualizer.data.ingestion.service;
 
+import com.elysianarts.f1.visualizer.data.ingestion.config.SecretManagerConfig;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -17,19 +18,13 @@ import jakarta.annotation.PostConstruct;
 @Slf4j
 @Service
 public class OpenF1AuthService {
-
-    // Native integration pulls directly from GCP Secret Manager!
-    @Value("${sm://f1v-api-openf1-login-user-email}")
-    private String username;
-
-    @Value("${sm://f1v-api-openf1-login-user-password}")
-    private String password;
-
     private final WebClient webClient;
+    private final SecretManagerConfig.OpenF1Credentials credentials; // NEW: Hold our injected credentials
     private String currentAccessToken;
 
-    public OpenF1AuthService(WebClient.Builder webClientBuilder) {
+    public OpenF1AuthService(WebClient.Builder webClientBuilder, SecretManagerConfig.OpenF1Credentials credentials) {
         this.webClient = webClientBuilder.baseUrl("https://api.openf1.org").build();
+        this.credentials = credentials;
     }
 
     // Run on startup, then every 50 minutes (3,000,000 ms)
@@ -39,8 +34,9 @@ public class OpenF1AuthService {
         log.info("🔐 Authenticating with OpenF1 API (Sponsorship Tier)...");
 
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
-        formData.add("username", username);
-        formData.add("password", password);
+        // NEW: Pull the username and password from the credentials record
+        formData.add("username", credentials.username());
+        formData.add("password", credentials.password());
 
         try {
             AuthResponse response = webClient.post()

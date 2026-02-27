@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -16,19 +15,16 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // 1. ROUTE ANALYSIS TRAFFIC TO PORT 8082
-      '/api/v1/analysis': {
-        target: 'http://localhost:8082',
-        changeOrigin: true,
-        secure: false,
-      },
-      // 2. DEFAULT API TRAFFIC TO PORT 8080
-      '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        secure: false,
-      },
-      // 3. WEBSOCKETS TO PORT 8080
+      // 1. TELEMETRY (Port 8080)
+      '/api/v1/debug': { target: 'http://localhost:8080', changeOrigin: true, secure: false },
+      // 2. INGESTION (Port 8081)
+      '/api/v1/ingestion': { target: 'http://localhost:8081', changeOrigin: true, secure: false },
+      // 3. ANALYSIS (Port 8082)
+      '/api/v1/analysis': { target: 'http://localhost:8082', changeOrigin: true, secure: false },
+      // 4. USER PROFILES (Port 8083)
+      '/api/v1/users': { target: 'http://localhost:8083', changeOrigin: true, secure: false },
+
+      // WEBSOCKETS (Port 8080)
       '/ws': {
         target: 'http://localhost:8080',
         ws: true,

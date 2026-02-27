@@ -25,10 +25,18 @@ class LiveStreamServiceTest {
     @Mock
     private RedisTemplate<String, Object> redisTemplate;
 
+    @Mock
+    private OpenF1AuthService authService; // <-- NEW: Mock the injected dependency
+
     @Test
     void connect_SetsUpCallback_AndParsesTelemetryCorrectly() throws Exception {
         JsonMapper jsonMapper = JsonMapper.builder().build();
-        LiveStreamService liveStreamService = new LiveStreamService(redisTemplate, jsonMapper);
+
+        // 1. Mock the auth token retrieval
+        when(authService.getAccessToken()).thenReturn("mock-sponsor-token");
+
+        // 2. Inject authService into the constructor
+        LiveStreamService liveStreamService = new LiveStreamService(redisTemplate, jsonMapper, authService);
         ReflectionTestUtils.setField(liveStreamService, "openF1MqttUrl", "tcp://localhost:1883");
 
         // Intercept the MqttClient creation
@@ -40,6 +48,9 @@ class LiveStreamServiceTest {
             // Verify Client was created
             assertEquals(1, mockedClient.constructed().size());
             MqttClient client = mockedClient.constructed().get(0);
+
+            // Verify it grabbed the token for the MQTT options
+            verify(authService, times(1)).getAccessToken();
 
             // Capture the anonymous callback
             ArgumentCaptor<MqttCallback> callbackCaptor = ArgumentCaptor.forClass(MqttCallback.class);
@@ -61,6 +72,10 @@ class LiveStreamServiceTest {
             assertEquals(1, capturedData.getDriverNumber());
             assertEquals(320, capturedData.getSpeed());
             assertEquals(8, capturedData.getGear());
+
+            // --- NEW: Test that a connection drop triggers a token refresh ---
+            callback.connectionLost(new RuntimeException("Test Disconnect"));
+            verify(authService, times(1)).refreshToken();
         }
     }
 }

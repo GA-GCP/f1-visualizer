@@ -19,7 +19,8 @@ describe('SessionControlPanel', () => {
         render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
 
         expect(screen.getByText('RACE INITIALIZATION')).toBeInTheDocument();
-        expect(screen.getByLabelText(/Session Key/i)).toHaveValue('9165');
+        // UPDATED: Check for the new Autocomplete label and default readable value
+        expect(screen.getByLabelText(/Select Grand Prix/i)).toHaveValue('2023 Singapore Grand Prix - Race');
         // Check that the button text defaults to SIMULATION
         expect(screen.getByRole('button', { name: /START SIMULATION STREAM/i })).toBeInTheDocument();
     });
@@ -41,18 +42,14 @@ describe('SessionControlPanel', () => {
 
         render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
 
-        // Change the session key input
-        const input = screen.getByLabelText(/Session Key/i);
-        fireEvent.change(input, { target: { value: '1234' } });
-
-        // Click Start
+        // Click Start (using the default selected Singapore Grand Prix which maps to key 9165)
         const startButton = screen.getByRole('button', { name: /START SIMULATION STREAM/i });
         fireEvent.click(startButton);
 
         // Assert 1: The API was called with the correct payload
         expect(sendIngestionCommand).toHaveBeenCalledWith({
             mode: 'SIMULATION',
-            sessionKey: 1234
+            sessionKey: 9165
         });
 
         // Assert 2: The UI shows the loading state temporarily
@@ -60,7 +57,7 @@ describe('SessionControlPanel', () => {
 
         // Assert 3: Wait for the async operation to finish and verify the parent callback was fired
         await waitFor(() => {
-            expect(mockOnStreamStarted).toHaveBeenCalledWith(1234, 'SIMULATION');
+            expect(mockOnStreamStarted).toHaveBeenCalledWith(9165, 'SIMULATION');
         });
     });
 

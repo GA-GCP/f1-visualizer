@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Box, Button, TextField, Typography, ToggleButton, ToggleButtonGroup, CircularProgress } from '@mui/material';
+import { Box, Button, Typography, ToggleButton, ToggleButtonGroup, CircularProgress, Autocomplete, TextField } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SensorsIcon from '@mui/icons-material/Sensors';
 import HistoryIcon from '@mui/icons-material/History';
 import { sendIngestionCommand } from '@/api/ingestionApi.ts';
+import { MOCK_SESSIONS, type RaceSession } from '@/data/mockSessions.ts';
 
 interface SessionControlPanelProps {
     onStreamStarted: (sessionKey: number, mode: 'LIVE' | 'SIMULATION') => void;
@@ -11,17 +12,16 @@ interface SessionControlPanelProps {
 
 const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStarted }) => {
     const [mode, setMode] = useState<'LIVE' | 'SIMULATION'>('SIMULATION');
-    const [sessionKey, setSessionKey] = useState<string>('9165'); // Default to Singapore 2023 for testing
+    const [selectedSession, setSelectedSession] = useState<RaceSession | null>(MOCK_SESSIONS[0]);
     const [isLoading, setIsLoading] = useState(false);
 
     const handleStart = async () => {
-        const parsedKey = parseInt(sessionKey, 10);
-        if (isNaN(parsedKey)) return;
+        if (!selectedSession) return;
 
         setIsLoading(true);
         try {
-            await sendIngestionCommand({ mode, sessionKey: parsedKey });
-            onStreamStarted(parsedKey, mode);
+            await sendIngestionCommand({ mode, sessionKey: selectedSession.session_key });
+            onStreamStarted(selectedSession.session_key, mode);
         } catch (error) {
             alert("Failed to connect to ingestion engine. Check console for details.");
         } finally {
@@ -50,17 +50,27 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                 </ToggleButton>
             </ToggleButtonGroup>
 
-            <TextField
-                label="Session Key"
-                variant="outlined"
-                value={sessionKey}
-                onChange={(e) => setSessionKey(e.target.value)}
-                helperText="e.g., 9165 (Singapore 2023)"
-                sx={{
-                    '& .MuiOutlinedInput-root': {
-                        bgcolor: '#121212',
-                    }
-                }}
+            <Autocomplete
+                options={MOCK_SESSIONS}
+                getOptionLabel={(option) => `${option.year} ${option.meeting_name} - ${option.session_name}`}
+                value={selectedSession}
+                onChange={(_, newValue) => setSelectedSession(newValue)}
+                renderOption={(props, option) => (
+                    <Box component="li" {...props} key={option.session_key}>
+                        <Typography variant="body1">{option.year} {option.meeting_name}</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>[{option.session_name}]</Typography>
+                    </Box>
+                )}
+                renderInput={(params) => (
+                    <TextField
+                        {...params}
+                        label="Select Grand Prix"
+                        variant="outlined"
+                        sx={{
+                            '& .MuiOutlinedInput-root': { bgcolor: '#121212' }
+                        }}
+                    />
+                )}
             />
 
             <Button
@@ -69,7 +79,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                 size="large"
                 startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
                 onClick={handleStart}
-                disabled={isLoading || !sessionKey}
+                disabled={isLoading || !selectedSession}
                 sx={{ fontWeight: 'bold', py: 1.5 }}
             >
                 {isLoading ? 'INITIALIZING...' : `START ${mode} STREAM`}

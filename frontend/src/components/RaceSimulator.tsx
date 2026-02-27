@@ -3,6 +3,7 @@ import { Box, Typography, Paper, Grid, Chip } from '@mui/material';
 import { useTelemetry } from '../hooks/useTelemetry';
 import { useLocation } from '../hooks/useLocation';
 import CircuitTrace from './CircuitTrace';
+import MediaController from './MediaController';
 import DriverSelector from './selectors/DriverSelector';
 import SessionControlPanel from './selectors/SessionControlPanel';
 import { MOCK_DRIVERS, type DriverProfile } from '../data/mockDrivers';
@@ -66,6 +67,11 @@ const RaceSimulator: React.FC = () => {
                         <Paper sx={{ bgcolor: '#1e1e1e', border: '1px solid #333' }}>
                             <SessionControlPanel onStreamStarted={handleStreamStarted} />
                         </Paper>
+
+                        {/* NEW: 1.5 Media Controller (Only show if in SIMULATION mode) */}
+                        {activeSession?.mode === 'SIMULATION' && (
+                            <MediaController />
+                        )}
 
                         {/* 2. Driver Selection */}
                         <Paper sx={{ p: 2, bgcolor: '#1e1e1e' }}>

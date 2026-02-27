@@ -1,8 +1,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SessionControlPanel from '../selectors/SessionControlPanel';
-import { sendIngestionCommand } from '../../api/ingestionApi';
-import { fetchSessions } from '../../api/referenceApi';
+import { sendIngestionCommand } from '@/api/ingestionApi.ts';
+import { fetchSessions } from '@/api/referenceApi.ts';
 
 // 1. Mock BOTH API modules
 vi.mock('../../api/ingestionApi', () => ({

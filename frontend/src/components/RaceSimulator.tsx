@@ -8,26 +8,29 @@ import SessionControlPanel from './selectors/SessionControlPanel';
 import MediaController from './MediaController';
 import { fetchDrivers, type DriverProfile } from '../api/referenceApi';
 import type { TelemetryPacket, LocationPacket } from '../types/telemetry';
+import { useUser } from '../context/UserContext';
 
 const RaceSimulator: React.FC = () => {
-    // Dynamic Reference Data
     const [drivers, setDrivers] = useState<DriverProfile[]>([]);
-
-    // State for Dynamic Inputs
     const [selectedDriver, setSelectedDriver] = useState<DriverProfile | null>(null);
     const [activeSession, setActiveSession] = useState<{ key: number, mode: string } | null>(null);
-
-    // Data State
     const [lastTelemetry, setLastTelemetry] = useState<TelemetryPacket | null>(null);
     const [lastLocation, setLastLocation] = useState<LocationPacket | null>(null);
 
-    // Fetch Master Drivers List on Mount
+    // 2. Consume the User Context
+    const { userProfile } = useUser();
+
     useEffect(() => {
         fetchDrivers().then(data => {
             setDrivers(data);
-            if (data.length > 0) setSelectedDriver(data[0]);
+            if (data.length > 0) {
+                // Determine the default driver using User Preferences!
+                const favCode = userProfile?.preferences?.favoriteDriver;
+                const defaultDriver = data.find(d => d.code === favCode) || data[0];
+                setSelectedDriver(defaultDriver);
+            }
         });
-    }, []);
+    }, [userProfile]);
 
     // 1. Hook into Physics Stream
     const { isConnected: isTelemetryConnected } = useTelemetry((data) => {

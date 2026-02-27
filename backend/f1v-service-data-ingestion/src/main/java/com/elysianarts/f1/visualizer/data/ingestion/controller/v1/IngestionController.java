@@ -4,6 +4,7 @@ import com.elysianarts.f1.visualizer.data.ingestion.model.constant.IngestionMode
 import com.elysianarts.f1.visualizer.data.ingestion.model.request.IngestionCommandRequest;
 import com.elysianarts.f1.visualizer.data.ingestion.service.HistoricalDataLoader;
 import com.elysianarts.f1.visualizer.data.ingestion.service.IngestionWorker;
+import com.elysianarts.f1.visualizer.data.ingestion.service.ReferenceDataLoader;
 import com.elysianarts.f1.visualizer.data.ingestion.service.ReplayEngine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class IngestionController {
     private final IngestionWorker ingestionWorker;
     private final HistoricalDataLoader historicalDataLoader;
+    private final ReferenceDataLoader referenceDataLoader;
     private final ReplayEngine replayEngine;
 
     @PostMapping("/command")
@@ -40,6 +42,12 @@ public class IngestionController {
     public ResponseEntity<String> loadHistoricalData(@RequestParam Long sessionKey) {
         historicalDataLoader.loadSessionIntoBigQuery(sessionKey);
         return ResponseEntity.ok("Batch ingestion started in the background for session: " + sessionKey);
+    }
+
+    @PostMapping("/load-reference")
+    public ResponseEntity<String> loadReferenceData(@RequestParam(defaultValue = "2023") int year) {
+        referenceDataLoader.loadReferenceData(year);
+        return ResponseEntity.ok("Reference data hydration triggered for year " + year);
     }
 
     @PostMapping("/playback/pause")

@@ -10,6 +10,7 @@ import { AxiosAuthInterceptor } from './auth/AuthHandler';
 import Home from './pages/Home';
 import HistoricalData from './pages/HistoricalData';
 import VersusMode from './pages/VersusMode';
+import { UserProvider } from "@/context/UserContext.tsx";
 
 // --- DYNAMIC OKTA CONFIGURATION ---
 const oktaAuth = new OktaAuth({
@@ -115,8 +116,12 @@ const RequiredAuth: React.FC = () => {
         return null; // Show nothing while redirecting to Okta
     }
 
-    // If authenticated, render the child routes
-    return <Outlet />;
+    // Wrap the authenticated Outlet with our UserProvider
+    return (
+        <UserProvider>
+            <Outlet />
+        </UserProvider>
+    );
 };
 
 const AppWithRouterAccess: React.FC = () => {

@@ -43,8 +43,9 @@ public class F1VisualizerSecurityConfig {
                 "https://*.f1visualizer.com",
                 "https://f1visualizer.com"
         ));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type"));
+        // FIX: Use wildcards to allow Axios and SockJS custom headers
+        configuration.setAllowedMethods(List.of("*"));
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true); // Required for SockJS/WebSockets
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

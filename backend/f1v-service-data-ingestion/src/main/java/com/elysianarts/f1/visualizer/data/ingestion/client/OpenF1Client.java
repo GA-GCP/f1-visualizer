@@ -4,6 +4,7 @@ import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1CarData;
 import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1LocationData;
 import com.elysianarts.f1.visualizer.data.ingestion.service.OpenF1AuthService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
@@ -32,6 +33,7 @@ public class OpenF1Client {
             .appendOffset("+HH:MM", "+00:00")
             .toFormatter();
 
+    @Autowired
     public OpenF1Client(WebClient.Builder webClientBuilder, OpenF1AuthService authService) {
         this.webClient = webClientBuilder.baseUrl("https://api.openf1.org/v1").build();
         this.authService = authService;

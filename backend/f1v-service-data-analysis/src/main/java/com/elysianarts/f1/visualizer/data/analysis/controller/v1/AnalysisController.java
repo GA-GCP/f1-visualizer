@@ -1,5 +1,6 @@
 package com.elysianarts.f1.visualizer.data.analysis.controller.v1;
 
+import com.elysianarts.f1.visualizer.data.analysis.model.DriverProfile;
 import com.elysianarts.f1.visualizer.data.analysis.model.LapDataRecord;
 import com.elysianarts.f1.visualizer.data.analysis.service.RaceAnalysisService;
 import org.springframework.http.ResponseEntity;
@@ -24,5 +25,10 @@ public class AnalysisController {
         // In the future, we can add @RequestParam for specific drivers to filter SQL server-side
         List<LapDataRecord> data = raceAnalysisService.getSessionLapTimes(sessionKey);
         return ResponseEntity.ok(data);
+    }
+
+    @GetMapping("/drivers/{driverId}/stats")
+    public ResponseEntity<DriverProfile.DriverStats> getDriverStats(@PathVariable int driverId) {
+        return ResponseEntity.ok(raceAnalysisService.getDriverStats(driverId));
     }
 }

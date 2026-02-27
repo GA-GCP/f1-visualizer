@@ -1,26 +1,63 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Container, Grid, Typography, Paper, CircularProgress } from '@mui/material';
 import DriverSelector from '../components/selectors/DriverSelector';
 import RadarChart from '../components/versus/RadarChart';
 import StatComparisonBar from '../components/versus/StatComparisonBar';
-import { fetchDrivers, type DriverProfile } from '../api/referenceApi';
+import { fetchDrivers, fetchDriverStats, type DriverProfile } from '../api/referenceApi';
 
 const VersusMode: React.FC = () => {
     const [drivers, setDrivers] = useState<DriverProfile[]>([]);
     const [driverA, setDriverA] = useState<DriverProfile | null>(null);
     const [driverB, setDriverB] = useState<DriverProfile | null>(null);
 
-    useEffect(() => {
-        fetchDrivers().then(data => {
-            setDrivers(data);
-            if (data.length > 1) {
-                setDriverA(data[0]); // Default to first driver
-                setDriverB(data[1]); // Default to second driver
-            }
-        });
+    // 1. Wrap the fetcher in useCallback so it's a stable reference for the useEffect
+    const handleDriverSelect = useCallback(async (driver: DriverProfile | null, slot: 'A' | 'B') => {
+        if (!driver) {
+            if (slot === 'A') setDriverA(null);
+            else setDriverB(null);
+            return;
+        }
+
+        try {
+            const dynamicStats = await fetchDriverStats(driver.id);
+            const updatedDriver = { ...driver, stats: dynamicStats };
+            if (slot === 'A') setDriverA(updatedDriver);
+            else setDriverB(updatedDriver);
+        } catch (error) {
+            console.error(`Failed to fetch stats for ${driver?.name}`, error);
+            // Fallback to the static stats on failure
+            if (slot === 'A') setDriverA(driver);
+            else setDriverB(driver);
+        }
     }, []);
 
-    // Prevent rendering the charts until the API call completes
+    // 2. Use the async/await initialization pattern
+    useEffect(() => {
+        let isMounted = true;
+
+        const initializeDrivers = async () => {
+            try {
+                const data = await fetchDrivers();
+                if (isMounted) {
+                    setDrivers(data);
+                    if (data.length > 1) {
+                        // Safely await the dynamic stat fetches
+                        await handleDriverSelect(data[0], 'A');
+                        await handleDriverSelect(data[1], 'B');
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load master driver list", err);
+            }
+        };
+
+        void initializeDrivers();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [handleDriverSelect]);
+
     if (!driverA || !driverB) {
         return (
             <Container maxWidth="xl" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
@@ -47,7 +84,8 @@ const VersusMode: React.FC = () => {
                             label="DRIVER A"
                             options={drivers}
                             value={driverA}
-                            onChange={(d) => d && setDriverA(d)}
+                            // 3. Explicitly wrap in void to satisfy ESLint's no-misused-promises
+                            onChange={(d) => { void handleDriverSelect(d, 'A'); }}
                         />
                     </Paper>
                 </Grid>
@@ -57,7 +95,8 @@ const VersusMode: React.FC = () => {
                             label="DRIVER B"
                             options={drivers}
                             value={driverB}
-                            onChange={(d) => d && setDriverB(d)}
+                            // 3. Explicitly wrap in void to satisfy ESLint's no-misused-promises
+                            onChange={(d) => { void handleDriverSelect(d, 'B'); }}
                         />
                     </Paper>
                 </Grid>
@@ -84,23 +123,12 @@ const VersusMode: React.FC = () => {
                             CAREER STATISTICS
                         </Typography>
 
-                        <StatComparisonBar
-                            label="Race Wins"
-                            driverA={driverA}
-                            driverB={driverB}
-                            metric="wins"
-                        />
-
-                        <StatComparisonBar
-                            label="Podium Finishes"
-                            driverA={driverA}
-                            driverB={driverB}
-                            metric="podiums"
-                        />
+                        <StatComparisonBar label="Race Wins" driverA={driverA} driverB={driverB} metric="wins" />
+                        <StatComparisonBar label="Podium Finishes" driverA={driverA} driverB={driverB} metric="podiums" />
 
                         <Box sx={{ mt: 6, p: 2, border: '1px dashed #444', borderRadius: 1 }}>
                             <Typography variant="caption" color="text.secondary">
-                                * Historical data aggregation from 2018-2023 seasons.
+                                * Data derived dynamically from BigQuery Data Warehouse
                             </Typography>
                         </Box>
                     </Paper>

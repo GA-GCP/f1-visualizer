@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Container, CircularProgress, Autocomplete, TextField } from '@mui/material';
+// Replace CircularProgress with Skeleton
+import { Box, Typography, Container, Skeleton, Autocomplete, TextField } from '@mui/material';
 import { apiClient } from '../api/apiClient';
 import LapTimeChart from '../components/LapTimeChart';
 import type { LapDataRecord } from '../types/telemetry';
@@ -24,18 +25,32 @@ const HistoricalData: React.FC = () => {
     useEffect(() => {
         if (!selectedSession) return;
 
-        setLoading(true);
-        // Using the dynamic sessionKey
-        apiClient.get<LapDataRecord[]>(`/analysis/session/${selectedSession.sessionKey}/laps`)
-            .then(response => {
-                setLaps(response.data);
-            })
-            .catch(err => {
-                console.error("Failed to fetch historical data", err);
-            })
-            .finally(() => {
-                setLoading(false);
-            });
+        let isMounted = true;
+
+        const fetchLaps = async () => {
+            setLoading(true); // Now safely awaited in a synchronous-looking flow
+            try {
+                const response = await apiClient.get<LapDataRecord[]>(
+                    `/analysis/session/${selectedSession.sessionKey}/laps`
+                );
+                if (isMounted) {
+                    setLaps(response.data);
+                }
+            } catch (err) {
+                if (isMounted) {
+                    console.error("Failed to fetch historical data", err);
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        void fetchLaps();
+        return () => {
+            isMounted = false;
+        };
     }, [selectedSession]);
 
     return (
@@ -71,9 +86,11 @@ const HistoricalData: React.FC = () => {
             </Box>
 
             {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}>
-                    <CircularProgress color="primary" />
-                </Box>
+                <Skeleton
+                    variant="rectangular"
+                    height={400}
+                    sx={{ bgcolor: '#1e1e1e', borderRadius: 2, mt: 2 }}
+                />
             ) : (
                 <LapTimeChart data={laps} />
             )}

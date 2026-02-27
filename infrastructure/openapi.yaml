@@ -191,7 +191,85 @@ paths:
               type: string
             Access-Control-Allow-Credentials:
               type: string
-
+  /api/v1/analysis/sessions/search:
+    get:
+      summary: Search Sessions
+      operationId: searchSessions
+      parameters:
+        - name: query
+          in: query
+          required: false
+          type: string
+      x-google-backend:
+        address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        '200':
+          description: OK
+      security:
+        - okta_jwt: [ ]
+    options:
+      summary: CORS support
+      operationId: searchSessionsOptions
+      x-google-backend:
+        address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        '200':
+          description: OK
+          headers:
+            Access-Control-Allow-Origin:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Credentials:
+              type: string
+  /api/v1/analysis/drivers/{driverId}/stats:
+    get:
+      summary: Get Driver Stats
+      operationId: getDriverStats
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          type: integer
+      x-google-backend:
+        address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        '200':
+          description: OK
+      security:
+        - okta_jwt: [ ]
+    options:
+      summary: CORS support
+      operationId: driverStatsOptions
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          type: integer
+      x-google-backend:
+        address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        '200':
+          description: OK
+          headers:
+            Access-Control-Allow-Origin:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Credentials:
+              type: string
   # --- INGESTION SERVICE ---
   /api/v1/ingestion/command:
     post:
@@ -243,6 +321,140 @@ paths:
       operationId: ingestionOptionsLoad
       x-google-backend:
         address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        '200':
+          description: OK
+          headers:
+            Access-Control-Allow-Origin:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Credentials:
+              type: string
+  /api/v1/ingestion/playback/play:
+    post:
+      summary: Play Simulation
+      operationId: playSimulation
+      x-google-backend:
+        address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        '200':
+          description: OK
+      security:
+        - okta_jwt: [ ]
+    options:
+      summary: CORS support
+      operationId: playOptions
+      x-google-backend:
+        address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        '200':
+          description: OK
+          headers:
+            Access-Control-Allow-Origin:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Credentials:
+              type: string
+  /api/v1/ingestion/playback/pause:
+    post:
+      summary: Pause Simulation
+      operationId: pauseSimulation
+      x-google-backend:
+        address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        '200':
+          description: OK
+      security:
+        - okta_jwt: [ ]
+    options:
+      summary: CORS support
+      operationId: pauseOptions
+      x-google-backend:
+        address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        '200':
+          description: OK
+          headers:
+            Access-Control-Allow-Origin:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Credentials:
+              type: string
+  /api/v1/ingestion/playback/seek:
+    post:
+      summary: Seek Simulation
+      operationId: seekSimulation
+      parameters:
+        - name: percentage
+          in: query
+          required: true
+          type: integer
+      x-google-backend:
+        address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        '200':
+          description: OK
+      security:
+        - okta_jwt: [ ]
+    options:
+      summary: CORS support
+      operationId: seekOptions
+      x-google-backend:
+        address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        '200':
+          description: OK
+          headers:
+            Access-Control-Allow-Origin:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Credentials:
+              type: string
+  # --- TELEMETRY SERVICE ---
+  /api/v1/debug/publish:
+    post:
+      summary: Publish Debug Telemetry
+      operationId: debugPublish
+      x-google-backend:
+        address: TELEMETRY_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        '200':
+          description: OK
+      security:
+        - okta_jwt: [ ]
+    options:
+      summary: CORS support
+      operationId: debugPublishOptions
+      x-google-backend:
+        address: TELEMETRY_SERVICE_URL_PLACEHOLDER
         path_translation: APPEND_PATH_TO_ADDRESS
         deadline: 60.0
       responses:

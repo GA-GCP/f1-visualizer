@@ -4,7 +4,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SensorsIcon from '@mui/icons-material/Sensors';
 import HistoryIcon from '@mui/icons-material/History';
 import { sendIngestionCommand } from '@/api/ingestionApi.ts';
-import { fetchSessions, type RaceSession } from '@/api/referenceApi.ts';
+import { searchSessions, type RaceSession } from '@/api/referenceApi';
 
 interface SessionControlPanelProps {
     onStreamStarted: (sessionKey: number, mode: 'LIVE' | 'SIMULATION') => void;
@@ -15,13 +15,22 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
     const [sessions, setSessions] = useState<RaceSession[]>([]);
     const [selectedSession, setSelectedSession] = useState<RaceSession | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [inputValue, setInputValue] = useState('');
 
+    // Initial load & search trigger
     useEffect(() => {
-        fetchSessions().then(data => {
-            setSessions(data);
-            if (data.length > 0) setSelectedSession(data[0]);
-        });
-    }, []);
+        const delayDebounceFn = setTimeout(() => {
+            searchSessions(inputValue).then(data => {
+                setSessions(data);
+                // Auto-select if first load
+                if (data.length > 0 && !selectedSession && inputValue === '') {
+                    setSelectedSession(data[0]);
+                }
+            });
+        }, 300); // 300ms debounce
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [inputValue]);
 
     const handleStart = async () => {
         if (!selectedSession) return;
@@ -63,6 +72,9 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                 getOptionLabel={(option) => `${option.year} ${option.meetingName} - ${option.sessionName}`}
                 value={selectedSession}
                 onChange={(_, newValue) => setSelectedSession(newValue)}
+                inputValue={inputValue}
+                onInputChange={(_, newInputValue) => setInputValue(newInputValue)} // <-- Handle typing
+                filterOptions={(x) => x} // Disable built-in filtering, we do it server-side
                 renderOption={(props, option) => (
                     <Box component="li" {...props} key={option.sessionKey}>
                         <Typography variant="body1">{option.year} {option.meetingName}</Typography>
@@ -72,11 +84,9 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                 renderInput={(params) => (
                     <TextField
                         {...params}
-                        label="Select Grand Prix"
+                        label="Search Grand Prix..." // <-- Updated Label
                         variant="outlined"
-                        sx={{
-                            '& .MuiOutlinedInput-root': { bgcolor: '#121212' }
-                        }}
+                        sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#121212' } }}
                     />
                 )}
             />

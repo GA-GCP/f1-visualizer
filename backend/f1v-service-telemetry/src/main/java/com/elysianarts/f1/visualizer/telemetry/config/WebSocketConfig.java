@@ -13,8 +13,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                // EXPLICITLY add "https://dev.f1visualizer.com"
-                .setAllowedOriginPatterns("http://localhost:5173", "https://dev.f1visualizer.com", "https://*.f1visualizer.com", "https://f1visualizer.com")
+                .setAllowedOriginPatterns("*")
+//                .setAllowedOriginPatterns("http://localhost:5173", "https://dev.f1visualizer.com", "https://*.f1visualizer.com", "https://f1visualizer.com")
                 .withSockJS();
     }
 

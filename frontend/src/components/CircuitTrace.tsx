@@ -59,6 +59,10 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ latestLocation }) => {
                 // Add padding to the view
                 const padding = 40;
 
+                // Prevent division by zero if the car hasn't moved yet
+                if (b.minX === b.maxX) b.maxX += 0.001;
+                if (b.minY === b.maxY) b.maxY += 0.001;
+
                 // Create D3 Scales dynamically based on current bounds
                 // Note: We flip the Y range ([height, 0]) because Canvas Y starts at top
                 const xScale = d3.scaleLinear()

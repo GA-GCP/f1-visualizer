@@ -31,6 +31,10 @@ public class OpenF1AuthService {
     @PostConstruct
     @Scheduled(fixedRate = 3000000)
     public void refreshToken() {
+        if (credentials == null || credentials.username() == null || credentials.password() == null) {
+            log.warn("⚠️ OpenF1 credentials missing or mocked (Test Environment). Skipping authentication.");
+            return;
+        }
         log.info("🔐 Authenticating with OpenF1 API (Sponsorship Tier)...");
 
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();

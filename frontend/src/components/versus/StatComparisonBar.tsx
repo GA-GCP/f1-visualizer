@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
+import { motion } from 'framer-motion';
 import type { DriverProfile } from '@/api/referenceApi.ts';
 
 interface StatComparisonBarProps {
@@ -14,6 +15,7 @@ const StatComparisonBar: React.FC<StatComparisonBarProps> = ({ label, driverA, d
     const valB = driverB.stats[metric];
     const total = valA + valB;
     const percentageA = total === 0 ? 50 : (valA / total) * 100;
+    const percentageB = 100 - percentageA; // Calculate B's width explicitly
 
     return (
         <Box sx={{ mb: 3 }}>
@@ -28,9 +30,21 @@ const StatComparisonBar: React.FC<StatComparisonBarProps> = ({ label, driverA, d
                     {valB}
                 </Typography>
             </Box>
+
+            {/* UPDATED: Framer Motion animated bars */}
             <Box sx={{ display: 'flex', height: 10, borderRadius: 1, overflow: 'hidden', bgcolor: '#333' }}>
-                <Box sx={{ width: `${percentageA}%`, bgcolor: driverA.teamColor, transition: 'width 1s' }} />
-                <Box sx={{ flexGrow: 1, bgcolor: driverB.teamColor, transition: 'width 1s' }} />
+                <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${percentageA}%` }}
+                    transition={{ duration: 1.2, ease: "circOut" }}
+                    style={{ backgroundColor: driverA.teamColor }}
+                />
+                <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${percentageB}%` }}
+                    transition={{ duration: 1.2, ease: "circOut" }}
+                    style={{ backgroundColor: driverB.teamColor }}
+                />
             </Box>
         </Box>
     );

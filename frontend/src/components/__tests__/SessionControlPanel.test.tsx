@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SessionControlPanel from '../selectors/SessionControlPanel';
 import { sendIngestionCommand } from '@/api/ingestionApi.ts';
-import { fetchSessions } from '@/api/referenceApi.ts';
+import { searchSessions } from '@/api/referenceApi.ts';
 
 // 1. Mock BOTH API modules
 vi.mock('../../api/ingestionApi', () => ({
@@ -10,7 +10,7 @@ vi.mock('../../api/ingestionApi', () => ({
 }));
 
 vi.mock('../../api/referenceApi', () => ({
-    fetchSessions: vi.fn()
+    searchSessions: vi.fn() // <-- UPDATED MOCK
 }));
 
 describe('SessionControlPanel', () => {
@@ -23,7 +23,7 @@ describe('SessionControlPanel', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(fetchSessions).mockResolvedValue(mockSessions);
+        vi.mocked(searchSessions).mockResolvedValue(mockSessions); // <-- UPDATED MOCK INJECTION
     });
 
     it('renders the control panel with default SIMULATION mode', async () => {
@@ -31,9 +31,10 @@ describe('SessionControlPanel', () => {
 
         expect(screen.getByText('RACE INITIALIZATION')).toBeInTheDocument();
 
-        // Wait for the async fetch to populate the Autocomplete
+        // Wait for the async fetch (and the 300ms debounce) to populate the Autocomplete
         await waitFor(() => {
-            expect(screen.getByLabelText(/Select Grand Prix/i)).toHaveValue('2023 Singapore Grand Prix - Race');
+            // <-- UPDATED LABEL TEXT -->
+            expect(screen.getByLabelText(/Search Grand Prix/i)).toHaveValue('2023 Singapore Grand Prix - Race');
         });
 
         expect(screen.getByRole('button', { name: /START SIMULATION STREAM/i })).toBeInTheDocument();

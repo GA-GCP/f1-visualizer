@@ -26,3 +26,13 @@ export const fetchSessions = async (): Promise<RaceSession[]> => {
     const res = await apiClient.get('/analysis/sessions');
     return res.data;
 };
+
+export const searchSessions = async (query: string): Promise<RaceSession[]> => {
+    const res = await apiClient.get(`/analysis/sessions/search?query=${encodeURIComponent(query)}`);
+    return res.data;
+};
+
+export const fetchDriverStats = async (driverId: number): Promise<DriverProfile['stats']> => {
+    const res = await apiClient.get(`/analysis/drivers/${driverId}/stats`);
+    return res.data;
+};

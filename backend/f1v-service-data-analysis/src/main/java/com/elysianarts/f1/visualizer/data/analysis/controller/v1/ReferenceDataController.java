@@ -6,6 +6,7 @@ import com.elysianarts.f1.visualizer.data.analysis.service.ReferenceDataService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
@@ -19,13 +20,18 @@ public class ReferenceDataController {
         this.referenceDataService = referenceDataService;
     }
 
+    @GetMapping("/drivers")
+    public ResponseEntity<List<DriverProfile>> getDrivers() {
+        return ResponseEntity.ok(referenceDataService.getMasterDriverList());
+    }
+
     @GetMapping("/sessions")
     public ResponseEntity<List<RaceSession>> getSessions() {
         return ResponseEntity.ok(referenceDataService.getAvailableSessions());
     }
 
-    @GetMapping("/drivers")
-    public ResponseEntity<List<DriverProfile>> getDrivers() {
-        return ResponseEntity.ok(referenceDataService.getMasterDriverList());
+    @GetMapping("/sessions/search")
+    public ResponseEntity<List<RaceSession>> searchSessions(@RequestParam(required = false, defaultValue = "") String query) {
+        return ResponseEntity.ok(referenceDataService.searchSessions(query));
     }
 }

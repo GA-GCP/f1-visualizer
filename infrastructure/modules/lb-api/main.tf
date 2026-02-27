@@ -37,6 +37,7 @@ resource "google_compute_backend_service" "telemetry_backend" {
   port_name             = "http"
   load_balancing_scheme = "EXTERNAL_MANAGED"
   project               = var.project_id
+  timeout_sec           = 3600
   backend {
     group = google_compute_region_network_endpoint_group.telemetry_neg.id
   }

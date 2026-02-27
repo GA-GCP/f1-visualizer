@@ -1,5 +1,6 @@
 package com.elysianarts.f1.visualizer.data.analysis.service;
 
+import com.elysianarts.f1.visualizer.data.analysis.model.DriverProfile;
 import com.elysianarts.f1.visualizer.data.analysis.model.LapDataRecord;
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.FieldValueList;
@@ -72,6 +73,60 @@ public class RaceAnalysisService {
         } catch (Exception e) {
             log.error("BigQuery execution failed", e);
             throw new RuntimeException("Failed to fetch analysis data", e);
+        }
+    }
+
+    public DriverProfile.DriverStats getDriverStats(int driverNumber) {
+        String query = String.format("""
+                SELECT
+                  (SELECT MAX(speed) FROM `%s.telemetry` WHERE driver_number = %d) as max_speed,
+                  (SELECT STDDEV(lap_duration) FROM `%s.laps` WHERE driver_number = %d AND lap_duration IS NOT NULL) as lap_stddev,
+                  (SELECT COUNT(DISTINCT session_key) FROM `%s.laps` WHERE driver_number = %d) as sessions_participated
+                """, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber);
+
+        log.info("Executing BigQuery Analysis: Aggregating stats for driver {}", driverNumber);
+
+        try {
+            QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(query).build();
+            TableResult result = bigQuery.query(queryConfig);
+
+            // Default fallback stats in case they have no data in BQ yet
+            int speedScore = 80;
+            int consistencyScore = 80;
+            int experienceScore = 50;
+
+            for (FieldValueList row : result.iterateAll()) {
+                if (!row.get("max_speed").isNull()) {
+                    // Normalize speed (e.g., 350 km/h = 99 score)
+                    double maxSpeed = row.get("max_speed").getDoubleValue();
+                    speedScore = (int) Math.min(99, (maxSpeed / 350.0) * 100);
+                }
+                if (!row.get("lap_stddev").isNull()) {
+                    // Normalize consistency (lower standard deviation = higher consistency)
+                    double stdDev = row.get("lap_stddev").getDoubleValue();
+                    consistencyScore = (int) Math.max(10, 100 - (stdDev * 10));
+                }
+                if (!row.get("sessions_participated").isNull()) {
+                    // 20+ sessions = 99 experience
+                    long sessions = row.get("sessions_participated").getLongValue();
+                    experienceScore = (int) Math.min(99, (sessions / 20.0) * 100);
+                }
+            }
+
+            return DriverProfile.DriverStats.builder()
+                    .speed(speedScore)
+                    .consistency(consistencyScore)
+                    .experience(experienceScore)
+                    .aggression(85) // Placeholder for advanced ML logic
+                    .tireMgmt(85)   // Placeholder for advanced ML logic
+                    .wins((int) (Math.random() * 10)) // Placeholder until Race Results table exists
+                    .podiums((int) (Math.random() * 20))
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Failed to aggregate stats for driver {}", driverNumber, e);
+            // Return defaults if BQ fails
+            return DriverProfile.DriverStats.builder().speed(80).consistency(80).aggression(80).tireMgmt(80).experience(50).wins(0).podiums(0).build();
         }
     }
 }

@@ -8,6 +8,20 @@ import java.util.List;
 @Service
 public class ReferenceDataService {
 
+    public List<RaceSession> searchSessions(String query) {
+        if (query == null || query.isBlank()) {
+            return getAvailableSessions();
+        }
+
+        String lowerQuery = query.toLowerCase();
+        return getAvailableSessions().stream()
+                .filter(session ->
+                        session.getMeetingName().toLowerCase().contains(lowerQuery) ||
+                                session.getCountryName().toLowerCase().contains(lowerQuery) ||
+                                String.valueOf(session.getYear()).contains(lowerQuery))
+                .toList();
+    }
+
     public List<RaceSession> getAvailableSessions() {
         return List.of(
                 RaceSession.builder().sessionKey(9165).sessionName("Race").meetingName("Singapore Grand Prix").year(2023).countryName("Singapore").build(),

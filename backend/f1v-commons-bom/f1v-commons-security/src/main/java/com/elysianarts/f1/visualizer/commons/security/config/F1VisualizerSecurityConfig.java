@@ -37,9 +37,9 @@ public class F1VisualizerSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // USE PATTERNS to allow dev, uat, and prod subdomains automatically
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
+                "https://dev.f1visualizer.com", // EXPLICIT
                 "https://*.f1visualizer.com",
                 "https://f1visualizer.com"
         ));

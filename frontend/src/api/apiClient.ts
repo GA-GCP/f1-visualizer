@@ -1,7 +1,18 @@
 import axios from 'axios';
 
+// 1. Dynamically determine the base URL based on the Vite build mode
+let targetBaseUrl = '/api/v1'; // Default for local 'development' (uses Vite proxy)
+
+if (import.meta.env.MODE === 'prod') {
+    targetBaseUrl = 'https://api.f1visualizer.com/api/v1';
+} else if (import.meta.env.MODE === 'uat') {
+    targetBaseUrl = 'https://uat.api.f1visualizer.com/api/v1';
+} else if (import.meta.env.MODE === 'dev') {
+    targetBaseUrl = 'https://dev.api.f1visualizer.com/api/v1';
+}
+
 export const apiClient = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
+    baseURL: targetBaseUrl,
     headers: {
         'Content-Type': 'application/json',
     },

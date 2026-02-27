@@ -28,8 +28,7 @@ public class HistoricalDataLoader {
     private static final String DATASET = "f1_dataset";
     private static final String TABLE = "telemetry";
     private static final int BATCH_SIZE = 500; // Safe batch limit for BigQuery inserts
-
-    @Async
+    
     public void loadSessionIntoBigQuery(long sessionKey) {
         log.info("⏳ Starting heavy batch ingestion for Session {} into BigQuery...", sessionKey);
 

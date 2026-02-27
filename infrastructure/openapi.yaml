@@ -18,12 +18,13 @@ securityDefinitions:
     x-google-jwks_uri: "OKTA_ISSUER_URI_PLACEHOLDER/v1/keys"
     x-google-audiences: "OKTA_AUDIENCE_PLACEHOLDER"
 paths:
-  /v1/telemetry/**:
+  # --- USER SERVICE ---
+  /api/v1/users/me:
     get:
-      summary: Proxy for Telemetry Service
-      operationId: telemetryProxy
+      summary: Get Current User
+      operationId: getUser
       x-google-backend:
-        address: TELEMETRY_SERVICE_URL_PLACEHOLDER
+        address: USER_SERVICE_URL_PLACEHOLDER
         path_translation: APPEND_PATH_TO_ADDRESS
       responses:
         '200':
@@ -32,17 +33,45 @@ paths:
         - okta_jwt: []
     options:
       summary: CORS support
-      operationId: telemetryOptions
+      operationId: userOptionsMe
       x-google-backend:
-        address: TELEMETRY_SERVICE_URL_PLACEHOLDER
+        address: USER_SERVICE_URL_PLACEHOLDER
         path_translation: APPEND_PATH_TO_ADDRESS
       responses:
         '200':
           description: OK
-  /v1/analysis/**:
+  /api/v1/users/me/preferences:
+    put:
+      summary: Update Preferences
+      operationId: updateUserPrefs
+      x-google-backend:
+        address: USER_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: OK
+      security:
+        - okta_jwt: []
+    options:
+      summary: CORS support
+      operationId: userOptionsPrefs
+      x-google-backend:
+        address: USER_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: OK
+
+  # --- ANALYSIS SERVICE ---
+  /api/v1/analysis/session/{sessionKey}/laps:
     get:
-      summary: Proxy for Analysis Service
-      operationId: analysisProxy
+      summary: Get Laps
+      operationId: getLaps
+      parameters:
+        - name: sessionKey
+          in: path
+          required: true
+          type: string
       x-google-backend:
         address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
         path_translation: APPEND_PATH_TO_ADDRESS
@@ -54,48 +83,23 @@ paths:
     options:
       summary: CORS support
       operationId: analysisOptions
+      parameters:
+        - name: sessionKey
+          in: path
+          required: true
+          type: string
       x-google-backend:
         address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
         path_translation: APPEND_PATH_TO_ADDRESS
       responses:
         '200':
           description: OK
-  /v1/user/**:
-    get:
-      summary: Proxy for User Service (Read)
-      operationId: userProxy
-      x-google-backend:
-        address: USER_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-      responses:
-        '200':
-          description: OK
-      security:
-        - okta_jwt: []
+
+  # --- INGESTION SERVICE ---
+  /api/v1/ingestion/command:
     post:
-      summary: Proxy for User Service (Write)
-      operationId: userCreateProxy
-      x-google-backend:
-        address: USER_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-      responses:
-        '200':
-          description: OK
-      security:
-        - okta_jwt: []
-    options:
-      summary: CORS support
-      operationId: userOptions
-      x-google-backend:
-        address: USER_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-      responses:
-        '200':
-          description: OK
-  /v1/ingestion/**:
-    post:
-      summary: Proxy for Data Ingestion Service (Commands)
-      operationId: ingestionCommandProxy
+      summary: Issue Command
+      operationId: ingestionCommand
       x-google-backend:
         address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
         path_translation: APPEND_PATH_TO_ADDRESS
@@ -103,10 +107,32 @@ paths:
         '200':
           description: OK
       security:
-        - okta_jwt: [ ]
+        - okta_jwt: []
     options:
       summary: CORS support
-      operationId: ingestionOptions
+      operationId: ingestionOptionsCommand
+      x-google-backend:
+        address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: OK
+  /api/v1/ingestion/load-historical:
+    post:
+      summary: Load Historical Data
+      operationId: loadHistorical
+      x-google-backend:
+        address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 120.0
+      responses:
+        '200':
+          description: OK
+      security:
+        - okta_jwt: []
+    options:
+      summary: CORS support
+      operationId: ingestionOptionsLoad
       x-google-backend:
         address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
         path_translation: APPEND_PATH_TO_ADDRESS

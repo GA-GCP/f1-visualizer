@@ -16,7 +16,8 @@ export const useLocation = (onDataReceived: LocationCallback) => {
     }, [onDataReceived]);
 
     useEffect(() => {
-        const socket = new SockJS('/ws');
+        const baseUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/v1$/, '');
+        const socket = new SockJS(`${baseUrl}/ws`);
         const client = new Client({
             webSocketFactory: () => socket,
             reconnectDelay: 5000,

@@ -2,6 +2,7 @@ package com.elysianarts.f1.visualizer.data.ingestion.controller;
 
 import com.elysianarts.f1.visualizer.data.ingestion.model.constant.IngestionMode;
 import com.elysianarts.f1.visualizer.data.ingestion.model.request.IngestionCommandRequest;
+import com.elysianarts.f1.visualizer.data.ingestion.service.HistoricalDataLoader;
 import com.elysianarts.f1.visualizer.data.ingestion.service.IngestionWorker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class IngestionController {
 
     private final IngestionWorker ingestionWorker;
+    private final HistoricalDataLoader historicalDataLoader;
 
     @PostMapping("/command")
     public ResponseEntity<String> issueIngestionCommand(@RequestBody IngestionCommandRequest request) {
@@ -35,5 +37,12 @@ public class IngestionController {
         }
 
         return ResponseEntity.badRequest().body("Invalid ingestion mode.");
+    }
+
+    @PostMapping("/load-historical")
+    public ResponseEntity<String> loadHistoricalData(@RequestParam Long sessionKey) {
+        // Kicks off the @Async batch job
+        historicalDataLoader.loadSessionIntoBigQuery(sessionKey);
+        return ResponseEntity.ok("Batch ingestion started in the background for session: " + sessionKey);
     }
 }

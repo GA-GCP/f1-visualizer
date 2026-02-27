@@ -14,7 +14,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // The "Handshake" endpoint the React App will connect to
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("http://localhost:5173", "https://f1visualizer.com") // Strict CORS for Dev & Prod
+                // FIX: Add "https://*.f1visualizer.com" to support dev, uat, and prod
+                .setAllowedOriginPatterns("http://localhost:5173", "https://*.f1visualizer.com", "https://f1visualizer.com")
                 .withSockJS(); // Enable SockJS fallback options
     }
 

@@ -104,24 +104,6 @@ resource "google_project_iam_member" "user_datastore_user" {
 
 # (Note: Frontend gets ZERO bindings, effectively isolating it completely)
 
-# ==============================================================================
-# 3. SECRET MANAGER placeholders
-# ==============================================================================
-
-resource "google_secret_manager_secret" "okta_client_secret" {
-  secret_id = "f1v-okta-client-secret-${var.environment}"
-  replication {
-    auto {}
-  }
-}
-
-resource "google_secret_manager_secret" "openf1_oauth_token" {
-  secret_id = "f1v-openf1-oauth-token-${var.environment}"
-  replication {
-    auto {}
-  }
-}
-
 # -- API Gateway: Allow Cloud Build to Create/Update Gateways & Configs --
 resource "google_project_iam_member" "cloudbuild_apigateway_admin" {
   project = var.project_id

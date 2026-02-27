@@ -18,7 +18,8 @@ export const useTelemetry = (onDataReceived: TelemetryCallback) => {
 
     useEffect(() => {
         // 1. Initialize STOMP Client over SockJS
-        const socket = new SockJS('/ws'); // Matches vite.config.ts proxy
+        const baseUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/v1$/, '');
+        const socket = new SockJS(`${baseUrl}/ws`);
         const client = new Client({
             webSocketFactory: () => socket,
             reconnectDelay: 5000,

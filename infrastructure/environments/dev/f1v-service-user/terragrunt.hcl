@@ -23,5 +23,13 @@ inputs = {
 
   env_vars = {
     "SPRING_PROFILES_ACTIVE" = "dev"
+
+    # --- NEW: Explicitly inject Security Properties ---
+    "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI" = "https://integrator-7997251.okta.com/oauth2/aus10dj3jwaXRs0xm698"
+    "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_AUDIENCES"  = "dev.api.f1visualizer.com"
+
+    # --- NEW: Explicitly inject Firestore Properties ---
+    "SPRING_CLOUD_GCP_FIRESTORE_PROJECT_ID"  = "f1-visualizer-488201"
+    "SPRING_CLOUD_GCP_FIRESTORE_DATABASE_ID" = "f1v-db-dev"
   }
 }

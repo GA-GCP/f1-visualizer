@@ -2,12 +2,14 @@ package com.elysianarts.f1.visualizer.data.ingestion.client;
 
 import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1CarData;
 import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1LocationData;
+import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1Session;
 import com.elysianarts.f1.visualizer.data.ingestion.service.OpenF1AuthService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -43,6 +45,21 @@ public class OpenF1Client {
     public OpenF1Client(WebClient webClient, OpenF1AuthService authService) {
         this.webClient = webClient;
         this.authService = authService;
+    }
+
+    public Mono<OpenF1Session> getSession(long sessionKey) {
+        String uri = "/sessions?session_key=" + sessionKey;
+
+        return webClient.get()
+                .uri(uri)
+                .header("Authorization", "Bearer " + authService.getAccessToken())
+                .retrieve()
+                .bodyToFlux(OpenF1Session.class)
+                .next() // Just grab the first matching session
+                .onErrorResume(e -> {
+                    log.error("Error fetching Session Metadata: {}", e.getMessage());
+                    return Mono.empty();
+                });
     }
 
     public Flux<OpenF1CarData> getCarData(long sessionKey, OffsetDateTime startTime, OffsetDateTime endTime) {

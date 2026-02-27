@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import type {DriverProfile} from '@/data/mockDrivers.ts';
+import type { DriverProfile } from '@/api/referenceApi.ts';
 
 interface RadarChartProps {
     driverA: DriverProfile;
@@ -38,7 +38,6 @@ const RadarChart: React.FC<RadarChartProps> = ({ driverA, driverB }) => {
                 .data(features)
                 .enter()
                 .append("line")
-                // FIX: Replaced unused 'd' with '_'
                 .attr("x1", (_, i) => levelFactor * (1 - 1 * Math.sin(i * angleSlice)))
                 .attr("y1", (_, i) => levelFactor * (1 - 1 * Math.cos(i * angleSlice)))
                 .attr("x2", (_, i) => levelFactor * (1 - 1 * Math.sin((i + 1) * angleSlice)))
@@ -57,7 +56,6 @@ const RadarChart: React.FC<RadarChartProps> = ({ driverA, driverB }) => {
         axis.append("line")
             .attr("x1", 0)
             .attr("y1", 0)
-            // FIX: Replaced unused 'd' with '_'
             .attr("x2", (_, i) => rScale(100) * Math.cos(angleSlice * i - Math.PI / 2))
             .attr("y2", (_, i) => rScale(100) * Math.sin(angleSlice * i - Math.PI / 2))
             .attr("class", "line")
@@ -70,7 +68,6 @@ const RadarChart: React.FC<RadarChartProps> = ({ driverA, driverB }) => {
             .style("fill", "#888")
             .attr("text-anchor", "middle")
             .attr("dy", "0.35em")
-            // FIX: Replaced unused 'd' with '_'
             .attr("x", (_, i) => rScale(115) * Math.cos(angleSlice * i - Math.PI / 2))
             .attr("y", (_, i) => rScale(115) * Math.sin(angleSlice * i - Math.PI / 2))
             .text(d => d.toUpperCase());

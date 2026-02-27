@@ -1,13 +1,33 @@
-import React, { useState } from 'react';
-import { Box, Container, Grid, Typography, Paper } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Container, Grid, Typography, Paper, CircularProgress } from '@mui/material';
 import DriverSelector from '../components/selectors/DriverSelector';
 import RadarChart from '../components/versus/RadarChart';
 import StatComparisonBar from '../components/versus/StatComparisonBar';
-import { MOCK_DRIVERS } from '../data/mockDrivers';
+import { fetchDrivers, type DriverProfile } from '../api/referenceApi';
 
 const VersusMode: React.FC = () => {
-    const [driverA, setDriverA] = useState(MOCK_DRIVERS[0]); // Default Max
-    const [driverB, setDriverB] = useState(MOCK_DRIVERS[1]); // Default Charles
+    const [drivers, setDrivers] = useState<DriverProfile[]>([]);
+    const [driverA, setDriverA] = useState<DriverProfile | null>(null);
+    const [driverB, setDriverB] = useState<DriverProfile | null>(null);
+
+    useEffect(() => {
+        fetchDrivers().then(data => {
+            setDrivers(data);
+            if (data.length > 1) {
+                setDriverA(data[0]); // Default to first driver
+                setDriverB(data[1]); // Default to second driver
+            }
+        });
+    }, []);
+
+    // Prevent rendering the charts until the API call completes
+    if (!driverA || !driverB) {
+        return (
+            <Container maxWidth="xl" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+                <CircularProgress color="primary" />
+            </Container>
+        );
+    }
 
     return (
         <Container maxWidth="xl" sx={{ mt: 4, pb: 8 }}>
@@ -20,23 +40,22 @@ const VersusMode: React.FC = () => {
                 </Typography>
             </Box>
 
-            {/* Selectors */}
             <Grid container spacing={4} sx={{ mb: 6 }}>
-                {/* FIX: Removed 'item', changed 'xs/md' to 'size={{ xs: ..., md: ... }}' */}
                 <Grid size={{ xs: 12, md: 6 }}>
                     <Paper sx={{ p: 3, bgcolor: '#1e1e1e', borderLeft: `4px solid ${driverA.teamColor}` }}>
                         <DriverSelector
                             label="DRIVER A"
+                            options={drivers}
                             value={driverA}
                             onChange={(d) => d && setDriverA(d)}
                         />
                     </Paper>
                 </Grid>
-                {/* FIX: Removed 'item', changed 'xs/md' to 'size={{ xs: ..., md: ... }}' */}
                 <Grid size={{ xs: 12, md: 6 }}>
                     <Paper sx={{ p: 3, bgcolor: '#1e1e1e', borderRight: `4px solid ${driverB.teamColor}` }}>
                         <DriverSelector
                             label="DRIVER B"
+                            options={drivers}
                             value={driverB}
                             onChange={(d) => d && setDriverB(d)}
                         />
@@ -44,10 +63,7 @@ const VersusMode: React.FC = () => {
                 </Grid>
             </Grid>
 
-            {/* Analysis Dashboard */}
             <Grid container spacing={4}>
-                {/* Center: Radar Chart */}
-                {/* FIX: Removed 'item', changed 'xs/md' to 'size={{ xs: ..., md: ... }}' */}
                 <Grid size={{ xs: 12, md: 5 }}>
                     <Paper sx={{ p: 3, bgcolor: '#1e1e1e', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -62,8 +78,6 @@ const VersusMode: React.FC = () => {
                     </Paper>
                 </Grid>
 
-                {/* Right: Stat Bars */}
-                {/* FIX: Removed 'item', changed 'xs/md' to 'size={{ xs: ..., md: ... }}' */}
                 <Grid size={{ xs: 12, md: 7 }}>
                     <Paper sx={{ p: 4, bgcolor: '#1e1e1e', height: '100%' }}>
                         <Typography variant="h6" color="text.secondary" gutterBottom sx={{ mb: 4 }}>
@@ -84,7 +98,6 @@ const VersusMode: React.FC = () => {
                             metric="podiums"
                         />
 
-                        {/* Placeholder for future expansion */}
                         <Box sx={{ mt: 6, p: 2, border: '1px dashed #444', borderRadius: 1 }}>
                             <Typography variant="caption" color="text.secondary">
                                 * Historical data aggregation from 2018-2023 seasons.

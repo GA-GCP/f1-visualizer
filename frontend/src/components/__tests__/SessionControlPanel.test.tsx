@@ -2,37 +2,55 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SessionControlPanel from '../selectors/SessionControlPanel';
 import { sendIngestionCommand } from '../../api/ingestionApi';
+import { fetchSessions } from '../../api/referenceApi';
 
-// 1. Mock the API module
+// 1. Mock BOTH API modules
 vi.mock('../../api/ingestionApi', () => ({
     sendIngestionCommand: vi.fn()
+}));
+
+vi.mock('../../api/referenceApi', () => ({
+    fetchSessions: vi.fn()
 }));
 
 describe('SessionControlPanel', () => {
     const mockOnStreamStarted = vi.fn();
 
+    // Mock response from the backend
+    const mockSessions = [
+        { sessionKey: 9165, sessionName: "Race", meetingName: "Singapore Grand Prix", year: 2023, countryName: "Singapore" }
+    ];
+
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(fetchSessions).mockResolvedValue(mockSessions);
     });
 
-    it('renders the control panel with default SIMULATION mode', () => {
+    it('renders the control panel with default SIMULATION mode', async () => {
         render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
 
         expect(screen.getByText('RACE INITIALIZATION')).toBeInTheDocument();
-        // UPDATED: Check for the new Autocomplete label and default readable value
-        expect(screen.getByLabelText(/Select Grand Prix/i)).toHaveValue('2023 Singapore Grand Prix - Race');
-        // Check that the button text defaults to SIMULATION
+
+        // Wait for the async fetch to populate the Autocomplete
+        await waitFor(() => {
+            expect(screen.getByLabelText(/Select Grand Prix/i)).toHaveValue('2023 Singapore Grand Prix - Race');
+        });
+
         expect(screen.getByRole('button', { name: /START SIMULATION STREAM/i })).toBeInTheDocument();
     });
 
-    it('toggles to LIVE mode and updates the start button', () => {
+    it('toggles to LIVE mode and updates the start button', async () => {
         render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
+
+        // Wait for data to load so the component is fully ready
+        await waitFor(() => {
+            expect(screen.getByRole('button', { name: /START SIMULATION STREAM/i })).toBeEnabled();
+        });
 
         // Find and click the LIVE toggle button
         const liveToggle = screen.getByRole('button', { name: /LIVE FEED/i });
         fireEvent.click(liveToggle);
 
-        // The main action button should now reflect the LIVE state
         expect(screen.getByRole('button', { name: /START LIVE STREAM/i })).toBeInTheDocument();
     });
 
@@ -42,11 +60,13 @@ describe('SessionControlPanel', () => {
 
         render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
 
-        // Click Start (using the default selected Singapore Grand Prix which maps to key 9165)
-        const startButton = screen.getByRole('button', { name: /START SIMULATION STREAM/i });
+        // Wait for Start button to be enabled (data loaded)
+        const startButton = await screen.findByRole('button', { name: /START SIMULATION STREAM/i });
+        await waitFor(() => expect(startButton).toBeEnabled());
+
         fireEvent.click(startButton);
 
-        // Assert 1: The API was called with the correct payload
+        // Assert 1: The API was called with the correct payload (using camelCase sessionKey)
         expect(sendIngestionCommand).toHaveBeenCalledWith({
             mode: 'SIMULATION',
             sessionKey: 9165
@@ -70,7 +90,9 @@ describe('SessionControlPanel', () => {
 
         render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
 
-        const startButton = screen.getByRole('button', { name: /START SIMULATION STREAM/i });
+        const startButton = await screen.findByRole('button', { name: /START SIMULATION STREAM/i });
+        await waitFor(() => expect(startButton).toBeEnabled());
+
         fireEvent.click(startButton);
 
         await waitFor(() => {

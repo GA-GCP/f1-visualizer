@@ -1,13 +1,20 @@
 import { render, screen } from '@testing-library/react';
 import DriverSelector from '../selectors/DriverSelector';
-import { MOCK_DRIVERS } from '@/data/mockDrivers.ts';
 import { vi } from 'vitest';
+
+const mockDrivers = [
+    {
+        id: 1, code: "VER", name: "Max Verstappen", team: "Red Bull Racing", teamColor: "#3671C6",
+        stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98 }
+    }
+];
 
 describe('DriverSelector', () => {
     it('renders the label correctly', () => {
         render(
             <DriverSelector
                 label="Select Driver"
+                options={mockDrivers}
                 value={null}
                 onChange={vi.fn()}
             />
@@ -19,7 +26,8 @@ describe('DriverSelector', () => {
         render(
             <DriverSelector
                 label="Select Driver"
-                value={MOCK_DRIVERS[0]} // Verstappen
+                options={mockDrivers}
+                value={mockDrivers[0]}
                 onChange={vi.fn()}
             />
         );

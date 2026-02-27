@@ -127,6 +127,70 @@ paths:
               type: string
             Access-Control-Allow-Credentials:
               type: string
+  /api/v1/analysis/sessions:
+    get:
+      summary: Get Sessions
+      operationId: getSessions
+      x-google-backend:
+        address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        '200':
+          description: OK
+      security:
+        - okta_jwt: [ ]
+    options:
+      summary: CORS support
+      operationId: sessionsOptions
+      x-google-backend:
+        address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        '200':
+          description: OK
+          headers:
+            Access-Control-Allow-Origin:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Credentials:
+              type: string
+  /api/v1/analysis/drivers:
+    get:
+      summary: Get Drivers
+      operationId: getDrivers
+      x-google-backend:
+        address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        '200':
+          description: OK
+      security:
+        - okta_jwt: [ ]
+    options:
+      summary: CORS support
+      operationId: driversOptions
+      x-google-backend:
+        address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        '200':
+          description: OK
+          headers:
+            Access-Control-Allow-Origin:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Headers:
+              type: string
+            Access-Control-Allow-Credentials:
+              type: string
 
   # --- INGESTION SERVICE ---
   /api/v1/ingestion/command:

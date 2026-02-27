@@ -3,19 +3,30 @@ import { Box, Typography, Container, CircularProgress, Autocomplete, TextField }
 import { apiClient } from '../api/apiClient';
 import LapTimeChart from '../components/LapTimeChart';
 import type { LapDataRecord } from '../types/telemetry';
-import { MOCK_SESSIONS, type RaceSession } from '../data/mockSessions';
+import { fetchSessions, type RaceSession } from '../api/referenceApi';
 
 const HistoricalData: React.FC = () => {
     const [laps, setLaps] = useState<LapDataRecord[]>([]);
     const [loading, setLoading] = useState(false);
-    const [selectedSession, setSelectedSession] = useState<RaceSession | null>(MOCK_SESSIONS[0]);
+
+    // Dynamic Session state
+    const [sessions, setSessions] = useState<RaceSession[]>([]);
+    const [selectedSession, setSelectedSession] = useState<RaceSession | null>(null);
+
+    // Fetch available sessions on mount
+    useEffect(() => {
+        fetchSessions().then(data => {
+            setSessions(data);
+            if (data.length > 0) setSelectedSession(data[0]);
+        });
+    }, []);
 
     useEffect(() => {
         if (!selectedSession) return;
 
         setLoading(true);
         // Using the dynamic sessionKey
-        apiClient.get<LapDataRecord[]>(`/analysis/session/${selectedSession.session_key}/laps`)
+        apiClient.get<LapDataRecord[]>(`/analysis/session/${selectedSession.sessionKey}/laps`)
             .then(response => {
                 setLaps(response.data);
             })
@@ -42,8 +53,8 @@ const HistoricalData: React.FC = () => {
                 {/* Dynamic Session Selector */}
                 <Box sx={{ width: 300 }}>
                     <Autocomplete
-                        options={MOCK_SESSIONS}
-                        getOptionLabel={(option) => `${option.year} ${option.meeting_name}`}
+                        options={sessions}
+                        getOptionLabel={(option) => `${option.year} ${option.meetingName}`}
                         value={selectedSession}
                         onChange={(_, newValue) => setSelectedSession(newValue)}
                         renderInput={(params) => (

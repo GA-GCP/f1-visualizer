@@ -1,4 +1,4 @@
-package com.elysianarts.f1.visualizer.data.ingestion.controller;
+package com.elysianarts.f1.visualizer.data.ingestion.controller.v1;
 
 import com.elysianarts.f1.visualizer.data.ingestion.model.constant.IngestionMode;
 import com.elysianarts.f1.visualizer.data.ingestion.model.request.IngestionCommandRequest;

@@ -1,4 +1,4 @@
-package com.elysianarts.f1.visualizer.telemetry.controller;
+package com.elysianarts.f1.visualizer.telemetry.controller.v1;
 
 import com.elysianarts.f1.visualizer.telemetry.config.RedisConfig;
 import org.springframework.data.redis.core.RedisTemplate;

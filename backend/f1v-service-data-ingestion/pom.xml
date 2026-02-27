@@ -29,6 +29,10 @@
             <artifactId>f1v-commons-gcp-memorystore-redis</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.elysianarts.f1.visualizer.commons</groupId>
+            <artifactId>f1v-commons-websocket</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>

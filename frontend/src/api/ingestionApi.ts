@@ -14,3 +14,16 @@ export const sendIngestionCommand = async (command: IngestionCommandRequest): Pr
         throw error;
     }
 };
+
+// --- NEW: Playback Controls ---
+export const playSimulation = async (): Promise<void> => {
+    await apiClient.post('/ingestion/playback/play');
+};
+
+export const pauseSimulation = async (): Promise<void> => {
+    await apiClient.post('/ingestion/playback/pause');
+};
+
+export const seekSimulation = async (percentage: number): Promise<void> => {
+    await apiClient.post(`/ingestion/playback/seek?percentage=${percentage}`);
+};

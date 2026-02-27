@@ -9,24 +9,31 @@ export const useLocation = (onDataReceived: LocationCallback) => {
     const [isConnected, setIsConnected] = useState(false);
     const clientRef = useRef<Client | null>(null);
 
-    // Store callback in ref to prevent reconnection loops
     const callbackRef = useRef(onDataReceived);
     useEffect(() => {
         callbackRef.current = onDataReceived;
     }, [onDataReceived]);
 
     useEffect(() => {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/v1$/, '');
-        const socket = new SockJS(`${baseUrl}/ws`);
+        // Dynamically determine WebSocket URL based on environment
+        let wsUrl = 'http://localhost:8080/ws'; // Default for local 'development'
+
+        if (import.meta.env.MODE === 'prod') {
+            wsUrl = 'https://api.f1visualizer.com/ws';
+        } else if (import.meta.env.MODE === 'uat') {
+            wsUrl = 'https://uat.api.f1visualizer.com/ws';
+        } else if (import.meta.env.MODE === 'dev') {
+            wsUrl = 'https://dev.api.f1visualizer.com/ws';
+        }
+
+        const socket = new SockJS(wsUrl);
         const client = new Client({
             webSocketFactory: () => socket,
             reconnectDelay: 5000,
-            // debug: (str) => console.log('[STOMP Location]:', str), // Uncomment for debugging
             onConnect: () => {
-                console.log('🟢 Connected to Location Stream');
+                console.log(`🟢 Connected to Location Stream (${import.meta.env.MODE})`);
                 setIsConnected(true);
 
-                // Subscribe to the NEW location topic
                 client.subscribe('/topic/race-location', (message: IMessage) => {
                     try {
                         const payload: LocationPacket = JSON.parse(message.body);

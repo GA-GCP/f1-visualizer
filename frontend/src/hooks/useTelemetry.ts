@@ -9,30 +9,35 @@ export const useTelemetry = (onDataReceived: TelemetryCallback) => {
     const [isConnected, setIsConnected] = useState(false);
     const clientRef = useRef<Client | null>(null);
 
-    // Store the callback in a ref to ensure the STOMP client always calls the latest version
-    // without needing to disconnect/reconnect when the callback function identity changes.
     const callbackRef = useRef(onDataReceived);
     useEffect(() => {
         callbackRef.current = onDataReceived;
     }, [onDataReceived]);
 
     useEffect(() => {
-        // 1. Initialize STOMP Client over SockJS
-        const baseUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/v1$/, '');
-        const socket = new SockJS(`${baseUrl}/ws`);
+        // Dynamically determine WebSocket URL based on environment
+        let wsUrl = 'http://localhost:8080/ws'; // Default for local 'development'
+
+        if (import.meta.env.MODE === 'prod') {
+            wsUrl = 'https://api.f1visualizer.com/ws';
+        } else if (import.meta.env.MODE === 'uat') {
+            wsUrl = 'https://uat.api.f1visualizer.com/ws';
+        } else if (import.meta.env.MODE === 'dev') {
+            wsUrl = 'https://dev.api.f1visualizer.com/ws';
+        }
+
+        const socket = new SockJS(wsUrl);
         const client = new Client({
             webSocketFactory: () => socket,
             reconnectDelay: 5000,
             debug: (str) => console.log('[STOMP]:', str),
             onConnect: () => {
-                console.log('🟢 Connected to Telemetry Stream');
+                console.log(`🟢 Connected to Telemetry Stream (${import.meta.env.MODE})`);
                 setIsConnected(true);
 
-                // 2. Subscribe to the "Live" Topic
                 client.subscribe('/topic/race-data', (message: IMessage) => {
                     try {
                         const payload: TelemetryPacket = JSON.parse(message.body);
-                        // 3. Invoke the callback directly (Zero-State Update)
                         if (callbackRef.current) {
                             callbackRef.current(payload);
                         }
@@ -51,11 +56,9 @@ export const useTelemetry = (onDataReceived: TelemetryCallback) => {
             },
         });
 
-        // 4. Activate Connection
         client.activate();
         clientRef.current = client;
 
-        // 5. Cleanup on Unmount
         return () => {
             if (client.active) {
                 client.deactivate();

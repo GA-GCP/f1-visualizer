@@ -12,11 +12,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // The "Handshake" endpoint the React App will connect to
         registry.addEndpoint("/ws")
-                // FIX: Add "https://*.f1visualizer.com" to support dev, uat, and prod
-                .setAllowedOriginPatterns("http://localhost:5173", "https://*.f1visualizer.com", "https://f1visualizer.com")
-                .withSockJS(); // Enable SockJS fallback options
+                // EXPLICITLY add "https://dev.f1visualizer.com"
+                .setAllowedOriginPatterns("http://localhost:5173", "https://dev.f1visualizer.com", "https://*.f1visualizer.com", "https://f1visualizer.com")
+                .withSockJS();
     }
 
     @Override

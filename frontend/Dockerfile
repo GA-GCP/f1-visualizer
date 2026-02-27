@@ -5,13 +5,16 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# 1. Install dependencies (cached if package.json/yarn.lock hasn't changed)
+# Accept the environment variable from Cloud Build
+ARG ENV_MODE=dev
+
+# 1. Install dependencies
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
 
-# 2. Copy source and build
+# 2. Copy source and build using the specific mode
 COPY . .
-RUN yarn build
+RUN yarn build --mode ${ENV_MODE}
 
 # ==========================================
 # STAGE 2: Serve with NGINX (Unprivileged)

@@ -21,6 +21,8 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
+      - '--build-arg'
+      - 'ENV_MODE=${_ENV}'
       - '-t'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:${_SHORT_SHA}'
       - '-t'

@@ -1,11 +1,18 @@
 import React from 'react';
-import { Box, AppBar, Toolbar, Typography, Container, Button } from '@mui/material';
+import { Box, AppBar, Toolbar, Typography, Container, Button, IconButton, Tooltip } from '@mui/material';
 import { Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
 import SpeedIcon from '@mui/icons-material/Speed';
 import StorageIcon from '@mui/icons-material/Storage';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { useOktaAuth } from '@okta/okta-react'; // NEW: Import Okta hook
 
 const LayoutMain: React.FC = () => {
     const location = useLocation();
+    const { oktaAuth } = useOktaAuth(); // NEW: Destructure the auth instance
+
+    const handleLogout = async () => {
+        await oktaAuth.signOut();
+    };
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -13,7 +20,6 @@ const LayoutMain: React.FC = () => {
             <AppBar position="sticky">
                 <Container maxWidth="xl">
                     <Toolbar disableGutters sx={{ height: 64 }}>
-                        {/* Branding - F1 Style Italic/Bold */}
                         <SpeedIcon sx={{ mr: 1, color: 'primary.main', fontSize: 32 }} />
                         <Typography
                             variant="h5"
@@ -30,9 +36,18 @@ const LayoutMain: React.FC = () => {
                             F1 VISUALIZER
                         </Typography>
 
-                        {/* Navigation Buttons - With Active State styling */}
                         <NavButton to="/" label="Live Console" icon={<SpeedIcon />} currentPath={location.pathname} />
                         <NavButton to="/historical" label="Data Vault" icon={<StorageIcon />} currentPath={location.pathname} />
+
+                        {/* NEW: Logout Button */}
+                        <Tooltip title="Secure Logout">
+                            <IconButton
+                                onClick={handleLogout}
+                                sx={{ ml: 2, color: 'text.secondary', '&:hover': { color: 'error.main' } }}
+                            >
+                                <LogoutIcon />
+                            </IconButton>
+                        </Tooltip>
                     </Toolbar>
                 </Container>
             </AppBar>

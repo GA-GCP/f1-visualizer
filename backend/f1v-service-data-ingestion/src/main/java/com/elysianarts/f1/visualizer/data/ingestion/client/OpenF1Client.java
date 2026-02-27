@@ -2,8 +2,8 @@ package com.elysianarts.f1.visualizer.data.ingestion.client;
 
 import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1CarData;
 import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1LocationData;
+import com.elysianarts.f1.visualizer.data.ingestion.service.OpenF1AuthService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
@@ -18,9 +18,8 @@ import java.time.temporal.ChronoField;
 public class OpenF1Client {
 
     private final WebClient webClient;
+    private final OpenF1AuthService authService; // Inject auth service
 
-    // Strict ISO 8601 Formatter (e.g. 2023-09-17T12:00:00.123+00:00)
-    // Truncates extra nanoseconds that cause 422s
     private static final DateTimeFormatter API_DATE_FORMATTER = new DateTimeFormatterBuilder()
             .append(DateTimeFormatter.ISO_LOCAL_DATE)
             .appendLiteral('T')
@@ -30,42 +29,46 @@ public class OpenF1Client {
             .appendLiteral(':')
             .appendValue(ChronoField.SECOND_OF_MINUTE, 2)
             .appendFraction(ChronoField.MILLI_OF_SECOND, 3, 3, true)
-            .appendOffset("+HH:MM", "+00:00") // Critical: Keep the Timezone
+            .appendOffset("+HH:MM", "+00:00")
             .toFormatter();
 
-    @Autowired
-    public OpenF1Client(WebClient.Builder webClientBuilder) {
+    public OpenF1Client(WebClient.Builder webClientBuilder, OpenF1AuthService authService) {
         this.webClient = webClientBuilder.baseUrl("https://api.openf1.org/v1").build();
+        this.authService = authService;
     }
 
-    public OpenF1Client(WebClient webClient) {
+    // 2. NEW: Testing Constructor (Used by JUnit to inject the MockWebServer)
+    public OpenF1Client(WebClient webClient, OpenF1AuthService authService) {
         this.webClient = webClient;
+        this.authService = authService;
     }
 
-    // UPDATED: Accepts start AND end time
     public Flux<OpenF1CarData> getCarData(long sessionKey, OffsetDateTime startTime, OffsetDateTime endTime) {
         String uri = "/car_data?session_key=" + sessionKey +
                 "&date>=" + startTime.format(API_DATE_FORMATTER) +
                 "&date<" + endTime.format(API_DATE_FORMATTER);
 
-        log.debug("Polling Car Data Window: {} -> {}", startTime, endTime);
-
-        return webClient.get().uri(uri).retrieve().bodyToFlux(OpenF1CarData.class)
+        return webClient.get()
+                .uri(uri)
+                .header("Authorization", "Bearer " + authService.getAccessToken()) // Attach token!
+                .retrieve()
+                .bodyToFlux(OpenF1CarData.class)
                 .onErrorResume(e -> {
                     log.error("Error fetching Car Data: {}", e.getMessage());
                     return Flux.empty();
                 });
     }
 
-    // UPDATED: Accepts start AND end time
     public Flux<OpenF1LocationData> getLocationData(long sessionKey, OffsetDateTime startTime, OffsetDateTime endTime) {
         String uri = "/location?session_key=" + sessionKey +
                 "&date>=" + startTime.format(API_DATE_FORMATTER) +
                 "&date<" + endTime.format(API_DATE_FORMATTER);
 
-        log.debug("Polling Location Window: {} -> {}", startTime, endTime);
-
-        return webClient.get().uri(uri).retrieve().bodyToFlux(OpenF1LocationData.class)
+        return webClient.get()
+                .uri(uri)
+                .header("Authorization", "Bearer " + authService.getAccessToken()) // Attach token!
+                .retrieve()
+                .bodyToFlux(OpenF1LocationData.class)
                 .onErrorResume(e -> {
                     log.error("Error fetching Location Data: {}", e.getMessage());
                     return Flux.empty();

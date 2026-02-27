@@ -1,10 +1,15 @@
 import React from 'react';
+import { Routes, Route, Outlet } from 'react-router-dom'; // Add Routes, Route, Outlet to your existing react-router-dom imports
+import { LoginCallback, useOktaAuth } from '@okta/okta-react'; // Add LoginCallback and useOktaAuth
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { BrowserRouter, useNavigate } from 'react-router-dom';
 import { Security } from '@okta/okta-react';
 import { OktaAuth, toRelativeUrl } from '@okta/okta-auth-js';
 import LayoutMain from './components/layout/LayoutMain';
 import { AxiosAuthInterceptor } from './auth/AuthHandler';
+import Home from './pages/Home';
+import HistoricalData from './pages/HistoricalData';
+import VersusMode from './pages/VersusMode';
 
 // --- DYNAMIC OKTA CONFIGURATION ---
 const oktaAuth = new OktaAuth({
@@ -94,19 +99,49 @@ const broadcastTheme = createTheme({
     }
 });
 
+// --- AUTH GUARD COMPONENT ---
+// This checks if the user is logged in. If not, it kicks them to Okta.
+const RequiredAuth: React.FC = () => {
+    const { oktaAuth, authState } = useOktaAuth();
+
+    React.useEffect(() => {
+        if (!authState) return;
+        if (!authState.isAuthenticated) {
+            oktaAuth.signInWithRedirect();
+        }
+    }, [oktaAuth, authState]);
+
+    if (!authState || !authState.isAuthenticated) {
+        return null; // Show nothing while redirecting to Okta
+    }
+
+    // If authenticated, render the child routes
+    return <Outlet />;
+};
+
 const AppWithRouterAccess: React.FC = () => {
     const navigate = useNavigate();
 
-    // 1. Keep the callback properly typed
     const restoreOriginalUri = async (_oktaAuth: OktaAuth, originalUri: string) => {
         navigate(toRelativeUrl(originalUri || '/', window.location.origin));
     };
 
     return (
-        // 2. Pass it as a prop (Ignore the harmless dev-mode console warning)
         <Security oktaAuth={oktaAuth} restoreOriginalUri={restoreOriginalUri}>
             <AxiosAuthInterceptor />
-            <LayoutMain />
+            <Routes>
+                {/* 1. The Okta Callback Route (Must be unprotected) */}
+                <Route path="/login/callback" element={<LoginCallback />} />
+
+                {/* 2. Protected Application Routes */}
+                <Route element={<RequiredAuth />}>
+                    <Route element={<LayoutMain />}>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/historical" element={<HistoricalData />} />
+                        <Route path="/versus" element={<VersusMode />} />
+                    </Route>
+                </Route>
+            </Routes>
         </Security>
     );
 };

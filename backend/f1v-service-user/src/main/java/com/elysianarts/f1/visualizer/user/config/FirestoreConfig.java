@@ -12,11 +12,15 @@ public class FirestoreConfig {
     @Value("${spring.cloud.gcp.firestore.project-id}")
     private String projectId;
 
+    @Value("${spring.cloud.gcp.firestore.database-id}")
+    private String databaseId;
+
     @Bean
     public Firestore firestore() {
         return FirestoreOptions.getDefaultInstance()
                 .toBuilder()
                 .setProjectId(projectId)
+                .setDatabaseId(databaseId) // NEW: Ensure we point to dev/uat/prod databases!
                 .build()
                 .getService();
     }

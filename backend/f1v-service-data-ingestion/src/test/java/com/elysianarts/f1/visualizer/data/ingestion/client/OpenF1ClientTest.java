@@ -2,6 +2,7 @@ package com.elysianarts.f1.visualizer.data.ingestion.client;
 
 import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1CarData;
 import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1LocationData;
+import com.elysianarts.f1.visualizer.data.ingestion.service.OpenF1AuthService;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
@@ -17,6 +18,9 @@ import tools.jackson.databind.json.JsonMapper;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class OpenF1ClientTest {
     private MockWebServer mockWebServer;
@@ -40,7 +44,12 @@ class OpenF1ClientTest {
                 .exchangeStrategies(strategies)
                 .build();
 
-        openF1Client = new OpenF1Client(testWebClient);
+        // --- NEW: Mock the Auth Service to return a dummy token ---
+        OpenF1AuthService mockAuthService = mock(OpenF1AuthService.class);
+        when(mockAuthService.getAccessToken()).thenReturn("dummy-test-token");
+
+        // --- UPDATED: Inject both the Mock WebClient and the Mock Auth Service ---
+        openF1Client = new OpenF1Client(testWebClient, mockAuthService);
     }
 
     @AfterEach

@@ -27,11 +27,7 @@ public class F1VisualizerSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-
-                        // TEMPORARY for initial dev-purposes, will be removed in next several commits
-//                        .requestMatchers("/ws/**").permitAll()
-//                        .requestMatchers("/api/v1/analysis/**").permitAll()
-
+                        .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
@@ -41,10 +37,15 @@ public class F1VisualizerSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Allow local Vite dev server and the future production domain
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "https://f1visualizer.com"));
+        // USE PATTERNS to allow dev, uat, and prod subdomains automatically
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:5173",
+                "https://*.f1visualizer.com",
+                "https://f1visualizer.com"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type"));
+        configuration.setAllowCredentials(true); // Required for SockJS/WebSockets
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

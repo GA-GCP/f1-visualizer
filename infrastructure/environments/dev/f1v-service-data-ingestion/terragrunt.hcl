@@ -42,5 +42,9 @@ inputs = {
     "SPRING_REDIS_HOST" = dependency.redis.outputs.redis_host
     "SPRING_REDIS_PORT" = dependency.redis.outputs.redis_port
     "SPRING_PROFILES_ACTIVE" = "dev"
+
+    # --- NEW: Explicitly inject Security Properties ---
+    "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI" = "https://example-okta-org.okta.com/oauth2/example-auth-server-dev"
+    "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_AUDIENCES"  = "dev.api.f1visualizer.com"
   }
 }

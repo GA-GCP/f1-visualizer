@@ -35,6 +35,8 @@ inputs = {
   service_account_email = dependency.iam.outputs.sa_data_ingestion_email
   image_url    = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/data-ingestion:latest"
 
+  is_public    = true
+
   # Needs VPC access to write to Redis
   vpc_connector_id = dependency.networking.outputs.vpc_access_connector_id
 

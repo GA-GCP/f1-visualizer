@@ -21,6 +21,8 @@ inputs = {
   image_url    = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/data-analysis:latest"
   service_account_email = dependency.iam.outputs.sa_data_analysis_email
 
+  is_public    = true
+
   env_vars = {
     "SPRING_PROFILES_ACTIVE" = "dev"
 

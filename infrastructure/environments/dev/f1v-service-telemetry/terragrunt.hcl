@@ -37,6 +37,8 @@ inputs = {
   service_name = "f1v-service-telemetry-dev"
   service_account_email = dependency.iam.outputs.sa_telemetry_email
 
+  is_public    = true
+
   # Pointing to the Artifact Registry repo we created
   image_url    = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/telemetry:latest"
 

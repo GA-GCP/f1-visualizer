@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,18 +27,18 @@ public class HistoricalDataLoader {
 
     private static final String DATASET = "f1_dataset";
     private static final String TABLE = "telemetry";
+    private static final int BATCH_SIZE = 500; // Safe batch limit for BigQuery inserts
 
     @Async
     public void loadSessionIntoBigQuery(long sessionKey) {
-        log.info("⏳ Starting batch ingestion for Session {} into BigQuery...", sessionKey);
+        log.info("⏳ Starting heavy batch ingestion for Session {} into BigQuery...", sessionKey);
 
-        // Fetch the first 5 minutes of data for a specific driver (Max Verstappen) just to populate the DB for our UI
+        // Fetch 15 minutes of race data for the ENTIRE grid
         OffsetDateTime start = OffsetDateTime.of(2023, 9, 17, 12, 0, 0, 0, ZoneOffset.UTC);
-        OffsetDateTime end = start.plusMinutes(5);
+        OffsetDateTime end = start.plusMinutes(15);
 
+        // Notice we removed the driver filter. This gets everyone!
         List<OpenF1CarData> data = openF1Client.getCarData(sessionKey, start, end)
-                // Filter to driver 1 just to keep the initial load manageable
-                .filter(d -> d.getDriverNumber() != null && d.getDriverNumber() == 1)
                 .collectList().block();
 
         if (data == null || data.isEmpty()) {
@@ -45,31 +46,45 @@ public class HistoricalDataLoader {
             return;
         }
 
-        log.info("📦 Received {} telemetry packets. Inserting to BigQuery...", data.size());
+        log.info("📦 Received {} telemetry packets for the grid. Chunking inserts...", data.size());
 
-        InsertAllRequest.Builder requestBuilder = InsertAllRequest.newBuilder(DATASET, TABLE);
+        List<InsertAllRequest.RowToInsert> rows = new ArrayList<>();
 
         for (OpenF1CarData packet : data) {
-            Map<String, Object> row = new HashMap<>();
-            row.put("session_key", packet.getSessionKey());
-            row.put("date", packet.getDate().toString());
-            row.put("driver_number", packet.getDriverNumber());
-            row.put("speed", packet.getSpeed());
-            row.put("rpm", packet.getRpm());
-            row.put("gear", packet.getGear());
-            row.put("throttle", packet.getThrottle());
-            row.put("brake", packet.getBrake());
-            row.put("drs", packet.getDrs());
+            Map<String, Object> rowContent = new HashMap<>();
+            rowContent.put("session_key", packet.getSessionKey());
+            rowContent.put("date", packet.getDate().toString());
+            rowContent.put("driver_number", packet.getDriverNumber());
+            rowContent.put("speed", packet.getSpeed());
+            rowContent.put("rpm", packet.getRpm());
+            rowContent.put("gear", packet.getGear());
+            rowContent.put("throttle", packet.getThrottle());
+            rowContent.put("brake", packet.getBrake());
+            rowContent.put("drs", packet.getDrs());
 
-            requestBuilder.addRow(row);
+            rows.add(InsertAllRequest.RowToInsert.of(rowContent));
+
+            // Execute BQ Insert when batch size is reached to prevent memory overflow
+            if (rows.size() >= BATCH_SIZE) {
+                flushToBigQuery(rows);
+                rows.clear();
+            }
         }
 
-        InsertAllResponse response = bigQuery.insertAll(requestBuilder.build());
+        // Flush remaining rows
+        if (!rows.isEmpty()) {
+            flushToBigQuery(rows);
+        }
+
+        log.info("✅ Hydration Complete! Successfully loaded {} rows into BigQuery `f1_dataset.telemetry`.", data.size());
+    }
+
+    private void flushToBigQuery(List<InsertAllRequest.RowToInsert> rows) {
+        InsertAllRequest request = InsertAllRequest.newBuilder(DATASET, TABLE).setRows(rows).build();
+        InsertAllResponse response = bigQuery.insertAll(request);
 
         if (response.hasErrors()) {
-            log.error("❌ BigQuery Insert Errors: {}", response.getInsertErrors());
-        } else {
-            log.info("✅ Successfully loaded {} rows into BigQuery `f1_dataset.telemetry`.", data.size());
+            log.error("❌ BigQuery Insert Errors on batch: {}", response.getInsertErrors());
         }
     }
 }

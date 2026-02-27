@@ -25,7 +25,7 @@ variable "env_vars" {
   default     = {}
 }
 variable "is_public" {
-  description = "Whether to allow unauthenticated invocations (Frontend only)"
+  description = "Whether to allow unauthenticated invocations"
   type        = bool
   default     = false
 }

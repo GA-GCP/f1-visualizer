@@ -2,6 +2,7 @@ package com.elysianarts.f1.visualizer.telemetry.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
@@ -13,18 +14,22 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")
-//                .setAllowedOriginPatterns("http://localhost:5173", "https://dev.f1visualizer.com", "https://*.f1visualizer.com", "https://f1visualizer.com")
+                .setAllowedOriginPatterns("http://localhost:5173", "https://*.f1visualizer.com", "https://f1visualizer.com")
                 .withSockJS();
     }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // Enable a simple in-memory broker to push messages to clients
-        // The frontend will subscribe to paths starting with "/topic"
-        registry.enableSimpleBroker("/topic");
+        // Use ThreadPoolTaskScheduler for the STOMP heartbeat
+        ThreadPoolTaskScheduler heartbeatScheduler = new ThreadPoolTaskScheduler();
+        heartbeatScheduler.setPoolSize(1);
+        heartbeatScheduler.setThreadNamePrefix("ws-heartbeat-thread-");
+        heartbeatScheduler.initialize();
 
-        // Prefix for messages bound for @MessageMapping methods (Client -> Server)
+        registry.enableSimpleBroker("/topic")
+                .setTaskScheduler(heartbeatScheduler)
+                .setHeartbeatValue(new long[]{10000, 10000}); // 10 seconds Heartbeat
+
         registry.setApplicationDestinationPrefixes("/app");
     }
 }

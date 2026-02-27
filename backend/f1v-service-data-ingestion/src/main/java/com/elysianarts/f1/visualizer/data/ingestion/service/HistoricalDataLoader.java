@@ -25,12 +25,11 @@ public class HistoricalDataLoader {
 
     private static final String DATASET = "f1_dataset";
     private static final String TABLE = "telemetry";
-    private static final int BATCH_SIZE = 500; // Safe batch limit for BigQuery inserts
+    private static final int BATCH_SIZE = 500;
 
     public void loadSessionIntoBigQuery(long sessionKey) {
         log.info("⏳ Fetching metadata for Session {}...", sessionKey);
 
-        // 1. DYNAMICALLY fetch the actual start time of the specific race
         var sessionMeta = openF1Client.getSession(sessionKey).block();
 
         if (sessionMeta == null || sessionMeta.getDateStart() == null) {
@@ -38,51 +37,56 @@ public class HistoricalDataLoader {
             return;
         }
 
-        OffsetDateTime start = sessionMeta.getDateStart();
-        OffsetDateTime end = start.plusMinutes(15);
+        OffsetDateTime windowStart = sessionMeta.getDateStart();
+        // Fallback to a 2-hour window if the API hasn't populated the end date yet
+        OffsetDateTime raceEnd = sessionMeta.getDateEnd() != null ? sessionMeta.getDateEnd() : windowStart.plusHours(2);
 
-        log.info("⏳ Starting heavy batch ingestion for Session {} ({} to {}) into BigQuery...", sessionKey, start, end);
+        log.info("🚀 Starting Full Race Ingestion for Session {} ({} to {}) into BigQuery...", sessionKey, windowStart, raceEnd);
 
-        // 2. Fetch the data using the correct window
-        List<OpenF1CarData> data = openF1Client.getCarData(sessionKey, start, end)
-                .collectList().block();
+        int totalPacketsIngested = 0;
 
-        if (data == null || data.isEmpty()) {
-            log.warn("⚠️ No data found for session {} in that window.", sessionKey);
-            return;
-        }
+        // Loop in 15-minute chunks to safely extract data without triggering API payload limits
+        while (windowStart.isBefore(raceEnd)) {
+            OffsetDateTime windowEnd = windowStart.plusMinutes(15);
+            if (windowEnd.isAfter(raceEnd)) windowEnd = raceEnd;
 
-        log.info("📦 Received {} telemetry packets for the grid. Chunking inserts...", data.size());
+            log.info("⏳ Fetching time window: {} -> {}", windowStart, windowEnd);
+            List<OpenF1CarData> data = openF1Client.getCarData(sessionKey, windowStart, windowEnd).collectList().block();
 
-        List<InsertAllRequest.RowToInsert> rows = new ArrayList<>();
+            if (data != null && !data.isEmpty()) {
+                totalPacketsIngested += data.size();
+                List<InsertAllRequest.RowToInsert> rows = new ArrayList<>();
 
-        for (OpenF1CarData packet : data) {
-            Map<String, Object> rowContent = new HashMap<>();
-            rowContent.put("session_key", packet.getSessionKey());
-            rowContent.put("date", packet.getDate().toString());
-            rowContent.put("driver_number", packet.getDriverNumber());
-            rowContent.put("speed", packet.getSpeed());
-            rowContent.put("rpm", packet.getRpm());
-            rowContent.put("gear", packet.getGear());
-            rowContent.put("throttle", packet.getThrottle());
-            rowContent.put("brake", packet.getBrake());
-            rowContent.put("drs", packet.getDrs());
+                for (OpenF1CarData packet : data) {
+                    Map<String, Object> rowContent = new HashMap<>();
+                    rowContent.put("session_key", packet.getSessionKey());
+                    rowContent.put("date", packet.getDate().toString());
+                    rowContent.put("driver_number", packet.getDriverNumber());
+                    rowContent.put("speed", packet.getSpeed());
+                    rowContent.put("rpm", packet.getRpm());
+                    rowContent.put("gear", packet.getGear());
+                    rowContent.put("throttle", packet.getThrottle());
+                    rowContent.put("brake", packet.getBrake());
+                    rowContent.put("drs", packet.getDrs());
 
-            rows.add(InsertAllRequest.RowToInsert.of(rowContent));
+                    rows.add(InsertAllRequest.RowToInsert.of(rowContent));
 
-            // Execute BQ Insert when batch size is reached to prevent memory overflow
-            if (rows.size() >= BATCH_SIZE) {
-                flushToBigQuery(rows);
-                rows.clear();
+                    if (rows.size() >= BATCH_SIZE) {
+                        flushToBigQuery(rows);
+                        rows.clear();
+                    }
+                }
+                if (!rows.isEmpty()) flushToBigQuery(rows);
             }
+
+            // Move to the next chunk
+            windowStart = windowEnd;
+
+            // Polite delay to respect API rate limits even on sponsor tier
+            try { Thread.sleep(500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         }
 
-        // Flush remaining rows
-        if (!rows.isEmpty()) {
-            flushToBigQuery(rows);
-        }
-
-        log.info("✅ Hydration Complete! Successfully loaded {} rows into BigQuery `f1_dataset.telemetry`.", data.size());
+        log.info("✅ Hydration Complete! Successfully loaded {} total rows into BigQuery `f1_dataset.telemetry`.", totalPacketsIngested);
     }
 
     private void flushToBigQuery(List<InsertAllRequest.RowToInsert> rows) {

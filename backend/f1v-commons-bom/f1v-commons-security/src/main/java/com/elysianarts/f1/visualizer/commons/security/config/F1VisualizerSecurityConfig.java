@@ -39,14 +39,14 @@ public class F1VisualizerSecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
-                "https://dev.f1visualizer.com", // EXPLICIT
                 "https://*.f1visualizer.com",
                 "https://f1visualizer.com"
         ));
-        // FIX: Use wildcards to allow Axios and SockJS custom headers
-        configuration.setAllowedMethods(List.of("*"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true); // Required for SockJS/WebSockets
+
+        // Explicitly define what is allowed to pass preflight checks
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type"));
+        configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

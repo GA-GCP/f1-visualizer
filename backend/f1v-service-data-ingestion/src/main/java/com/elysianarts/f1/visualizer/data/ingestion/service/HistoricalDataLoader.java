@@ -7,11 +7,9 @@ import com.google.cloud.bigquery.InsertAllRequest;
 import com.google.cloud.bigquery.InsertAllResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,15 +26,24 @@ public class HistoricalDataLoader {
     private static final String DATASET = "f1_dataset";
     private static final String TABLE = "telemetry";
     private static final int BATCH_SIZE = 500; // Safe batch limit for BigQuery inserts
-    
-    public void loadSessionIntoBigQuery(long sessionKey) {
-        log.info("⏳ Starting heavy batch ingestion for Session {} into BigQuery...", sessionKey);
 
-        // Fetch 15 minutes of race data for the ENTIRE grid
-        OffsetDateTime start = OffsetDateTime.of(2023, 9, 17, 12, 0, 0, 0, ZoneOffset.UTC);
+    public void loadSessionIntoBigQuery(long sessionKey) {
+        log.info("⏳ Fetching metadata for Session {}...", sessionKey);
+
+        // 1. DYNAMICALLY fetch the actual start time of the specific race
+        var sessionMeta = openF1Client.getSession(sessionKey).block();
+
+        if (sessionMeta == null || sessionMeta.getDateStart() == null) {
+            log.warn("⚠️ Could not find valid session metadata for key: {}", sessionKey);
+            return;
+        }
+
+        OffsetDateTime start = sessionMeta.getDateStart();
         OffsetDateTime end = start.plusMinutes(15);
 
-        // Notice we removed the driver filter. This gets everyone!
+        log.info("⏳ Starting heavy batch ingestion for Session {} ({} to {}) into BigQuery...", sessionKey, start, end);
+
+        // 2. Fetch the data using the correct window
         List<OpenF1CarData> data = openF1Client.getCarData(sessionKey, start, end)
                 .collectList().block();
 

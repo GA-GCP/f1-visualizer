@@ -6,7 +6,7 @@ export interface UserPreferences {
 }
 
 export interface UserProfile {
-    oktaSubId: string;
+    authSubId: string;
     email: string;
     createdAt: string;
     preferences: UserPreferences;

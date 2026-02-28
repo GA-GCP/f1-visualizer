@@ -26,8 +26,8 @@ inputs = {
   env_vars = {
     "SPRING_PROFILES_ACTIVE" = "dev"
 
-    # --- NEW: Explicitly inject Security Properties ---
-    "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI" = "https://example-okta-org.okta.com/oauth2/example-auth-server-dev"
+    # --- NEW: Explicitly inject Auth0 Security Properties ---
+    "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI" = "example-tenant.us.auth0.com/"
     "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_AUDIENCES"  = "dev.api.f1visualizer.com"
   }
 }

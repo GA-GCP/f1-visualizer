@@ -11,12 +11,11 @@
     "test:ci": "vitest run"
   },
   "dependencies": {
+    "@auth0/auth0-react": "^2.15.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.8",
     "@mui/material": "^7.3.8",
-    "@okta/okta-auth-js": "^7.14.1",
-    "@okta/okta-react": "^6.10.0",
     "@stomp/stompjs": "^7.3.0",
     "axios": "^1.13.5",
     "d3": "^7.9.0",

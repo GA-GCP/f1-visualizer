@@ -1,14 +1,20 @@
 import React, { useEffect } from 'react';
-import { useOktaAuth } from '@okta/okta-react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { apiClient } from '../api/apiClient';
 
 export const AxiosAuthInterceptor: React.FC = () => {
-    const { authState } = useOktaAuth();
+    const { getAccessTokenSilently, isAuthenticated } = useAuth0();
 
     useEffect(() => {
-        const requestInterceptor = apiClient.interceptors.request.use((config) => {
-            if (authState?.accessToken?.accessToken) {
-                config.headers.Authorization = `Bearer ${authState.accessToken.accessToken}`;
+        const requestInterceptor = apiClient.interceptors.request.use(async (config) => {
+            if (isAuthenticated) {
+                try {
+                    // This dynamically fetches/refreshes the Auth0 JWT token
+                    const token = await getAccessTokenSilently();
+                    config.headers.Authorization = `Bearer ${token}`;
+                } catch (error) {
+                    console.error("Failed to acquire Auth0 access token", error);
+                }
             }
             return config;
         });
@@ -16,7 +22,7 @@ export const AxiosAuthInterceptor: React.FC = () => {
         return () => {
             apiClient.interceptors.request.eject(requestInterceptor);
         };
-    }, [authState]);
+    }, [isAuthenticated, getAccessTokenSilently]);
 
     return null;
 };

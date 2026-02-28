@@ -10,13 +10,13 @@ produces:
 consumes:
   - application/json
 securityDefinitions:
-  okta_jwt:
-    authorizationUrl: "OKTA_ISSUER_URI_PLACEHOLDER/v1/authorize"
+  auth0_jwt:
+    authorizationUrl: "AUTH0_ISSUER_URI_PLACEHOLDER/authorize"
     flow: "implicit"
     type: "oauth2"
-    x-google-issuer: "OKTA_ISSUER_URI_PLACEHOLDER"
-    x-google-jwks_uri: "OKTA_ISSUER_URI_PLACEHOLDER/v1/keys"
-    x-google-audiences: "OKTA_AUDIENCE_PLACEHOLDER"
+    x-google-issuer: "AUTH0_ISSUER_URI_PLACEHOLDER/"
+    x-google-jwks_uri: "AUTH0_ISSUER_URI_PLACEHOLDER/.well-known/jwks.json"
+    x-google-audiences: "AUTH0_AUDIENCE_PLACEHOLDER"
 paths:
   # --- USER SERVICE ---
   /api/v1/users/me:
@@ -31,7 +31,7 @@ paths:
         '200':
           description: OK
       security:
-        - okta_jwt: []
+        - auth0_jwt: []
     options:
       summary: CORS support
       operationId: userOptionsMe
@@ -63,7 +63,7 @@ paths:
         '200':
           description: OK
       security:
-        - okta_jwt: []
+        - auth0_jwt: []
     options:
       summary: CORS support
       operationId: userOptionsPrefs
@@ -102,7 +102,7 @@ paths:
         '200':
           description: OK
       security:
-        - okta_jwt: []
+        - auth0_jwt: []
     options:
       summary: CORS support
       operationId: analysisOptions
@@ -283,7 +283,7 @@ paths:
         '200':
           description: OK
       security:
-        - okta_jwt: []
+        - auth0_jwt: []
     options:
       summary: CORS support
       operationId: ingestionOptionsCommand
@@ -315,7 +315,7 @@ paths:
         '200':
           description: OK
       security:
-        - okta_jwt: []
+        - auth0_jwt: []
     options:
       summary: CORS support
       operationId: ingestionOptionsLoad

@@ -1,6 +1,6 @@
 package com.elysianarts.f1.visualizer.user.firestore.repository;
 
-import com.elysianarts.f1.visualizer.user.firestore.document.F1UserDocument;
+import com.elysianarts.f1.visualizer.user.firestore.document.F1VUserDocument;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import lombok.RequiredArgsConstructor;
@@ -10,16 +10,15 @@ import java.util.concurrent.ExecutionException;
 
 @Repository
 @RequiredArgsConstructor
-public class F1UserRepository {
-
+public class F1VUserRepository {
     private final Firestore firestore;
     private static final String COLLECTION_NAME = "users";
 
-    public F1UserDocument findById(String id) {
+    public F1VUserDocument findById(String id) {
         try {
             DocumentSnapshot document = firestore.collection(COLLECTION_NAME).document(id).get().get();
             if (document.exists()) {
-                return document.toObject(F1UserDocument.class);
+                return document.toObject(F1VUserDocument.class);
             }
             return null;
         } catch (InterruptedException | ExecutionException e) {
@@ -27,11 +26,11 @@ public class F1UserRepository {
         }
     }
 
-    public F1UserDocument save(F1UserDocument user) {
+    public F1VUserDocument save(F1VUserDocument user) {
         try {
-            // We use the oktaSubId as the document Key
+            // Use the authSubId as the document Key
             firestore.collection(COLLECTION_NAME)
-                    .document(user.getOktaSubId())
+                    .document(user.getAuthSubId())
                     .set(user)
                     .get(); // block to ensure write completes
             return user;

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { useOktaAuth } from '@okta/okta-react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { fetchCurrentUser, updateUserPreferences } from '../api/userApi';
 import type { UserProfile, UserPreferences } from '../types/user';
 
@@ -12,14 +12,14 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { authState } = useOktaAuth();
+    const { isAuthenticated } = useAuth0();
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         let isMounted = true;
         const loadUser = async () => {
-            if (authState?.isAuthenticated) {
+            if (isAuthenticated) {
                 try {
                     const profile = await fetchCurrentUser();
                     if (isMounted) setUserProfile(profile);
@@ -34,7 +34,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         void loadUser();
         return () => { isMounted = false; };
-    }, [authState?.isAuthenticated]);
+    }, [isAuthenticated]);
 
     const handleUpdatePreferences = async (newPrefs: UserPreferences) => {
         const updatedProfile = await updateUserPreferences(newPrefs);
@@ -48,6 +48,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useUser = () => {
     const context = useContext(UserContext);
     if (context === undefined) {

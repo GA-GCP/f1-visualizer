@@ -1,10 +1,7 @@
-import React from 'react';
-import { Routes, Route, Outlet } from 'react-router-dom'; // Add Routes, Route, Outlet to your existing react-router-dom imports
-import { LoginCallback, useOktaAuth } from '@okta/okta-react'; // Add LoginCallback and useOktaAuth
+import React, { useEffect } from 'react';
+import { Routes, Route, Outlet, BrowserRouter, useNavigate } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
-import { BrowserRouter, useNavigate } from 'react-router-dom';
-import { Security } from '@okta/okta-react';
-import { OktaAuth, toRelativeUrl } from '@okta/okta-auth-js';
+import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import LayoutMain from './components/layout/LayoutMain';
 import { AxiosAuthInterceptor } from './auth/AuthHandler';
 import Home from './pages/Home';
@@ -12,23 +9,15 @@ import HistoricalData from './pages/HistoricalData';
 import VersusMode from './pages/VersusMode';
 import { UserProvider } from "@/context/UserContext.tsx";
 
-// --- DYNAMIC OKTA CONFIGURATION ---
-const oktaAuth = new OktaAuth({
-    issuer: import.meta.env.VITE_OKTA_ISSUER,
-    clientId: import.meta.env.VITE_OKTA_CLIENT_ID,
-    redirectUri: window.location.origin + '/login/callback',
-    scopes: ['openid', 'profile', 'email']
-});
-
 // --- THE BROADCAST THEME ---
 const broadcastTheme = createTheme({
     palette: {
         mode: 'dark',
-        primary: { main: '#e10600' }, // F1 Crimson
-        secondary: { main: '#ffffff' }, // Pure White for contrast
+        primary: { main: '#e10600' },
+        secondary: { main: '#ffffff' },
         background: {
-            default: '#101010', // Deep dark, almost black
-            paper: 'rgba(20, 20, 20, 0.6)' // Glass base
+            default: '#101010',
+            paper: 'rgba(20, 20, 20, 0.6)'
         },
         text: {
             primary: '#ffffff',
@@ -42,14 +31,11 @@ const broadcastTheme = createTheme({
         h6: { fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' },
         body1: { fontSize: '1.1rem' },
     },
-    shape: {
-        borderRadius: 4, // Subtle rounding, but we will often override this
-    },
+    shape: { borderRadius: 4 },
     components: {
         MuiCssBaseline: {
             styleOverrides: {
                 body: {
-                    // Global dark radial gradient to give it depth (like a TV studio background)
                     background: 'radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000000 100%)',
                     backgroundAttachment: 'fixed',
                     minHeight: '100vh',
@@ -59,7 +45,6 @@ const broadcastTheme = createTheme({
         MuiPaper: {
             styleOverrides: {
                 root: {
-                    // THE GLASS EFFECT
                     backdropFilter: 'blur(12px)',
                     backgroundColor: 'rgba(30, 30, 30, 0.6)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -70,9 +55,9 @@ const broadcastTheme = createTheme({
         MuiAppBar: {
             styleOverrides: {
                 root: {
-                    background: 'rgba(0, 0, 0, 0.8)', // Darker glass for header
+                    background: 'rgba(0, 0, 0, 0.8)',
                     backdropFilter: 'blur(20px)',
-                    borderBottom: '2px solid #e10600', // The "Red Line" signature
+                    borderBottom: '2px solid #e10600',
                     boxShadow: 'none',
                 }
             }
@@ -92,7 +77,7 @@ const broadcastTheme = createTheme({
                         backgroundColor: 'rgba(0, 255, 0, 0.1)',
                         color: '#00ff00',
                         border: '1px solid #00ff00',
-                        boxShadow: '0 0 10px rgba(0, 255, 0, 0.2)', // Neon Glow
+                        boxShadow: '0 0 10px rgba(0, 255, 0, 0.2)',
                     }
                 }
             ]
@@ -101,22 +86,19 @@ const broadcastTheme = createTheme({
 });
 
 // --- AUTH GUARD COMPONENT ---
-// This checks if the user is logged in. If not, it kicks them to Okta.
 const RequiredAuth: React.FC = () => {
-    const { oktaAuth, authState } = useOktaAuth();
+    const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
 
-    React.useEffect(() => {
-        if (!authState) return;
-        if (!authState.isAuthenticated) {
-            oktaAuth.signInWithRedirect();
+    useEffect(() => {
+        if (!isLoading && !isAuthenticated) {
+            void loginWithRedirect();
         }
-    }, [oktaAuth, authState]);
+    }, [isLoading, isAuthenticated, loginWithRedirect]);
 
-    if (!authState || !authState.isAuthenticated) {
-        return null; // Show nothing while redirecting to Okta
+    if (isLoading || !isAuthenticated) {
+        return null;
     }
 
-    // Wrap the authenticated Outlet with our UserProvider
     return (
         <UserProvider>
             <Outlet />
@@ -124,30 +106,35 @@ const RequiredAuth: React.FC = () => {
     );
 };
 
-const AppWithRouterAccess: React.FC = () => {
+// --- AUTH0 PROVIDER WRAPPER ---
+// We wrap this inside BrowserRouter so we can use useNavigate for the Auth0 callback redirect
+const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const navigate = useNavigate();
 
-    const restoreOriginalUri = async (_oktaAuth: OktaAuth, originalUri: string) => {
-        navigate(toRelativeUrl(originalUri || '/', window.location.origin));
+    const domain = import.meta.env.VITE_AUTH0_DOMAIN;
+    const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
+    const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
+
+    const onRedirectCallback = (appState: any) => {
+        navigate(appState?.returnTo || window.location.pathname);
     };
 
-    return (
-        <Security oktaAuth={oktaAuth} restoreOriginalUri={restoreOriginalUri}>
-            <AxiosAuthInterceptor />
-            <Routes>
-                {/* 1. The Okta Callback Route (Must be unprotected) */}
-                <Route path="/login/callback" element={<LoginCallback />} />
+    if (!(domain && clientId && audience)) {
+        return null;
+    }
 
-                {/* 2. Protected Application Routes */}
-                <Route element={<RequiredAuth />}>
-                    <Route element={<LayoutMain />}>
-                        <Route path="/" element={<Home />} />
-                        <Route path="/historical" element={<HistoricalData />} />
-                        <Route path="/versus" element={<VersusMode />} />
-                    </Route>
-                </Route>
-            </Routes>
-        </Security>
+    return (
+        <Auth0Provider
+            domain={domain}
+            clientId={clientId}
+            authorizationParams={{
+                redirect_uri: window.location.origin,
+                audience: audience
+            }}
+            onRedirectCallback={onRedirectCallback}
+        >
+            {children}
+        </Auth0Provider>
     );
 };
 
@@ -156,7 +143,18 @@ function App() {
         <ThemeProvider theme={broadcastTheme}>
             <CssBaseline />
             <BrowserRouter>
-                <AppWithRouterAccess />
+                <Auth0ProviderWithNavigate>
+                    <AxiosAuthInterceptor />
+                    <Routes>
+                        <Route element={<RequiredAuth />}>
+                            <Route element={<LayoutMain />}>
+                                <Route path="/" element={<Home />} />
+                                <Route path="/historical" element={<HistoricalData />} />
+                                <Route path="/versus" element={<VersusMode />} />
+                            </Route>
+                        </Route>
+                    </Routes>
+                </Auth0ProviderWithNavigate>
             </BrowserRouter>
         </ThemeProvider>
     );

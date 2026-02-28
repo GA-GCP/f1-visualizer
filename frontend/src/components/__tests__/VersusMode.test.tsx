@@ -1,11 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import VersusMode from '../../pages/VersusMode';
-import { fetchDrivers } from '@/api/referenceApi.ts';
+import { fetchDrivers, fetchDriverStats } from '@/api/referenceApi.ts';
 
 // Mock the reference API
 vi.mock('../../api/referenceApi', () => ({
-    fetchDrivers: vi.fn()
+    fetchDrivers: vi.fn(),
+    fetchDriverStats: vi.fn()
 }));
 
 // Mock the heavy D3 Radar Chart
@@ -27,11 +28,16 @@ describe('VersusMode Page', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(fetchDrivers).mockResolvedValue(mockDrivers);
+
+        // FIX: Dynamically return the correct stats based on the driver ID requested
+        vi.mocked(fetchDriverStats).mockImplementation(async (id: number) => {
+            const driver = mockDrivers.find(d => d.id === id);
+            return driver ? driver.stats : mockDrivers[0].stats;
+        });
     });
 
     it('shows loading state initially, then renders comparison engine when data arrives', async () => {
-        vi.mocked(fetchDrivers).mockResolvedValue(mockDrivers);
-
         render(<VersusMode />);
 
         // Verify the CircularProgress (progressbar) is rendered initially
@@ -49,6 +55,7 @@ describe('VersusMode Page', () => {
         expect(screen.getByTestId('mock-radar-chart')).toBeInTheDocument();
 
         // Verify stat bars rendered (by checking for driver wins)
+        // Since the mock is now dynamic, there will only be exactly one "54" and one "5"
         expect(screen.getByText('54')).toBeInTheDocument(); // VER wins
         expect(screen.getByText('5')).toBeInTheDocument();  // LEC wins
     });

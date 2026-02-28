@@ -8,5 +8,5 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: https://example-okta-org.okta.com/oauth2/example-auth-server-prod
+          issuer-uri: https://example-tenant.us.auth0.com/
           audiences: api.f1visualizer.com

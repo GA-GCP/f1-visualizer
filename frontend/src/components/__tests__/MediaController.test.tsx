@@ -1,7 +1,7 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'; // <-- 'act' imported here
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MediaController from '../MediaController';
-import { playSimulation, pauseSimulation } from '../../api/ingestionApi';
+import { playSimulation, pauseSimulation } from '@/api/ingestionApi.ts';
 
 // Mock the API calls (mockResolvedValue ensures the await inside the component finishes)
 vi.mock('../../api/ingestionApi', () => ({
@@ -28,8 +28,11 @@ describe('MediaController', () => {
         render(<MediaController />);
         const toggleBtn = screen.getByRole('button');
 
-        // 1. Initially playing, so clicking it should pause the simulation
-        fireEvent.click(toggleBtn);
+        // 1. Wrap the async interaction in act()
+        await act(async () => {
+            fireEvent.click(toggleBtn);
+        });
+
         expect(pauseSimulation).toHaveBeenCalledTimes(1);
         expect(playSimulation).not.toHaveBeenCalled();
 
@@ -39,11 +42,12 @@ describe('MediaController', () => {
             expect(screen.getByTestId('PlayArrowIcon')).toBeInTheDocument();
         });
 
-        // 3. Now the state is paused. Clicking again should play the simulation.
-        fireEvent.click(toggleBtn);
-        expect(playSimulation).toHaveBeenCalledTimes(1);
+        // 3. Wrap the second async interaction in act()
+        await act(async () => {
+            fireEvent.click(toggleBtn);
+        });
 
-        // pauseSimulation remains at 1 call from the previous click
+        expect(playSimulation).toHaveBeenCalledTimes(1);
         expect(pauseSimulation).toHaveBeenCalledTimes(1);
     });
 });

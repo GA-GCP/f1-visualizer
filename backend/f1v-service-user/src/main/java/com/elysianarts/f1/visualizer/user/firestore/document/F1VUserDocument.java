@@ -11,14 +11,10 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-// Removed @Document, @DocumentId (Native client doesn't use them)
-public class F1UserDocument {
-
-    // We will handle the ID manually in the Repository layer
-    private String oktaSubId;
+public class F1VUserDocument {
+    private String authSubId;
 
     private String email;
-    // Note: Native client handles java.time.Instant conversion automatically
     private Instant createdAt;
     private UserPreferences preferences;
 

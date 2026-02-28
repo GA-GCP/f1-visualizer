@@ -5,16 +5,17 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import StorageIcon from '@mui/icons-material/Storage';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
-import { useOktaAuth } from '@okta/okta-react';
 import UserSettingsModal from './UserSettingsModal';
+import {useAuth0} from "@auth0/auth0-react";
 
 const LayoutMain: React.FC = () => {
     const location = useLocation();
-    const { oktaAuth } = useOktaAuth(); // NEW: Destructure the auth instance
+    const { logout } = useAuth0();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-    const handleLogout = async () => {
-        await oktaAuth.signOut();
+    const handleLogout = () => {
+        // Log out and redirect back to the app root
+        logout({ logoutParams: { returnTo: window.location.origin } });
     };
 
     return (

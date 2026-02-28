@@ -52,7 +52,7 @@ inputs = {
     "SPRING_PROFILES_ACTIVE" = "dev"
 
     # --- NEW: Explicitly inject Security Properties ---
-    "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI" = "https://integrator-7997251.okta.com/oauth2/aus10dj3jwaXRs0xm698"
+    "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI" = "dev-5ly43mspbpyofvc1.us.auth0.com/"
     "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_AUDIENCES"  = "dev.api.f1visualizer.com"
   }
 }

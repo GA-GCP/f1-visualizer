@@ -1,12 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UserProvider, useUser } from '../../context/UserContext';
-import { useOktaAuth } from '@okta/okta-react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { fetchCurrentUser } from '@/api/userApi.ts';
 
 // Mock dependencies
-vi.mock('@okta/okta-react', () => ({
-    useOktaAuth: vi.fn()
+vi.mock('@auth0/auth0-react', () => ({
+    useAuth0: vi.fn()
 }));
 
 vi.mock('../../api/userApi', () => ({
@@ -24,14 +24,14 @@ describe('UserContext', () => {
         vi.clearAllMocks();
     });
 
-    it('fetches user profile if Okta is authenticated', async () => {
-        // Arrange
-        vi.mocked(useOktaAuth).mockReturnValue({
-            authState: { isAuthenticated: true }
-        } as any);
+    it('fetches user profile if Auth0 is authenticated', async () => {
+        // Arrange: Use double assertion to bypass "any" rule safely
+        vi.mocked(useAuth0).mockReturnValue({
+            isAuthenticated: true
+        } as unknown as ReturnType<typeof useAuth0>);
 
         vi.mocked(fetchCurrentUser).mockResolvedValue({
-            oktaSubId: '123',
+            authSubId: '123',
             email: 'test@f1.com',
             createdAt: '2024-01-01',
             preferences: { favoriteDriver: 'LEC' }
@@ -53,11 +53,11 @@ describe('UserContext', () => {
         });
     });
 
-    it('does not fetch profile if Okta is unauthenticated', async () => {
-        // Arrange
-        vi.mocked(useOktaAuth).mockReturnValue({
-            authState: { isAuthenticated: false }
-        } as any);
+    it('does not fetch profile if Auth0 is unauthenticated', async () => {
+        // Arrange: Use double assertion to bypass "any" rule safely
+        vi.mocked(useAuth0).mockReturnValue({
+            isAuthenticated: false
+        } as unknown as ReturnType<typeof useAuth0>);
 
         // Act
         render(

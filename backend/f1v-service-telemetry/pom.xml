@@ -13,23 +13,24 @@
     <artifactId>f1v-service-telemetry</artifactId>
     <packaging>jar</packaging>
 
-    <properties>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
     <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.elysianarts.f1.visualizer.commons</groupId>
+            <artifactId>f1v-commons-service-base</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.elysianarts.f1.visualizer.commons</groupId>
             <artifactId>f1v-commons-websocket</artifactId>
         </dependency>
-
         <dependency>
             <groupId>com.elysianarts.f1.visualizer.commons</groupId>
             <artifactId>f1v-commons-gcp-memorystore-redis</artifactId>
         </dependency>
-
         <dependency>
             <groupId>com.elysianarts.f1.visualizer.commons</groupId>
             <artifactId>f1v-commons-security</artifactId>
@@ -65,5 +66,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

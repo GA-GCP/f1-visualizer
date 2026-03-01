@@ -1,7 +1,7 @@
 package com.elysianarts.f1.visualizer.telemetry.controller.v1;
 
 import com.elysianarts.f1.visualizer.commons.security.config.F1VisualizerSecurityConfig;
-import com.elysianarts.f1.visualizer.telemetry.config.JacksonObjectMapperConfig;
+import com.elysianarts.f1.visualizer.commons.service.config.JacksonObjectMapperConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;

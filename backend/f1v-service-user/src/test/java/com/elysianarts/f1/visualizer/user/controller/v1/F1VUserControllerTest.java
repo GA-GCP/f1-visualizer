@@ -1,7 +1,7 @@
 package com.elysianarts.f1.visualizer.user.controller.v1;
 
 import com.elysianarts.f1.visualizer.commons.security.config.F1VisualizerSecurityConfig;
-import com.elysianarts.f1.visualizer.user.config.JacksonObjectMapperConfig;
+import com.elysianarts.f1.visualizer.commons.service.config.JacksonObjectMapperConfig;
 import com.elysianarts.f1.visualizer.user.firestore.document.F1VUserDocument;
 import com.elysianarts.f1.visualizer.user.service.F1VUserService;
 import org.junit.jupiter.api.Test;

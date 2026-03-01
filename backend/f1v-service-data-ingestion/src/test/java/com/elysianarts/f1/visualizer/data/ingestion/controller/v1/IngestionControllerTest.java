@@ -1,8 +1,8 @@
 package com.elysianarts.f1.visualizer.data.ingestion.controller.v1;
 
+import com.elysianarts.f1.visualizer.commons.api.openf1.config.SecretManagerConfig;
 import com.elysianarts.f1.visualizer.commons.security.config.F1VisualizerSecurityConfig;
-import com.elysianarts.f1.visualizer.data.ingestion.config.JacksonObjectMapperConfig;
-import com.elysianarts.f1.visualizer.data.ingestion.config.SecretManagerConfig;
+import com.elysianarts.f1.visualizer.commons.service.config.JacksonObjectMapperConfig;
 import com.elysianarts.f1.visualizer.data.ingestion.service.HistoricalDataLoader;
 import com.elysianarts.f1.visualizer.data.ingestion.service.IngestionWorker;
 import com.elysianarts.f1.visualizer.data.ingestion.service.ReplayEngine;

@@ -10,11 +10,11 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>f1v-commons-parent</module>
         <module>f1v-commons-bom</module>
+        <module>f1v-commons-parent</module>
+        <module>f1v-service-data-analysis</module>
         <module>f1v-service-data-ingestion</module>
         <module>f1v-service-telemetry</module>
-        <module>f1v-service-data-analysis</module>
         <module>f1v-service-user</module>
     </modules>
 

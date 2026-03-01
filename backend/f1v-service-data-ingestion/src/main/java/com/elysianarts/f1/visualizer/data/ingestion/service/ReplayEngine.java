@@ -1,7 +1,7 @@
 package com.elysianarts.f1.visualizer.data.ingestion.service;
 
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
 import com.elysianarts.f1.visualizer.data.ingestion.config.RedisConfig;
-import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1CarData;
 import com.elysianarts.f1.visualizer.data.ingestion.repository.HistoricalRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

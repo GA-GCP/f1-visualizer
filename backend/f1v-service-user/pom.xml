@@ -13,20 +13,15 @@
     <artifactId>f1v-service-user</artifactId>
     <packaging>jar</packaging>
 
-    <properties>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
     <dependencies>
         <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-tx</artifactId>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.elysianarts.f1.visualizer.commons</groupId>
-            <artifactId>f1v-commons-rest-service</artifactId>
+            <artifactId>f1v-commons-service-rest</artifactId>
         </dependency>
         <dependency>
             <groupId>com.elysianarts.f1.visualizer.commons</groupId>

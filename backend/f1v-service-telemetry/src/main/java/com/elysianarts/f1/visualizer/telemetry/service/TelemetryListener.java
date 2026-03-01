@@ -26,6 +26,8 @@ public class TelemetryListener implements MessageListener {
             messagingTemplate.convertAndSend("/topic/race-data", payload);
         } else if (RedisConfig.LOCATION_TOPIC.equals(channel)) {
             messagingTemplate.convertAndSend("/topic/race-location", payload);
+        } else if (RedisConfig.PLAYBACK_TOPIC.equals(channel)) { // ROUTE NEW TOPIC
+            messagingTemplate.convertAndSend("/topic/playback-status", payload);
         }
     }
 }

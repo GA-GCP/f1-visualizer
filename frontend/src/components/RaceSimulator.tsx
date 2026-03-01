@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Paper, Grid, Chip } from '@mui/material';
+// 1. ADD Snackbar AND Alert TO THE MUI IMPORTS
+import { Box, Typography, Paper, Grid, Chip, Snackbar, Alert } from '@mui/material';
 import { useTelemetry } from '../hooks/useTelemetry';
 import { useLocation } from '../hooks/useLocation';
 import CircuitTrace from './CircuitTrace';
@@ -17,14 +18,12 @@ const RaceSimulator: React.FC = () => {
     const [lastTelemetry, setLastTelemetry] = useState<TelemetryPacket | null>(null);
     const [lastLocation, setLastLocation] = useState<LocationPacket | null>(null);
 
-    // 2. Consume the User Context
     const { userProfile } = useUser();
 
     useEffect(() => {
         fetchDrivers().then(data => {
             setDrivers(data);
             if (data.length > 0) {
-                // Determine the default driver using User Preferences!
                 const favCode = userProfile?.preferences?.favoriteDriver;
                 const defaultDriver = data.find(d => d.code === favCode) || data[0];
                 setSelectedDriver(defaultDriver);
@@ -32,25 +31,24 @@ const RaceSimulator: React.FC = () => {
         });
     }, [userProfile]);
 
-    // 1. Hook into Physics Stream (Keep the filter so the stats panel only shows the selected driver)
     const { isConnected: isTelemetryConnected } = useTelemetry((data) => {
         if (selectedDriver && data.driver_number === selectedDriver.id) {
             setLastTelemetry(data);
         }
     });
 
-    // 2. Hook into Spatial Stream (NEW: Remove the filter so the track draws ALL cars)
     const { isConnected: isLocationConnected } = useLocation((data) => {
         setLastLocation(data);
     });
 
-    // Callback when user clicks "Start" in the control panel
     const handleStreamStarted = (sessionKey: number, mode: 'LIVE' | 'SIMULATION') => {
         setActiveSession({ key: sessionKey, mode });
-        // Clear previous data
         setLastTelemetry(null);
         setLastLocation(null);
     };
+
+    // 2. NEW: Determine if we have dropped connection while a session is active
+    const connectionLost = activeSession !== null && (!isTelemetryConnected || !isLocationConnected);
 
     return (
         <Box sx={{ p: 4, bgcolor: '#121212', minHeight: '100vh', color: 'white' }}>
@@ -131,6 +129,14 @@ const RaceSimulator: React.FC = () => {
                     />
                 </Grid>
             </Grid>
+
+            {/* 3. NEW: The Global Alert Banner */}
+            <Snackbar open={connectionLost} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+                <Alert severity="error" variant="filled" sx={{ width: '100%', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                    CRITICAL: LIVE FEED CONNECTION LOST. ATTEMPTING RECONNECT...
+                </Alert>
+            </Snackbar>
+
         </Box>
     );
 };

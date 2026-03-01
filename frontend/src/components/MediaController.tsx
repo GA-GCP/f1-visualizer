@@ -1,12 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, IconButton, Slider, Typography, Paper } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
+// 1. IMPORT StompSubscription from the library
+import { type StompSubscription } from '@stomp/stompjs';
 import { playSimulation, pauseSimulation, seekSimulation } from '../api/ingestionApi';
+import { stompClient } from '../api/stompClient';
 
 const MediaController: React.FC = () => {
     const [isPlaying, setIsPlaying] = useState(true);
     const [progress, setProgress] = useState(0);
+
+    // Listen to the backend's Virtual Clock playback status
+    useEffect(() => {
+        // 2. USE THE CORRECT TYPE INSTEAD OF 'any'
+        let subscription: StompSubscription | null = null;
+
+        const checkConnection = setInterval(() => {
+            if (stompClient.connected) {
+                clearInterval(checkConnection);
+                subscription = stompClient.subscribe('/topic/playback-status', (message) => {
+                    try {
+                        const data = JSON.parse(message.body);
+                        if (typeof data.progress === 'number') {
+                            setProgress(data.progress);
+                            // Auto-pause the UI if we hit the end of the simulation
+                            if (data.progress >= 100) {
+                                setIsPlaying(false);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Failed to parse playback status:', err);
+                    }
+                });
+            }
+        }, 500);
+
+        return () => {
+            clearInterval(checkConnection);
+            if (subscription) subscription.unsubscribe();
+        };
+    }, []);
 
     const handleTogglePlay = async () => {
         if (isPlaying) {
@@ -23,6 +57,11 @@ const MediaController: React.FC = () => {
 
     const handleSeekCommitted = async (_: React.SyntheticEvent | Event, newValue: number | number[]) => {
         await seekSimulation(newValue as number);
+        // Automatically resume playing if we seek
+        if (!isPlaying) {
+            await playSimulation();
+            setIsPlaying(true);
+        }
     };
 
     return (

@@ -32,18 +32,16 @@ const RaceSimulator: React.FC = () => {
         });
     }, [userProfile]);
 
-    // 1. Hook into Physics Stream
+    // 1. Hook into Physics Stream (Keep the filter so the stats panel only shows the selected driver)
     const { isConnected: isTelemetryConnected } = useTelemetry((data) => {
         if (selectedDriver && data.driver_number === selectedDriver.id) {
             setLastTelemetry(data);
         }
     });
 
-    // 2. Hook into Spatial Stream
+    // 2. Hook into Spatial Stream (NEW: Remove the filter so the track draws ALL cars)
     const { isConnected: isLocationConnected } = useLocation((data) => {
-        if (selectedDriver && data.driver_number === selectedDriver.id) {
-            setLastLocation(data);
-        }
+        setLastLocation(data);
     });
 
     // Callback when user clicks "Start" in the control panel
@@ -127,7 +125,10 @@ const RaceSimulator: React.FC = () => {
                 </Grid>
 
                 <Grid size={{ xs: 12, md: 8 }}>
-                    <CircuitTrace latestLocation={lastLocation} />
+                    <CircuitTrace
+                        latestLocation={lastLocation}
+                        selectedDriver={selectedDriver}
+                    />
                 </Grid>
             </Grid>
         </Box>

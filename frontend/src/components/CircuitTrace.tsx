@@ -2,41 +2,56 @@ import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 import { Box, Paper, Typography } from '@mui/material';
 import type { LocationPacket } from '../types/telemetry';
+import type { DriverProfile } from '../api/referenceApi';
 
 interface CircuitTraceProps {
     latestLocation: LocationPacket | null;
+    selectedDriver: DriverProfile | null;
 }
 
-// We store history outside React state to avoid re-rendering the parent 60fps
-const CircuitTrace: React.FC<CircuitTraceProps> = ({ latestLocation }) => {
+const CircuitTrace: React.FC<CircuitTraceProps> = ({ latestLocation, selectedDriver }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    // "Ref" storage ensures these persist without triggering React renders
-    const historyRef = useRef<{ x: number; y: number }[]>([]);
+    // NEW: Map to store history for ALL drivers
+    const historyRef = useRef<Record<number, { x: number; y: number }[]>>({});
+
     const boundsRef = useRef({
         minX: Infinity, maxX: -Infinity,
         minY: Infinity, maxY: -Infinity
     });
 
-    // 1. Data Ingestion Effect: Only runs when new data arrives
+    // NEW: Reset the camera bounds when the selected driver changes
+    useEffect(() => {
+        boundsRef.current = {
+            minX: Infinity, maxX: -Infinity,
+            minY: Infinity, maxY: -Infinity
+        };
+    }, [selectedDriver?.id]);
+
+    // 1. Data Ingestion Effect
     useEffect(() => {
         if (!latestLocation) return;
 
-        const { x, y } = latestLocation;
+        const { driver_number, x, y } = latestLocation;
 
-        // Add to history buffer
-        historyRef.current.push({ x, y });
+        if (!historyRef.current[driver_number]) {
+            historyRef.current[driver_number] = [];
+        }
+        historyRef.current[driver_number].push({ x, y });
 
-        // Update "Auto-Scale" bounds
-        const b = boundsRef.current;
-        b.minX = Math.min(b.minX, x);
-        b.maxX = Math.max(b.maxX, x);
-        b.minY = Math.min(b.minY, y);
-        b.maxY = Math.max(b.maxY, y);
+        // Only update "Auto-Scale" bounds based on the SELECTED driver's movement
+        // This ensures the camera follows them specifically!
+        if (selectedDriver && driver_number === selectedDriver.id) {
+            const b = boundsRef.current;
+            b.minX = Math.min(b.minX, x);
+            b.maxX = Math.max(b.maxX, x);
+            b.minY = Math.min(b.minY, y);
+            b.maxY = Math.max(b.maxY, y);
+        }
 
-    }, [latestLocation]);
+    }, [latestLocation, selectedDriver]);
 
-    // 2. Animation Loop Effect: Runs once on mount
+    // 2. Animation Loop Effect
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -49,81 +64,82 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ latestLocation }) => {
             const width = canvas.width;
             const height = canvas.height;
             const b = boundsRef.current;
-            const history = historyRef.current;
+            const historyMap = historyRef.current;
 
-            // Clear frame
             ctx.clearRect(0, 0, width, height);
 
-            // Only draw if we have data
-            if (history.length > 1) {
-                // Add padding to the view
+            // Ensure we have valid bounds to draw
+            if (b.minX !== Infinity && b.maxX !== -Infinity) {
                 const padding = 40;
+                let minX = b.minX;
+                let maxX = b.maxX;
+                let minY = b.minY;
+                let maxY = b.maxY;
 
-                // Prevent division by zero if the car hasn't moved yet
-                if (b.minX === b.maxX) b.maxX += 0.001;
-                if (b.minY === b.maxY) b.maxY += 0.001;
+                if (minX === maxX) maxX += 0.001;
+                if (minY === maxY) maxY += 0.001;
 
-                // Create D3 Scales dynamically based on current bounds
-                // Note: We flip the Y range ([height, 0]) because Canvas Y starts at top
-                const xScale = d3.scaleLinear()
-                    .domain([b.minX, b.maxX])
-                    .range([padding, width - padding]);
+                const xScale = d3.scaleLinear().domain([minX, maxX]).range([padding, width - padding]);
+                const yScale = d3.scaleLinear().domain([minY, maxY]).range([height - padding, padding]);
 
-                const yScale = d3.scaleLinear()
-                    .domain([b.minY, b.maxY])
-                    .range([height - padding, padding]);
+                // Draw all lines
+                Object.entries(historyMap).forEach(([driverIdStr, history]) => {
+                    const driverId = parseInt(driverIdStr, 10);
+                    if (history.length < 2) return;
 
-                // Draw the "Ghost Trace" (The Track)
-                ctx.beginPath();
-                ctx.strokeStyle = '#333'; // Dark Grey Trace
-                ctx.lineWidth = 4;
-                ctx.lineJoin = 'round';
+                    const isSelected = selectedDriver?.id === driverId;
 
-                // Move to first point
-                ctx.moveTo(xScale(history[0].x), yScale(history[0].y));
+                    ctx.beginPath();
+                    // NEW: Highlight selected driver in their team color, ghost others
+                    ctx.strokeStyle = isSelected ? (selectedDriver?.teamColor || '#e10600') : 'rgba(255, 255, 255, 0.1)';
+                    ctx.lineWidth = isSelected ? 4 : 1.5;
+                    ctx.lineJoin = 'round';
 
-                // Connect the dots
-                for (let i = 1; i < history.length; i++) {
-                    const p = history[i];
-                    ctx.lineTo(xScale(p.x), yScale(p.y));
-                }
-                ctx.stroke();
+                    ctx.moveTo(xScale(history[0].x), yScale(history[0].y));
+                    for (let i = 1; i < history.length; i++) {
+                        ctx.lineTo(xScale(history[i].x), yScale(history[i].y));
+                    }
+                    ctx.stroke();
 
-                // Draw the "Car" (Current Position)
-                const lastPoint = history[history.length - 1];
-                ctx.beginPath();
-                ctx.fillStyle = '#e10600'; // F1 Red
-                ctx.arc(xScale(lastPoint.x), yScale(lastPoint.y), 6, 0, 2 * Math.PI);
-                ctx.fill();
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = '#e10600';
+                    // Draw the "Car" dot
+                    const lastPoint = history[history.length - 1];
+                    ctx.beginPath();
+                    ctx.fillStyle = isSelected ? '#ffffff' : 'rgba(255,255,255,0.3)';
+                    ctx.arc(xScale(lastPoint.x), yScale(lastPoint.y), isSelected ? 6 : 3, 0, 2 * Math.PI);
+                    ctx.fill();
+
+                    if (isSelected) {
+                        ctx.shadowBlur = 15;
+                        ctx.shadowColor = selectedDriver?.teamColor || '#e10600';
+                    } else {
+                        ctx.shadowBlur = 0;
+                    }
+                });
             }
 
-            // Request next frame
             animationFrameId = requestAnimationFrame(render);
         };
 
-        // Start Loop
         render();
 
         return () => cancelAnimationFrame(animationFrameId);
-    }, []);
+    }, [selectedDriver]);
 
     return (
         <Paper sx={{ p: 2, bgcolor: '#1e1e1e', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <Typography variant="h6" color="primary" sx={{ mb: 1, alignSelf: 'flex-start' }}>
                 CIRCUIT TRACE
             </Typography>
-            <Box sx={{ border: '1px solid #333', borderRadius: 1, bgcolor: '#121212' }}>
+            <Box sx={{ border: '1px solid #333', borderRadius: 1, bgcolor: '#121212', width: '100%', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
                 <canvas
                     ref={canvasRef}
-                    width={500}
-                    height={400}
-                    style={{ display: 'block' }}
+                    width={800} // Increased width for a better aspect ratio
+                    height={500}
+                    style={{ display: 'block', maxWidth: '100%' }}
                 />
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                Live Plotting (Auto-Scale)
+                Live Plotting (Tracking Driver: {selectedDriver?.code || 'None'})
             </Typography>
         </Paper>
     );

@@ -5,6 +5,7 @@ import com.elysianarts.f1.visualizer.commons.security.config.F1VisualizerSecurit
 import com.elysianarts.f1.visualizer.commons.service.config.JacksonObjectMapperConfig;
 import com.elysianarts.f1.visualizer.data.ingestion.service.HistoricalDataLoader;
 import com.elysianarts.f1.visualizer.data.ingestion.service.IngestionWorker;
+import com.elysianarts.f1.visualizer.data.ingestion.service.LapDataLoader;
 import com.elysianarts.f1.visualizer.data.ingestion.service.ReplayEngine;
 import com.google.cloud.bigquery.BigQuery;
 import org.junit.jupiter.api.Test;
@@ -41,11 +42,12 @@ class IngestionControllerTest {
     @MockitoBean
     private ReplayEngine replayEngine;
 
-    // Required to satisfy the @EnableWebSecurity
+    @MockitoBean
+    private LapDataLoader lapDataLoader;
+
     @MockitoBean
     private JwtDecoder jwtDecoder;
 
-    // --- NEW: Mocking external configurations to prevent ApplicationContext crashes ---
     @MockitoBean
     private BigQuery bigQuery;
 

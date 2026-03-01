@@ -2,10 +2,7 @@ package com.elysianarts.f1.visualizer.data.ingestion.controller.v1;
 
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.constant.IngestionMode;
 import com.elysianarts.f1.visualizer.data.ingestion.dto.request.IngestionCommandRequest;
-import com.elysianarts.f1.visualizer.data.ingestion.service.HistoricalDataLoader;
-import com.elysianarts.f1.visualizer.data.ingestion.service.IngestionWorker;
-import com.elysianarts.f1.visualizer.data.ingestion.service.ReferenceDataLoader;
-import com.elysianarts.f1.visualizer.data.ingestion.service.ReplayEngine;
+import com.elysianarts.f1.visualizer.data.ingestion.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +17,7 @@ public class IngestionController {
     private final HistoricalDataLoader historicalDataLoader;
     private final ReferenceDataLoader referenceDataLoader;
     private final ReplayEngine replayEngine;
+    private final LapDataLoader lapDataLoader;
 
     @PostMapping("/command")
     public ResponseEntity<String> issueIngestionCommand(@RequestBody IngestionCommandRequest request) {
@@ -40,8 +38,12 @@ public class IngestionController {
 
     @PostMapping("/load-historical")
     public ResponseEntity<String> loadHistoricalData(@RequestParam Long sessionKey) {
+        // Run telemetry batch ingestion
         historicalDataLoader.loadSessionIntoBigQuery(sessionKey);
-        return ResponseEntity.ok("Batch ingestion started in the background for session: " + sessionKey);
+        // Run lap batch ingestion
+        lapDataLoader.loadLapsIntoBigQuery(sessionKey); // <-- 2. ADD THIS LINE
+
+        return ResponseEntity.ok("Batch ingestion started for session: " + sessionKey);
     }
 
     @PostMapping("/load-reference")

@@ -71,9 +71,9 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ latestLocation, selectedDri
             // Ensure we have valid bounds to draw
             if (b.minX !== Infinity && b.maxX !== -Infinity) {
                 const padding = 40;
-                let minX = b.minX;
+                const minX = b.minX;
                 let maxX = b.maxX;
-                let minY = b.minY;
+                const minY = b.minY;
                 let maxY = b.maxY;
 
                 if (minX === maxX) maxX += 0.001;

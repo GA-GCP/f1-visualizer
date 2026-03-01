@@ -24,8 +24,8 @@ describe('UserSettingsModal', () => {
         vi.clearAllMocks();
 
         // Use direct casting to bypass strict vi.mocked() TS errors
-        (fetchDrivers as any).mockResolvedValue(mockDrivers);
-        (useUser as any).mockReturnValue({
+        (fetchDrivers as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockDrivers);
+        (useUser as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
             userProfile: { preferences: { favoriteDriver: 'LEC' } },
             updatePreferences: mockUpdatePreferences,
             isLoading: false

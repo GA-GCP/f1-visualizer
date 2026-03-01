@@ -1,9 +1,6 @@
 package com.elysianarts.f1.visualizer.commons.api.openf1.client;
 
-import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
-import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1LapData;
-import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1LocationData;
-import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Session;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.*;
 import com.elysianarts.f1.visualizer.commons.api.openf1.service.OpenF1AuthService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -105,6 +102,20 @@ public class OpenF1Client {
                 .bodyToFlux(OpenF1LapData.class)
                 .onErrorResume(e -> {
                     log.error("Error fetching Lap Data: {}", e.getMessage());
+                    return Flux.empty();
+                });
+    }
+
+    public Flux<OpenF1PositionData> getPositionData(long sessionKey) {
+        String uri = "/position?session_key=" + sessionKey;
+
+        return webClient.get()
+                .uri(uri)
+                .header("Authorization", "Bearer " + authService.getAccessToken())
+                .retrieve()
+                .bodyToFlux(OpenF1PositionData.class)
+                .onErrorResume(e -> {
+                    log.error("Error fetching Position Data: {}", e.getMessage());
                     return Flux.empty();
                 });
     }

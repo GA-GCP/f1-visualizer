@@ -95,3 +95,18 @@ resource "google_bigquery_table" "sessions" {
 ]
 EOF
 }
+
+# 5. RESULTS TABLE (For Versus Mode Stats)
+resource "google_bigquery_table" "results" {
+  dataset_id = google_bigquery_dataset.f1_dataset.dataset_id
+  table_id   = "results"
+  project    = var.project_id
+
+  schema = <<EOF
+[
+  { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
+  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
+  { "name": "position", "type": "INTEGER", "mode": "NULLABLE" }
+]
+EOF
+}

@@ -81,8 +81,10 @@ public class RaceAnalysisService {
                 SELECT
                   (SELECT MAX(speed) FROM `%s.telemetry` WHERE driver_number = %d) as max_speed,
                   (SELECT STDDEV(lap_duration) FROM `%s.laps` WHERE driver_number = %d AND lap_duration IS NOT NULL) as lap_stddev,
-                  (SELECT COUNT(DISTINCT session_key) FROM `%s.laps` WHERE driver_number = %d) as sessions_participated
-                """, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber);
+                  (SELECT COUNT(DISTINCT session_key) FROM `%s.laps` WHERE driver_number = %d) as sessions_participated,
+                  (SELECT COUNT(*) FROM `%s.results` WHERE driver_number = %d AND position = 1) as wins,
+                  (SELECT COUNT(*) FROM `%s.results` WHERE driver_number = %d AND position <= 3) as podiums
+                """, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber);
 
         log.info("Executing BigQuery Analysis: Aggregating stats for driver {}", driverNumber);
 
@@ -90,26 +92,30 @@ public class RaceAnalysisService {
             QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(query).build();
             TableResult result = bigQuery.query(queryConfig);
 
-            // Default fallback stats in case they have no data in BQ yet
             int speedScore = 80;
             int consistencyScore = 80;
             int experienceScore = 50;
+            int wins = 0;
+            int podiums = 0;
 
             for (FieldValueList row : result.iterateAll()) {
                 if (!row.get("max_speed").isNull()) {
-                    // Normalize speed (e.g., 350 km/h = 99 score)
                     double maxSpeed = row.get("max_speed").getDoubleValue();
                     speedScore = (int) Math.min(99, (maxSpeed / 350.0) * 100);
                 }
                 if (!row.get("lap_stddev").isNull()) {
-                    // Normalize consistency (lower standard deviation = higher consistency)
                     double stdDev = row.get("lap_stddev").getDoubleValue();
                     consistencyScore = (int) Math.max(10, 100 - (stdDev * 10));
                 }
                 if (!row.get("sessions_participated").isNull()) {
-                    // 20+ sessions = 99 experience
                     long sessions = row.get("sessions_participated").getLongValue();
                     experienceScore = (int) Math.min(99, (sessions / 20.0) * 100);
+                }
+                if (!row.get("wins").isNull()) {
+                    wins = (int) row.get("wins").getLongValue();
+                }
+                if (!row.get("podiums").isNull()) {
+                    podiums = (int) row.get("podiums").getLongValue();
                 }
             }
 
@@ -117,15 +123,14 @@ public class RaceAnalysisService {
                     .speed(speedScore)
                     .consistency(consistencyScore)
                     .experience(experienceScore)
-                    .aggression(85) // Placeholder for advanced ML logic
-                    .tireMgmt(85)   // Placeholder for advanced ML logic
-                    .wins((int) (Math.random() * 10)) // Placeholder until Race Results table exists
-                    .podiums((int) (Math.random() * 20))
+                    .aggression(85) // ML Placeholder
+                    .tireMgmt(85)   // ML Placeholder
+                    .wins(wins)
+                    .podiums(podiums)
                     .build();
 
         } catch (Exception e) {
             log.error("Failed to aggregate stats for driver {}", driverNumber, e);
-            // Return defaults if BQ fails
             return DriverProfile.DriverStats.builder().speed(80).consistency(80).aggression(80).tireMgmt(80).experience(50).wins(0).podiums(0).build();
         }
     }

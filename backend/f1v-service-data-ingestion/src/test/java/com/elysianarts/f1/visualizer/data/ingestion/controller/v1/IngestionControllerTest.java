@@ -3,10 +3,7 @@ package com.elysianarts.f1.visualizer.data.ingestion.controller.v1;
 import com.elysianarts.f1.visualizer.commons.api.openf1.config.SecretManagerConfig;
 import com.elysianarts.f1.visualizer.commons.security.config.F1VisualizerSecurityConfig;
 import com.elysianarts.f1.visualizer.commons.service.config.JacksonObjectMapperConfig;
-import com.elysianarts.f1.visualizer.data.ingestion.service.HistoricalDataLoader;
-import com.elysianarts.f1.visualizer.data.ingestion.service.IngestionWorker;
-import com.elysianarts.f1.visualizer.data.ingestion.service.LapDataLoader;
-import com.elysianarts.f1.visualizer.data.ingestion.service.ReplayEngine;
+import com.elysianarts.f1.visualizer.data.ingestion.service.*;
 import com.google.cloud.bigquery.BigQuery;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +41,9 @@ class IngestionControllerTest {
 
     @MockitoBean
     private LapDataLoader lapDataLoader;
+
+    @MockitoBean
+    private ResultDataLoader resultDataLoader;
 
     @MockitoBean
     private JwtDecoder jwtDecoder;

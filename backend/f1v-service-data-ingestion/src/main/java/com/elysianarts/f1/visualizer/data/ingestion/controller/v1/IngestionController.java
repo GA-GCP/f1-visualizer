@@ -18,6 +18,7 @@ public class IngestionController {
     private final ReferenceDataLoader referenceDataLoader;
     private final ReplayEngine replayEngine;
     private final LapDataLoader lapDataLoader;
+    private final ResultDataLoader resultDataLoader;
 
     @PostMapping("/command")
     public ResponseEntity<String> issueIngestionCommand(@RequestBody IngestionCommandRequest request) {
@@ -38,10 +39,9 @@ public class IngestionController {
 
     @PostMapping("/load-historical")
     public ResponseEntity<String> loadHistoricalData(@RequestParam Long sessionKey) {
-        // Run telemetry batch ingestion
         historicalDataLoader.loadSessionIntoBigQuery(sessionKey);
-        // Run lap batch ingestion
-        lapDataLoader.loadLapsIntoBigQuery(sessionKey); // <-- 2. ADD THIS LINE
+        lapDataLoader.loadLapsIntoBigQuery(sessionKey);
+        resultDataLoader.loadResultsIntoBigQuery(sessionKey);
 
         return ResponseEntity.ok("Batch ingestion started for session: " + sessionKey);
     }

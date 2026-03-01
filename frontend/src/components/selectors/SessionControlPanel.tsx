@@ -23,8 +23,8 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
             searchSessions(inputValue).then(data => {
                 setSessions(data);
                 // Auto-select if first load
-                if (data.length > 0 && !selectedSession && inputValue === '') {
-                    setSelectedSession(data[0]);
+                if (data.length > 0 && inputValue === '') {
+                    setSelectedSession(prev => prev ? prev : data[0]);
                 }
             });
         }, 300); // 300ms debounce
@@ -40,6 +40,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
             await sendIngestionCommand({ mode, sessionKey: selectedSession.sessionKey });
             onStreamStarted(selectedSession.sessionKey, mode);
         } catch (error) {
+            console.error(error);
             alert("Failed to connect to ingestion engine. Check console for details.");
         } finally {
             setIsLoading(false);

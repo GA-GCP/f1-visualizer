@@ -132,7 +132,7 @@ const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ ch
     const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
     const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
-    const onRedirectCallback = (appState: any) => {
+    const onRedirectCallback = (appState?: { returnTo?: string }) => {
         navigate(appState?.returnTo || window.location.pathname);
     };
 

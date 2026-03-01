@@ -87,15 +87,32 @@ const broadcastTheme = createTheme({
 
 // --- AUTH GUARD COMPONENT ---
 const RequiredAuth: React.FC = () => {
-    const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
+    // 1. Destructure the 'error' object from Auth0
+    const { isAuthenticated, isLoading, loginWithRedirect, error } = useAuth0();
 
     useEffect(() => {
-        if (!isLoading && !isAuthenticated) {
+        // 2. Do not attempt a redirect if an error already exists!
+        if (!isLoading && !isAuthenticated && !error) {
             void loginWithRedirect();
         }
-    }, [isLoading, isAuthenticated, loginWithRedirect]);
+    }, [isLoading, isAuthenticated, error, loginWithRedirect]);
 
-    if (isLoading || !isAuthenticated) {
+    if (isLoading) {
+        return null;
+    }
+
+    // 3. Gracefully display the error to stop the infinite loop
+    if (error) {
+        return (
+            <div style={{ padding: '2rem', textAlign: 'center', color: '#ff4444', fontFamily: 'sans-serif' }}>
+                <h2>Authentication Error</h2>
+                <p>{error.message}</p>
+                <p style={{ fontSize: '0.8rem', color: '#888' }}>Check your Auth0 Dashboard and .env configuration.</p>
+            </div>
+        );
+    }
+
+    if (!isAuthenticated) {
         return null;
     }
 

@@ -21,13 +21,9 @@
         <module>f1v-commons-exception</module>
         <module>f1v-commons-service-rest</module>
         <module>f1v-commons-websocket</module>
-        <module>f1v-commons-gcp-pubsub</module>
         <module>f1v-commons-gcp-bq</module>
         <module>f1v-commons-gcp-firestore</module>
-        <module>f1v-commons-gcp-workflows</module>
-        <module>f1v-commons-gcp-dataflow</module>
         <module>f1v-commons-api-openf1</module>
-        <module>f1v-commons-gcp-cloud-storage</module>
         <module>f1v-commons-gcp-memorystore-redis</module>
         <module>f1v-commons-service-reactive</module>
         <module>f1v-commons-service-base</module>
@@ -55,12 +51,8 @@
         <f1v-commons-base.version>1.0.0-SNAPSHOT</f1v-commons-base.version>
         <f1v-commons-exception.version>1.0.0-SNAPSHOT</f1v-commons-exception.version>
         <f1v-commons-gcp-bq.version>1.0.0-SNAPSHOT</f1v-commons-gcp-bq.version>
-        <f1v-commons-gcp-cloud-storage.version>1.0.0-SNAPSHOT</f1v-commons-gcp-cloud-storage.version>
-        <f1v-commons-gcp-dataflow.version>1.0.0-SNAPSHOT</f1v-commons-gcp-dataflow.version>
         <f1v-commons-gcp-firestore.version>1.0.0-SNAPSHOT</f1v-commons-gcp-firestore.version>
         <f1v-commons-gcp-memorystore-redis.version>1.0.0-SNAPSHOT</f1v-commons-gcp-memorystore-redis.version>
-        <f1v-commons-gcp-pubsub.version>1.0.0-SNAPSHOT</f1v-commons-gcp-pubsub.version>
-        <f1v-commons-gcp-workflows.version>1.0.0-SNAPSHOT</f1v-commons-gcp-workflows.version>
         <f1v-commons-service-base.version>1.0.0-SNAPSHOT</f1v-commons-service-base.version>
         <f1v-commons-service-reactive.version>1.0.0-SNAPSHOT</f1v-commons-service-reactive.version>
         <f1v-commons-service-rest.version>1.0.0-SNAPSHOT</f1v-commons-service-rest.version>
@@ -234,16 +226,6 @@
             </dependency>
             <dependency>
                 <groupId>com.elysianarts.f1.visualizer.commons</groupId>
-                <artifactId>f1v-commons-gcp-cloud-storage</artifactId>
-                <version>${f1v-commons-gcp-cloud-storage.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.elysianarts.f1.visualizer.commons</groupId>
-                <artifactId>f1v-commons-gcp-dataflow</artifactId>
-                <version>${f1v-commons-gcp-dataflow.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.elysianarts.f1.visualizer.commons</groupId>
                 <artifactId>f1v-commons-gcp-firestore</artifactId>
                 <version>${f1v-commons-gcp-firestore.version}</version>
             </dependency>
@@ -251,16 +233,6 @@
                 <groupId>com.elysianarts.f1.visualizer.commons</groupId>
                 <artifactId>f1v-commons-gcp-memorystore-redis</artifactId>
                 <version>${f1v-commons-gcp-memorystore-redis.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.elysianarts.f1.visualizer.commons</groupId>
-                <artifactId>f1v-commons-gcp-pubsub</artifactId>
-                <version>${f1v-commons-gcp-pubsub.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.elysianarts.f1.visualizer.commons</groupId>
-                <artifactId>f1v-commons-gcp-workflows</artifactId>
-                <version>${f1v-commons-gcp-workflows.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.elysianarts.f1.visualizer.commons</groupId>

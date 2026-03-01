@@ -11,6 +11,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.RedisTemplate;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,11 +37,16 @@ class ReplayEngineTest {
     @BeforeEach
     void setUp() {
         dummyData = new ArrayList<>();
-        // Create 10 dummy packets
+        // Baseline time to build from
+        OffsetDateTime baseTime = OffsetDateTime.of(2023, 1, 1, 12, 0, 0, 0, ZoneOffset.UTC);
+
+        // Create 10 dummy packets spaced by 100ms each
         for (int i = 0; i < 10; i++) {
             OpenF1CarData packet = new OpenF1CarData();
             packet.setDriverNumber(1);
             packet.setSpeed(100 + i);
+            // NEW: Set the Date so the Virtual Clock works!
+            packet.setDate(baseTime.plusNanos(i * 100_000_000L));
             dummyData.add(packet);
         }
     }
@@ -50,11 +57,12 @@ class ReplayEngineTest {
 
         replayEngine.loadSession(9165L);
 
-        // Verify it triggers play state (testing internal state via tick effect)
+        // Tick advances clock by 250ms.
+        // Packets exist at T+0, T+100, and T+200.
+        // Therefore, exactly 3 packets should fall into the first tick window.
         replayEngine.tick();
 
-        // Since burst rate is 5, it should publish 5 times
-        verify(redisTemplate, times(5)).convertAndSend(eq(RedisConfig.TELEMETRY_TOPIC), any(OpenF1CarData.class));
+        verify(redisTemplate, times(3)).convertAndSend(eq(RedisConfig.TELEMETRY_TOPIC), any(OpenF1CarData.class));
     }
 
     @Test
@@ -65,12 +73,12 @@ class ReplayEngineTest {
         // Pause
         replayEngine.pause();
         replayEngine.tick(); // Should do nothing
-        verify(redisTemplate, never()).convertAndSend(anyString(), any(OpenF1CarData.class));
+        verify(redisTemplate, never()).convertAndSend(eq(RedisConfig.TELEMETRY_TOPIC), any(OpenF1CarData.class));
 
         // Play
         replayEngine.play();
-        replayEngine.tick(); // Should burst 5 packets
-        verify(redisTemplate, times(5)).convertAndSend(eq(RedisConfig.TELEMETRY_TOPIC), any(OpenF1CarData.class));
+        replayEngine.tick(); // Should process 3 packets (0ms, 100ms, 200ms)
+        verify(redisTemplate, times(3)).convertAndSend(eq(RedisConfig.TELEMETRY_TOPIC), any(OpenF1CarData.class));
     }
 
     @Test
@@ -81,15 +89,17 @@ class ReplayEngineTest {
         // Pause so tick() doesn't auto-advance
         replayEngine.pause();
 
-        // Seek to 50% (should target index 4)
+        // Seek to 50% (targets index 4, which is at T+400ms)
         replayEngine.seek(50);
         replayEngine.play();
 
-        // Tick should process indexes 4, 5, 6, 7, 8
+        // Tick adds 250ms -> virtual clock is now T+650ms.
+        // Should process index 4 (400ms), 5 (500ms), 6 (600ms). (3 packets)
         replayEngine.tick();
-        verify(redisTemplate, times(5)).convertAndSend(eq(RedisConfig.TELEMETRY_TOPIC), any(OpenF1CarData.class));
+        verify(redisTemplate, times(3)).convertAndSend(eq(RedisConfig.TELEMETRY_TOPIC), any(OpenF1CarData.class));
 
-        // Tick again should only process index 9 and then auto-pause
+        // Tick again adds 250ms -> virtual clock is now T+900ms.
+        // Should process index 7 (700ms), 8 (800ms), 9 (900ms). (3 packets)
         replayEngine.tick();
         verify(redisTemplate, times(6)).convertAndSend(eq(RedisConfig.TELEMETRY_TOPIC), any(OpenF1CarData.class));
     }

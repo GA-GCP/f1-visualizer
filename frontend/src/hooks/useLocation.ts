@@ -8,13 +8,14 @@ type LocationCallback = (data: LocationPacket) => void;
 export const useLocation = (onDataReceived: LocationCallback) => {
     const [isConnected, setIsConnected] = useState(false);
     const callbackRef = useRef(onDataReceived);
+    // NEW: Buffer for spatial data
+    const bufferRef = useRef<LocationPacket[]>([]);
 
     useEffect(() => {
         callbackRef.current = onDataReceived;
     }, [onDataReceived]);
 
     useEffect(() => {
-        // Wait for the singleton STOMP client to be connected before subscribing
         const checkConnection = setInterval(() => {
             if (stompClient.connected) {
                 setIsConnected(true);
@@ -22,22 +23,33 @@ export const useLocation = (onDataReceived: LocationCallback) => {
             }
         }, 500);
 
-        // Subscribe to the spatial data stream
         const subscription = stompClient.subscribe('/topic/race-location', (message: IMessage) => {
             try {
                 const payload: LocationPacket = JSON.parse(message.body);
-                if (callbackRef.current) {
-                    callbackRef.current(payload);
-                }
+                bufferRef.current.push(payload); // Push silently
             } catch (err) {
                 console.error('Failed to parse location packet:', err);
             }
         });
 
-        // Cleanup: Unsubscribe when the component unmounts
+        // NEW: Flush all buffered spatial points to the Canvas trace
+        let animationFrameId: number;
+        const flushBuffer = () => {
+            if (bufferRef.current.length > 0 && callbackRef.current) {
+                // Unlike Telemetry (where we only need the latest speed),
+                // for the track trace, we need to send ALL intermediate points
+                // so the line doesn't skip segments.
+                bufferRef.current.forEach(packet => callbackRef.current(packet));
+                bufferRef.current = [];
+            }
+            animationFrameId = requestAnimationFrame(flushBuffer);
+        };
+        flushBuffer();
+
         return () => {
             clearInterval(checkConnection);
             subscription.unsubscribe();
+            cancelAnimationFrame(animationFrameId);
         };
     }, []);
 

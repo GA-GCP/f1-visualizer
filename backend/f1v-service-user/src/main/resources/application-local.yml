@@ -10,5 +10,5 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: https://example-tenant.us.auth0.com/
+          jwk-set-uri: https://example-tenant.us.auth0.com/.well-known/jwks.json
           audiences: dev.api.f1visualizer.com

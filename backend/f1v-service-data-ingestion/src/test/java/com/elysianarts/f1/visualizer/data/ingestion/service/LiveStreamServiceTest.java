@@ -1,7 +1,8 @@
 package com.elysianarts.f1.visualizer.data.ingestion.service;
 
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
+import com.elysianarts.f1.visualizer.commons.api.openf1.service.OpenF1AuthService;
 import com.elysianarts.f1.visualizer.data.ingestion.config.RedisConfig;
-import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1CarData;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttMessage;

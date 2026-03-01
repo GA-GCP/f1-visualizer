@@ -9,7 +9,7 @@ options:
 
 steps:
   # 1. HARD STOP: Run Tests
-  - name: 'maven:3.9-eclipse-temurin-25'
+  - name: 'maven:3.9.12-eclipse-temurin-25'
     entrypoint: 'mvn'
     args: ['clean', 'test']
     dir: 'backend'

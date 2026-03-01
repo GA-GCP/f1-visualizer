@@ -19,8 +19,7 @@
         <module>f1v-commons-base</module>
         <module>f1v-commons-security</module>
         <module>f1v-commons-exception</module>
-        <module>f1v-commons-rest-service</module>
-        <module>f1v-commons-reactive-service</module>
+        <module>f1v-commons-service-rest</module>
         <module>f1v-commons-websocket</module>
         <module>f1v-commons-gcp-pubsub</module>
         <module>f1v-commons-gcp-bq</module>
@@ -30,6 +29,8 @@
         <module>f1v-commons-api-openf1</module>
         <module>f1v-commons-gcp-cloud-storage</module>
         <module>f1v-commons-gcp-memorystore-redis</module>
+        <module>f1v-commons-service-reactive</module>
+        <module>f1v-commons-service-base</module>
     </modules>
 
     <properties>
@@ -39,7 +40,7 @@
         <spring-boot.version>4.0.3</spring-boot.version>
         <spring-cloud-gcp.version>7.4.5</spring-cloud-gcp.version>
         <spring-cloud-gcp-bigquery.version>7.4.5</spring-cloud-gcp-bigquery.version>
-        <spring-cloud-gcp-firestore.version>3.37.0</spring-cloud-gcp-firestore.version>
+        <google-cloud-firestore.version>3.38.0</google-cloud-firestore.version>
         <jackson-3.version>3.1.0-rc1</jackson-3.version>
         <springdoc.version>3.0.1</springdoc.version>
         <spring-security-test.version>7.0.3</spring-security-test.version>
@@ -60,8 +61,9 @@
         <f1v-commons-gcp-memorystore-redis.version>1.0.0-SNAPSHOT</f1v-commons-gcp-memorystore-redis.version>
         <f1v-commons-gcp-pubsub.version>1.0.0-SNAPSHOT</f1v-commons-gcp-pubsub.version>
         <f1v-commons-gcp-workflows.version>1.0.0-SNAPSHOT</f1v-commons-gcp-workflows.version>
-        <f1v-commons-reactive-service.version>1.0.0-SNAPSHOT</f1v-commons-reactive-service.version>
-        <f1v-commons-rest-service.version>1.0.0-SNAPSHOT</f1v-commons-rest-service.version>
+        <f1v-commons-service-base.version>1.0.0-SNAPSHOT</f1v-commons-service-base.version>
+        <f1v-commons-service-reactive.version>1.0.0-SNAPSHOT</f1v-commons-service-reactive.version>
+        <f1v-commons-service-rest.version>1.0.0-SNAPSHOT</f1v-commons-service-rest.version>
         <f1v-commons-security.version>1.0.0-SNAPSHOT</f1v-commons-security.version>
         <f1v-commons-websocket.version>1.0.0-SNAPSHOT</f1v-commons-websocket.version>
     </properties>
@@ -131,6 +133,7 @@
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.springframework</groupId>
@@ -140,7 +143,7 @@
             <dependency>
                 <groupId>com.google.cloud</groupId>
                 <artifactId>google-cloud-firestore</artifactId>
-                <version>${spring-cloud-gcp-firestore.version}</version>
+                <version>${google-cloud-firestore.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework.data</groupId>
@@ -161,6 +164,17 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-test-autoconfigure</artifactId>
                 <version>${spring-boot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-test</artifactId>
+                <version>${spring-boot.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.vaadin.external.google</groupId>
+                        <artifactId>android-json</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
@@ -250,13 +264,18 @@
             </dependency>
             <dependency>
                 <groupId>com.elysianarts.f1.visualizer.commons</groupId>
-                <artifactId>f1v-commons-reactive-service</artifactId>
-                <version>${f1v-commons-reactive-service.version}</version>
+                <artifactId>f1v-commons-service-base</artifactId>
+                <version>${f1v-commons-service-base.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.elysianarts.f1.visualizer.commons</groupId>
-                <artifactId>f1v-commons-rest-service</artifactId>
-                <version>${f1v-commons-rest-service.version}</version>
+                <artifactId>f1v-commons-service-reactive</artifactId>
+                <version>${f1v-commons-service-reactive.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.elysianarts.f1.visualizer.commons</groupId>
+                <artifactId>f1v-commons-service-rest</artifactId>
+                <version>${f1v-commons-service-rest.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.elysianarts.f1.visualizer.commons</groupId>
@@ -270,5 +289,23 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

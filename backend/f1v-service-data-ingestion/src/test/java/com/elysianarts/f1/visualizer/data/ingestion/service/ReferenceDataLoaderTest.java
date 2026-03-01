@@ -1,5 +1,6 @@
 package com.elysianarts.f1.visualizer.data.ingestion.service;
 
+import com.elysianarts.f1.visualizer.commons.api.openf1.service.OpenF1AuthService;
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.InsertAllRequest;
 import com.google.cloud.bigquery.InsertAllResponse;

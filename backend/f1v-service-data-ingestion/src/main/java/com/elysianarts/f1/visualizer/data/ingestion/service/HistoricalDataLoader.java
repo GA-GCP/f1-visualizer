@@ -1,7 +1,7 @@
 package com.elysianarts.f1.visualizer.data.ingestion.service;
 
-import com.elysianarts.f1.visualizer.data.ingestion.client.OpenF1Client;
-import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1CarData;
+import com.elysianarts.f1.visualizer.commons.api.openf1.client.OpenF1Client;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.InsertAllRequest;
 import com.google.cloud.bigquery.InsertAllResponse;

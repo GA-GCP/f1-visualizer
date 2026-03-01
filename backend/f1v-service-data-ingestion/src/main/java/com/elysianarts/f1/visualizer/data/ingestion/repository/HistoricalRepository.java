@@ -1,13 +1,12 @@
 package com.elysianarts.f1.visualizer.data.ingestion.repository;
 
-import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1CarData;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
 import com.google.cloud.bigquery.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 

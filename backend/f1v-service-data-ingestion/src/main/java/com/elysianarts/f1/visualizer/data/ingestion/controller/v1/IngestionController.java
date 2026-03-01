@@ -1,7 +1,7 @@
 package com.elysianarts.f1.visualizer.data.ingestion.controller.v1;
 
-import com.elysianarts.f1.visualizer.data.ingestion.model.constant.IngestionMode;
-import com.elysianarts.f1.visualizer.data.ingestion.model.request.IngestionCommandRequest;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.constant.IngestionMode;
+import com.elysianarts.f1.visualizer.data.ingestion.dto.request.IngestionCommandRequest;
 import com.elysianarts.f1.visualizer.data.ingestion.service.HistoricalDataLoader;
 import com.elysianarts.f1.visualizer.data.ingestion.service.IngestionWorker;
 import com.elysianarts.f1.visualizer.data.ingestion.service.ReferenceDataLoader;

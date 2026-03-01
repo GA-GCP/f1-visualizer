@@ -1,6 +1,6 @@
 package com.elysianarts.f1.visualizer.data.ingestion.service;
 
-import com.elysianarts.f1.visualizer.data.ingestion.model.constant.IngestionMode;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.constant.IngestionMode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

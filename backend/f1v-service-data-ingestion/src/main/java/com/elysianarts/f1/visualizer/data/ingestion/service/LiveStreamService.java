@@ -1,8 +1,9 @@
 package com.elysianarts.f1.visualizer.data.ingestion.service;
 
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1LocationData;
+import com.elysianarts.f1.visualizer.commons.api.openf1.service.OpenF1AuthService;
 import com.elysianarts.f1.visualizer.data.ingestion.config.RedisConfig;
-import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1CarData;
-import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1LocationData;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;

@@ -8,12 +8,12 @@ options:
   logging: CLOUD_LOGGING_ONLY
 
 steps:
-  - name: 'node:22-alpine'
+  - name: 'node:25-alpine'
     entrypoint: 'yarn'
     args: ['install', '--frozen-lockfile']
     dir: 'frontend'
 
-  - name: 'node:22-alpine'
+  - name: 'node:25-alpine'
     entrypoint: 'yarn'
     args: ['test:ci']
     dir: 'frontend'

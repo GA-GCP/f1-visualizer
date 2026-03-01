@@ -1,8 +1,9 @@
 package com.elysianarts.f1.visualizer.data.ingestion.client;
 
-import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1CarData;
-import com.elysianarts.f1.visualizer.data.ingestion.model.OpenF1LocationData;
-import com.elysianarts.f1.visualizer.data.ingestion.service.OpenF1AuthService;
+import com.elysianarts.f1.visualizer.commons.api.openf1.client.OpenF1Client;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1LocationData;
+import com.elysianarts.f1.visualizer.commons.api.openf1.service.OpenF1AuthService;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;

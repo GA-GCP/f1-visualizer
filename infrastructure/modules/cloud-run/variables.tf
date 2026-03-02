@@ -44,3 +44,13 @@ variable "service_account_email" {
   type        = string
   default     = null # Optional (but we will enforce it in Terragrunt)
 }
+variable "min_instance_count" {
+  description = "Minimum number of instances to keep warm (0 = scale to zero, 1+ = always-on)"
+  type        = number
+  default     = 0
+}
+variable "max_instance_count" {
+  description = "Maximum number of instances to scale up to"
+  type        = number
+  default     = 5
+}

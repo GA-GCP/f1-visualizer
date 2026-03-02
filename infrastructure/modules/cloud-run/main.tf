@@ -9,8 +9,8 @@ resource "google_cloud_run_v2_service" "service" {
   template {
     # Scaling settings
     scaling {
-      min_instance_count = 0
-      max_instance_count = 5
+      min_instance_count = var.min_instance_count
+      max_instance_count = var.max_instance_count
     }
 
     # VPC Access (Critical for Redis)

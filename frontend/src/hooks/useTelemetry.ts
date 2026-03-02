@@ -14,24 +14,30 @@ export const useTelemetry = (onDataReceived: (data: TelemetryPacket) => void) =>
     }, [onDataReceived]);
 
     useEffect(() => {
+        let subscription: { unsubscribe: () => void } | null = null;
+        let animationFrameId: number;
+
+        // Defer subscription until the STOMP client is actually connected.
+        // Without this guard, stompClient.subscribe() throws a synchronous
+        // "There is no underlying STOMP connection" TypeError on mount because
+        // the SockJS handshake (started by StompAuthHandler) is still in-flight.
         const checkConnection = setInterval(() => {
             if (stompClient.connected) {
                 setIsConnected(true);
                 clearInterval(checkConnection);
+
+                subscription = stompClient.subscribe('/topic/race-data', (message: IMessage) => {
+                    try {
+                        const payload: TelemetryPacket = JSON.parse(message.body);
+                        bufferRef.current.push(payload); // Push silently
+                    } catch (err) {
+                        console.error('Failed to parse telemetry:', err);
+                    }
+                });
             }
         }, 500);
 
-        const subscription = stompClient.subscribe('/topic/race-data', (message: IMessage) => {
-            try {
-                const payload: TelemetryPacket = JSON.parse(message.body);
-                bufferRef.current.push(payload); // Push silently
-            } catch (err) {
-                console.error('Failed to parse telemetry:', err);
-            }
-        });
-
-        // NEW: 60fps flush loop
-        let animationFrameId: number;
+        // 60fps flush loop (safe to start immediately — buffer is just empty until data arrives)
         const flushBuffer = () => {
             if (bufferRef.current.length > 0 && callbackRef.current) {
                 // For UI state, we only need the absolute latest frame from the buffer
@@ -45,7 +51,7 @@ export const useTelemetry = (onDataReceived: (data: TelemetryPacket) => void) =>
 
         return () => {
             clearInterval(checkConnection);
-            subscription.unsubscribe();
+            if (subscription) subscription.unsubscribe();
             cancelAnimationFrame(animationFrameId);
         };
     }, []);

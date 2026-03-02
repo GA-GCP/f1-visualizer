@@ -3,6 +3,7 @@ import { Box, AppBar, Toolbar, Typography, Container, Button, IconButton, Toolti
 import { Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
 import SpeedIcon from '@mui/icons-material/Speed';
 import StorageIcon from '@mui/icons-material/Storage';
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
 import UserSettingsModal from './UserSettingsModal';
@@ -42,6 +43,7 @@ const LayoutMain: React.FC = () => {
 
                         <NavButton to="/" label="Live Console" icon={<SpeedIcon />} currentPath={location.pathname} />
                         <NavButton to="/historical" label="Data Vault" icon={<StorageIcon />} currentPath={location.pathname} />
+                        <NavButton to="/versus" label="Head-to-Head" icon={<CompareArrowsIcon />} currentPath={location.pathname} />
 
                         {/* NEW: Settings Button */}
                         <Tooltip title="User Preferences">

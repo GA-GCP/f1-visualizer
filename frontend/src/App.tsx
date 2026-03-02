@@ -3,7 +3,9 @@ import { Routes, Route, Outlet, BrowserRouter, useNavigate } from 'react-router-
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import LayoutMain from './components/layout/LayoutMain';
+import ErrorBoundary from './components/ErrorBoundary';
 import { AxiosAuthInterceptor } from './auth/AuthHandler';
+import { StompAuthHandler } from './auth/StompAuthHandler';
 import Home from './pages/Home';
 import HistoricalData from './pages/HistoricalData';
 import VersusMode from './pages/VersusMode';
@@ -162,15 +164,18 @@ function App() {
             <BrowserRouter>
                 <Auth0ProviderWithNavigate>
                     <AxiosAuthInterceptor />
-                    <Routes>
-                        <Route element={<RequiredAuth />}>
-                            <Route element={<LayoutMain />}>
-                                <Route path="/" element={<Home />} />
-                                <Route path="/historical" element={<HistoricalData />} />
-                                <Route path="/versus" element={<VersusMode />} />
+                    <StompAuthHandler />
+                    <ErrorBoundary>
+                        <Routes>
+                            <Route element={<RequiredAuth />}>
+                                <Route element={<LayoutMain />}>
+                                    <Route path="/" element={<Home />} />
+                                    <Route path="/historical" element={<HistoricalData />} />
+                                    <Route path="/versus" element={<VersusMode />} />
+                                </Route>
                             </Route>
-                        </Route>
-                    </Routes>
+                        </Routes>
+                    </ErrorBoundary>
                 </Auth0ProviderWithNavigate>
             </BrowserRouter>
         </ThemeProvider>

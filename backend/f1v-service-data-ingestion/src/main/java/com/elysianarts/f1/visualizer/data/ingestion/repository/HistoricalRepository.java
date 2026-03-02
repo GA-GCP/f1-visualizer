@@ -24,11 +24,11 @@ public class HistoricalRepository {
 
         // Fetch ordered by date so we can replay chronologically
         String query = String.format("""
-            SELECT session_key, meeting_key, date, driver_number, speed, rpm, gear, throttle, brake, drs
+            SELECT session_key, date, driver_number, speed, rpm, gear, throttle, brake, drs
             FROM `%s.%s`
-            WHERERP session_key = %d
+            WHERE session_key = %d
             ORDER BY date ASC
-            LIMIT 10000 -- Cap for MVP to prevent memory overflow
+            LIMIT 50000
             """, DATASET, TABLE, sessionKey);
 
         try {

@@ -28,35 +28,39 @@ public class LapDataLoader {
     public void loadLapsIntoBigQuery(long sessionKey) {
         log.info("🏁 Fetching Lap Data for Session {}...", sessionKey);
 
-        List<OpenF1LapData> laps = openF1Client.getLapData(sessionKey).collectList().block();
+        try {
+            List<OpenF1LapData> laps = openF1Client.getLapData(sessionKey).collectList().block();
 
-        if (laps != null && !laps.isEmpty()) {
-            List<InsertAllRequest.RowToInsert> rows = new ArrayList<>();
-            for (OpenF1LapData lap : laps) {
-                Map<String, Object> rowContent = new HashMap<>();
-                rowContent.put("session_key", lap.getSessionKey());
-                rowContent.put("meeting_key", lap.getMeetingKey());
-                rowContent.put("driver_number", lap.getDriverNumber());
-                rowContent.put("lap_number", lap.getLapNumber());
-                rowContent.put("lap_duration", lap.getLapDuration());
-                rowContent.put("sector_1_duration", lap.getSector1Duration());
-                rowContent.put("sector_2_duration", lap.getSector2Duration());
-                rowContent.put("sector_3_duration", lap.getSector3Duration());
+            if (laps != null && !laps.isEmpty()) {
+                List<InsertAllRequest.RowToInsert> rows = new ArrayList<>();
+                for (OpenF1LapData lap : laps) {
+                    Map<String, Object> rowContent = new HashMap<>();
+                    rowContent.put("session_key", lap.getSessionKey());
+                    rowContent.put("meeting_key", lap.getMeetingKey());
+                    rowContent.put("driver_number", lap.getDriverNumber());
+                    rowContent.put("lap_number", lap.getLapNumber());
+                    rowContent.put("lap_duration", lap.getLapDuration());
+                    rowContent.put("sector_1_duration", lap.getSector1Duration());
+                    rowContent.put("sector_2_duration", lap.getSector2Duration());
+                    rowContent.put("sector_3_duration", lap.getSector3Duration());
 
-                rows.add(InsertAllRequest.RowToInsert.of(rowContent));
-            }
+                    rows.add(InsertAllRequest.RowToInsert.of(rowContent));
+                }
 
-            // Batch insert
-            InsertAllRequest request = InsertAllRequest.newBuilder(DATASET, TABLE).setRows(rows).build();
-            InsertAllResponse response = bigQuery.insertAll(request);
+                // Batch insert
+                InsertAllRequest request = InsertAllRequest.newBuilder(DATASET, TABLE).setRows(rows).build();
+                InsertAllResponse response = bigQuery.insertAll(request);
 
-            if (response.hasErrors()) {
-                log.error("❌ BigQuery Insert Errors on Laps: {}", response.getInsertErrors());
+                if (response.hasErrors()) {
+                    log.error("❌ BigQuery Insert Errors on Laps: {}", response.getInsertErrors());
+                } else {
+                    log.info("✅ Successfully loaded {} laps into BigQuery `f1_dataset.laps`.", rows.size());
+                }
             } else {
-                log.info("✅ Successfully loaded {} laps into BigQuery `f1_dataset.laps`.", rows.size());
+                log.warn("⚠️ No lap data found for session {}", sessionKey);
             }
-        } else {
-            log.warn("⚠️ No lap data found for session {}", sessionKey);
+        } catch (Exception e) {
+            log.error("❌ Failed to fetch lap data for session {}: {}", sessionKey, e.getMessage());
         }
     }
 }

@@ -1,7 +1,9 @@
 package com.elysianarts.f1.visualizer.data.ingestion.service;
 
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1LocationData;
 import com.elysianarts.f1.visualizer.data.ingestion.config.RedisConfig;
+import com.elysianarts.f1.visualizer.data.ingestion.repository.HistoricalLocationRepository;
 import com.elysianarts.f1.visualizer.data.ingestion.repository.HistoricalRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,11 +22,14 @@ import java.util.Map;
 public class ReplayEngine {
 
     private final HistoricalRepository historicalRepository;
+    private final HistoricalLocationRepository historicalLocationRepository;
     private final RedisTemplate<String, Object> redisTemplate;
 
     private final List<OpenF1CarData> replayBuffer = new ArrayList<>();
+    private final List<OpenF1LocationData> locationBuffer = new ArrayList<>();
     private boolean isRunning = false;
     private int currentIndex = 0;
+    private int locationIndex = 0;
 
     // NEW: Virtual Clock state
     private OffsetDateTime virtualClock;
@@ -33,10 +38,15 @@ public class ReplayEngine {
     public void loadSession(long sessionKey) {
         this.isRunning = false;
         this.replayBuffer.clear();
+        this.locationBuffer.clear();
         this.currentIndex = 0;
+        this.locationIndex = 0;
 
         List<OpenF1CarData> data = historicalRepository.fetchSessionTelemetry(sessionKey);
         this.replayBuffer.addAll(data);
+
+        List<OpenF1LocationData> locData = historicalLocationRepository.fetchSessionLocations(sessionKey);
+        this.locationBuffer.addAll(locData);
 
         // Initialize clock to the very first packet's timestamp
         if (!this.replayBuffer.isEmpty()) {
@@ -44,7 +54,7 @@ public class ReplayEngine {
         }
 
         this.isRunning = true;
-        log.info("Simulation loaded for session {}. Buffer size: {}", sessionKey, replayBuffer.size());
+        log.info("Simulation loaded for session {}. Telemetry: {}, Location: {}", sessionKey, replayBuffer.size(), locationBuffer.size());
     }
 
     public void pause() {
@@ -67,7 +77,18 @@ public class ReplayEngine {
 
         // Sync the clock to the newly seeked position
         this.virtualClock = replayBuffer.get(this.currentIndex).getDate();
-        log.info("Simulation seeked to {}% (Index: {})", safePercentage, currentIndex);
+
+        // Sync location index to match the new virtual clock
+        this.locationIndex = 0;
+        for (int i = 0; i < locationBuffer.size(); i++) {
+            if (!locationBuffer.get(i).getDate().isAfter(virtualClock)) {
+                this.locationIndex = i + 1;
+            } else {
+                break;
+            }
+        }
+
+        log.info("Simulation seeked to {}% (Index: {}, LocIndex: {})", safePercentage, currentIndex, locationIndex);
     }
 
     public void tick() {
@@ -76,7 +97,7 @@ public class ReplayEngine {
         // 1. Advance the virtual clock by exactly the interval it took for this tick to occur
         virtualClock = virtualClock.plus(TICK_RATE_MS, ChronoUnit.MILLIS);
 
-        // 2. Poll all packets that occurred before or exactly at the current virtual clock
+        // 2. Poll all telemetry packets that occurred before or exactly at the current virtual clock
         while (currentIndex < replayBuffer.size() &&
                 !replayBuffer.get(currentIndex).getDate().isAfter(virtualClock)) {
 
@@ -85,7 +106,16 @@ public class ReplayEngine {
             currentIndex++;
         }
 
-        // 3. Broadcast the current simulation progress as a percentage
+        // 3. Poll all location packets that occurred before or exactly at the current virtual clock
+        while (locationIndex < locationBuffer.size() &&
+                !locationBuffer.get(locationIndex).getDate().isAfter(virtualClock)) {
+
+            OpenF1LocationData locPacket = locationBuffer.get(locationIndex);
+            redisTemplate.convertAndSend(RedisConfig.LOCATION_TOPIC, locPacket);
+            locationIndex++;
+        }
+
+        // 4. Broadcast the current simulation progress as a percentage
         int progress = (int) (((double) currentIndex / replayBuffer.size()) * 100);
         redisTemplate.convertAndSend(RedisConfig.PLAYBACK_TOPIC, Map.of("progress", progress));
 

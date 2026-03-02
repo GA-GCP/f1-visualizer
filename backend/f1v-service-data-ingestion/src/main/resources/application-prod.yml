@@ -5,8 +5,8 @@ spring:
         dataset-name: f1_dataset
   data:
     redis:
-      host: ${SPRING_REDIS_HOST}
-      port: ${SPRING_REDIS_PORT}
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT}
       timeout: 10000ms
   security:
     oauth2:

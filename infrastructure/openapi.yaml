@@ -17,6 +17,7 @@ securityDefinitions:
     x-google-issuer: "AUTH0_ISSUER_URI_PLACEHOLDER/"
     x-google-jwks_uri: "AUTH0_ISSUER_URI_PLACEHOLDER/.well-known/jwks.json"
     x-google-audiences: "AUTH0_AUDIENCE_PLACEHOLDER"
+    x-google-forward-auth-header: true
 paths:
   # --- USER SERVICE ---
   /api/v1/users/me:

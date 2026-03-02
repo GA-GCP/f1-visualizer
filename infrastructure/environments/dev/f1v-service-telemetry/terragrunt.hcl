@@ -42,6 +42,11 @@ inputs = {
   # Pointing to the Artifact Registry repo we created
   image_url    = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/telemetry:latest"
 
+  # Keep 1 instance warm to eliminate cold-start delays on WebSocket connections.
+  # The frontend establishes a STOMP/SockJS connection immediately after login;
+  # a cold-starting backend causes transient connection failures.
+  min_instance_count = 1
+
   # Critical for WebSocket Performance
   container_concurrency = 1000
   vpc_connector_id      = dependency.networking.outputs.vpc_access_connector_id

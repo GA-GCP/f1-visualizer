@@ -16,24 +16,30 @@ export const useLocation = (onDataReceived: LocationCallback) => {
     }, [onDataReceived]);
 
     useEffect(() => {
+        let subscription: { unsubscribe: () => void } | null = null;
+        let animationFrameId: number;
+
+        // Defer subscription until the STOMP client is actually connected.
+        // Without this guard, stompClient.subscribe() throws a synchronous
+        // "There is no underlying STOMP connection" TypeError on mount because
+        // the SockJS handshake (started by StompAuthHandler) is still in-flight.
         const checkConnection = setInterval(() => {
             if (stompClient.connected) {
                 setIsConnected(true);
                 clearInterval(checkConnection);
+
+                subscription = stompClient.subscribe('/topic/race-location', (message: IMessage) => {
+                    try {
+                        const payload: LocationPacket = JSON.parse(message.body);
+                        bufferRef.current.push(payload); // Push silently
+                    } catch (err) {
+                        console.error('Failed to parse location packet:', err);
+                    }
+                });
             }
         }, 500);
 
-        const subscription = stompClient.subscribe('/topic/race-location', (message: IMessage) => {
-            try {
-                const payload: LocationPacket = JSON.parse(message.body);
-                bufferRef.current.push(payload); // Push silently
-            } catch (err) {
-                console.error('Failed to parse location packet:', err);
-            }
-        });
-
-        // NEW: Flush all buffered spatial points to the Canvas trace
-        let animationFrameId: number;
+        // Flush all buffered spatial points to the Canvas trace
         const flushBuffer = () => {
             if (bufferRef.current.length > 0 && callbackRef.current) {
                 // Unlike Telemetry (where we only need the latest speed),
@@ -48,7 +54,7 @@ export const useLocation = (onDataReceived: LocationCallback) => {
 
         return () => {
             clearInterval(checkConnection);
-            subscription.unsubscribe();
+            if (subscription) subscription.unsubscribe();
             cancelAnimationFrame(animationFrameId);
         };
     }, []);

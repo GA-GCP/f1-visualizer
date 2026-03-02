@@ -19,6 +19,7 @@ public class IngestionController {
     private final ReplayEngine replayEngine;
     private final LapDataLoader lapDataLoader;
     private final ResultDataLoader resultDataLoader;
+    private final LocationDataLoader locationDataLoader;
 
     @PostMapping("/command")
     public ResponseEntity<String> issueIngestionCommand(@RequestBody IngestionCommandRequest request) {
@@ -42,6 +43,7 @@ public class IngestionController {
         historicalDataLoader.loadSessionIntoBigQuery(sessionKey);
         lapDataLoader.loadLapsIntoBigQuery(sessionKey);
         resultDataLoader.loadResultsIntoBigQuery(sessionKey);
+        locationDataLoader.loadLocationsIntoBigQuery(sessionKey);
 
         return ResponseEntity.ok("Batch ingestion started for session: " + sessionKey);
     }

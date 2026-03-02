@@ -22,5 +22,13 @@ export const stompClient = new Client({
     },
 });
 
-// Activate the singleton immediately
-stompClient.activate();
+/**
+ * Activates the STOMP client with an Auth0 JWT token.
+ * Called by StompAuthHandler once the user is authenticated.
+ */
+export function activateWithToken(token: string): void {
+    stompClient.connectHeaders = { Authorization: `Bearer ${token}` };
+    if (!stompClient.active) {
+        stompClient.activate();
+    }
+}

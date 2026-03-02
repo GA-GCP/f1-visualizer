@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import * as d3 from 'd3';
 import { Box, Paper, Typography } from '@mui/material';
 import type { LocationPacket } from '../types/telemetry';
@@ -9,8 +9,12 @@ interface CircuitTraceProps {
     selectedDriver: DriverProfile | null;
 }
 
+const ASPECT_RATIO = 1.6; // width:height = 1.6:1
+
 const CircuitTrace: React.FC<CircuitTraceProps> = ({ latestLocation, selectedDriver }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [canvasSize, setCanvasSize] = useState({ width: 800, height: 500 });
 
     // NEW: Map to store history for ALL drivers
     const historyRef = useRef<Record<number, { x: number; y: number }[]>>({});
@@ -27,6 +31,21 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ latestLocation, selectedDri
             minY: Infinity, maxY: -Infinity
         };
     }, [selectedDriver?.id]);
+
+    // Observe container resize for responsive canvas
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const observer = new ResizeObserver((entries) => {
+            const { width } = entries[0].contentRect;
+            if (width > 0) {
+                setCanvasSize({ width: Math.round(width), height: Math.round(width / ASPECT_RATIO) });
+            }
+        });
+        observer.observe(container);
+        return () => observer.disconnect();
+    }, []);
 
     // 1. Data Ingestion Effect
     useEffect(() => {
@@ -130,12 +149,12 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ latestLocation, selectedDri
             <Typography variant="h6" color="primary" sx={{ mb: 1, alignSelf: 'flex-start' }}>
                 CIRCUIT TRACE
             </Typography>
-            <Box sx={{ border: '1px solid #333', borderRadius: 1, bgcolor: '#121212', width: '100%', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
+            <Box ref={containerRef} sx={{ border: '1px solid #333', borderRadius: 1, bgcolor: '#121212', width: '100%', overflow: 'hidden' }}>
                 <canvas
                     ref={canvasRef}
-                    width={800} // Increased width for a better aspect ratio
-                    height={500}
-                    style={{ display: 'block', maxWidth: '100%' }}
+                    width={canvasSize.width}
+                    height={canvasSize.height}
+                    style={{ display: 'block', width: '100%', height: 'auto' }}
                 />
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>

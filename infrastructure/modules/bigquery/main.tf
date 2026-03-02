@@ -96,7 +96,32 @@ resource "google_bigquery_table" "sessions" {
 EOF
 }
 
-# 5. RESULTS TABLE (For Versus Mode Stats)
+# 5. LOCATIONS TABLE (For Circuit Trace Replay)
+resource "google_bigquery_table" "locations" {
+  dataset_id = google_bigquery_dataset.f1_dataset.dataset_id
+  table_id   = "locations"
+  project    = var.project_id
+
+  time_partitioning {
+    type  = "DAY"
+    field = "date"
+  }
+
+  clustering = ["session_key", "driver_number"]
+
+  schema = <<EOF
+[
+  { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
+  { "name": "date", "type": "TIMESTAMP", "mode": "REQUIRED" },
+  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
+  { "name": "x", "type": "INTEGER", "mode": "NULLABLE" },
+  { "name": "y", "type": "INTEGER", "mode": "NULLABLE" },
+  { "name": "z", "type": "INTEGER", "mode": "NULLABLE" }
+]
+EOF
+}
+
+# 6. RESULTS TABLE (For Versus Mode Stats)
 resource "google_bigquery_table" "results" {
   dataset_id = google_bigquery_dataset.f1_dataset.dataset_id
   table_id   = "results"

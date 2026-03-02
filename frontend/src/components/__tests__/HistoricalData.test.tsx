@@ -1,12 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HistoricalData from '../../pages/HistoricalData';
-import { fetchSessions } from '@/api/referenceApi.ts';
+import { fetchDrivers, fetchSessions } from '@/api/referenceApi.ts';
 import { apiClient } from '@/api/apiClient.ts';
 
 // Mock the reference API
 vi.mock('../../api/referenceApi', () => ({
-    fetchSessions: vi.fn()
+    fetchSessions: vi.fn(),
+    fetchDrivers: vi.fn()
 }));
 
 // Mock the base Axios client used for lap data
@@ -29,6 +30,7 @@ describe('HistoricalData Page', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.mocked(fetchSessions).mockResolvedValue(mockSessions);
+        vi.mocked(fetchDrivers).mockResolvedValue([]);
         vi.mocked(apiClient.get).mockResolvedValue({ data: [] }); // Return empty laps for test
     });
 

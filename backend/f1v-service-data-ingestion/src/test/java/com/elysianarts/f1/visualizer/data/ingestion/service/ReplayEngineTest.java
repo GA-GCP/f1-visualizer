@@ -2,6 +2,7 @@ package com.elysianarts.f1.visualizer.data.ingestion.service;
 
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
 import com.elysianarts.f1.visualizer.data.ingestion.config.RedisConfig;
+import com.elysianarts.f1.visualizer.data.ingestion.repository.HistoricalLocationRepository;
 import com.elysianarts.f1.visualizer.data.ingestion.repository.HistoricalRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,9 @@ class ReplayEngineTest {
 
     @Mock
     private HistoricalRepository historicalRepository;
+
+    @Mock
+    private HistoricalLocationRepository historicalLocationRepository;
 
     @Mock
     private RedisTemplate<String, Object> redisTemplate;

@@ -33,7 +33,7 @@ inputs = {
   region       = "us-central1"
   service_name = "f1v-service-data-ingestion-dev"
   service_account_email = dependency.iam.outputs.sa_data_ingestion_email
-  image_url    = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/data-ingestion:latest"
+  image_url    = get_env("TF_VAR_image_url", "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/data-ingestion:latest")
 
   is_public    = true
 
@@ -46,7 +46,7 @@ inputs = {
     "SPRING_PROFILES_ACTIVE" = "dev"
 
     # --- NEW: Explicitly inject Security Properties ---
-    "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI" = "dev-5ly43mspbpyofvc1.us.auth0.com/"
+    "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI" = "https://dev-5ly43mspbpyofvc1.us.auth0.com/"
     "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_AUDIENCES"  = "dev.api.f1visualizer.com"
   }
 }

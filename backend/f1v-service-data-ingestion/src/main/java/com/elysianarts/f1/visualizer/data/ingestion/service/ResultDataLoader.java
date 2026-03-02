@@ -28,38 +28,40 @@ public class ResultDataLoader {
     public void loadResultsIntoBigQuery(long sessionKey) {
         log.info("🏆 Fetching Final Positions for Session {}...", sessionKey);
 
-        List<OpenF1PositionData> positions = openF1Client.getPositionData(sessionKey).collectList().block();
+        try {
+            List<OpenF1PositionData> positions = openF1Client.getPositionData(sessionKey).collectList().block();
 
-        if (positions != null && !positions.isEmpty()) {
-            // The OpenF1 /position endpoint returns a time-series of positions throughout the race.
-            // To get the final result, we'll map them by driver, overwriting until we get the last known position.
-            Map<Integer, Integer> finalPositions = new HashMap<>();
-            for (OpenF1PositionData pos : positions) {
-                finalPositions.put(pos.getDriverNumber(), pos.getPosition());
-            }
-
-            List<InsertAllRequest.RowToInsert> rows = new ArrayList<>();
-            for (Map.Entry<Integer, Integer> entry : finalPositions.entrySet()) {
-                Map<String, Object> rowContent = new HashMap<>();
-                rowContent.put("session_key", sessionKey);
-                rowContent.put("driver_number", entry.getKey());
-                rowContent.put("position", entry.getValue());
-
-                rows.add(InsertAllRequest.RowToInsert.of(rowContent));
-            }
-
-            if (!rows.isEmpty()) {
-                InsertAllRequest request = InsertAllRequest.newBuilder(DATASET, TABLE).setRows(rows).build();
-                InsertAllResponse response = bigQuery.insertAll(request);
-
-                if (response.hasErrors()) {
-                    log.error("❌ BigQuery Insert Errors on Results: {}", response.getInsertErrors());
-                } else {
-                    log.info("✅ Successfully loaded {} driver results into BigQuery `f1_dataset.results`.", rows.size());
+            if (positions != null && !positions.isEmpty()) {
+                Map<Integer, Integer> finalPositions = new HashMap<>();
+                for (OpenF1PositionData pos : positions) {
+                    finalPositions.put(pos.getDriverNumber(), pos.getPosition());
                 }
+
+                List<InsertAllRequest.RowToInsert> rows = new ArrayList<>();
+                for (Map.Entry<Integer, Integer> entry : finalPositions.entrySet()) {
+                    Map<String, Object> rowContent = new HashMap<>();
+                    rowContent.put("session_key", sessionKey);
+                    rowContent.put("driver_number", entry.getKey());
+                    rowContent.put("position", entry.getValue());
+
+                    rows.add(InsertAllRequest.RowToInsert.of(rowContent));
+                }
+
+                if (!rows.isEmpty()) {
+                    InsertAllRequest request = InsertAllRequest.newBuilder(DATASET, TABLE).setRows(rows).build();
+                    InsertAllResponse response = bigQuery.insertAll(request);
+
+                    if (response.hasErrors()) {
+                        log.error("❌ BigQuery Insert Errors on Results: {}", response.getInsertErrors());
+                    } else {
+                        log.info("✅ Successfully loaded {} driver results into BigQuery `f1_dataset.results`.", rows.size());
+                    }
+                }
+            } else {
+                log.warn("⚠️ No position data found for session {}", sessionKey);
             }
-        } else {
-            log.warn("⚠️ No position data found for session {}", sessionKey);
+        } catch (Exception e) {
+            log.error("❌ Failed to fetch result data for session {}: {}", sessionKey, e.getMessage());
         }
     }
 }

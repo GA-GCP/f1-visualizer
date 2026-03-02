@@ -4,21 +4,29 @@ import { Box, Typography, Container, Skeleton, Autocomplete, TextField } from '@
 import { apiClient } from '../api/apiClient';
 import LapTimeChart from '../components/LapTimeChart';
 import type { LapDataRecord } from '../types/telemetry';
-import { fetchSessions, type RaceSession } from '../api/referenceApi';
+import { fetchDrivers, fetchSessions, type DriverProfile, type RaceSession } from '../api/referenceApi';
 
 const HistoricalData: React.FC = () => {
     const [laps, setLaps] = useState<LapDataRecord[]>([]);
     const [loading, setLoading] = useState(false);
+    const [driverColorMap, setDriverColorMap] = useState<Record<number, string>>({});
 
     // Dynamic Session state
     const [sessions, setSessions] = useState<RaceSession[]>([]);
     const [selectedSession, setSelectedSession] = useState<RaceSession | null>(null);
 
-    // Fetch available sessions on mount
+    // Fetch available sessions and driver colors on mount
     useEffect(() => {
         fetchSessions().then(data => {
             setSessions(data);
             if (data.length > 0) setSelectedSession(data[0]);
+        });
+        fetchDrivers().then((drivers: DriverProfile[]) => {
+            const colorMap: Record<number, string> = {};
+            for (const d of drivers) {
+                colorMap[d.id] = d.teamColor;
+            }
+            setDriverColorMap(colorMap);
         });
     }, []);
 
@@ -92,7 +100,11 @@ const HistoricalData: React.FC = () => {
                     sx={{ bgcolor: '#1e1e1e', borderRadius: 2, mt: 2 }}
                 />
             ) : (
-                <LapTimeChart data={laps} />
+                <LapTimeChart
+                    data={laps}
+                    title={selectedSession ? `LAP TIMES // ${selectedSession.year} ${selectedSession.meetingName}` : undefined}
+                    driverColorMap={driverColorMap}
+                />
             )}
         </Container>
     );

@@ -9,6 +9,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -39,7 +41,7 @@ public class OpenF1Client {
         this.authService = authService;
     }
 
-    // 2. NEW: Testing Constructor (Used by JUnit to inject the MockWebServer)
+    // Testing Constructor (Used by JUnit to inject the MockWebServer)
     public OpenF1Client(WebClient webClient, OpenF1AuthService authService) {
         this.webClient = webClient;
         this.authService = authService;
@@ -61,9 +63,14 @@ public class OpenF1Client {
     }
 
     public Flux<OpenF1CarData> getCarData(long sessionKey, OffsetDateTime startTime, OffsetDateTime endTime) {
+        // Safely URL-encode the ISO timestamps (translating the timezone '+' to '%2B')
+        String startStr = URLEncoder.encode(startTime.format(API_DATE_FORMATTER), StandardCharsets.UTF_8);
+        String endStr = URLEncoder.encode(endTime.format(API_DATE_FORMATTER), StandardCharsets.UTF_8);
+
+        // Use '%3C' (URL-encoded '<') to ensure the end bound is EXCLUSIVE for contiguous windows
         String uri = "/car_data?session_key=" + sessionKey +
-                "&date>=" + startTime.format(API_DATE_FORMATTER) +
-                "&date<" + endTime.format(API_DATE_FORMATTER);
+                "&date>=" + startStr +
+                "&date%3C" + endStr;
 
         return webClient.get()
                 .uri(uri)
@@ -77,9 +84,14 @@ public class OpenF1Client {
     }
 
     public Flux<OpenF1LocationData> getLocationData(long sessionKey, OffsetDateTime startTime, OffsetDateTime endTime) {
+        // Safely URL-encode the ISO timestamps (translating the timezone '+' to '%2B')
+        String startStr = URLEncoder.encode(startTime.format(API_DATE_FORMATTER), StandardCharsets.UTF_8);
+        String endStr = URLEncoder.encode(endTime.format(API_DATE_FORMATTER), StandardCharsets.UTF_8);
+
+        // Use '%3C' (URL-encoded '<') to ensure the end bound is EXCLUSIVE for contiguous windows
         String uri = "/location?session_key=" + sessionKey +
-                "&date>=" + startTime.format(API_DATE_FORMATTER) +
-                "&date<" + endTime.format(API_DATE_FORMATTER);
+                "&date>=" + startStr +
+                "&date%3C" + endStr;
 
         return webClient.get()
                 .uri(uri)

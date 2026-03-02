@@ -38,18 +38,19 @@ describe('VersusMode Page', () => {
     });
 
     it('shows loading state initially, then renders comparison engine when data arrives', async () => {
-        render(<VersusMode />);
+        const { container } = render(<VersusMode />);
 
-        // Verify the CircularProgress (progressbar) is rendered initially
-        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        // Verify Skeleton placeholders are rendered during loading (not CircularProgress)
+        expect(container.querySelector('.MuiSkeleton-root')).toBeInTheDocument();
+        expect(screen.queryByText('COMPARISON ENGINE')).not.toBeInTheDocument();
 
         // Wait for the data to resolve and the main title to appear
         await waitFor(() => {
             expect(screen.getByText('COMPARISON ENGINE')).toBeInTheDocument();
         });
 
-        // The loading spinner should be gone
-        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+        // The skeleton placeholders should be gone
+        expect(container.querySelector('.MuiSkeleton-root')).not.toBeInTheDocument();
 
         // Verify the mocked Radar Chart is rendered
         expect(screen.getByTestId('mock-radar-chart')).toBeInTheDocument();

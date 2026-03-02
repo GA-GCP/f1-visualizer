@@ -23,7 +23,7 @@ steps:
         # --- NEW: Map Auth0 Tenants based on Environment ---
         if [ "${_ENV}" == "dev" ]; then
           # IMPORTANT: Do not include a trailing slash here, we handle it in the openapi.yaml
-          AUTH0_ISSUER="https://yourname-portfolio-dev.us.auth0.com" 
+          AUTH0_ISSUER="https://dev-5ly43mspbpyofvc1.us.auth0.com"
           AUTH0_AUDIENCE="dev.api.f1visualizer.com"
         elif [ "${_ENV}" == "uat" ]; then
           AUTH0_ISSUER="https://yourname-portfolio-uat.us.auth0.com"

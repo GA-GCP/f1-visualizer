@@ -9,6 +9,9 @@ produces:
   - application/json
 consumes:
   - application/json
+x-google-endpoints:
+  - name: "AUTH0_AUDIENCE_PLACEHOLDER"
+    allowCors: true
 securityDefinitions:
   auth0_jwt:
     authorizationUrl: "AUTH0_ISSUER_URI_PLACEHOLDER/authorize"
@@ -19,7 +22,6 @@ securityDefinitions:
     x-google-audiences: "AUTH0_AUDIENCE_PLACEHOLDER"
     x-google-forward-auth-header: true
 paths:
-  # --- USER SERVICE ---
   /api/v1/users/me:
     get:
       summary: Get Current User
@@ -33,25 +35,6 @@ paths:
           description: OK
       security:
         - auth0_jwt: []
-    options:
-      summary: CORS support
-      operationId: userOptionsMe
-      x-google-backend:
-        address: USER_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-        deadline: 60.0
-      responses:
-        '200':
-          description: OK
-          headers:
-            Access-Control-Allow-Origin:
-              type: string
-            Access-Control-Allow-Methods:
-              type: string
-            Access-Control-Allow-Headers:
-              type: string
-            Access-Control-Allow-Credentials:
-              type: string
   /api/v1/users/me/preferences:
     put:
       summary: Update Preferences
@@ -65,27 +48,6 @@ paths:
           description: OK
       security:
         - auth0_jwt: []
-    options:
-      summary: CORS support
-      operationId: userOptionsPrefs
-      x-google-backend:
-        address: USER_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-        deadline: 60.0
-      responses:
-        '200':
-          description: OK
-          headers:
-            Access-Control-Allow-Origin:
-              type: string
-            Access-Control-Allow-Methods:
-              type: string
-            Access-Control-Allow-Headers:
-              type: string
-            Access-Control-Allow-Credentials:
-              type: string
-
-  # --- ANALYSIS SERVICE ---
   /api/v1/analysis/session/{sessionKey}/laps:
     get:
       summary: Get Laps
@@ -104,30 +66,6 @@ paths:
           description: OK
       security:
         - auth0_jwt: []
-    options:
-      summary: CORS support
-      operationId: analysisOptions
-      parameters:
-        - name: sessionKey
-          in: path
-          required: true
-          type: string
-      x-google-backend:
-        address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-        deadline: 60.0
-      responses:
-        '200':
-          description: OK
-          headers:
-            Access-Control-Allow-Origin:
-              type: string
-            Access-Control-Allow-Methods:
-              type: string
-            Access-Control-Allow-Headers:
-              type: string
-            Access-Control-Allow-Credentials:
-              type: string
   /api/v1/analysis/sessions:
     get:
       summary: Get Sessions
@@ -141,25 +79,6 @@ paths:
           description: OK
       security:
         - auth0_jwt: [ ]
-    options:
-      summary: CORS support
-      operationId: sessionsOptions
-      x-google-backend:
-        address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-        deadline: 60.0
-      responses:
-        '200':
-          description: OK
-          headers:
-            Access-Control-Allow-Origin:
-              type: string
-            Access-Control-Allow-Methods:
-              type: string
-            Access-Control-Allow-Headers:
-              type: string
-            Access-Control-Allow-Credentials:
-              type: string
   /api/v1/analysis/drivers:
     get:
       summary: Get Drivers
@@ -173,25 +92,6 @@ paths:
           description: OK
       security:
         - auth0_jwt: [ ]
-    options:
-      summary: CORS support
-      operationId: driversOptions
-      x-google-backend:
-        address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-        deadline: 60.0
-      responses:
-        '200':
-          description: OK
-          headers:
-            Access-Control-Allow-Origin:
-              type: string
-            Access-Control-Allow-Methods:
-              type: string
-            Access-Control-Allow-Headers:
-              type: string
-            Access-Control-Allow-Credentials:
-              type: string
   /api/v1/analysis/sessions/search:
     get:
       summary: Search Sessions
@@ -210,25 +110,6 @@ paths:
           description: OK
       security:
         - auth0_jwt: [ ]
-    options:
-      summary: CORS support
-      operationId: searchSessionsOptions
-      x-google-backend:
-        address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-        deadline: 60.0
-      responses:
-        '200':
-          description: OK
-          headers:
-            Access-Control-Allow-Origin:
-              type: string
-            Access-Control-Allow-Methods:
-              type: string
-            Access-Control-Allow-Headers:
-              type: string
-            Access-Control-Allow-Credentials:
-              type: string
   /api/v1/analysis/drivers/{driverId}/stats:
     get:
       summary: Get Driver Stats
@@ -247,31 +128,6 @@ paths:
           description: OK
       security:
         - auth0_jwt: [ ]
-    options:
-      summary: CORS support
-      operationId: driverStatsOptions
-      parameters:
-        - name: driverId
-          in: path
-          required: true
-          type: integer
-      x-google-backend:
-        address: DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-        deadline: 60.0
-      responses:
-        '200':
-          description: OK
-          headers:
-            Access-Control-Allow-Origin:
-              type: string
-            Access-Control-Allow-Methods:
-              type: string
-            Access-Control-Allow-Headers:
-              type: string
-            Access-Control-Allow-Credentials:
-              type: string
-  # --- INGESTION SERVICE ---
   /api/v1/ingestion/command:
     post:
       summary: Issue Command
@@ -285,25 +141,6 @@ paths:
           description: OK
       security:
         - auth0_jwt: []
-    options:
-      summary: CORS support
-      operationId: ingestionOptionsCommand
-      x-google-backend:
-        address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-        deadline: 60.0
-      responses:
-        '200':
-          description: OK
-          headers:
-            Access-Control-Allow-Origin:
-              type: string
-            Access-Control-Allow-Methods:
-              type: string
-            Access-Control-Allow-Headers:
-              type: string
-            Access-Control-Allow-Credentials:
-              type: string
   /api/v1/ingestion/load-historical:
     post:
       summary: Load Historical Data
@@ -317,25 +154,6 @@ paths:
           description: OK
       security:
         - auth0_jwt: []
-    options:
-      summary: CORS support
-      operationId: ingestionOptionsLoad
-      x-google-backend:
-        address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-        deadline: 60.0
-      responses:
-        '200':
-          description: OK
-          headers:
-            Access-Control-Allow-Origin:
-              type: string
-            Access-Control-Allow-Methods:
-              type: string
-            Access-Control-Allow-Headers:
-              type: string
-            Access-Control-Allow-Credentials:
-              type: string
   /api/v1/ingestion/load-reference:
     post:
       summary: Load Reference Data
@@ -354,25 +172,6 @@ paths:
           description: OK
       security:
         - auth0_jwt: []
-    options:
-      summary: CORS support
-      operationId: ingestionOptionsReference
-      x-google-backend:
-        address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-        deadline: 60.0
-      responses:
-        '200':
-          description: OK
-          headers:
-            Access-Control-Allow-Origin:
-              type: string
-            Access-Control-Allow-Methods:
-              type: string
-            Access-Control-Allow-Headers:
-              type: string
-            Access-Control-Allow-Credentials:
-              type: string
   /api/v1/ingestion/playback/play:
     post:
       summary: Play Simulation
@@ -386,25 +185,6 @@ paths:
           description: OK
       security:
         - auth0_jwt: [ ]
-    options:
-      summary: CORS support
-      operationId: playOptions
-      x-google-backend:
-        address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-        deadline: 60.0
-      responses:
-        '200':
-          description: OK
-          headers:
-            Access-Control-Allow-Origin:
-              type: string
-            Access-Control-Allow-Methods:
-              type: string
-            Access-Control-Allow-Headers:
-              type: string
-            Access-Control-Allow-Credentials:
-              type: string
   /api/v1/ingestion/playback/pause:
     post:
       summary: Pause Simulation
@@ -418,25 +198,6 @@ paths:
           description: OK
       security:
         - auth0_jwt: [ ]
-    options:
-      summary: CORS support
-      operationId: pauseOptions
-      x-google-backend:
-        address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-        deadline: 60.0
-      responses:
-        '200':
-          description: OK
-          headers:
-            Access-Control-Allow-Origin:
-              type: string
-            Access-Control-Allow-Methods:
-              type: string
-            Access-Control-Allow-Headers:
-              type: string
-            Access-Control-Allow-Credentials:
-              type: string
   /api/v1/ingestion/playback/seek:
     post:
       summary: Seek Simulation
@@ -455,26 +216,6 @@ paths:
           description: OK
       security:
         - auth0_jwt: [ ]
-    options:
-      summary: CORS support
-      operationId: seekOptions
-      x-google-backend:
-        address: DATA_INGESTION_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-        deadline: 60.0
-      responses:
-        '200':
-          description: OK
-          headers:
-            Access-Control-Allow-Origin:
-              type: string
-            Access-Control-Allow-Methods:
-              type: string
-            Access-Control-Allow-Headers:
-              type: string
-            Access-Control-Allow-Credentials:
-              type: string
-  # --- TELEMETRY SERVICE ---
   /api/v1/debug/publish:
     post:
       summary: Publish Debug Telemetry
@@ -488,22 +229,3 @@ paths:
           description: OK
       security:
         - auth0_jwt: [ ]
-    options:
-      summary: CORS support
-      operationId: debugPublishOptions
-      x-google-backend:
-        address: TELEMETRY_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-        deadline: 60.0
-      responses:
-        '200':
-          description: OK
-          headers:
-            Access-Control-Allow-Origin:
-              type: string
-            Access-Control-Allow-Methods:
-              type: string
-            Access-Control-Allow-Headers:
-              type: string
-            Access-Control-Allow-Credentials:
-              type: string

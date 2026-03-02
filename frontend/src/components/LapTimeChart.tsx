@@ -154,7 +154,7 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({ data, title, driverColorMap
             .attr("r", 6)
             .attr("fill", "transparent")
             .attr("cursor", "crosshair")
-            .on("mouseenter", (event: MouseEvent, d: LapDataRecord) => {
+            .on("mouseenter", (_event: MouseEvent, d: LapDataRecord) => {
                 const driverIdx = driverNumbers.indexOf(d.driverNumber);
                 const color = getColor(d.driverNumber, driverIdx);
                 tooltip

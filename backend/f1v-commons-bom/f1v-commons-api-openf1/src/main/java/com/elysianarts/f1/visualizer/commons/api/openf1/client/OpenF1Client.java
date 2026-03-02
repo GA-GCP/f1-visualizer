@@ -9,8 +9,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -21,7 +19,7 @@ import java.time.temporal.ChronoField;
 public class OpenF1Client {
 
     private final WebClient webClient;
-    private final OpenF1AuthService authService; // Inject auth service
+    private final OpenF1AuthService authService;
 
     private static final DateTimeFormatter API_DATE_FORMATTER = new DateTimeFormatterBuilder()
             .append(DateTimeFormatter.ISO_LOCAL_DATE)
@@ -41,21 +39,18 @@ public class OpenF1Client {
         this.authService = authService;
     }
 
-    // Testing Constructor (Used by JUnit to inject the MockWebServer)
     public OpenF1Client(WebClient webClient, OpenF1AuthService authService) {
         this.webClient = webClient;
         this.authService = authService;
     }
 
     public Mono<OpenF1Session> getSession(long sessionKey) {
-        String uri = "/sessions?session_key=" + sessionKey;
-
         return webClient.get()
-                .uri(uri)
+                .uri("/sessions?session_key=" + sessionKey)
                 .header("Authorization", "Bearer " + authService.getAccessToken())
                 .retrieve()
                 .bodyToFlux(OpenF1Session.class)
-                .next() // Just grab the first matching session
+                .next()
                 .onErrorResume(e -> {
                     log.error("Error fetching Session Metadata: {}", e.getMessage());
                     return Mono.empty();
@@ -63,18 +58,15 @@ public class OpenF1Client {
     }
 
     public Flux<OpenF1CarData> getCarData(long sessionKey, OffsetDateTime startTime, OffsetDateTime endTime) {
-        // Safely URL-encode the ISO timestamps (translating the timezone '+' to '%2B')
-        String startStr = URLEncoder.encode(startTime.format(API_DATE_FORMATTER), StandardCharsets.UTF_8);
-        String endStr = URLEncoder.encode(endTime.format(API_DATE_FORMATTER), StandardCharsets.UTF_8);
-
-        // Use '%3C' (URL-encoded '<') to ensure the end bound is EXCLUSIVE for contiguous windows
-        String uri = "/car_data?session_key=" + sessionKey +
-                "&date>=" + startStr +
-                "&date%3C" + endStr;
-
         return webClient.get()
-                .uri(uri)
-                .header("Authorization", "Bearer " + authService.getAccessToken()) // Attach token!
+                // Safely build the URI using Spring's native variable substitution.
+                // This prevents double-encoding while ensuring characters like '+' and '<' are safely handled.
+                .uri(builder -> builder
+                        .path("/car_data")
+                        .query("session_key={key}&date>={start}&date<{end}")
+                        .build(sessionKey, startTime.format(API_DATE_FORMATTER), endTime.format(API_DATE_FORMATTER))
+                )
+                .header("Authorization", "Bearer " + authService.getAccessToken())
                 .retrieve()
                 .bodyToFlux(OpenF1CarData.class)
                 .onErrorResume(e -> {
@@ -84,18 +76,14 @@ public class OpenF1Client {
     }
 
     public Flux<OpenF1LocationData> getLocationData(long sessionKey, OffsetDateTime startTime, OffsetDateTime endTime) {
-        // Safely URL-encode the ISO timestamps (translating the timezone '+' to '%2B')
-        String startStr = URLEncoder.encode(startTime.format(API_DATE_FORMATTER), StandardCharsets.UTF_8);
-        String endStr = URLEncoder.encode(endTime.format(API_DATE_FORMATTER), StandardCharsets.UTF_8);
-
-        // Use '%3C' (URL-encoded '<') to ensure the end bound is EXCLUSIVE for contiguous windows
-        String uri = "/location?session_key=" + sessionKey +
-                "&date>=" + startStr +
-                "&date%3C" + endStr;
-
         return webClient.get()
-                .uri(uri)
-                .header("Authorization", "Bearer " + authService.getAccessToken()) // Attach token!
+                // Using the same native UriBuilder strategy for location data
+                .uri(builder -> builder
+                        .path("/location")
+                        .query("session_key={key}&date>={start}&date<{end}")
+                        .build(sessionKey, startTime.format(API_DATE_FORMATTER), endTime.format(API_DATE_FORMATTER))
+                )
+                .header("Authorization", "Bearer " + authService.getAccessToken())
                 .retrieve()
                 .bodyToFlux(OpenF1LocationData.class)
                 .onErrorResume(e -> {
@@ -105,10 +93,8 @@ public class OpenF1Client {
     }
 
     public Flux<OpenF1LapData> getLapData(long sessionKey) {
-        String uri = "/laps?session_key=" + sessionKey;
-
         return webClient.get()
-                .uri(uri)
+                .uri("/laps?session_key=" + sessionKey)
                 .header("Authorization", "Bearer " + authService.getAccessToken())
                 .retrieve()
                 .bodyToFlux(OpenF1LapData.class)
@@ -119,10 +105,8 @@ public class OpenF1Client {
     }
 
     public Flux<OpenF1PositionData> getPositionData(long sessionKey) {
-        String uri = "/position?session_key=" + sessionKey;
-
         return webClient.get()
-                .uri(uri)
+                .uri("/position?session_key=" + sessionKey)
                 .header("Authorization", "Bearer " + authService.getAccessToken())
                 .retrieve()
                 .bodyToFlux(OpenF1PositionData.class)

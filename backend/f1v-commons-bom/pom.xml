@@ -37,9 +37,7 @@
         <spring-cloud-gcp.version>7.4.5</spring-cloud-gcp.version>
         <spring-cloud-gcp-bigquery.version>7.4.5</spring-cloud-gcp-bigquery.version>
         <google-cloud-firestore.version>3.38.0</google-cloud-firestore.version>
-        <jackson-3.version>3.1.0-rc1</jackson-3.version>
-        <springdoc.version>3.0.1</springdoc.version>
-        <spring-security-test.version>7.0.3</spring-security-test.version>
+        <jackson-3.version>3.1.0</jackson-3.version>
         <spring-data-commons.version>4.0.3</spring-data-commons.version>
         <spring-tx.version>7.0.5</spring-tx.version>
         <junit-jupiter-api.version>6.0.3</junit-jupiter-api.version>
@@ -100,11 +98,6 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-jackson</artifactId>
                 <version>${spring-boot.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springdoc</groupId>
-                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-                <version>${springdoc.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>

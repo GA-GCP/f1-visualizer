@@ -47,8 +47,8 @@ inputs = {
   vpc_connector_id      = dependency.networking.outputs.vpc_access_connector_id
 
   env_vars = {
-    "SPRING_REDIS_HOST" = dependency.redis.outputs.redis_host
-    "SPRING_REDIS_PORT" = dependency.redis.outputs.redis_port
+    "SPRING_DATA_REDIS_HOST" = dependency.redis.outputs.redis_host
+    "SPRING_DATA_REDIS_PORT" = dependency.redis.outputs.redis_port
     "SPRING_PROFILES_ACTIVE" = "dev"
 
     # --- NEW: Explicitly inject Security Properties ---

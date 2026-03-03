@@ -12,12 +12,6 @@
     <groupId>com.elysianarts.f1.visualizer.commons</groupId>
     <artifactId>f1v-commons-gcp-firestore</artifactId>
 
-    <properties>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>com.google.cloud</groupId>
@@ -26,10 +20,6 @@
         <dependency>
             <groupId>org.springframework.data</groupId>
             <artifactId>spring-data-commons</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.elysianarts.f1.visualizer.commons</groupId>
-            <artifactId>f1v-commons-base</artifactId>
         </dependency>
     </dependencies>
 

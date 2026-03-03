@@ -43,7 +43,7 @@
         </dependency>
         <dependency>
             <groupId>com.elysianarts.f1.visualizer.commons</groupId>
-            <artifactId>f1v-commons-websocket</artifactId>
+            <artifactId>f1v-commons-service-websocket</artifactId>
         </dependency>
         <dependency>
             <groupId>com.elysianarts.f1.visualizer.commons</groupId>

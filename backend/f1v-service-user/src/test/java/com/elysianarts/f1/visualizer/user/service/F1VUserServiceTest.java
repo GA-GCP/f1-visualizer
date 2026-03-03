@@ -86,4 +86,24 @@ class F1VUserServiceTest {
 
         assertTrue(ex.getMessage().contains("User profile not found"));
     }
+
+    @Test
+    void getOrCreateUser_SetsCreatedAtTimestamp_WhenCreatingNewUser() {
+        when(userRepository.findById(testAuthId)).thenReturn(null);
+        when(userRepository.save(any(F1VUserDocument.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        F1VUserDocument result = f1VUserService.getOrCreateUser(testAuthId, testEmail);
+
+        assertNotNull(result.getCreatedAt());
+    }
+
+    @Test
+    void getOrCreateUser_InitializesEmptyPreferences_WhenCreatingNewUser() {
+        when(userRepository.findById(testAuthId)).thenReturn(null);
+        when(userRepository.save(any(F1VUserDocument.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        F1VUserDocument result = f1VUserService.getOrCreateUser(testAuthId, testEmail);
+
+        assertNotNull(result.getPreferences());
+    }
 }

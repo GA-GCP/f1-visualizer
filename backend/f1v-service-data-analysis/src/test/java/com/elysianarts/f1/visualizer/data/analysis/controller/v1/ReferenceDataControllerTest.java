@@ -16,6 +16,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.Mockito.when;
@@ -101,5 +102,31 @@ class ReferenceDataControllerTest {
 
         mockMvc.perform(get("/api/v1/analysis/sessions"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void searchSessions_ReturnsMatchingSessions_WhenQueryProvided() throws Exception {
+        when(referenceDataService.searchSessions("Singapore"))
+                .thenReturn(List.of(mockSession));
+
+        mockMvc.perform(get("/api/v1/analysis/sessions/search")
+                        .param("query", "Singapore")
+                        .with(jwt().jwt(jwt -> jwt.subject("admin_user"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].meetingName").value("Singapore Grand Prix"));
+    }
+
+    @Test
+    void searchSessions_ReturnsEmptyList_WhenNoMatchesFound() throws Exception {
+        when(referenceDataService.searchSessions("Nonexistent"))
+                .thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/v1/analysis/sessions/search")
+                        .param("query", "Nonexistent")
+                        .with(jwt().jwt(jwt -> jwt.subject("admin_user"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(0));
     }
 }

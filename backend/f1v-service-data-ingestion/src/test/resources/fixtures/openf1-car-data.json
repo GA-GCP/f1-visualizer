@@ -1,0 +1,38 @@
+[
+  {
+    "session_key": 9472,
+    "meeting_key": 1234,
+    "date": "2024-03-02T15:30:00.000+00:00",
+    "driver_number": 1,
+    "speed": 315,
+    "rpm": 11200,
+    "n_gear": 8,
+    "throttle": 100,
+    "brake": 0,
+    "drs": 12
+  },
+  {
+    "session_key": 9472,
+    "meeting_key": 1234,
+    "date": "2024-03-02T15:30:00.250+00:00",
+    "driver_number": 1,
+    "speed": 310,
+    "rpm": 11100,
+    "n_gear": 8,
+    "throttle": 95,
+    "brake": 5,
+    "drs": 10
+  },
+  {
+    "session_key": 9472,
+    "meeting_key": 1234,
+    "date": "2024-03-02T15:30:00.500+00:00",
+    "driver_number": 44,
+    "speed": 308,
+    "rpm": 10900,
+    "n_gear": 7,
+    "throttle": 80,
+    "brake": 20,
+    "drs": 0
+  }
+]

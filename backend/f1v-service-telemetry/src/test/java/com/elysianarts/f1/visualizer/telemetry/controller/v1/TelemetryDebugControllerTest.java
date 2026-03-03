@@ -8,7 +8,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.listener.RedisMessageListenerContainer; // Import added
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -48,18 +48,15 @@ class TelemetryDebugControllerTest {
 
     @Test
     void publishManualTelemetry_PublishesToRedis_WhenAuthorized() throws Exception {
-        // Arrange
         Map<String, Object> payload = new HashMap<>();
         payload.put("driver", "HAM");
         payload.put("speed", 290);
 
         String expectedTopic = "live_telemetry";
 
-        // When
         when(redisTemplate.convertAndSend(eq(expectedTopic), any(Map.class)))
                 .thenReturn(1L);
 
-        // Act & Assert
         mockMvc.perform(post("/api/v1/debug/publish")
                         .with(jwt().jwt(jwt -> jwt.subject("admin_user")))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -74,5 +71,22 @@ class TelemetryDebugControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void publishManualTelemetry_Returns400_WhenBodyIsMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/debug/publish")
+                        .with(jwt().jwt(jwt -> jwt.subject("admin_user")))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void publishManualTelemetry_Returns415_WhenContentTypeIsWrong() throws Exception {
+        mockMvc.perform(post("/api/v1/debug/publish")
+                        .with(jwt().jwt(jwt -> jwt.subject("admin_user")))
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("{\"driver\":\"VER\"}"))
+                .andExpect(status().isUnsupportedMediaType());
     }
 }

@@ -19,6 +19,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -101,5 +102,29 @@ class F1VUserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.preferences.favoriteDriver").value("Max Verstappen"))
                 .andExpect(jsonPath("$.preferences.team").value("Red Bull"));
+    }
+
+    @Test
+    void getCurrentUser_PropagatesException_WhenServiceThrows() {
+        when(f1VUserService.getOrCreateUser(eq(TEST_SUB), eq(TEST_EMAIL)))
+                .thenThrow(new RuntimeException("Firestore connection failed"));
+
+        assertThrows(Exception.class, () ->
+                mockMvc.perform(get("/api/v1/users/me")
+                        .with(jwt().jwt(jwt -> jwt
+                                .subject(TEST_SUB)
+                                .claim("email", TEST_EMAIL)))));
+    }
+
+    @Test
+    void updatePreferences_PropagatesException_WhenServiceThrows() {
+        when(f1VUserService.updatePreferences(eq(TEST_SUB), any(F1VUserDocument.UserPreferences.class)))
+                .thenThrow(new RuntimeException("User profile not found"));
+
+        assertThrows(Exception.class, () ->
+                mockMvc.perform(put("/api/v1/users/me/preferences")
+                        .with(jwt().jwt(jwt -> jwt.subject(TEST_SUB)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"favoriteDriver\":\"VER\"}")));
     }
 }

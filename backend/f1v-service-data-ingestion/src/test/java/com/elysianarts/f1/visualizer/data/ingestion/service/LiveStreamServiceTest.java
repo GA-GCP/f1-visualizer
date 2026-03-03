@@ -31,7 +31,7 @@ class LiveStreamServiceTest {
 
     @Test
     void connect_SetsUpCallback_AndParsesTelemetryCorrectly() throws Exception {
-        JsonMapper jsonMapper = JsonMapper.builder().build();
+        JsonMapper jsonMapper = JsonMapper.builder().findAndAddModules().build();
 
         // 1. Mock the auth token retrieval
         when(authService.getAccessToken()).thenReturn("mock-sponsor-token");
@@ -59,7 +59,7 @@ class LiveStreamServiceTest {
             MqttCallback callback = callbackCaptor.getValue();
 
             // Simulate incoming MQTT JSON Message
-            String jsonPayload = "{\"driver_number\":1, \"speed\": 320, \"gear\": 8}";
+            String jsonPayload = "{\"driver_number\":1, \"speed\": 320, \"n_gear\": 8}";
             MqttMessage message = new MqttMessage(jsonPayload.getBytes());
 
             // Trigger the callback manually

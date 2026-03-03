@@ -61,11 +61,18 @@ class ReferenceDataLoaderTest {
         when(authService.getAccessToken()).thenReturn("test-token");
         when(bigQuery.insertAll(any(InsertAllRequest.class))).thenReturn(mock(InsertAllResponse.class));
 
-        // Enqueue Mock Responses: First for /sessions, then for /drivers
+        // Enqueue Mock Responses:
+        // 1st for /meetings (building the lookup)
         mockWebServer.enqueue(new MockResponse()
-                .setBody("[{\"session_key\": 9165, \"meeting_name\": \"Singapore Grand Prix\"}]")
+                .setBody("[{\"meeting_key\": 1219, \"meeting_name\": \"Singapore Grand Prix\"}]")
                 .addHeader("Content-Type", "application/json"));
 
+        // 2nd for /sessions
+        mockWebServer.enqueue(new MockResponse()
+                .setBody("[{\"session_key\": 9165, \"meeting_key\": 1219}]")
+                .addHeader("Content-Type", "application/json"));
+
+        // 3rd for /drivers
         mockWebServer.enqueue(new MockResponse()
                 .setBody("[{\"driver_number\": 1, \"broadcast_name\": \"M VERSTAPPEN\", \"team_colour\": \"3671C6\"}]")
                 .addHeader("Content-Type", "application/json"));

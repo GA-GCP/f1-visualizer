@@ -11,6 +11,7 @@ public class JacksonObjectMapperConfig {
     @Primary
     public JsonMapper jsonMapper() {
         return JsonMapper.builder()
+                .findAndAddModules()
                 .build();
     }
 }

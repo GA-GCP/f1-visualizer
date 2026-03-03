@@ -78,11 +78,14 @@ class ReferenceDataServiceTest {
         when(teamColorVal.getStringValue()).thenReturn("E80020");
         when(mockRow.get("team_colour")).thenReturn(teamColorVal);
 
+        FieldValue nameAcronymVal = mock(FieldValue.class);
+        when(nameAcronymVal.isNull()).thenReturn(false);
+        when(nameAcronymVal.getStringValue()).thenReturn("LEC");
+        when(mockRow.get("name_acronym")).thenReturn(nameAcronymVal);
+
         FieldValue defaultNull = mock(FieldValue.class);
         when(defaultNull.isNull()).thenReturn(true);
         when(mockRow.get("team_name")).thenReturn(defaultNull);
-
-        // REMOVED: when(mockRow.get("country_code")).thenReturn(defaultNull); <-- This was causing the error!
 
         when(tableResult.iterateAll()).thenReturn(List.of(mockRow));
         when(bigQuery.query(any(QueryJobConfiguration.class))).thenReturn(tableResult);
@@ -93,7 +96,7 @@ class ReferenceDataServiceTest {
         // Assert
         assertEquals(1, results.size());
         assertEquals(16, results.get(0).getId());
-        assertEquals("CHA", results.get(0).getCode()); // Extracted first 3 chars
+        assertEquals("LEC", results.get(0).getCode()); // Uses name_acronym from OpenF1
         assertEquals("#E80020", results.get(0).getTeamColor()); // Hash prefixed
     }
 }

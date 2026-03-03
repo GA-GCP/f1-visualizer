@@ -71,6 +71,12 @@ class RaceAnalysisServiceTest {
         when(s3Val.getDoubleValue()).thenReturn(35.2);
         when(mockRow.get("sector_3_duration")).thenReturn(s3Val);
 
+        // Compound: SOFT
+        FieldValue compoundVal = mock(FieldValue.class);
+        when(compoundVal.isNull()).thenReturn(false);
+        when(compoundVal.getStringValue()).thenReturn("SOFT");
+        when(mockRow.get("compound")).thenReturn(compoundVal);
+
         // 2. Mock the TableResult to return our single mockRow
         when(tableResult.iterateAll()).thenReturn(List.of(mockRow));
 
@@ -117,6 +123,7 @@ class RaceAnalysisServiceTest {
         when(mockRow.get("sector_1_duration")).thenReturn(nullField);
         when(mockRow.get("sector_2_duration")).thenReturn(nullField);
         when(mockRow.get("sector_3_duration")).thenReturn(nullField);
+        when(mockRow.get("compound")).thenReturn(nullField);
 
         when(tableResult.iterateAll()).thenReturn(List.of(mockRow));
         when(bigQuery.query(any(QueryJobConfiguration.class))).thenReturn(tableResult);
@@ -129,6 +136,7 @@ class RaceAnalysisServiceTest {
 
         assertNull(results.get(0).getLapDuration(), "Lap duration should be null");
         assertNull(results.get(0).getSector1(), "Sector 1 should be null");
+        assertNull(results.get(0).getCompound(), "Compound should be null");
     }
 
     @Test

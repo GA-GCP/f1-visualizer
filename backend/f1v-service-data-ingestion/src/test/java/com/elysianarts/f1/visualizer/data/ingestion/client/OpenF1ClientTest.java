@@ -70,7 +70,7 @@ class OpenF1ClientTest {
                 "driver_number": 1,
                 "speed": 310,
                 "rpm": 11500,
-                "gear": 8,
+                "n_gear": 8,
                 "throttle": 100,
                 "brake": 0,
                 "drs": 1

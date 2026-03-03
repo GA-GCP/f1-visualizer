@@ -27,7 +27,7 @@ public class OpenF1CarData {
     @JsonProperty("rpm")
     private Integer rpm;
 
-    @JsonProperty("gear")
+    @JsonProperty("n_gear")
     private Integer gear;
 
     @JsonProperty("throttle")

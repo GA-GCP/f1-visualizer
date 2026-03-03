@@ -1,0 +1,11 @@
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: https://test-issuer.example.com/.well-known/jwks.json
+          audiences: test.api.f1visualizer.com
+
+logging:
+  level:
+    root: WARN

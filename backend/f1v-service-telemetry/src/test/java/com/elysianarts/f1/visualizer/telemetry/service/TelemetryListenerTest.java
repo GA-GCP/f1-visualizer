@@ -33,14 +33,13 @@ class TelemetryListenerTest {
         Message mockMessage = mock(Message.class);
         when(mockMessage.getBody()).thenReturn(body);
 
-        // CRITICAL FIX: Stub the channel so the Listener knows where it came from
+        // Stub the channel so the Listener knows where it came from
         when(mockMessage.getChannel()).thenReturn(channel);
 
         // Act
-        telemetryListener.onMessage(mockMessage, channel); // The 2nd arg 'pattern' isn't used by our logic, but required by interface
+        telemetryListener.onMessage(mockMessage, channel);
 
         // Assert
-        // Verify we routed to "/topic/race-data"
         verify(messagingTemplate, times(1)).convertAndSend("/topic/race-data", jsonPayload);
     }
 
@@ -55,14 +54,66 @@ class TelemetryListenerTest {
         Message mockMessage = mock(Message.class);
         when(mockMessage.getBody()).thenReturn(body);
 
-        // CRITICAL FIX: Stub the LOCATION channel
+        // Stub the LOCATION channel
         when(mockMessage.getChannel()).thenReturn(channel);
 
         // Act
         telemetryListener.onMessage(mockMessage, channel);
 
         // Assert
-        // Verify we routed to "/topic/race-location"
         verify(messagingTemplate, times(1)).convertAndSend("/topic/race-location", jsonPayload);
+    }
+
+    @Test
+    void onMessage_RoutesPlayback_ToPlaybackStatusTopic() {
+        // Arrange
+        String jsonPayload = "{\"progress\":75}";
+        byte[] body = jsonPayload.getBytes(StandardCharsets.UTF_8);
+        byte[] channel = RedisConfig.PLAYBACK_TOPIC.getBytes(StandardCharsets.UTF_8);
+
+        Message mockMessage = mock(Message.class);
+        when(mockMessage.getBody()).thenReturn(body);
+        when(mockMessage.getChannel()).thenReturn(channel);
+
+        // Act
+        telemetryListener.onMessage(mockMessage, channel);
+
+        // Assert
+        verify(messagingTemplate, times(1)).convertAndSend("/topic/playback-status", jsonPayload);
+    }
+
+    @Test
+    void onMessage_IgnoresMessage_WhenChannelIsUnknown() {
+        // Arrange
+        String jsonPayload = "{\"data\":\"test\"}";
+        byte[] body = jsonPayload.getBytes(StandardCharsets.UTF_8);
+        byte[] unknownChannel = "unknown_channel".getBytes(StandardCharsets.UTF_8);
+
+        Message mockMessage = mock(Message.class);
+        when(mockMessage.getBody()).thenReturn(body);
+        when(mockMessage.getChannel()).thenReturn(unknownChannel);
+
+        // Act
+        telemetryListener.onMessage(mockMessage, unknownChannel);
+
+        // Assert - no routing should occur
+        verifyNoInteractions(messagingTemplate);
+    }
+
+    @Test
+    void onMessage_HandlesEmptyPayload_WithoutThrowing() {
+        // Arrange
+        byte[] body = "".getBytes(StandardCharsets.UTF_8);
+        byte[] channel = RedisConfig.TELEMETRY_TOPIC.getBytes(StandardCharsets.UTF_8);
+
+        Message mockMessage = mock(Message.class);
+        when(mockMessage.getBody()).thenReturn(body);
+        when(mockMessage.getChannel()).thenReturn(channel);
+
+        // Act - should not throw
+        telemetryListener.onMessage(mockMessage, channel);
+
+        // Assert - empty string still gets routed since the listener doesn't validate content
+        verify(messagingTemplate, times(1)).convertAndSend("/topic/race-data", "");
     }
 }

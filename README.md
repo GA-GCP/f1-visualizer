@@ -264,9 +264,9 @@ f1-visualizer/
 |   |   +-- bigquery/                  #   Dataset + 6 tables with partitioning/clustering
 |   |   +-- firestore/                 #   Document database with delete protection
 |   |   +-- redis/                     #   Memorystore instance (HA in production)
-|   |   +-- artifact_registry/         #   Docker image repository
+|   |   +-- artifact-registry/         #   Docker image repository
 |   |   +-- networking/                #   VPC, subnets, firewall rules, VPC connector
-|   |   +-- iam_and_secrets/           #   6 service accounts with scoped IAM bindings
+|   |   +-- iam-and-secrets/           #   6 service accounts with scoped IAM bindings
 |   |   +-- lb-api/                    #   Global HTTPS LB with WebSocket path bypass
 |   |   +-- lb-frontend/              #   Global HTTPS LB for React SPA
 |   |   +-- cloudbuild-triggers/       #   7 path-filtered CI/CD triggers
@@ -395,11 +395,11 @@ The infrastructure is fully codified across 11 reusable OpenTofu modules, compos
 ```
 infrastructure/modules/
 |
-+-- iam_and_secrets      6 service accounts with principle-of-least-privilege bindings
++-- iam-and-secrets      6 service accounts with principle-of-least-privilege bindings
 |       |
 +-- networking           VPC, subnet, firewall rules, serverless VPC connector
 |       |
-+-- artifact_registry    Docker image repository
++-- artifact-registry    Docker image repository
 +-- firestore            Document database (delete protection per env)
 +-- bigquery             Dataset + 6 tables (partitioned + clustered)
 +-- redis                Memorystore (BASIC for dev, STANDARD_HA for prod)
@@ -419,11 +419,11 @@ infrastructure/modules/
 Terragrunt manages the deployment order through explicit `dependency` blocks. The graph ensures that IAM identities and networking exist before any service that needs them:
 
 ```
-iam_and_secrets ----+----> cloud-run (all services)
+iam-and-secrets ----+----> cloud-run (all services)
                     |
 networking ---------+----> redis
                     |
-artifact_registry --+
+artifact-registry --+
 firestore ----------+
 bigquery -----------+----> api-gateway -----> lb-api
                                               lb-frontend

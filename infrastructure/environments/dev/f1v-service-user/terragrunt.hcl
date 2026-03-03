@@ -8,7 +8,7 @@ terraform {
 
 # 1. Dependency on IAM module
 dependency "iam" {
-  config_path = "../iam_and_secrets"
+  config_path = "../iam-and-secrets"
   mock_outputs = {
     sa_user_email = "sa-f1v-user-dev@f1-visualizer-488201.iam.gserviceaccount.com"
   }

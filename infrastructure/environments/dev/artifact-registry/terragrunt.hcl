@@ -3,7 +3,7 @@ include "root" {
 }
 
 terraform {
-  source = "../../../modules/artifact_registry"
+  source = "../../../modules/artifact-registry"
 }
 
 inputs = {

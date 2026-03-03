@@ -30,8 +30,8 @@ resource "google_cloud_run_v2_service" "service" {
       # Resources
       resources {
         limits = {
-          cpu    = "1000m"
-          memory = "512Mi"
+          cpu    = var.cpu
+          memory = var.memory
         }
       }
 

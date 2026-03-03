@@ -8,7 +8,7 @@ terraform {
 
 # 1. Dependency on IAM module
 dependency "iam" {
-  config_path = "../iam_and_secrets"
+  config_path = "../iam-and-secrets"
   mock_outputs = {
     sa_telemetry_email = "sa-f1v-telemetry-dev@f1-visualizer-488201.iam.gserviceaccount.com"
   }
@@ -41,6 +41,10 @@ inputs = {
 
   # Pointing to the Artifact Registry repo we created
   image_url    = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/telemetry:latest"
+
+  # Elevated resources: high-frequency Redis Pub/Sub to WebSocket broadcast (1000+ msg/sec during live sessions)
+  cpu    = "2000m"
+  memory = "1024Mi"
 
   # Keep 1 instance warm to eliminate cold-start delays on WebSocket connections.
   # The frontend establishes a STOMP/SockJS connection immediately after login;

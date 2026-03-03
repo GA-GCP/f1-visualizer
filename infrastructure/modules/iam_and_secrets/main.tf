@@ -129,9 +129,41 @@ resource "google_project_iam_member" "cloudbuild_run_viewer" {
   member  = "serviceAccount:${google_service_account.cloudbuild.email}"
 }
 
-# -- Compute: Manage Load Balancers (global addresses, NEGs, SSL certs, URL maps, etc.) --
+# -- Infrastructure Pipeline: Manage all IaC-provisioned resources --
+# These roles enable the Cloud Build SA to run terragrunt plan/apply
+# across all modules (networking, BigQuery, Firestore, Redis, LBs, IAM).
+resource "google_project_iam_member" "cloudbuild_project_iam_admin" {
+  project = var.project_id
+  role    = "roles/resourcemanager.projectIamAdmin"
+  member  = "serviceAccount:${google_service_account.cloudbuild.email}"
+}
+resource "google_project_iam_member" "cloudbuild_compute_network_admin" {
+  project = var.project_id
+  role    = "roles/compute.networkAdmin"
+  member  = "serviceAccount:${google_service_account.cloudbuild.email}"
+}
+resource "google_project_iam_member" "cloudbuild_vpcaccess_admin" {
+  project = var.project_id
+  role    = "roles/vpcaccess.admin"
+  member  = "serviceAccount:${google_service_account.cloudbuild.email}"
+}
 resource "google_project_iam_member" "cloudbuild_lb_admin" {
   project = var.project_id
   role    = "roles/compute.loadBalancerAdmin"
+  member  = "serviceAccount:${google_service_account.cloudbuild.email}"
+}
+resource "google_project_iam_member" "cloudbuild_bq_admin" {
+  project = var.project_id
+  role    = "roles/bigquery.admin"
+  member  = "serviceAccount:${google_service_account.cloudbuild.email}"
+}
+resource "google_project_iam_member" "cloudbuild_datastore_owner" {
+  project = var.project_id
+  role    = "roles/datastore.owner"
+  member  = "serviceAccount:${google_service_account.cloudbuild.email}"
+}
+resource "google_project_iam_member" "cloudbuild_redis_admin" {
+  project = var.project_id
+  role    = "roles/redis.admin"
   member  = "serviceAccount:${google_service_account.cloudbuild.email}"
 }

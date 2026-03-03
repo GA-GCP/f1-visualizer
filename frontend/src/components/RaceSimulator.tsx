@@ -23,17 +23,34 @@ const RaceSimulator: React.FC = () => {
     const { userProfile } = useUser();
 
     useEffect(() => {
-        setIsLoadingDrivers(true);
-        fetchDrivers()
-            .then(data => {
-                setDrivers(data);
-                if (data.length > 0) {
-                    const favCode = userProfile?.preferences?.favoriteDriver;
-                    const defaultDriver = data.find(d => d.code === favCode) || data[0];
-                    setSelectedDriver(defaultDriver);
+        let isMounted = true;
+
+        const initializeDrivers = async () => {
+            setIsLoadingDrivers(true);
+            try {
+                const data = await fetchDrivers();
+                if (isMounted) {
+                    setDrivers(data);
+                    if (data.length > 0) {
+                        const favCode = userProfile?.preferences?.favoriteDriver;
+                        const defaultDriver = data.find(d => d.code === favCode) || data[0];
+                        setSelectedDriver(defaultDriver);
+                    }
                 }
-            })
-            .finally(() => setIsLoadingDrivers(false));
+            } catch (err) {
+                console.error("Failed to fetch drivers for simulator", err);
+            } finally {
+                if (isMounted) {
+                    setIsLoadingDrivers(false);
+                }
+            }
+        };
+
+        void initializeDrivers();
+
+        return () => {
+            isMounted = false; // Cleanup to prevent state updates on unmounted components
+        };
     }, [userProfile]);
 
     const { isConnected: isTelemetryConnected } = useTelemetry((data) => {

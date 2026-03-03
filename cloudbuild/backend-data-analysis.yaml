@@ -25,9 +25,6 @@ steps:
       - 'f1v-service-data-analysis'
       - '-am'
     dir: 'backend'
-    volumes:
-      - name: 'm2-cache'
-        path: '/root/.m2'
 
   # 2. Extract Spring Boot JAR Layers
   - name: 'eclipse-temurin:25-jdk'

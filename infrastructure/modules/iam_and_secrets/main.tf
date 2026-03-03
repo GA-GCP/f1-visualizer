@@ -128,3 +128,10 @@ resource "google_project_iam_member" "cloudbuild_run_viewer" {
   role    = "roles/run.viewer"
   member  = "serviceAccount:${google_service_account.cloudbuild.email}"
 }
+
+# -- Compute: Manage Load Balancers (global addresses, NEGs, SSL certs, URL maps, etc.) --
+resource "google_project_iam_member" "cloudbuild_lb_admin" {
+  project = var.project_id
+  role    = "roles/compute.loadBalancerAdmin"
+  member  = "serviceAccount:${google_service_account.cloudbuild.email}"
+}

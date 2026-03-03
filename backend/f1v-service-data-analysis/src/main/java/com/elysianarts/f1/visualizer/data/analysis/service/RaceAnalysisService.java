@@ -85,8 +85,10 @@ public class RaceAnalysisService {
                   (SELECT STDDEV(lap_duration) FROM `%s.laps` WHERE driver_number = %d AND lap_duration IS NOT NULL) as lap_stddev,
                   (SELECT COUNT(DISTINCT session_key) FROM `%s.laps` WHERE driver_number = %d) as sessions_participated,
                   (SELECT COUNT(*) FROM `%s.results` WHERE driver_number = %d AND position = 1) as wins,
-                  (SELECT COUNT(*) FROM `%s.results` WHERE driver_number = %d AND position <= 3) as podiums
-                """, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber);
+                  (SELECT COUNT(*) FROM `%s.results` WHERE driver_number = %d AND position <= 3) as podiums,
+                  (SELECT AVG(brake) FROM `%s.telemetry` WHERE driver_number = %d AND brake > 0) as avg_brake,
+                  (SELECT AVG(stint_len) FROM (SELECT COUNT(*) as stint_len FROM `%s.laps` WHERE driver_number = %d AND compound IS NOT NULL AND lap_duration IS NOT NULL GROUP BY session_key, compound)) as avg_stint_length
+                """, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber, DATASET_NAME, driverNumber);
 
         log.info("Executing BigQuery Analysis: Aggregating stats for driver {}", driverNumber);
 
@@ -97,6 +99,8 @@ public class RaceAnalysisService {
             int speedScore = 80;
             int consistencyScore = 80;
             int experienceScore = 50;
+            int aggressionScore = 85;
+            int tireMgmtScore = 85;
             int wins = 0;
             int podiums = 0;
 
@@ -119,14 +123,22 @@ public class RaceAnalysisService {
                 if (!row.get("podiums").isNull()) {
                     podiums = (int) row.get("podiums").getLongValue();
                 }
+                if (!row.get("avg_brake").isNull()) {
+                    double avgBrake = row.get("avg_brake").getDoubleValue();
+                    aggressionScore = (int) Math.min(99, Math.max(10, avgBrake));
+                }
+                if (!row.get("avg_stint_length").isNull()) {
+                    double avgStintLen = row.get("avg_stint_length").getDoubleValue();
+                    tireMgmtScore = (int) Math.min(99, Math.max(10, (avgStintLen / 30.0) * 100));
+                }
             }
 
             return DriverProfile.DriverStats.builder()
                     .speed(speedScore)
                     .consistency(consistencyScore)
                     .experience(experienceScore)
-                    .aggression(85) // ML Placeholder
-                    .tireMgmt(85)   // ML Placeholder
+                    .aggression(aggressionScore)
+                    .tireMgmt(tireMgmtScore)
                     .wins(wins)
                     .podiums(podiums)
                     .build();

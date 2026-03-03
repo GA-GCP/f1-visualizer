@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, Container, Button, IconButton, Tooltip } from '@mui/material';
 import { Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion, LayoutGroup } from 'framer-motion';
 import SpeedIcon from '@mui/icons-material/Speed';
 import StorageIcon from '@mui/icons-material/Storage';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
@@ -41,9 +42,11 @@ const LayoutMain: React.FC = () => {
                             F1 VISUALIZER
                         </Typography>
 
-                        <NavButton to="/" label="Live Console" icon={<SpeedIcon />} currentPath={location.pathname} />
-                        <NavButton to="/historical" label="Data Vault" icon={<StorageIcon />} currentPath={location.pathname} />
-                        <NavButton to="/versus" label="Head-to-Head" icon={<CompareArrowsIcon />} currentPath={location.pathname} />
+                        <LayoutGroup>
+                            <NavButton to="/" label="Live Console" icon={<SpeedIcon />} currentPath={location.pathname} />
+                            <NavButton to="/historical" label="Data Vault" icon={<StorageIcon />} currentPath={location.pathname} />
+                            <NavButton to="/versus" label="Head-to-Head" icon={<CompareArrowsIcon />} currentPath={location.pathname} />
+                        </LayoutGroup>
 
                         {/* NEW: Settings Button */}
                         <Tooltip title="User Preferences">
@@ -70,7 +73,17 @@ const LayoutMain: React.FC = () => {
 
             {/* 2. Content Area */}
             <Container maxWidth="xl" sx={{ flexGrow: 1, py: 4, position: 'relative', zIndex: 1 }}>
-                <Outlet />
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={location.pathname}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -12 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    >
+                        <Outlet />
+                    </motion.div>
+                </AnimatePresence>
             </Container>
 
             {/* 3. Footer */}
@@ -94,7 +107,7 @@ const NavButton = ({ to, label, icon, currentPath }: { to: string, label: string
             sx={{
                 mx: 1,
                 color: isActive ? 'white' : 'text.secondary',
-                borderBottom: isActive ? '2px solid #e10600' : '2px solid transparent',
+                position: 'relative',
                 borderRadius: 0,
                 '&:hover': {
                     bgcolor: 'rgba(255,255,255,0.05)',
@@ -103,6 +116,20 @@ const NavButton = ({ to, label, icon, currentPath }: { to: string, label: string
             }}
         >
             {label}
+            {isActive && (
+                <motion.div
+                    layoutId="nav-underline"
+                    style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: 2,
+                        background: '#e10600',
+                    }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+            )}
         </Button>
     );
 };

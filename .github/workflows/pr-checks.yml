@@ -36,6 +36,8 @@ jobs:
 
       - name: Build & Test
         run: mvn clean package -am
+        env:
+          GOOGLE_CLOUD_PROJECT: ci-dummy-project
 
   # -----------------------------------------
   # Frontend: Lint + Test
@@ -89,6 +91,8 @@ jobs:
         with:
           working_directory: infrastructure/modules
           soft_fail: false
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Terragrunt Plan
         run: terragrunt run-all plan --terragrunt-non-interactive

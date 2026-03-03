@@ -61,9 +61,9 @@ public class ReferenceDataService {
     public List<DriverProfile> getMasterDriverList() {
         // Deduplicate drivers in case they appear in multiple sessions
         String sql = String.format("""
-            SELECT driver_number, broadcast_name, team_name, team_colour, country_code
+            SELECT driver_number, broadcast_name, name_acronym, team_name, team_colour, country_code
             FROM `%s.drivers`
-            GROUP BY driver_number, broadcast_name, team_name, team_colour, country_code
+            GROUP BY driver_number, broadcast_name, name_acronym, team_name, team_colour, country_code
             ORDER BY driver_number ASC
             """, DATASET);
 
@@ -77,8 +77,9 @@ public class ReferenceDataService {
                 String teamColor = row.get("team_colour").isNull() ? "ffffff" : row.get("team_colour").getStringValue();
                 String name = row.get("broadcast_name").isNull() ? "Unknown" : row.get("broadcast_name").getStringValue();
 
-                // Generate a 3-letter code like "VER" from their broadcast name
-                String code = name.length() >= 3 ? name.substring(0, 3).toUpperCase() : String.valueOf(driverNum);
+                // Use the official 3-letter code from OpenF1 (e.g., VER, HAM), falling back to broadcast name
+                String acronym = row.get("name_acronym").isNull() ? null : row.get("name_acronym").getStringValue();
+                String code = acronym != null ? acronym : (name.length() >= 3 ? name.substring(0, 3).toUpperCase() : String.valueOf(driverNum));
 
                 drivers.add(DriverProfile.builder()
                         .id(driverNum)

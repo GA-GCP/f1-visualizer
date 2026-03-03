@@ -1,9 +1,7 @@
 package com.elysianarts.f1.visualizer.data.ingestion.service;
 
 import com.elysianarts.f1.visualizer.commons.api.openf1.service.OpenF1AuthService;
-import com.google.cloud.bigquery.BigQuery;
-import com.google.cloud.bigquery.InsertAllRequest;
-import com.google.cloud.bigquery.InsertAllResponse;
+import com.google.cloud.bigquery.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -50,6 +48,8 @@ public class ReferenceDataLoader {
                     .retrieve().bodyToFlux(Map.class).collectList().block();
 
             if (sessions != null && !sessions.isEmpty()) {
+                deleteExistingData("sessions", "year = " + year);
+
                 List<InsertAllRequest.RowToInsert> rows = new ArrayList<>();
                 for (Map s : sessions) {
                     Map<String, Object> row = new HashMap<>();
@@ -75,11 +75,14 @@ public class ReferenceDataLoader {
                     .retrieve().bodyToFlux(Map.class).collectList().block();
 
             if (drivers != null && !drivers.isEmpty()) {
+                deleteExistingData("drivers", "1=1");
+
                 List<InsertAllRequest.RowToInsert> rows = new ArrayList<>();
                 for (Map d : drivers) {
                     Map<String, Object> row = new HashMap<>();
                     row.put("driver_number", d.get("driver_number"));
                     row.put("broadcast_name", d.get("broadcast_name"));
+                    row.put("name_acronym", d.get("name_acronym"));
                     row.put("team_name", d.get("team_name"));
                     row.put("team_colour", d.get("team_colour"));
                     row.put("country_code", d.get("country_code"));
@@ -89,6 +92,17 @@ public class ReferenceDataLoader {
             }
         } catch (Exception e) {
             log.error("❌ Failed to fetch drivers: {}", e.getMessage());
+        }
+    }
+
+    private void deleteExistingData(String table, String whereClause) {
+        String sql = String.format("DELETE FROM `%s.%s` WHERE %s", DATASET, table, whereClause);
+        try {
+            QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(sql).build();
+            bigQuery.query(queryConfig);
+            log.info("🗑️ Cleared existing rows from {} (WHERE {})", table, whereClause);
+        } catch (Exception e) {
+            log.warn("⚠️ Could not clear existing data from {} (may be empty): {}", table, e.getMessage());
         }
     }
 

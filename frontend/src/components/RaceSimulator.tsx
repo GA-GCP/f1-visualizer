@@ -18,6 +18,7 @@ const RaceSimulator: React.FC = () => {
     const [lastTelemetry, setLastTelemetry] = useState<TelemetryPacket | null>(null);
     const [lastLocation, setLastLocation] = useState<LocationPacket | null>(null);
     const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
+    const [streamError, setStreamError] = useState<string | null>(null);
 
     const { userProfile } = useUser();
 
@@ -76,7 +77,7 @@ const RaceSimulator: React.FC = () => {
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 
                         <Paper sx={{ bgcolor: '#1e1e1e', border: '1px solid #333' }}>
-                            <SessionControlPanel onStreamStarted={handleStreamStarted} />
+                            <SessionControlPanel onStreamStarted={handleStreamStarted} onError={setStreamError} />
                         </Paper>
 
                         {activeSession?.mode === 'SIMULATION' && (
@@ -144,6 +145,12 @@ const RaceSimulator: React.FC = () => {
             <Snackbar open={connectionLost} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
                 <Alert severity="error" variant="filled" sx={{ width: '100%', fontWeight: 'bold', fontSize: '1.1rem' }}>
                     CRITICAL: LIVE FEED CONNECTION LOST. ATTEMPTING RECONNECT...
+                </Alert>
+            </Snackbar>
+
+            <Snackbar open={!!streamError} autoHideDuration={8000} onClose={() => setStreamError(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+                <Alert severity="error" variant="filled" onClose={() => setStreamError(null)} sx={{ width: '100%', fontWeight: 'bold' }}>
+                    {streamError}
                 </Alert>
             </Snackbar>
 

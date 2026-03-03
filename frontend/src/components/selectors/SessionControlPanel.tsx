@@ -8,9 +8,10 @@ import { searchSessions, type RaceSession } from '@/api/referenceApi';
 
 interface SessionControlPanelProps {
     onStreamStarted: (sessionKey: number, mode: 'LIVE' | 'SIMULATION') => void;
+    onError?: (message: string) => void;
 }
 
-const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStarted }) => {
+const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStarted, onError }) => {
     const [mode, setMode] = useState<'LIVE' | 'SIMULATION'>('SIMULATION');
     const [sessions, setSessions] = useState<RaceSession[]>([]);
     const [selectedSession, setSelectedSession] = useState<RaceSession | null>(null);
@@ -41,7 +42,10 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
             onStreamStarted(selectedSession.sessionKey, mode);
         } catch (error) {
             console.error(error);
-            alert("Failed to connect to ingestion engine. Check console for details.");
+            const msg = mode === 'LIVE'
+                ? 'LIVE STREAM FAILED: Could not connect to ingestion engine.'
+                : 'SIMULATION FAILED: Could not start historical replay.';
+            onError?.(msg);
         } finally {
             setIsLoading(false);
         }

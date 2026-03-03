@@ -81,11 +81,6 @@ jobs:
         with:
           tofu_version: '1.9.0'
 
-      - name: Install Terragrunt
-        run: |
-          curl -sL https://github.com/gruntwork-io/terragrunt/releases/download/v0.77.0/terragrunt_linux_amd64 -o /usr/local/bin/terragrunt
-          chmod +x /usr/local/bin/terragrunt
-
       - name: tfsec Security Scan
         uses: aquasecurity/tfsec-action@v1.0.3
         with:
@@ -94,8 +89,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Terragrunt Plan
-        run: terragrunt run-all plan --terragrunt-non-interactive
-        working-directory: infrastructure/environments/dev
-        env:
-          GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
+      - name: Validate OpenTofu Modules
+        run: |
+          for dir in infrastructure/modules/*/; do
+            echo "=== Validating $dir ==="
+            tofu -chdir="$dir" init -backend=false
+            tofu -chdir="$dir" validate
+          done

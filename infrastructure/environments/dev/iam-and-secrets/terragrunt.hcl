@@ -5,7 +5,7 @@ include "root" {
 
 # 2. Point to the reusable OpenTofu module we just created
 terraform {
-  source = "../../../modules/iam_and_secrets"
+  source = "../../../modules/iam-and-secrets"
 }
 
 # 3. Pass in the DEV-specific variables

@@ -54,3 +54,13 @@ variable "max_instance_count" {
   type        = number
   default     = 5
 }
+variable "cpu" {
+  description = "CPU limit for the Cloud Run container (e.g., '1000m' = 1 vCPU, '2000m' = 2 vCPUs)"
+  type        = string
+  default     = "1000m"
+}
+variable "memory" {
+  description = "Memory limit for the Cloud Run container (e.g., '512Mi', '1024Mi', '2Gi')"
+  type        = string
+  default     = "512Mi"
+}

@@ -7,7 +7,7 @@ terraform {
 }
 
 dependency "iam" {
-  config_path = "../iam_and_secrets"
+  config_path = "../iam-and-secrets"
   mock_outputs = {
     sa_data_ingestion_email = "sa-f1v-data-ingestion-dev@f1-visualizer-488201.iam.gserviceaccount.com"
   }
@@ -36,6 +36,10 @@ inputs = {
   image_url    = get_env("TF_VAR_image_url", "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/data-ingestion:latest")
 
   is_public    = true
+
+  # Elevated resources: batch BigQuery inserts, 100K-object replay buffers, MQTT + Redis I/O
+  cpu    = "2000m"
+  memory = "1024Mi"
 
   # Needs VPC access to write to Redis
   vpc_connector_id = dependency.networking.outputs.vpc_access_connector_id

@@ -1,0 +1,98 @@
+# ==========================================
+# PR Checks — Lint, Test, and Plan on Pull Requests
+# ==========================================
+# Runs on every PR targeting main. Three independent jobs
+# execute in parallel: backend tests, frontend lint+test,
+# and infrastructure plan.
+# ==========================================
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # -----------------------------------------
+  # Backend: Compile + Test all modules
+  # -----------------------------------------
+  backend:
+    name: Backend Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build & Test
+        run: mvn clean package -am
+        env:
+          GOOGLE_CLOUD_PROJECT: ci-dummy-project
+
+  # -----------------------------------------
+  # Frontend: Lint + Test
+  # -----------------------------------------
+  frontend:
+    name: Frontend Lint & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Test
+        run: yarn test:ci
+
+  # -----------------------------------------
+  # Infrastructure: Security Scan + Plan
+  # -----------------------------------------
+  infrastructure:
+    name: Infrastructure Scan & Plan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: '1.9.0'
+
+      - name: tfsec Security Scan
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: infrastructure/modules
+          soft_fail: false
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Validate OpenTofu Modules
+        run: |
+          for dir in infrastructure/modules/*/; do
+            echo "=== Validating $dir ==="
+            tofu -chdir="$dir" init -backend=false
+            tofu -chdir="$dir" validate
+          done

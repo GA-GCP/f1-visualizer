@@ -1,62 +1,75 @@
+# ==========================================
+# Pipeline: API Gateway Configuration
+# ==========================================
+# Discovers Cloud Run URLs, injects into OpenAPI spec,
+# validates, deploys new config, and smoke tests.
+# ==========================================
 serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com'
 
 substitutions:
   _ENV: 'dev'
   _SHORT_SHA: 'manual-build'
+  _AUTH0_ISSUER: 'https://dev-5ly43mspbpyofvc1.us.auth0.com'
+  _AUTH0_AUDIENCE: 'dev.api.f1visualizer.com'
 
 options:
   logging: CLOUD_LOGGING_ONLY
 
 steps:
-  # 1. Fetch Cloud Run URLs (Dynamic Discovery based on _ENV)
+  # 1. Discover Service URLs, Inject Placeholders, Validate, and Deploy Config
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'inject-and-deploy-config'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        # Dynamic Lookup using ${_ENV} suffix (Keep single $ for _ENV)
+        set -euo pipefail
+
+        # --- 1. Dynamic Cloud Run URL Discovery ---
+        echo "Discovering Cloud Run service URLs for environment: ${_ENV}"
+
         TELEMETRY_URL=$(gcloud run services describe f1v-service-telemetry-${_ENV} --region=us-central1 --format='value(status.url)')
         DATA_ANALYSIS_URL=$(gcloud run services describe f1v-service-data-analysis-${_ENV} --region=us-central1 --format='value(status.url)')
         USER_URL=$(gcloud run services describe f1v-service-user-${_ENV} --region=us-central1 --format='value(status.url)')
         DATA_INGESTION_URL=$(gcloud run services describe f1v-service-data-ingestion-${_ENV} --region=us-central1 --format='value(status.url)')
-        
-        # --- NEW: Map Auth0 Tenants based on Environment ---
-        if [ "${_ENV}" == "dev" ]; then
-          # IMPORTANT: Do not include a trailing slash here, we handle it in the openapi.yaml
-          AUTH0_ISSUER="https://dev-5ly43mspbpyofvc1.us.auth0.com"
-          AUTH0_AUDIENCE="dev.api.f1visualizer.com"
-        elif [ "${_ENV}" == "uat" ]; then
-          AUTH0_ISSUER="https://yourname-portfolio-uat.us.auth0.com"
-          AUTH0_AUDIENCE="uat.api.f1visualizer.com"
-        elif [ "${_ENV}" == "prod" ]; then
-          AUTH0_ISSUER="https://yourname-portfolio-prod.us.auth0.com"
-          AUTH0_AUDIENCE="api.f1visualizer.com"
-        else
-          echo "Unknown environment: ${_ENV}"
-          exit 1
-        fi
-        
-        echo "Environment: ${_ENV}"
-        echo "Configuring Gateway for Audience: $$AUTH0_AUDIENCE"
-        
-        # 2. Inject URLs into OpenAPI Spec
+
+        echo "  Telemetry:      $$TELEMETRY_URL"
+        echo "  Data Analysis:  $$DATA_ANALYSIS_URL"
+        echo "  User:           $$USER_URL"
+        echo "  Data Ingestion: $$DATA_INGESTION_URL"
+        echo "  Auth0 Issuer:   ${_AUTH0_ISSUER}"
+        echo "  Auth0 Audience: ${_AUTH0_AUDIENCE}"
+
+        # --- 2. Inject Service URLs into OpenAPI Spec ---
         sed -i "s|TELEMETRY_SERVICE_URL_PLACEHOLDER|$$TELEMETRY_URL|g" infrastructure/openapi.yaml
         sed -i "s|DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER|$$DATA_ANALYSIS_URL|g" infrastructure/openapi.yaml
         sed -i "s|USER_SERVICE_URL_PLACEHOLDER|$$USER_URL|g" infrastructure/openapi.yaml
         sed -i "s|DATA_INGESTION_SERVICE_URL_PLACEHOLDER|$$DATA_INGESTION_URL|g" infrastructure/openapi.yaml
-        
-        # 3. Inject Auth0 Identity values into OpenAPI Spec
-        sed -i "s|AUTH0_ISSUER_URI_PLACEHOLDER|$$AUTH0_ISSUER|g" infrastructure/openapi.yaml
-        sed -i "s|AUTH0_AUDIENCE_PLACEHOLDER|$$AUTH0_AUDIENCE|g" infrastructure/openapi.yaml
-        
-        # 4. Deploy API Gateway Config
+
+        # --- 3. Inject Auth0 Configuration (externalized via substitutions) ---
+        sed -i "s|AUTH0_ISSUER_URI_PLACEHOLDER|${_AUTH0_ISSUER}|g" infrastructure/openapi.yaml
+        sed -i "s|AUTH0_AUDIENCE_PLACEHOLDER|${_AUTH0_AUDIENCE}|g" infrastructure/openapi.yaml
+
+        # --- 4. Validate: Ensure no unresolved PLACEHOLDERs remain ---
+        if grep -q 'PLACEHOLDER' infrastructure/openapi.yaml; then
+          echo ""
+          echo "ERROR: Unresolved placeholders found in openapi.yaml:"
+          grep 'PLACEHOLDER' infrastructure/openapi.yaml
+          exit 1
+        fi
+        echo "Validation passed: All placeholders resolved."
+
+        # --- 5. Deploy API Gateway Config ---
         gcloud api-gateway api-configs create f1v-config-${_ENV}-${_SHORT_SHA} \
           --api=f1v-gateway-${_ENV} \
           --openapi-spec=infrastructure/openapi.yaml \
           --project=$PROJECT_ID --quiet
 
-  # 4. Update Gateway to use new Config
+        echo "API Gateway config deployed: f1v-config-${_ENV}-${_SHORT_SHA}"
+
+  # 2. Update Gateway to Use New Config
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'update-gateway'
     entrypoint: 'gcloud'
     args:
       - 'api-gateway'
@@ -68,3 +81,32 @@ steps:
       - '--location=us-central1'
       - '--project=$PROJECT_ID'
       - '--quiet'
+
+  # 3. Smoke Test: Verify Gateway is Responding
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'smoke-test'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+
+        echo "Waiting 30s for gateway to stabilize..."
+        sleep 30
+
+        GATEWAY_URL=$(gcloud api-gateway gateways describe f1v-gateway-${_ENV} \
+          --location=us-central1 \
+          --project=$PROJECT_ID \
+          --format='value(defaultHostname)')
+
+        echo "Testing gateway: https://$$GATEWAY_URL/health"
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$$GATEWAY_URL/health" || true)
+
+        echo "Smoke test HTTP status: $$HTTP_STATUS"
+
+        if [ "$$HTTP_STATUS" -ge 500 ]; then
+          echo "ERROR: Gateway returned server error ($$HTTP_STATUS)"
+          exit 1
+        fi
+
+        echo "Smoke test passed."

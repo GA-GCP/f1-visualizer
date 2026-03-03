@@ -1,0 +1,23 @@
+# ==========================================
+# CI-Only Dockerfile: Pre-Built Spring Boot Layers
+# ==========================================
+# This Dockerfile is used exclusively by Cloud Build pipelines.
+# It receives pre-extracted Spring Boot JAR layers from the
+# build step (via java -Djarmode=layertools) and produces
+# a minimal distroless production image.
+#
+# For local development builds, use the standard Dockerfile.
+# ==========================================
+FROM gcr.io/distroless/java25-debian13
+
+WORKDIR /app
+
+# Copy the pre-extracted Spring Boot layers (order matters for caching)
+COPY dependencies/ ./
+COPY spring-boot-loader/ ./
+COPY snapshot-dependencies/ ./
+COPY application/ ./
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]

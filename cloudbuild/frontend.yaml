@@ -1,3 +1,9 @@
+# ==========================================
+# Pipeline: f1v-webapp (React Frontend)
+# ==========================================
+# Install, lint, test, build in Cloud Build, then
+# Kaniko cached image build and Cloud Run deployment.
+# ==========================================
 serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com'
 
 substitutions:
@@ -8,32 +14,58 @@ options:
   logging: CLOUD_LOGGING_ONLY
 
 steps:
+  # 1. Install Dependencies
   - name: 'node:25-alpine'
+    id: 'install'
     entrypoint: 'yarn'
     args: ['install', '--frozen-lockfile']
     dir: 'frontend'
 
+  # 2. ESLint Check
   - name: 'node:25-alpine'
+    id: 'lint'
+    entrypoint: 'yarn'
+    args: ['lint']
+    dir: 'frontend'
+
+  # 3. Unit Tests
+  - name: 'node:25-alpine'
+    id: 'test'
     entrypoint: 'yarn'
     args: ['test:ci']
     dir: 'frontend'
 
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'build'
-      - '--build-arg'
-      - 'ENV_MODE=${_ENV}'
-      - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:${_SHORT_SHA}'
-      - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:latest'
-      - '.'
+  # 4. Production Build (produces dist/)
+  - name: 'node:25-alpine'
+    id: 'build'
+    entrypoint: 'yarn'
+    args: ['build', '--mode', '${_ENV}']
     dir: 'frontend'
 
-  - name: 'gcr.io/cloud-builders/docker'
+  # 5. Kaniko Build + Push (with layer caching)
+  - name: 'gcr.io/kaniko-project/executor:latest'
+    id: 'build-push-image'
     args:
-      - 'push'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend'
+      - '--dockerfile=/workspace/frontend/Dockerfile.ci'
+      - '--context=/workspace/frontend'
+      - '--destination=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:${_SHORT_SHA}'
+      - '--destination=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:latest'
+      - '--cache=true'
+      - '--cache-repo=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend-cache'
+
+  # 6. Deploy to Cloud Run (immutable SHA tag)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'update'
+      - 'f1v-webapp-${_ENV}'
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:${_SHORT_SHA}'
+      - '--region=us-central1'
+      - '--project=$PROJECT_ID'
+      - '--quiet'
 
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:${_SHORT_SHA}'

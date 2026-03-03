@@ -1,0 +1,88 @@
+# ==========================================
+# Pipeline: Infrastructure (OpenTofu + Terragrunt)
+# ==========================================
+# Installs tooling, runs tfsec security scan,
+# then plans and applies infrastructure changes.
+# ==========================================
+serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com'
+
+substitutions:
+  _ENV: 'dev'
+  _SHORT_SHA: 'manual-build'
+  _TOFU_VERSION: '1.9.0'
+  _TERRAGRUNT_VERSION: '0.77.0'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  # 1. Install OpenTofu + Terragrunt into /workspace/bin (persists across steps)
+  - name: 'alpine:latest'
+    id: 'install-tools'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        set -e
+        apk add --no-cache curl unzip
+
+        mkdir -p /workspace/bin
+
+        # Install OpenTofu
+        echo "Installing OpenTofu v${_TOFU_VERSION}..."
+        curl -sL "https://github.com/opentofu/opentofu/releases/download/v${_TOFU_VERSION}/tofu_${_TOFU_VERSION}_linux_amd64.zip" -o /tmp/tofu.zip
+        unzip -o /tmp/tofu.zip -d /workspace/bin/
+        chmod +x /workspace/bin/tofu
+
+        # Install Terragrunt
+        echo "Installing Terragrunt v${_TERRAGRUNT_VERSION}..."
+        curl -sL "https://github.com/gruntwork-io/terragrunt/releases/download/v${_TERRAGRUNT_VERSION}/terragrunt_linux_amd64" -o /workspace/bin/terragrunt
+        chmod +x /workspace/bin/terragrunt
+
+        echo "Tools installed:"
+        /workspace/bin/tofu version
+        /workspace/bin/terragrunt --version
+
+  # 2. tfsec Security Scan on All Modules
+  - name: 'aquasec/tfsec:latest'
+    id: 'tfsec-scan'
+    args:
+      - '--minimum-severity'
+      - 'HIGH'
+      - 'infrastructure/modules/'
+
+  # 3. Terragrunt Init
+  - name: 'alpine:latest'
+    id: 'terragrunt-init'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        set -e
+        export PATH=/workspace/bin:$$PATH
+        cd infrastructure/environments/${_ENV}
+        terragrunt run-all init --terragrunt-non-interactive
+
+  # 4. Terragrunt Plan
+  - name: 'alpine:latest'
+    id: 'terragrunt-plan'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        set -e
+        export PATH=/workspace/bin:$$PATH
+        cd infrastructure/environments/${_ENV}
+        terragrunt run-all plan --terragrunt-non-interactive
+
+  # 5. Terragrunt Apply
+  - name: 'alpine:latest'
+    id: 'terragrunt-apply'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        set -e
+        export PATH=/workspace/bin:$$PATH
+        cd infrastructure/environments/${_ENV}
+        terragrunt run-all apply --terragrunt-non-interactive -auto-approve

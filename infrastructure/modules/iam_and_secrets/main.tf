@@ -80,6 +80,11 @@ resource "google_project_iam_member" "data_ingestion_bq_editor" {
   role    = "roles/bigquery.dataEditor"
   member  = "serviceAccount:${google_service_account.data_ingestion.email}"
 }
+resource "google_project_iam_member" "data_ingestion_bq_job_user" {
+  project = var.project_id
+  role    = "roles/bigquery.jobUser"
+  member  = "serviceAccount:${google_service_account.data_ingestion.email}"
+}
 
 # -- Telemetry Roles --
 resource "google_project_iam_member" "telemetry_pubsub_subscriber" {
@@ -92,6 +97,11 @@ resource "google_project_iam_member" "telemetry_pubsub_subscriber" {
 resource "google_project_iam_member" "data_analysis_bq_viewer" {
   project = var.project_id
   role    = "roles/bigquery.dataViewer"
+  member  = "serviceAccount:${google_service_account.data_analysis.email}"
+}
+resource "google_project_iam_member" "data_analysis_bq_job_user" {
+  project = var.project_id
+  role    = "roles/bigquery.jobUser"
   member  = "serviceAccount:${google_service_account.data_analysis.email}"
 }
 

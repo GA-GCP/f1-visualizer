@@ -1,3 +1,9 @@
+# ==========================================
+# Pipeline: f1v-service-telemetry
+# ==========================================
+# Scoped build + test, layer extraction, security scan,
+# Kaniko cached image build, and Cloud Run deployment.
+# ==========================================
 serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com'
 
 substitutions:
@@ -8,31 +14,68 @@ options:
   logging: CLOUD_LOGGING_ONLY
 
 steps:
-  # 1. HARD STOP: Run Tests
+  # 1. Scoped Maven Build + Test (only this module and its dependencies)
   - name: 'maven:3.9.12-eclipse-temurin-25'
+    id: 'build-and-test'
     entrypoint: 'mvn'
-    args: ['clean', 'test']
+    args:
+      - 'clean'
+      - 'package'
+      - '-pl'
+      - 'f1v-service-telemetry'
+      - '-am'
     dir: 'backend'
+    volumes:
+      - name: 'm2-cache'
+        path: '/root/.m2'
 
-  # 2. Build Docker Image
-  - name: 'gcr.io/cloud-builders/docker'
+  # 2. Extract Spring Boot JAR Layers
+  - name: 'eclipse-temurin:25-jdk'
+    id: 'extract-layers'
+    entrypoint: 'bash'
     args:
-      - 'build'
-      - '--build-arg'
-      - 'MODULE=f1v-service-telemetry'
-      - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:${_SHORT_SHA}'
-      - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:latest'
-      - '-f'
-      - 'backend/Dockerfile'
-      - 'backend'
+      - '-c'
+      - |
+        mkdir -p /workspace/staging
+        cd /workspace/staging
+        java -Djarmode=layertools -jar /workspace/backend/f1v-service-telemetry/target/*.jar extract
 
-  # 3. Push Image
-  - name: 'gcr.io/cloud-builders/docker'
+  # 3. Trivy Filesystem Security Scan
+  - name: 'aquasec/trivy:latest'
+    id: 'security-scan'
     args:
-      - 'push'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry'
+      - 'filesystem'
+      - '--exit-code'
+      - '1'
+      - '--severity'
+      - 'CRITICAL,HIGH'
+      - '--no-progress'
+      - '/workspace/staging'
+
+  # 4. Kaniko Build + Push (with layer caching)
+  - name: 'gcr.io/kaniko-project/executor:latest'
+    id: 'build-push-image'
+    args:
+      - '--dockerfile=/workspace/backend/Dockerfile.ci'
+      - '--context=/workspace/staging'
+      - '--destination=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:${_SHORT_SHA}'
+      - '--destination=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:latest'
+      - '--cache=true'
+      - '--cache-repo=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry-cache'
+
+  # 5. Deploy to Cloud Run (immutable SHA tag)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'update'
+      - 'f1v-service-telemetry-${_ENV}'
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:${_SHORT_SHA}'
+      - '--region=us-central1'
+      - '--project=$PROJECT_ID'
+      - '--quiet'
 
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:${_SHORT_SHA}'

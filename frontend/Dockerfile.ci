@@ -1,0 +1,20 @@
+# ==========================================
+# CI-Only Dockerfile: Pre-Built Vite Assets
+# ==========================================
+# This Dockerfile is used exclusively by Cloud Build pipelines.
+# It receives the pre-built dist/ directory from the build step
+# (via yarn build) and produces a minimal NGINX production image.
+#
+# For local development builds, use the standard Dockerfile.
+# ==========================================
+FROM nginxinc/nginx-unprivileged:alpine
+
+# SPA routing configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Pre-built static assets from Cloud Build
+COPY dist/ /usr/share/nginx/html/
+
+EXPOSE 8080
+
+CMD ["nginx", "-g", "daemon off;"]

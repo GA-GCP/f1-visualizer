@@ -34,7 +34,7 @@ describe('LayoutMain', () => {
     });
 
     it('highlights active route', () => {
-        const { container } = render(
+        render(
             <MemoryRouter initialEntries={['/historical']}>
                 <LayoutMain />
             </MemoryRouter>

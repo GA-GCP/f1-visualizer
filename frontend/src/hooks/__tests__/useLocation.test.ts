@@ -28,7 +28,7 @@ describe('useLocation Hook', () => {
     it('subscribes to stompClient on /topic/race-location', async () => {
         const mockCallback = vi.fn();
 
-        vi.mocked(stompClient.subscribe).mockImplementation((_topic, _cb) => {
+        vi.mocked(stompClient.subscribe).mockImplementation(() => {
             return { id: '1', unsubscribe: vi.fn() };
         });
 
@@ -78,7 +78,7 @@ describe('useLocation Hook', () => {
         const mockCallback = vi.fn();
         const mockUnsubscribe = vi.fn();
 
-        vi.mocked(stompClient.subscribe).mockImplementation((_topic, _cb) => {
+        vi.mocked(stompClient.subscribe).mockImplementation(() => {
             return { id: '1', unsubscribe: mockUnsubscribe };
         });
 

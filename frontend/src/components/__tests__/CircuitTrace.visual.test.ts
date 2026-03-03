@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { toMatchImageSnapshot } from 'jest-image-snapshot';
 import { createCanvas } from 'canvas';
-import * as d3 from 'd3';
 import {
     computeBounds,
     createScales,

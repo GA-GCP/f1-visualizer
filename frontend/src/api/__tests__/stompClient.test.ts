@@ -15,7 +15,7 @@ vi.mock('@stomp/stompjs', () => {
         heartbeatOutgoing = 0;
         debug = vi.fn();
         onStompError = vi.fn();
-        constructor(_config?: Record<string, unknown>) {}
+        constructor() {}
     }
     return { Client: MockClient };
 });

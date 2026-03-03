@@ -53,7 +53,8 @@ export function createScales(
     canvasHeight: number,
     padding: number = CIRCUIT_PADDING
 ): Scales {
-    let { minX, maxX, minY, maxY } = bounds;
+    const { minX, minY } = bounds;
+    let { maxX, maxY } = bounds;
 
     // Prevent zero-range domains
     if (minX === maxX) maxX += 0.001;

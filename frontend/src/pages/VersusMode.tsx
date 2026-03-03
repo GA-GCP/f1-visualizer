@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Container, Grid, Typography, Paper, Skeleton } from '@mui/material';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import DriverSelector from '../components/selectors/DriverSelector';
 import RadarChart from '../components/versus/RadarChart';
 import StatComparisonBar from '../components/versus/StatComparisonBar';

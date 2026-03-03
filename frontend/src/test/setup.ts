@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { afterEach, vi } from 'vitest';
+import { afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
 // ResizeObserver mock (jsdom doesn't support it)

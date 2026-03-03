@@ -71,6 +71,7 @@ resource "google_bigquery_table" "drivers" {
 [
   { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
   { "name": "broadcast_name", "type": "STRING", "mode": "NULLABLE" },
+  { "name": "name_acronym", "type": "STRING", "mode": "NULLABLE" },
   { "name": "team_name", "type": "STRING", "mode": "NULLABLE" },
   { "name": "team_colour", "type": "STRING", "mode": "NULLABLE" },
   { "name": "country_code", "type": "STRING", "mode": "NULLABLE" }

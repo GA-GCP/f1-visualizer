@@ -86,10 +86,11 @@ describe('SessionControlPanel', () => {
         // Setup the mock to reject/fail
         vi.mocked(sendIngestionCommand).mockRejectedValue(new Error('Network Error'));
 
-        // Mock window.alert to prevent it from failing the test environment
-        const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
+        // 1. Create a mock for the new onError prop instead of window.alert
+        const mockOnError = vi.fn();
 
-        render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
+        // 2. Pass the mock into the component
+        render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} onError={mockOnError} />);
 
         const startButton = await screen.findByRole('button', { name: /START SIMULATION STREAM/i });
         await waitFor(() => expect(startButton).toBeEnabled());
@@ -99,10 +100,8 @@ describe('SessionControlPanel', () => {
         await waitFor(() => {
             // Callback should NEVER be called if the API fails
             expect(mockOnStreamStarted).not.toHaveBeenCalled();
-            // Alert should have been shown to the user
-            expect(alertMock).toHaveBeenCalledWith(expect.stringContaining('Failed to connect'));
+            // 3. Assert that our onError callback was triggered with the correct message
+            expect(mockOnError).toHaveBeenCalledWith(expect.stringContaining('SIMULATION FAILED'));
         });
-
-        alertMock.mockRestore();
     });
 });

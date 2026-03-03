@@ -115,4 +115,16 @@ public class OpenF1Client {
                     return Flux.empty();
                 });
     }
+
+    public Flux<OpenF1StintData> getStintData(long sessionKey) {
+        return webClient.get()
+                .uri("/stints?session_key=" + sessionKey)
+                .header("Authorization", "Bearer " + authService.getAccessToken())
+                .retrieve()
+                .bodyToFlux(OpenF1StintData.class)
+                .onErrorResume(e -> {
+                    log.error("Error fetching Stint Data: {}", e.getMessage());
+                    return Flux.empty();
+                });
+    }
 }

@@ -1,0 +1,32 @@
+[
+  {
+    "session_key": 9472,
+    "meeting_key": 1234,
+    "driver_number": 1,
+    "lap_number": 1,
+    "lap_duration": 92.456,
+    "duration_sector_1": 28.123,
+    "duration_sector_2": 33.789,
+    "duration_sector_3": 30.544
+  },
+  {
+    "session_key": 9472,
+    "meeting_key": 1234,
+    "driver_number": 1,
+    "lap_number": 2,
+    "lap_duration": 90.112,
+    "duration_sector_1": 27.845,
+    "duration_sector_2": 32.901,
+    "duration_sector_3": 29.366
+  },
+  {
+    "session_key": 9472,
+    "meeting_key": 1234,
+    "driver_number": 44,
+    "lap_number": 1,
+    "lap_duration": 91.789,
+    "duration_sector_1": 27.990,
+    "duration_sector_2": 33.456,
+    "duration_sector_3": 30.343
+  }
+]

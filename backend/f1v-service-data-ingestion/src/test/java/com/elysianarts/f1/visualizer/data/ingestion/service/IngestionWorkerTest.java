@@ -57,4 +57,30 @@ class IngestionWorkerTest {
         verify(liveStreamService, times(1)).connect(sessionKey);
         verify(replayEngine, never()).tick(); // Shouldn't tick in LIVE mode
     }
+
+    @Test
+    void startSimulation_SwitchesBackFromLive_WhenCalledAfterLiveStream() {
+        // Start in live mode
+        ingestionWorker.startLiveStream(9999L);
+        ingestionWorker.runLoop();
+        verify(replayEngine, never()).tick();
+
+        // Switch back to simulation
+        ingestionWorker.startSimulation(1234L);
+        ingestionWorker.runLoop();
+
+        // Now replay engine should tick again
+        verify(replayEngine, times(1)).tick();
+    }
+
+    @Test
+    void runLoop_DoesNotCallLiveStreamConnect_WhenInSimulationMode() {
+        // Default mode is SIMULATION
+        ingestionWorker.runLoop();
+        ingestionWorker.runLoop();
+        ingestionWorker.runLoop();
+
+        verify(replayEngine, times(3)).tick();
+        verifyNoInteractions(liveStreamService);
+    }
 }

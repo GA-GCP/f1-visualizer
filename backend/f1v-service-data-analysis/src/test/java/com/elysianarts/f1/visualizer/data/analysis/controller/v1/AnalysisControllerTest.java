@@ -14,8 +14,10 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Collections;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -58,5 +60,32 @@ class AnalysisControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.speed").value(99))
                 .andExpect(jsonPath("$.wins").value(50));
+    }
+
+    @Test
+    void getSessionLaps_PropagatesException_WhenServiceThrows() {
+        when(raceAnalysisService.getSessionLapTimes(9165L))
+                .thenThrow(new RuntimeException("BigQuery connection failed"));
+
+        assertThrows(Exception.class, () ->
+                mockMvc.perform(get("/api/v1/analysis/session/9165/laps")
+                        .with(jwt().jwt(jwt -> jwt.subject("auth0|user")))));
+    }
+
+    @Test
+    void getSessionLaps_ReturnsEmptyList_WhenNoDataExists() throws Exception {
+        when(raceAnalysisService.getSessionLapTimes(9999L)).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/v1/analysis/session/9999/laps")
+                        .with(jwt().jwt(jwt -> jwt.subject("auth0|user"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void getSessionLaps_Returns401_WhenUnauthenticated() throws Exception {
+        mockMvc.perform(get("/api/v1/analysis/session/9165/laps"))
+                .andExpect(status().isUnauthorized());
     }
 }

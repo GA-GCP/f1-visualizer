@@ -11,6 +11,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -37,6 +38,9 @@ class IngestionControllerTest {
     private HistoricalDataLoader historicalDataLoader;
 
     @MockitoBean
+    private ReferenceDataLoader referenceDataLoader;
+
+    @MockitoBean
     private ReplayEngine replayEngine;
 
     @MockitoBean
@@ -44,6 +48,9 @@ class IngestionControllerTest {
 
     @MockitoBean
     private ResultDataLoader resultDataLoader;
+
+    @MockitoBean
+    private LocationDataLoader locationDataLoader;
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
@@ -86,5 +93,47 @@ class IngestionControllerTest {
                 .andExpect(content().string("Simulation seeked to 75%"));
 
         verify(replayEngine, times(1)).seek(75);
+    }
+
+    @Test
+    void command_Returns401_WhenUnauthenticated() throws Exception {
+        mockMvc.perform(post("/api/v1/ingestion/command")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"mode\":\"SIMULATION\",\"sessionKey\":9165}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void command_StartsSimulation_WhenModeIsSimulation() throws Exception {
+        mockMvc.perform(post("/api/v1/ingestion/command")
+                        .with(jwt().jwt(jwt -> jwt.subject("admin_user")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"mode\":\"SIMULATION\",\"sessionKey\":9165}"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Simulation initiated for session: 9165"));
+
+        verify(ingestionWorker, times(1)).startSimulation(9165L);
+    }
+
+    @Test
+    void command_StartsLiveStream_WhenModeIsLive() throws Exception {
+        mockMvc.perform(post("/api/v1/ingestion/command")
+                        .with(jwt().jwt(jwt -> jwt.subject("admin_user")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"mode\":\"LIVE\",\"sessionKey\":9165}"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Live stream connection initiated for session: 9165"));
+
+        verify(ingestionWorker, times(1)).startLiveStream(9165L);
+    }
+
+    @Test
+    void command_Returns400_WhenSessionKeyIsMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/ingestion/command")
+                        .with(jwt().jwt(jwt -> jwt.subject("admin_user")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"mode\":\"SIMULATION\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("sessionKey is required."));
     }
 }

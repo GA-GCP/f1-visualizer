@@ -19,7 +19,7 @@ inputs = {
   environment    = "dev"
   github_owner   = "GA-GCP"
   github_repo    = "f1-visualizer"
-  branch_pattern = "^main$"
+  branch_pattern = "^dev$"
 
   # Auth0 configuration for dev environment
   auth0_issuer   = "https://dev-5ly43mspbpyofvc1.us.auth0.com"

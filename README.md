@@ -449,14 +449,57 @@ bigquery -----------+----> api-gateway -----> lb-api
 
 ---
 
+## Branching Strategy
+
+The repository follows an **environment-promotion** branching model with `main` as the development trunk. Feature work integrates to `main` via pull requests, and changes promote sequentially through environment branches for deployment:
+
+```
+feature/*          main             dev              uat              prod
+    |                |                |                |                |
+    |   Pull Request |                |                |                |
+    +--------------->|                |                |                |
+    |    (PR Checks) |   Promotion PR |                |                |
+    |                +--------------->|                |                |
+    |                |   (CI gate)    |   Promotion PR |                |
+    |                |                +--------------->|                |
+    |                |                |   (CI gate)    |   Promotion PR |
+    |                |                |                +--------------->|
+    |                |                |                |   (CI gate +   |
+    |                |                |                |    approval)   |
+    |                |                |                |                |
+    |   GitHub       |   Cloud Build  |   Cloud Build  |   Cloud Build  |
+    |   Actions      |   (dev env)    |   (uat env)    |   (prod env)   |
+    |   PR Checks    |   7 pipelines  |   7 pipelines  |   7 pipelines  |
+```
+
+### Branch Responsibilities
+
+| Branch | Purpose | Deploys To | Trigger |
+|--------|---------|-----------|---------|
+| `main` | Development trunk — all feature branches merge here | Nothing (validation only) | GitHub Actions PR checks |
+| `dev` | Development environment deployment | GCP Dev | Cloud Build on push (7 path-filtered pipelines) |
+| `uat` | User acceptance testing deployment | GCP UAT | Cloud Build on push |
+| `prod` | Production deployment | GCP Prod | Cloud Build on push (requires approval) |
+
+### Promotion Flow
+
+Each promotion is an explicit pull request from one environment branch to the next, creating a clear audit trail:
+
+1. **feature → main** — Developer opens a PR. GitHub Actions runs backend tests, frontend lint + tests, and infrastructure validation. On merge, the code is integrated but not yet deployed.
+2. **main → dev** — A promotion PR deploys to the dev environment. Cloud Build pipelines build, scan, containerize, and deploy all affected services.
+3. **dev → uat** — After dev validation, a promotion PR moves the release candidate to the UAT environment for acceptance testing.
+4. **uat → prod** — After UAT sign-off, a promotion PR deploys to production. This is the only promotion that will require explicit reviewer approval once branch protection rules are enabled.
+
+---
+
 ## CI/CD Pipeline
 
 ### Dual-Layer Pipeline Strategy
 
-The CI/CD system operates across two layers: **GitHub Actions** for fast PR validation, and **GCP Cloud Build** for production deployment.
+The CI/CD system operates across two layers: **GitHub Actions** for fast PR validation on `main`, and **GCP Cloud Build** for environment deployment on promotion branches.
 
 ```
-Pull Request                                 Merge to Main
+Pull Request to main                        Promotion to env branch (dev/uat/prod)
     |                                             |
     v                                             v
 GitHub Actions (3 parallel jobs)            Cloud Build (7 path-filtered triggers)
@@ -472,7 +515,7 @@ GitHub Actions (3 parallel jobs)            Cloud Build (7 path-filtered trigger
 
 ### PR Quality Gates (GitHub Actions)
 
-Every pull request triggers three parallel validation jobs:
+Every pull request targeting `main` triggers three parallel validation jobs:
 
 | Job | Steps | Purpose |
 |-----|-------|---------|
@@ -480,9 +523,9 @@ Every pull request triggers three parallel validation jobs:
 | **Frontend** | `yarn lint` then `yarn test:ci` | ESLint checks + Vitest unit tests |
 | **Infrastructure** | tfsec scan + `tofu validate` per module | Security analysis + HCL syntax validation |
 
-### Production Pipelines (Cloud Build)
+### Environment Pipelines (Cloud Build)
 
-Each Cloud Build pipeline is triggered only when files matching its path filter are merged to `main`. The backend pipelines all follow the same five-step pattern:
+Each Cloud Build pipeline is triggered only when files matching its path filter are pushed to an environment branch. The backend pipelines all follow the same five-step pattern:
 
 ```
 1. Scoped Maven Build       mvn clean package -pl <module> -am

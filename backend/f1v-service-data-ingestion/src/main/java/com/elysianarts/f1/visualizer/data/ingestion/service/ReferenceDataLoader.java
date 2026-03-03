@@ -40,7 +40,11 @@ public class ReferenceDataLoader {
         log.info("⬇️ Initiating Reference Data Hydration for year {}...", year);
         String token = authService.getAccessToken();
 
-        // 1. Fetch & Load Sessions
+        // 1. Fetch meetings first to build a meeting_key -> meeting_name lookup
+        // (The /sessions endpoint does not include meeting_name; it lives on /meetings)
+        Map<Object, String> meetingNameLookup = buildMeetingNameLookup(year, token);
+
+        // 2. Fetch & Load Sessions
         try {
             List<Map> sessions = webClient.get()
                     .uri("/sessions?year=" + year)
@@ -56,7 +60,7 @@ public class ReferenceDataLoader {
                     row.put("session_key", s.get("session_key"));
                     row.put("session_name", s.get("session_name"));
                     row.put("meeting_key", s.get("meeting_key"));
-                    row.put("meeting_name", s.get("meeting_name"));
+                    row.put("meeting_name", meetingNameLookup.get(s.get("meeting_key")));
                     row.put("year", s.get("year"));
                     row.put("country_name", s.get("country_name"));
                     rows.add(InsertAllRequest.RowToInsert.of(row));
@@ -67,7 +71,7 @@ public class ReferenceDataLoader {
             log.error("❌ Failed to fetch sessions for year {}: {}", year, e.getMessage());
         }
 
-        // 2. Fetch & Load Drivers (Using 'latest' session to get the current grid)
+        // 3. Fetch & Load Drivers (Using 'latest' session to get the current grid)
         try {
             List<Map> drivers = webClient.get()
                     .uri("/drivers?session_key=latest")
@@ -93,6 +97,29 @@ public class ReferenceDataLoader {
         } catch (Exception e) {
             log.error("❌ Failed to fetch drivers: {}", e.getMessage());
         }
+    }
+
+    private Map<Object, String> buildMeetingNameLookup(int year, String token) {
+        Map<Object, String> lookup = new HashMap<>();
+        try {
+            List<Map> meetings = webClient.get()
+                    .uri("/meetings?year=" + year)
+                    .header("Authorization", "Bearer " + token)
+                    .retrieve().bodyToFlux(Map.class).collectList().block();
+            if (meetings != null) {
+                for (Map m : meetings) {
+                    Object meetingKey = m.get("meeting_key");
+                    String meetingName = (String) m.get("meeting_name");
+                    if (meetingKey != null && meetingName != null) {
+                        lookup.put(meetingKey, meetingName);
+                    }
+                }
+                log.info("🏁 Built meeting name lookup with {} entries for year {}", lookup.size(), year);
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ Could not fetch meetings for name enrichment: {}", e.getMessage());
+        }
+        return lookup;
     }
 
     private void deleteExistingData(String table, String whereClause) {

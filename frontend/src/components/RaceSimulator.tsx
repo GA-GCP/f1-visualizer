@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 // 1. ADD Snackbar AND Alert TO THE MUI IMPORTS
-import { Box, Typography, Paper, Grid, Chip, Snackbar, Alert } from '@mui/material';
+import { Box, Typography, Paper, Grid, Chip, Snackbar, Alert, CircularProgress } from '@mui/material';
 import { useTelemetry } from '../hooks/useTelemetry';
 import { useLocation } from '../hooks/useLocation';
 import CircuitTrace from './CircuitTrace';
@@ -17,18 +17,23 @@ const RaceSimulator: React.FC = () => {
     const [activeSession, setActiveSession] = useState<{ key: number, mode: string } | null>(null);
     const [lastTelemetry, setLastTelemetry] = useState<TelemetryPacket | null>(null);
     const [lastLocation, setLastLocation] = useState<LocationPacket | null>(null);
+    const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
+    const [streamError, setStreamError] = useState<string | null>(null);
 
     const { userProfile } = useUser();
 
     useEffect(() => {
-        fetchDrivers().then(data => {
-            setDrivers(data);
-            if (data.length > 0) {
-                const favCode = userProfile?.preferences?.favoriteDriver;
-                const defaultDriver = data.find(d => d.code === favCode) || data[0];
-                setSelectedDriver(defaultDriver);
-            }
-        });
+        setIsLoadingDrivers(true);
+        fetchDrivers()
+            .then(data => {
+                setDrivers(data);
+                if (data.length > 0) {
+                    const favCode = userProfile?.preferences?.favoriteDriver;
+                    const defaultDriver = data.find(d => d.code === favCode) || data[0];
+                    setSelectedDriver(defaultDriver);
+                }
+            })
+            .finally(() => setIsLoadingDrivers(false));
     }, [userProfile]);
 
     const { isConnected: isTelemetryConnected } = useTelemetry((data) => {
@@ -72,7 +77,7 @@ const RaceSimulator: React.FC = () => {
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 
                         <Paper sx={{ bgcolor: '#1e1e1e', border: '1px solid #333' }}>
-                            <SessionControlPanel onStreamStarted={handleStreamStarted} />
+                            <SessionControlPanel onStreamStarted={handleStreamStarted} onError={setStreamError} />
                         </Paper>
 
                         {activeSession?.mode === 'SIMULATION' && (
@@ -80,12 +85,18 @@ const RaceSimulator: React.FC = () => {
                         )}
 
                         <Paper sx={{ p: 2, bgcolor: '#1e1e1e' }}>
-                            <DriverSelector
-                                label="SELECT DRIVER CHANNEL"
-                                options={drivers}
-                                value={selectedDriver}
-                                onChange={setSelectedDriver}
-                            />
+                            {isLoadingDrivers ? (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                                    <CircularProgress size={28} />
+                                </Box>
+                            ) : (
+                                <DriverSelector
+                                    label="SELECT DRIVER CHANNEL"
+                                    options={drivers}
+                                    value={selectedDriver}
+                                    onChange={setSelectedDriver}
+                                />
+                            )}
                         </Paper>
 
                         <Paper sx={{ p: 3, bgcolor: '#1e1e1e', color: 'white', minHeight: '200px', borderTop: `4px solid ${selectedDriver?.teamColor || '#333'}` }}>
@@ -134,6 +145,12 @@ const RaceSimulator: React.FC = () => {
             <Snackbar open={connectionLost} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
                 <Alert severity="error" variant="filled" sx={{ width: '100%', fontWeight: 'bold', fontSize: '1.1rem' }}>
                     CRITICAL: LIVE FEED CONNECTION LOST. ATTEMPTING RECONNECT...
+                </Alert>
+            </Snackbar>
+
+            <Snackbar open={!!streamError} autoHideDuration={8000} onClose={() => setStreamError(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+                <Alert severity="error" variant="filled" onClose={() => setStreamError(null)} sx={{ width: '100%', fontWeight: 'bold' }}>
+                    {streamError}
                 </Alert>
             </Snackbar>
 

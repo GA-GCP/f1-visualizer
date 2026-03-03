@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, CircularProgress } from '@mui/material';
+import { motion } from 'framer-motion';
 import DriverSelector from '../selectors/DriverSelector';
 import { fetchDrivers, type DriverProfile } from '../../api/referenceApi';
 import { useUser } from '../../context/UserContext';
@@ -46,7 +47,14 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
     };
 
     return (
-        <Dialog open={open} onClose={onClose} PaperProps={{ sx: { bgcolor: '#1e1e1e', color: 'white', minWidth: 400, border: '1px solid #333' } }}>
+        <Dialog open={open} onClose={onClose} PaperProps={{
+            component: motion.div,
+            initial: { opacity: 0, scale: 0.95 },
+            animate: { opacity: 1, scale: 1 },
+            exit: { opacity: 0, scale: 0.95 },
+            transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] },
+            sx: { bgcolor: '#1e1e1e', color: 'white', minWidth: 400, border: '1px solid #333' }
+        }}>
             <DialogTitle sx={{ borderBottom: '1px solid #333', pb: 2 }}>⚙️ USER PREFERENCES</DialogTitle>
             <DialogContent sx={{ pt: 3 }}>
                 {isLoading ? (

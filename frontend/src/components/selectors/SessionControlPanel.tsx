@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Button, Typography, ToggleButton, ToggleButtonGroup, CircularProgress, Autocomplete, TextField } from '@mui/material';
+import { motion } from 'framer-motion';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SensorsIcon from '@mui/icons-material/Sensors';
 import HistoryIcon from '@mui/icons-material/History';
@@ -96,17 +97,19 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                 )}
             />
 
-            <Button
-                variant="contained"
-                color={mode === 'LIVE' ? 'error' : 'primary'}
-                size="large"
-                startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
-                onClick={handleStart}
-                disabled={isLoading || !selectedSession}
-                sx={{ fontWeight: 'bold', py: 1.5 }}
-            >
-                {isLoading ? 'INITIALIZING...' : `START ${mode} STREAM`}
-            </Button>
+            <motion.div whileTap={{ scale: 0.97 }} whileHover={{ scale: 1.02 }}>
+                <Button
+                    variant="contained"
+                    color={mode === 'LIVE' ? 'error' : 'primary'}
+                    size="large"
+                    startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
+                    onClick={handleStart}
+                    disabled={isLoading || !selectedSession}
+                    sx={{ fontWeight: 'bold', py: 1.5 }}
+                >
+                    {isLoading ? 'INITIALIZING...' : `START ${mode} STREAM`}
+                </Button>
+            </motion.div>
         </Box>
     );
 };

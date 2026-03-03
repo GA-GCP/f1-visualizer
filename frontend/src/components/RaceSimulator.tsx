@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // 1. ADD Snackbar AND Alert TO THE MUI IMPORTS
 import { Box, Typography, Paper, Grid, Chip, Snackbar, Alert, CircularProgress } from '@mui/material';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTelemetry } from '../hooks/useTelemetry';
 import { useLocation } from '../hooks/useLocation';
 import CircuitTrace from './CircuitTrace';
@@ -10,6 +11,15 @@ import MediaController from './MediaController';
 import { fetchDrivers, type DriverProfile } from '../api/referenceApi';
 import type { TelemetryPacket, LocationPacket } from '../types/telemetry';
 import { useUser } from '../context/UserContext';
+
+const containerVariants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.08 } }
+};
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+};
 
 const RaceSimulator: React.FC = () => {
     const [drivers, setDrivers] = useState<DriverProfile[]>([]);
@@ -97,9 +107,19 @@ const RaceSimulator: React.FC = () => {
                             <SessionControlPanel onStreamStarted={handleStreamStarted} onError={setStreamError} />
                         </Paper>
 
-                        {activeSession?.mode === 'SIMULATION' && (
-                            <MediaController />
-                        )}
+                        <AnimatePresence>
+                            {activeSession?.mode === 'SIMULATION' && (
+                                <motion.div
+                                    key="media-controller"
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ duration: 0.35, ease: 'easeOut' }}
+                                >
+                                    <MediaController />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         <Paper sx={{ p: 2, bgcolor: '#1e1e1e' }}>
                             {isLoadingDrivers ? (
@@ -121,25 +141,33 @@ const RaceSimulator: React.FC = () => {
                                 LIVE TELEMETRY
                             </Typography>
                             {lastTelemetry ? (
-                                <Box>
-                                    <Typography variant="h2" sx={{ fontWeight: 'bold', color: 'white' }}>
-                                        {lastTelemetry.speed} <span style={{ fontSize: '1.5rem', color: '#666' }}>KM/H</span>
-                                    </Typography>
+                                <motion.div variants={containerVariants} initial="hidden" animate="visible">
+                                    <motion.div variants={itemVariants}>
+                                        <Typography variant="h2" sx={{ fontWeight: 'bold', color: 'white' }}>
+                                            {lastTelemetry.speed} <span style={{ fontSize: '1.5rem', color: '#666' }}>KM/H</span>
+                                        </Typography>
+                                    </motion.div>
                                     <Grid container spacing={2} sx={{ mt: 2 }}>
                                         <Grid size={4}>
-                                            <Typography variant="caption" color="text.secondary">RPM</Typography>
-                                            <Typography variant="h6">{lastTelemetry.rpm}</Typography>
+                                            <motion.div variants={itemVariants}>
+                                                <Typography variant="caption" color="text.secondary">RPM</Typography>
+                                                <Typography variant="h6">{lastTelemetry.rpm}</Typography>
+                                            </motion.div>
                                         </Grid>
                                         <Grid size={4}>
-                                            <Typography variant="caption" color="text.secondary">GEAR</Typography>
-                                            <Typography variant="h6">{lastTelemetry.gear}</Typography>
+                                            <motion.div variants={itemVariants}>
+                                                <Typography variant="caption" color="text.secondary">GEAR</Typography>
+                                                <Typography variant="h6">{lastTelemetry.gear}</Typography>
+                                            </motion.div>
                                         </Grid>
                                         <Grid size={4}>
-                                            <Typography variant="caption" color="text.secondary">THROTTLE</Typography>
-                                            <Typography variant="h6">{lastTelemetry.throttle}%</Typography>
+                                            <motion.div variants={itemVariants}>
+                                                <Typography variant="caption" color="text.secondary">THROTTLE</Typography>
+                                                <Typography variant="h6">{lastTelemetry.throttle}%</Typography>
+                                            </motion.div>
                                         </Grid>
                                     </Grid>
-                                </Box>
+                                </motion.div>
                             ) : (
                                 <Typography color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>
                                     {activeSession ? `Waiting for data from ${selectedDriver?.code}...` : "Initialize a session to begin."}

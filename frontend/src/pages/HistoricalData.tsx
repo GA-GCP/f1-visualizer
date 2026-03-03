@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 // Replace CircularProgress with Skeleton
 import { Box, Typography, Container, Skeleton, Autocomplete, TextField } from '@mui/material';
+import { motion, AnimatePresence } from 'framer-motion';
 import { apiClient } from '../api/apiClient';
 import LapTimeChart from '../components/LapTimeChart';
 import type { LapDataRecord } from '../types/telemetry';
@@ -93,19 +94,37 @@ const HistoricalData: React.FC = () => {
                 </Box>
             </Box>
 
-            {loading ? (
-                <Skeleton
-                    variant="rectangular"
-                    height={400}
-                    sx={{ bgcolor: '#1e1e1e', borderRadius: 2, mt: 2 }}
-                />
-            ) : (
-                <LapTimeChart
-                    data={laps}
-                    title={selectedSession ? `LAP TIMES // ${selectedSession.year} ${selectedSession.meetingName}` : undefined}
-                    driverColorMap={driverColorMap}
-                />
-            )}
+            <AnimatePresence mode="wait">
+                {loading ? (
+                    <motion.div
+                        key="skeleton"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                    >
+                        <Skeleton
+                            variant="rectangular"
+                            height={400}
+                            sx={{ bgcolor: '#1e1e1e', borderRadius: 2, mt: 2 }}
+                        />
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key="chart"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <LapTimeChart
+                            data={laps}
+                            title={selectedSession ? `LAP TIMES // ${selectedSession.year} ${selectedSession.meetingName}` : undefined}
+                            driverColorMap={driverColorMap}
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </Container>
     );
 };

@@ -32,7 +32,7 @@ class OpenF1ClientTest {
         mockWebServer = new MockWebServer();
         mockWebServer.start();
 
-        JsonMapper mapper = JsonMapper.builder().build();
+        JsonMapper mapper = JsonMapper.builder().findAndAddModules().build();
 
         ExchangeStrategies strategies = ExchangeStrategies.builder()
                 .codecs(configurer -> {

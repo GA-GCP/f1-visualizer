@@ -2,6 +2,8 @@ package com.elysianarts.f1.visualizer.user.controller.v1;
 
 import com.elysianarts.f1.visualizer.commons.security.config.F1VisualizerSecurityConfig;
 import com.elysianarts.f1.visualizer.commons.service.config.JacksonObjectMapperConfig;
+import com.elysianarts.f1.visualizer.user.exception.GlobalExceptionHandler;
+import com.elysianarts.f1.visualizer.user.exception.UserNotFoundException;
 import com.elysianarts.f1.visualizer.user.firestore.document.F1VUserDocument;
 import com.elysianarts.f1.visualizer.user.service.F1VUserService;
 import org.junit.jupiter.api.Test;
@@ -31,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(F1VUserController.class)
 @AutoConfigureMockMvc
-@Import({F1VisualizerSecurityConfig.class, JacksonObjectMapperConfig.class})
+@Import({F1VisualizerSecurityConfig.class, JacksonObjectMapperConfig.class, GlobalExceptionHandler.class})
 class F1VUserControllerTest {
 
     @Autowired
@@ -117,14 +119,22 @@ class F1VUserControllerTest {
     }
 
     @Test
-    void updatePreferences_PropagatesException_WhenServiceThrows() {
+    void updatePreferences_Returns404_WhenUserNotFound() throws Exception {
         when(f1VUserService.updatePreferences(eq(TEST_SUB), any(F1VUserDocument.UserPreferences.class)))
-                .thenThrow(new RuntimeException("User profile not found"));
+                .thenThrow(new UserNotFoundException(TEST_SUB));
 
-        assertThrows(Exception.class, () ->
-                mockMvc.perform(put("/api/v1/users/me/preferences")
+        mockMvc.perform(put("/api/v1/users/me/preferences")
                         .with(jwt().jwt(jwt -> jwt.subject(TEST_SUB)))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"favoriteDriver\":\"VER\"}")));
+                        .content("{\"favoriteDriver\":\"VER\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void getCurrentUser_Returns400_WhenEmailClaimMissing() throws Exception {
+        mockMvc.perform(get("/api/v1/users/me")
+                        .with(jwt().jwt(jwt -> jwt.subject(TEST_SUB))))
+                .andExpect(status().isBadRequest());
     }
 }

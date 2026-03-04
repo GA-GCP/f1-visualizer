@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, CircularProgress } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, CircularProgress, Alert } from '@mui/material';
 import { motion } from 'framer-motion';
 import DriverSelector from '../selectors/DriverSelector';
 import { fetchDrivers, type DriverProfile } from '../../api/referenceApi';
@@ -16,6 +16,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
     const [selectedDriver, setSelectedDriver] = useState<DriverProfile | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     useEffect(() => {
         if (!open) return;
@@ -33,6 +34,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
 
     const handleSave = async () => {
         setIsSaving(true);
+        setErrorMsg(null);
         try {
             await updatePreferences({
                 ...userProfile?.preferences,
@@ -41,6 +43,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
             onClose();
         } catch (e) {
             console.error(e);
+            setErrorMsg('Failed to save preferences. Please try again.');
         } finally {
             setIsSaving(false);
         }
@@ -57,6 +60,9 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
         }}>
             <DialogTitle sx={{ borderBottom: '1px solid #333', pb: 2 }}>⚙️ USER PREFERENCES</DialogTitle>
             <DialogContent sx={{ pt: 3 }}>
+                {errorMsg && (
+                    <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert>
+                )}
                 {isLoading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
                         <CircularProgress size={40} />

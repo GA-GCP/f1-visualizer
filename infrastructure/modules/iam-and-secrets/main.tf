@@ -104,6 +104,11 @@ resource "google_project_iam_member" "data_analysis_bq_job_user" {
   role    = "roles/bigquery.jobUser"
   member  = "serviceAccount:${google_service_account.data_analysis.email}"
 }
+resource "google_project_iam_member" "data_analysis_datastore_user" {
+  project = var.project_id
+  role    = "roles/datastore.user"
+  member  = "serviceAccount:${google_service_account.data_analysis.email}"
+}
 
 # -- User Roles --
 resource "google_project_iam_member" "user_datastore_user" {

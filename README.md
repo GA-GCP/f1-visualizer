@@ -490,6 +490,30 @@ Each promotion is an explicit pull request from one environment branch to the ne
 3. **dev → uat** — After dev validation, a promotion PR moves the release candidate to the UAT environment for acceptance testing.
 4. **uat → prod** — After UAT sign-off, a promotion PR deploys to production. This is the only promotion that will require explicit reviewer approval once branch protection rules are enabled.
 
+### Down-Merge Flow
+
+When a hotfix or conflict resolution introduces commits directly on an environment branch (e.g., an urgent fix applied to `prod`), those changes must flow back upstream to prevent branch divergence. Down-merges ensure every branch remains a superset of the branches below it:
+
+```
+prod             uat              dev              main
+  |                |                |                |
+  |   Down-merge   |                |                |
+  +--------------->|                |                |
+  |                |   Down-merge   |                |
+  |                +--------------->|                |
+  |                |                |   Down-merge   |
+  |                |                +--------------->|
+  |                |                |                |
+```
+
+1. **prod → uat** — Merge `prod` back into `uat` via PR so the UAT branch has the hotfix.
+2. **uat → dev** — Merge `uat` back into `dev` via PR so the dev branch stays in sync.
+3. **dev → main** — Merge `dev` back into `main` via PR so the trunk contains all changes.
+
+Each down-merge should be performed via a pull request for audit trail consistency. The goal is to ensure `main` always contains the superset of all changes — no fix should exist in production that isn't also in `main`.
+
+**Preferred approach — avoid down-merges entirely:** Since `main` is the trunk where all work originates, even hotfixes should be branched off `main`, merged via PR, and then fast-tracked through the promotion chain (`main → dev → uat → prod`). This keeps the flow strictly unidirectional and eliminates the need for down-merges altogether.
+
 ---
 
 ## CI/CD Pipeline

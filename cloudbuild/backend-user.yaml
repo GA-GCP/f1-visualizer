@@ -73,7 +73,3 @@ steps:
       - '--region=us-central1'
       - '--project=$PROJECT_ID'
       - '--quiet'
-
-images:
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/user:${_SHORT_SHA}'
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/user:latest'

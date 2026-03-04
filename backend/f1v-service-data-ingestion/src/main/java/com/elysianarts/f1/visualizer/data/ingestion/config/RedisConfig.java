@@ -6,10 +6,28 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import tools.jackson.databind.MapperFeature;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.json.JsonMapper;
 
+/**
+ * Redis pub/sub configuration for publishing live telemetry and location data.
+ *
+ * <p><b>ObjectMapper Configuration:</b> The ObjectMapper disables
+ * {@code MapperFeature.USE_ANNOTATIONS} and uses
+ * {@link PropertyNamingStrategies#SNAKE_CASE}. This is intentional:</p>
+ * <ul>
+ *   <li>SNAKE_CASE converts Java field names (e.g. {@code sessionKey}) to snake_case
+ *       JSON keys (e.g. {@code session_key}), matching the frontend TypeScript interfaces.</li>
+ *   <li>Annotations are disabled because {@code @JsonProperty("n_gear")} on the DTO
+ *       field {@code gear} (needed for OpenF1 API deserialization) would override the
+ *       naming strategy and serialize as {@code "n_gear"} instead of {@code "gear"},
+ *       breaking the frontend.</li>
+ * </ul>
+ *
+ * <p>Wire format is validated by {@code OpenF1DtoSerializationTest}.</p>
+ */
 @Configuration
 public class RedisConfig {
     public static final String TELEMETRY_TOPIC = "live_telemetry";
@@ -22,7 +40,10 @@ public class RedisConfig {
         template.setConnectionFactory(connectionFactory);
         template.setKeySerializer(new StringRedisSerializer());
 
+        // IMPORTANT: Annotations are disabled so the mapper uses ONLY the SNAKE_CASE
+        // naming strategy on raw Java field names. See class-level Javadoc.
         ObjectMapper mapper = JsonMapper.builder()
+                .disable(MapperFeature.USE_ANNOTATIONS)
                 .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
                 .build();
         JacksonJsonRedisSerializer<Object> valueSerializer = new JacksonJsonRedisSerializer<>(mapper, Object.class);

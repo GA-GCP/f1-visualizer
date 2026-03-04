@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import axios from 'axios';
 import { fetchCurrentUser, updateUserPreferences } from '../api/userApi';
 import type { UserProfile, UserPreferences } from '../types/user';
 
@@ -7,6 +8,7 @@ interface UserContextType {
     userProfile: UserProfile | null;
     updatePreferences: (prefs: UserPreferences) => Promise<void>;
     isLoading: boolean;
+    error: 'service_unavailable' | null;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -15,6 +17,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { isAuthenticated } = useAuth0();
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<'service_unavailable' | null>(null);
 
     useEffect(() => {
         let isMounted = true;
@@ -22,12 +25,26 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (isAuthenticated) {
                 try {
                     const profile = await fetchCurrentUser();
-                    if (isMounted) setUserProfile(profile);
-                } catch (err) {
-                    console.error("Failed to load user profile. Is the User Service running?", err);
+                    if (isMounted) {
+                        setUserProfile(profile);
+                        setError(null);
+                    }
+                } catch (err: unknown) {
+                    if (axios.isAxiosError(err) && err.response?.status === 404) {
+                        console.warn(
+                            "[UserContext] User Service returned 404. " +
+                            "The service may not be running or the user may not exist yet."
+                        );
+                    } else {
+                        console.error("Failed to load user profile:", err);
+                    }
+                    if (isMounted) setError('service_unavailable');
                 }
             } else {
-                if (isMounted) setUserProfile(null);
+                if (isMounted) {
+                    setUserProfile(null);
+                    setError(null);
+                }
             }
             if (isMounted) setIsLoading(false);
         };
@@ -37,12 +54,16 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [isAuthenticated]);
 
     const handleUpdatePreferences = async (newPrefs: UserPreferences) => {
-        const updatedProfile = await updateUserPreferences(newPrefs);
-        setUserProfile(updatedProfile);
+        try {
+            const updatedProfile = await updateUserPreferences(newPrefs);
+            setUserProfile(updatedProfile);
+        } catch (err) {
+            console.error("Failed to update user preferences:", err);
+        }
     };
 
     return (
-        <UserContext.Provider value={{ userProfile, updatePreferences: handleUpdatePreferences, isLoading }}>
+        <UserContext.Provider value={{ userProfile, updatePreferences: handleUpdatePreferences, isLoading, error }}>
             {children}
         </UserContext.Provider>
     );

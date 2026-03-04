@@ -2,7 +2,12 @@ package com.elysianarts.f1.visualizer.commons.api.openf1.dto;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.MapperFeature;
+import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.json.JsonMapper;
+
+import java.time.OffsetDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -10,9 +15,28 @@ class OpenF1DtoSerializationTest {
 
     private JsonMapper mapper;
 
+    /**
+     * Mirrors the exact ObjectMapper configuration used by RedisConfig in both
+     * f1v-service-data-ingestion and f1v-service-telemetry.
+     *
+     * <p>IMPORTANT: This mapper disables {@code MapperFeature.USE_ANNOTATIONS} so that
+     * {@code @JsonProperty("n_gear")} on the {@code gear} field does NOT override the
+     * naming strategy. Without this, the field serializes as {@code "n_gear"}, breaking
+     * the frontend which expects {@code "gear"}. The SNAKE_CASE strategy converts Java
+     * field names directly, producing the correct wire format.
+     *
+     * @see com.elysianarts.f1.visualizer.data.ingestion.config.RedisConfig
+     * @see com.elysianarts.f1.visualizer.telemetry.config.RedisConfig
+     */
+    private JsonMapper redisMapper;
+
     @BeforeEach
     void setUp() {
         mapper = JsonMapper.builder().findAndAddModules().build();
+        redisMapper = JsonMapper.builder()
+                .disable(MapperFeature.USE_ANNOTATIONS)
+                .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+                .build();
     }
 
     @Test
@@ -184,5 +208,121 @@ class OpenF1DtoSerializationTest {
         assertNull(data.getSpeed());
         assertNull(data.getRpm());
         assertNull(data.getGear());
+    }
+
+    // ===================================================================
+    // Redis Wire-Format Tests
+    //
+    // These tests validate that the SNAKE_CASE ObjectMapper (used by
+    // RedisConfig) produces JSON matching the frontend TypeScript interfaces.
+    // ===================================================================
+
+    @Test
+    void carData_RedisWireFormat_MatchesFrontendTelemetryPacket() throws Exception {
+        OpenF1CarData data = new OpenF1CarData();
+        data.setSessionKey(9165L);
+        data.setMeetingKey(1219L);
+        data.setDate(OffsetDateTime.parse("2023-09-17T12:00:00.123Z"));
+        data.setDriverNumber(1);
+        data.setSpeed(310);
+        data.setRpm(11500);
+        data.setGear(8);
+        data.setThrottle(100);
+        data.setBrake(0);
+        data.setDrs(1);
+
+        String json = redisMapper.writeValueAsString(data);
+        JsonNode node = redisMapper.readTree(json);
+
+        // Assert snake_case keys matching frontend TelemetryPacket interface
+        assertTrue(node.has("session_key"), "Expected 'session_key'");
+        assertTrue(node.has("meeting_key"), "Expected 'meeting_key'");
+        assertTrue(node.has("date"), "Expected 'date'");
+        assertTrue(node.has("driver_number"), "Expected 'driver_number'");
+        assertTrue(node.has("speed"), "Expected 'speed'");
+        assertTrue(node.has("rpm"), "Expected 'rpm'");
+        assertTrue(node.has("gear"), "Expected 'gear'");
+        assertTrue(node.has("throttle"), "Expected 'throttle'");
+        assertTrue(node.has("brake"), "Expected 'brake'");
+        assertTrue(node.has("drs"), "Expected 'drs'");
+
+        // Sentinel: @JsonProperty("n_gear") must NOT be honored — frontend expects "gear"
+        assertFalse(node.has("n_gear"), "'n_gear' must not appear; frontend expects 'gear'");
+
+        // No camelCase keys should leak through
+        assertFalse(node.has("sessionKey"), "camelCase 'sessionKey' must not appear");
+        assertFalse(node.has("meetingKey"), "camelCase 'meetingKey' must not appear");
+        assertFalse(node.has("driverNumber"), "camelCase 'driverNumber' must not appear");
+
+        // Verify values
+        assertEquals(9165, node.get("session_key").intValue());
+        assertEquals(1, node.get("driver_number").intValue());
+        assertEquals(310, node.get("speed").intValue());
+        assertEquals(8, node.get("gear").intValue());
+    }
+
+    @Test
+    void locationData_RedisWireFormat_MatchesFrontendLocationPacket() throws Exception {
+        OpenF1LocationData data = new OpenF1LocationData();
+        data.setSessionKey(9165L);
+        data.setMeetingKey(1219L);
+        data.setDate(OffsetDateTime.parse("2023-09-17T12:00:00.456Z"));
+        data.setDriverNumber(1);
+        data.setX(1200);
+        data.setY(3400);
+        data.setZ(100);
+
+        String json = redisMapper.writeValueAsString(data);
+        JsonNode node = redisMapper.readTree(json);
+
+        // Assert snake_case keys matching frontend LocationPacket interface
+        assertTrue(node.has("session_key"), "Expected 'session_key'");
+        assertTrue(node.has("meeting_key"), "Expected 'meeting_key'");
+        assertTrue(node.has("date"), "Expected 'date'");
+        assertTrue(node.has("driver_number"), "Expected 'driver_number'");
+        assertTrue(node.has("x"), "Expected 'x'");
+        assertTrue(node.has("y"), "Expected 'y'");
+        assertTrue(node.has("z"), "Expected 'z'");
+
+        // No camelCase keys should leak through
+        assertFalse(node.has("sessionKey"), "camelCase 'sessionKey' must not appear");
+        assertFalse(node.has("meetingKey"), "camelCase 'meetingKey' must not appear");
+        assertFalse(node.has("driverNumber"), "camelCase 'driverNumber' must not appear");
+
+        // Verify values
+        assertEquals(9165, node.get("session_key").intValue());
+        assertEquals(1, node.get("driver_number").intValue());
+        assertEquals(1200, node.get("x").intValue());
+        assertEquals(3400, node.get("y").intValue());
+        assertEquals(100, node.get("z").intValue());
+    }
+
+    @Test
+    void carData_RedisWireFormat_RoundTrips_Correctly() throws Exception {
+        OpenF1CarData original = new OpenF1CarData();
+        original.setSessionKey(9165L);
+        original.setMeetingKey(1219L);
+        original.setDate(OffsetDateTime.parse("2023-09-17T12:00:00.123Z"));
+        original.setDriverNumber(1);
+        original.setSpeed(310);
+        original.setRpm(11500);
+        original.setGear(8);
+        original.setThrottle(100);
+        original.setBrake(0);
+        original.setDrs(1);
+
+        String json = redisMapper.writeValueAsString(original);
+        OpenF1CarData deserialized = redisMapper.readValue(json, OpenF1CarData.class);
+
+        assertEquals(original.getSessionKey(), deserialized.getSessionKey());
+        assertEquals(original.getMeetingKey(), deserialized.getMeetingKey());
+        assertEquals(original.getDriverNumber(), deserialized.getDriverNumber());
+        assertEquals(original.getSpeed(), deserialized.getSpeed());
+        assertEquals(original.getRpm(), deserialized.getRpm());
+        assertEquals(original.getGear(), deserialized.getGear());
+        assertEquals(original.getThrottle(), deserialized.getThrottle());
+        assertEquals(original.getBrake(), deserialized.getBrake());
+        assertEquals(original.getDrs(), deserialized.getDrs());
+        assertNotNull(deserialized.getDate());
     }
 }

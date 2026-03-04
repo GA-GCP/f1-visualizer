@@ -49,6 +49,7 @@ resource "google_bigquery_table" "telemetry" {
   schema = <<EOF
 [
   { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
+  { "name": "meeting_key", "type": "INTEGER", "mode": "NULLABLE" },
   { "name": "date", "type": "TIMESTAMP", "mode": "REQUIRED" },
   { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
   { "name": "speed", "type": "INTEGER", "mode": "NULLABLE" },
@@ -113,6 +114,7 @@ resource "google_bigquery_table" "locations" {
   schema = <<EOF
 [
   { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
+  { "name": "meeting_key", "type": "INTEGER", "mode": "NULLABLE" },
   { "name": "date", "type": "TIMESTAMP", "mode": "REQUIRED" },
   { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
   { "name": "x", "type": "INTEGER", "mode": "NULLABLE" },

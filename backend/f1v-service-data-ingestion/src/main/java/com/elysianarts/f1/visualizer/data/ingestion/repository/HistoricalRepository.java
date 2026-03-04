@@ -24,7 +24,7 @@ public class HistoricalRepository {
 
         // Fetch ordered by date so we can replay chronologically
         String query = String.format("""
-            SELECT session_key, date, driver_number, speed, rpm, gear, throttle, brake, drs
+            SELECT session_key, meeting_key, date, driver_number, speed, rpm, gear, throttle, brake, drs
             FROM `%s.%s`
             WHERE session_key = %d
             ORDER BY date ASC
@@ -39,6 +39,9 @@ public class HistoricalRepository {
             for (FieldValueList row : result.iterateAll()) {
                 OpenF1CarData data = new OpenF1CarData();
                 data.setSessionKey(sessionKey);
+                if (!row.get("meeting_key").isNull()) {
+                    data.setMeetingKey(row.get("meeting_key").getLongValue());
+                }
                 data.setDriverNumber((int) row.get("driver_number").getLongValue());
                 data.setSpeed((int) row.get("speed").getLongValue());
                 data.setRpm((int) row.get("rpm").getLongValue());

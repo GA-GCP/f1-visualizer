@@ -500,6 +500,22 @@ paths:
               type: string
             Access-Control-Allow-Credentials:
               type: string
+  # ===============================================================
+  # NOTE: WebSocket routes (/ws, /ws/*) are NOT defined here.
+  #
+  # WebSocket connections are routed DIRECTLY to the Telemetry
+  # Service Cloud Run instance via a serverless NEG, bypassing
+  # this API Gateway entirely. This is configured in:
+  #   infrastructure/modules/lb-api/main.tf (path_rule for /ws)
+  #
+  # The Load Balancer URL Map directs /ws and /ws/* to the
+  # telemetry backend service, which connects to Cloud Run.
+  # Adding /ws routes here would be INCORRECT — GCP API Gateway
+  # does not support WebSocket upgrade.
+  #
+  # Frontend connects via: wss://<domain>/ws (SockJS + STOMP)
+  # ===============================================================
+
   # --- TELEMETRY SERVICE ---
   /api/v1/debug/publish:
     post:

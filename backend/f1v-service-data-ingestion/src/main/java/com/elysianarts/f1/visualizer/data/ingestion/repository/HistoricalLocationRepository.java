@@ -23,7 +23,7 @@ public class HistoricalLocationRepository {
         log.info("Fetching historical location data for session: {}", sessionKey);
 
         String query = String.format("""
-            SELECT session_key, date, driver_number, x, y, z
+            SELECT session_key, meeting_key, date, driver_number, x, y, z
             FROM `%s.%s`
             WHERE session_key = %d
             ORDER BY date ASC
@@ -38,6 +38,9 @@ public class HistoricalLocationRepository {
             for (FieldValueList row : result.iterateAll()) {
                 OpenF1LocationData data = new OpenF1LocationData();
                 data.setSessionKey(sessionKey);
+                if (!row.get("meeting_key").isNull()) {
+                    data.setMeetingKey(row.get("meeting_key").getLongValue());
+                }
                 data.setDriverNumber((int) row.get("driver_number").getLongValue());
                 data.setX((int) row.get("x").getLongValue());
                 data.setY((int) row.get("y").getLongValue());

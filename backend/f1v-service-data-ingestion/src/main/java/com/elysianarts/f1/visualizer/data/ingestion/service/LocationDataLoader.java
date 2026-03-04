@@ -60,6 +60,7 @@ public class LocationDataLoader {
                     for (OpenF1LocationData packet : data) {
                         Map<String, Object> rowContent = new HashMap<>();
                         rowContent.put("session_key", packet.getSessionKey());
+                        rowContent.put("meeting_key", packet.getMeetingKey());
                         rowContent.put("date", packet.getDate().toString());
                         rowContent.put("driver_number", packet.getDriverNumber());
                         rowContent.put("x", packet.getX());

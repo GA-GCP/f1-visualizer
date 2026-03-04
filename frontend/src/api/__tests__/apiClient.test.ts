@@ -43,18 +43,34 @@ describe('apiClient', () => {
     it('response interceptor logs warning on 401', async () => {
         vi.stubEnv('MODE', 'development');
 
-        const { apiClient } = await import('../apiClient');
+        // Capture the rejected handler via a mock axios instead of
+        // reaching into the private `handlers` array (which is an
+        // internal implementation detail that differs across environments).
+        let capturedErrorHandler: ((err: unknown) => unknown) | undefined;
+
+        vi.doMock('axios', () => ({
+            default: {
+                create: () => ({
+                    defaults: { baseURL: '/api/v1' },
+                    interceptors: {
+                        response: {
+                            use: (_onFulfilled: unknown, onRejected: (err: unknown) => unknown) => {
+                                capturedErrorHandler = onRejected;
+                            }
+                        }
+                    }
+                })
+            }
+        }));
+
+        await import('../apiClient');
+
+        expect(capturedErrorHandler).toBeDefined();
 
         const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-        // Access the interceptor's error handler from the internal handlers array.
-        // In axios v1, interceptors.response.handlers is an array of
-        // { fulfilled, rejected } objects.
-        const handlers = (apiClient.interceptors.response as unknown as { handlers: Array<{ fulfilled: unknown; rejected: (err: unknown) => Promise<unknown> }> }).handlers;
-        const errorHandler = handlers[0].rejected;
-
         try {
-            await errorHandler({ response: { status: 401 } });
+            await capturedErrorHandler!({ response: { status: 401 } });
         } catch {
             // Expected to reject (the interceptor returns Promise.reject)
         }

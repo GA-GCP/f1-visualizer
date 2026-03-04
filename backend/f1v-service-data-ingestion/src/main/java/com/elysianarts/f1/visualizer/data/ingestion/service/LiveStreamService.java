@@ -100,7 +100,8 @@ public class LiveStreamService {
             log.info("📡 Subscribed to {} and {} at QoS 1", carDataTopic, locationTopic);
 
         } catch (MqttException e) {
-            log.error("❌ Failed to connect to MQTT broker", e);
+            log.error("Failed to connect to MQTT broker", e);
+            throw new IllegalStateException("Failed to connect to OpenF1 MQTT broker: " + e.getMessage(), e);
         }
     }
 }

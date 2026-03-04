@@ -27,7 +27,7 @@ public class HistoricalLocationRepository {
             FROM `%s.%s`
             WHERE session_key = %d
             ORDER BY date ASC
-            LIMIT 50000
+            LIMIT 200000
             """, DATASET, TABLE, sessionKey);
 
         try {

@@ -1,5 +1,6 @@
 package com.elysianarts.f1.visualizer.user.service;
 
+import com.elysianarts.f1.visualizer.user.exception.UserNotFoundException;
 import com.elysianarts.f1.visualizer.user.firestore.document.F1VUserDocument;
 import com.elysianarts.f1.visualizer.user.firestore.repository.F1VUserRepository;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,6 @@ public class F1VUserService {
             existingUser.setPreferences(newPreferences);
             return userRepository.save(existingUser);
         }
-        throw new RuntimeException("User profile not found for Auth ID: " + authSubId);
+        throw new UserNotFoundException(authSubId);
     }
 }

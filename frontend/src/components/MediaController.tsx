@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, IconButton, Slider, Typography, Paper } from '@mui/material';
+import { Box, IconButton, Slider, Typography, Paper, CircularProgress } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 // 1. IMPORT StompSubscription from the library
@@ -10,6 +10,7 @@ import { stompClient } from '../api/stompClient';
 const MediaController: React.FC = () => {
     const [isPlaying, setIsPlaying] = useState(true);
     const [progress, setProgress] = useState(0);
+    const [isPending, setIsPending] = useState(false);
 
     // Listen to the backend's Virtual Clock playback status
     useEffect(() => {
@@ -43,12 +44,19 @@ const MediaController: React.FC = () => {
     }, []);
 
     const handleTogglePlay = async () => {
-        if (isPlaying) {
-            await pauseSimulation();
-        } else {
-            await playSimulation();
+        setIsPending(true);
+        try {
+            if (isPlaying) {
+                await pauseSimulation();
+            } else {
+                await playSimulation();
+            }
+            setIsPlaying(!isPlaying);
+        } catch {
+            console.error('Playback command failed');
+        } finally {
+            setIsPending(false);
         }
-        setIsPlaying(!isPlaying);
     };
 
     const handleSeekChange = (_: Event, newValue: number | number[]) => {
@@ -69,9 +77,10 @@ const MediaController: React.FC = () => {
             <IconButton
                 onClick={handleTogglePlay}
                 color="primary"
+                disabled={isPending}
                 sx={{ bgcolor: 'rgba(225, 6, 0, 0.1)', '&:hover': { bgcolor: 'rgba(225, 6, 0, 0.2)' } }}
             >
-                {isPlaying ? <PauseIcon fontSize="large" /> : <PlayArrowIcon fontSize="large" />}
+                {isPending ? <CircularProgress size={28} color="inherit" /> : isPlaying ? <PauseIcon fontSize="large" /> : <PlayArrowIcon fontSize="large" />}
             </IconButton>
 
             <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>

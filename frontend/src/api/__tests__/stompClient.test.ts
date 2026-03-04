@@ -35,7 +35,7 @@ describe('stompClient', () => {
         const { stompClient, activateWithToken } = await import('../stompClient');
 
         // Client starts inactive
-        stompClient.active = false;
+        Object.defineProperty(stompClient, 'active', { value: false, writable: true });
 
         activateWithToken('my-jwt-token');
 
@@ -49,7 +49,7 @@ describe('stompClient', () => {
         const { stompClient, activateWithToken } = await import('../stompClient');
 
         // Simulate that the client is already active
-        stompClient.active = true;
+        Object.defineProperty(stompClient, 'active', { value: true, writable: true });
 
         activateWithToken('my-jwt-token');
 

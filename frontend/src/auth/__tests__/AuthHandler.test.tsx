@@ -45,7 +45,7 @@ describe('AxiosAuthInterceptor', () => {
         expect(apiClient.interceptors.request.use).toHaveBeenCalledWith(expect.any(Function));
 
         // Extract the interceptor function and test it injects the token
-        const interceptorFn = vi.mocked(apiClient.interceptors.request.use).mock.calls[0][0] as (config: { headers: Record<string, string> }) => Promise<{ headers: Record<string, string> }>;
+        const interceptorFn = vi.mocked(apiClient.interceptors.request.use).mock.calls[0][0] as unknown as (config: { headers: Record<string, string> }) => Promise<{ headers: Record<string, string> }>;
         const mockConfig = { headers: {} as Record<string, string> };
 
         const resultConfig = await interceptorFn(mockConfig);
@@ -68,7 +68,7 @@ describe('AxiosAuthInterceptor', () => {
         expect(apiClient.interceptors.request.use).toHaveBeenCalledTimes(1);
 
         // Extract the interceptor function and verify it does NOT inject the token
-        const interceptorFn = vi.mocked(apiClient.interceptors.request.use).mock.calls[0][0] as (config: { headers: Record<string, string> }) => Promise<{ headers: Record<string, string> }>;
+        const interceptorFn = vi.mocked(apiClient.interceptors.request.use).mock.calls[0][0] as unknown as (config: { headers: Record<string, string> }) => Promise<{ headers: Record<string, string> }>;
         const mockConfig = { headers: {} as Record<string, string> };
 
         const resultConfig = await interceptorFn(mockConfig);

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import axios from 'axios';
 import { fetchCurrentUser, updateUserPreferences } from '../api/userApi';
 import type { UserProfile, UserPreferences } from '../types/user';
 
@@ -30,7 +31,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     if (isMounted) setError(err instanceof Error ? err.message : String(err));
                 }
             } else {
-                if (isMounted) setUserProfile(null);
+                if (isMounted) {
+                    setUserProfile(null);
+                    setError(null);
+                }
             }
             if (isMounted) setIsLoading(false);
         };
@@ -40,8 +44,12 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [isAuthenticated]);
 
     const handleUpdatePreferences = async (newPrefs: UserPreferences) => {
-        const updatedProfile = await updateUserPreferences(newPrefs);
-        setUserProfile(updatedProfile);
+        try {
+            const updatedProfile = await updateUserPreferences(newPrefs);
+            setUserProfile(updatedProfile);
+        } catch (err) {
+            console.error("Failed to update user preferences:", err);
+        }
     };
 
     return (

@@ -15,10 +15,18 @@ options:
 
 steps:
   # 1. Install Dependencies
+  #    canvas (node-canvas) is a native C++ addon used by visual-regression
+  #    tests. Alpine needs Python, a C++ toolchain, and Cairo/Pango libs
+  #    for node-gyp to compile it.
   - name: 'node:25-alpine'
     id: 'install'
-    entrypoint: 'yarn'
-    args: ['install', '--frozen-lockfile']
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        apk add --no-cache python3 make g++ pkgconf \
+          cairo-dev pango-dev libjpeg-turbo-dev giflib-dev librsvg-dev \
+        && yarn install --frozen-lockfile
     dir: 'frontend'
 
   # 2. ESLint Check
@@ -29,10 +37,16 @@ steps:
     dir: 'frontend'
 
   # 3. Unit Tests
+  #    canvas runtime libs needed for visual-regression tests (the compiled
+  #    .node addon from step 1 links against cairo/pango shared libs).
   - name: 'node:25-alpine'
     id: 'test'
-    entrypoint: 'yarn'
-    args: ['test:ci']
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        apk add --no-cache cairo pango libjpeg-turbo giflib librsvg \
+        && yarn test:ci
     dir: 'frontend'
 
   # 4. Production Build (produces dist/)

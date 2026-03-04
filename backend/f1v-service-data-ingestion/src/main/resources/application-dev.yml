@@ -12,5 +12,5 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: https://dev-5ly43mspbpyofvc1.us.auth0.com/
+          issuer-uri: https://elysianarts-dev.us.auth0.com/
           audiences: dev.api.f1visualizer.com

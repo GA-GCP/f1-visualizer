@@ -9,7 +9,7 @@ serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@
 substitutions:
   _ENV: 'dev'
   _SHORT_SHA: 'manual-build'
-  _AUTH0_ISSUER: 'https://dev-5ly43mspbpyofvc1.us.auth0.com'
+  _AUTH0_ISSUER: 'https://elysianarts-dev.us.auth0.com'
   _AUTH0_AUDIENCE: 'dev.api.f1visualizer.com'
 
 options:

@@ -12,20 +12,19 @@ const MediaController: React.FC = () => {
     const [progress, setProgress] = useState(0);
     const [isPending, setIsPending] = useState(false);
 
-    // Listen to the backend's Virtual Clock playback status
+    // Listen to the backend's Virtual Clock playback status.
+    // The interval is NOT cleared after the first connection so that
+    // after a disconnect/reconnect we re-subscribe automatically.
     useEffect(() => {
-        // 2. USE THE CORRECT TYPE INSTEAD OF 'any'
         let subscription: StompSubscription | null = null;
 
         const checkConnection = setInterval(() => {
-            if (stompClient.connected) {
-                clearInterval(checkConnection);
+            if (stompClient.connected && !subscription) {
                 subscription = stompClient.subscribe('/topic/playback-status', (message) => {
                     try {
                         const data = JSON.parse(message.body);
                         if (typeof data.progress === 'number') {
                             setProgress(data.progress);
-                            // Auto-pause the UI if we hit the end of the simulation
                             if (data.progress >= 100) {
                                 setIsPlaying(false);
                             }
@@ -34,6 +33,8 @@ const MediaController: React.FC = () => {
                         console.error('Failed to parse playback status:', err);
                     }
                 });
+            } else if (!stompClient.connected && subscription) {
+                subscription = null;
             }
         }, 500);
 

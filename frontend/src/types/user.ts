@@ -8,6 +8,6 @@ export interface UserPreferences {
 export interface UserProfile {
     authSubId: string;
     email: string;
-    createdAt: string;
+    createdAt: { seconds: number; nanos: number } | string;
     preferences: UserPreferences;
 }

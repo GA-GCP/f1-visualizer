@@ -56,9 +56,9 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({ data, title, driverColorMap
         const grouped = d3.group(data.filter(d => d.lapDuration), d => d.driverNumber);
         const driverNumbers = Array.from(grouped.keys());
 
-        // Assign colors per driver
+        // Assign colors per driver (driverColorMap values already include '#')
         const getColor = (driverNum: number, idx: number): string => {
-            if (driverColorMap?.[driverNum]) return `#${driverColorMap[driverNum]}`;
+            if (driverColorMap?.[driverNum]) return driverColorMap[driverNum];
             return FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
         };
 
@@ -67,9 +67,13 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({ data, title, driverColorMap
             .domain(d3.extent(data, d => d.lapNumber) as [number, number])
             .range([0, innerWidth]);
 
-        const validDurations = data.filter(d => d.lapDuration).map(d => d.lapDuration!);
+        const validDurations = data.filter(d => d.lapDuration != null && d.lapDuration > 0).map(d => d.lapDuration!);
+        if (validDurations.length === 0) return;
+
+        const yMin = d3.min(validDurations)!;
+        const yMax = d3.max(validDurations)!;
         const y = d3.scaleLinear()
-            .domain([d3.min(validDurations)! - 2, d3.max(validDurations)! + 2])
+            .domain([yMin - 2, yMax + 2])
             .range([innerHeight, 0]);
 
         // Axes (adaptive tick count based on available width)

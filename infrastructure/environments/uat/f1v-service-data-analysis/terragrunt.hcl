@@ -29,5 +29,9 @@ inputs = {
     # --- NEW: Explicitly inject Auth0 Security Properties ---
     "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI" = "https://elysianarts-uat.us.auth0.com/"
     "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_AUDIENCES"  = "uat.api.f1visualizer.com"
+
+    # --- NEW: Explicitly inject Firestore Properties ---
+    "SPRING_CLOUD_GCP_FIRESTORE_PROJECT_ID"  = "f1-visualizer-uat"
+    "SPRING_CLOUD_GCP_FIRESTORE_DATABASE_ID" = "f1v-db-uat"
   }
 }

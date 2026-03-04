@@ -3,8 +3,8 @@ node_modules/
 .pnp
 .pnp.js
 
-# Build Output
-dist/
+# Build Output (dist/ intentionally NOT excluded — required by Dockerfile.ci
+# which receives pre-built assets from Cloud Build)
 build/
 coverage/
 

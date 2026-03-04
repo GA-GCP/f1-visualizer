@@ -27,7 +27,7 @@ inputs = {
     "SPRING_PROFILES_ACTIVE" = "prod"
 
     # --- NEW: Explicitly inject Auth0 Security Properties ---
-    "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI" = "https://f1visualizer.us.auth0.com/"
+    "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI" = "https://elysianarts.us.auth0.com/"
     "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_AUDIENCES"  = "api.f1visualizer.com"
   }
 }

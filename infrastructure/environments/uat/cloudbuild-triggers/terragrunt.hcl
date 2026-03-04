@@ -22,6 +22,6 @@ inputs = {
   branch_pattern = "^uat$"
 
   # Auth0 configuration for uat environment
-  auth0_issuer   = "https://uat-f1visualizer.us.auth0.com/"
+  auth0_issuer   = "https://elysianarts-uat.us.auth0.com/"
   auth0_audience = "uat.api.f1visualizer.com"
 }

@@ -27,7 +27,7 @@ inputs = {
     "SPRING_PROFILES_ACTIVE" = "uat"
 
     # --- NEW: Explicitly inject Security Properties ---
-    "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI" = "https://uat-f1visualizer.us.auth0.com/"
+    "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI" = "https://elysianarts-uat.us.auth0.com/"
     "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_AUDIENCES"  = "uat.api.f1visualizer.com"
 
     # --- NEW: Explicitly inject Firestore Properties ---

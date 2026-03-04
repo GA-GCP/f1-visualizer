@@ -22,6 +22,6 @@ inputs = {
   branch_pattern = "^prod$"
 
   # Auth0 configuration for prod environment
-  auth0_issuer   = "https://f1visualizer.us.auth0.com/"
+  auth0_issuer   = "https://elysianarts.us.auth0.com/"
   auth0_audience = "api.f1visualizer.com"
 }

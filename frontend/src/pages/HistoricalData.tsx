@@ -2,10 +2,9 @@ import React, { useEffect, useState } from 'react';
 // Replace CircularProgress with Skeleton
 import { Box, Typography, Container, Skeleton, Autocomplete, TextField } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { apiClient } from '../api/apiClient';
 import LapTimeChart from '../components/LapTimeChart';
 import type { LapDataRecord } from '../types/telemetry';
-import { fetchDrivers, fetchSessions, type DriverProfile, type RaceSession } from '../api/referenceApi';
+import { fetchDrivers, fetchSessions, fetchSessionLaps, type DriverProfile, type RaceSession } from '../api/referenceApi';
 
 const HistoricalData: React.FC = () => {
     const [laps, setLaps] = useState<LapDataRecord[]>([]);
@@ -37,13 +36,11 @@ const HistoricalData: React.FC = () => {
         let isMounted = true;
 
         const fetchLaps = async () => {
-            setLoading(true); // Now safely awaited in a synchronous-looking flow
+            setLoading(true);
             try {
-                const response = await apiClient.get<LapDataRecord[]>(
-                    `/analysis/session/${selectedSession.sessionKey}/laps`
-                );
+                const data = await fetchSessionLaps(selectedSession.sessionKey);
                 if (isMounted) {
-                    setLaps(response.data);
+                    setLaps(data);
                 }
             } catch (err) {
                 if (isMounted) {

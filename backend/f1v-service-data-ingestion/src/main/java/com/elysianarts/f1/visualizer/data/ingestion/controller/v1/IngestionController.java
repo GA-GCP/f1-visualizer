@@ -32,7 +32,12 @@ public class IngestionController {
             return ResponseEntity.ok("Simulation initiated for session: " + request.getSessionKey());
         }
         if (request.getMode() == IngestionMode.LIVE) {
-            ingestionWorker.startLiveStream(request.getSessionKey());
+            try {
+                ingestionWorker.startLiveStream(request.getSessionKey());
+            } catch (Exception e) {
+                log.error("Live stream connection failed for session: {}", request.getSessionKey(), e);
+                return ResponseEntity.status(502).body("Failed to connect to live data feed: " + e.getMessage());
+            }
             return ResponseEntity.ok("Live stream connection initiated for session: " + request.getSessionKey());
         }
         return ResponseEntity.badRequest().body("Invalid ingestion mode.");

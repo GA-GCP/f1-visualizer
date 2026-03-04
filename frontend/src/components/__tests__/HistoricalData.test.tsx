@@ -1,20 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HistoricalData from '../../pages/HistoricalData';
-import { fetchDrivers, fetchSessions } from '@/api/referenceApi.ts';
-import { apiClient } from '@/api/apiClient.ts';
+import { fetchDrivers, fetchSessions, fetchSessionLaps } from '@/api/referenceApi.ts';
 
 // Mock the reference API
 vi.mock('../../api/referenceApi', () => ({
     fetchSessions: vi.fn(),
-    fetchDrivers: vi.fn()
-}));
-
-// Mock the base Axios client used for lap data
-vi.mock('../../api/apiClient', () => ({
-    apiClient: {
-        get: vi.fn()
-    }
+    fetchDrivers: vi.fn(),
+    fetchSessionLaps: vi.fn()
 }));
 
 // Mock the D3 Chart to avoid SVG rendering issues in JSDOM
@@ -31,7 +24,7 @@ describe('HistoricalData Page', () => {
         vi.clearAllMocks();
         vi.mocked(fetchSessions).mockResolvedValue(mockSessions);
         vi.mocked(fetchDrivers).mockResolvedValue([]);
-        vi.mocked(apiClient.get).mockResolvedValue({ data: [] }); // Return empty laps for test
+        vi.mocked(fetchSessionLaps).mockResolvedValue([]); // Return empty laps for test
     });
 
     it('fetches sessions on mount and requests lap data for the default session', async () => {
@@ -46,7 +39,7 @@ describe('HistoricalData Page', () => {
 
         // Verify that once the session list is fetched, it uses the first sessionKey to fetch laps
         await waitFor(() => {
-            expect(apiClient.get).toHaveBeenCalledWith('/analysis/session/9165/laps');
+            expect(fetchSessionLaps).toHaveBeenCalledWith(9165);
         });
 
         // Ensure the chart renders

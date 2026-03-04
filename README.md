@@ -579,6 +579,108 @@ Each Cloud Build pipeline is triggered only when files matching its path filter 
 
 ---
 
+## Testing
+
+The project maintains a comprehensive multi-layered testing strategy spanning unit, integration, component, visual regression, and security testing across all three pillars of the monorepo.
+
+### Backend Test Suite
+
+**Framework:** JUnit 5 (Jupiter 6.0.3) with Mockito, Spring Boot Test 4.0.3
+
+All backend test dependencies are centrally managed through the `f1v-commons-bom`, ensuring consistent versions across all four microservices. Each service has its own `src/test/java/` and `src/test/resources/` trees with environment-specific test profiles.
+
+| Category | Framework / Tool | Description |
+|----------|-----------------|-------------|
+| **Unit Tests** | JUnit 5 + Mockito | Isolated service-layer testing with `@ExtendWith(MockitoExtension.class)`, `@Mock`, and `@InjectMocks`. Covers scoring algorithms, data loaders, replay engine logic, and repository interactions. |
+| **Controller Tests** | Spring `@WebMvcTest` | Lightweight Spring context tests for REST controllers with `MockMvc`. Validates request mapping, JSON serialization, HTTP status codes, and error handling without starting a full server. |
+| **Security Tests** | Spring Security Test | OAuth2 JWT authentication testing using `SecurityMockMvcRequestPostProcessors.jwt()` to inject mock tokens with configurable subjects and claims. Validates endpoint authorization across all secured controllers. |
+| **Reactive Tests** | Reactor Test (`StepVerifier`) | Verifies non-blocking `Flux`/`Mono` streams in the Ingestion Service's OpenF1 client and data pipeline using `StepVerifier.create().expectNextMatches().verifyComplete()`. |
+| **HTTP Mock Tests** | OkHttp `MockWebServer` | Embeds a local HTTP server to test external API client behavior — request construction, response parsing, error handling, and retry logic — without network calls to the real OpenF1 API. |
+| **Serialization Tests** | Jackson 3 + `JsonMapper` | Validates DTO serialization/deserialization roundtrips for all OpenF1 data transfer objects, ensuring JSON contract stability. |
+| **Parameterized Tests** | JUnit `@ParameterizedTest` + `@CsvSource` | Data-driven tests for the driver scoring algorithms (speed, consistency, experience, aggression, tire management), running each scoring function against multiple input/output pairs from inline CSV data. |
+
+**Test Profiles:** Each service defines an `application-test.yml` with a test-specific Auth0 issuer (`https://test-issuer.example.com/`), a test API audience, and a dummy BigQuery dataset — ensuring tests never touch real cloud resources.
+
+**Test Fixtures:** The Ingestion Service maintains JSON fixtures in `src/test/resources/fixtures/` (`openf1-lap-data.json`, `openf1-car-data.json`, `openf1-location-data.json`, `openf1-position-data.json`, `openf1-session.json`, `openf1-stint-data.json`) for deterministic deserialization and data loading tests.
+
+**Test Execution:**
+```bash
+# Full backend test suite (all modules)
+cd backend && mvn clean package
+
+# Scoped test run (single service + its commons dependencies)
+cd backend && mvn clean package -pl f1v-service-data-analysis -am
+```
+
+### Frontend Test Suite
+
+**Framework:** Vitest 4.0.18 with React Testing Library, jsdom, jest-image-snapshot
+
+**Configuration:** `vitest.config.ts` — jsdom environment, global test APIs enabled, `@` path alias, and a setup file (`src/test/setup.ts`) that polyfills `ResizeObserver`, `requestAnimationFrame`/`cancelAnimationFrame`, and configures automatic React Testing Library cleanup between tests.
+
+| Category | Framework / Tool | Description |
+|----------|-----------------|-------------|
+| **Component Tests** | React Testing Library | Renders React components with `render()` and asserts on DOM output, user interactions (`fireEvent`), and async state updates (`waitFor`, `act`). Covers 15 components including `CircuitTrace`, `LapTimeChart`, `RadarChart`, `RaceSimulator`, `SessionControlPanel`, and `VersusMode`. |
+| **Visual Regression Tests** | jest-image-snapshot + node-canvas | Renders the `CircuitTrace` component to a Node.js Canvas and compares pixel-level output against stored PNG baseline snapshots with a failure threshold of 0.01%. Baselines stored in `src/components/__tests__/__image_snapshots__/`. |
+| **Hook Tests** | `renderHook()` from React Testing Library | Tests custom React hooks (`useTelemetry`, `useLocation`) in isolation, validating STOMP subscription lifecycle, message buffering, and callback invocation patterns. |
+| **Utility Tests** | Vitest | Pure function tests for D3 scale factories (`chartScales`), world-to-canvas coordinate projection (`circuitProjection`), and radar chart geometry calculations (`radarGeometry`). |
+| **API Client Tests** | Vitest + `vi.stubEnv()` | Validates Axios instance configuration across deployment environments (dev, uat, prod) and STOMP client initialization with JWT authentication headers. |
+| **Auth Tests** | Vitest | Tests the Auth0 Axios interceptor (`AuthHandler`) for Bearer token injection and 401 response handling. |
+| **Error Boundary Tests** | React Testing Library | Validates the auto-retry error boundary's fallback rendering, retry attempts, and error recovery behavior. |
+
+**Mocking Patterns:**
+- **D3.js** — Complex fluent API chains mocked as chainable objects that track method calls (`textCalls`, `styleCalls`, `appendCallCount`) for assertion.
+- **Canvas API** — `HTMLCanvasElement.prototype.getContext` spied to intercept and verify `beginPath()`, `moveTo()`, `lineTo()`, `stroke()`, `arc()`, and `fill()` draw operations.
+- **STOMP/WebSocket** — Full mock of `@stomp/stompjs` Client class and `sockjs-client`, returning controllable `{ id, unsubscribe }` subscription objects.
+- **Auth0** — `useAuth0` hook mocked to return configurable authentication state and token accessors.
+
+**Visual Regression Baselines** (5 snapshots):
+- `circuit-trace-oval-selected.png` — Selected driver with team-color trace
+- `circuit-trace-oval-small.png` — Scaled-down canvas rendering
+- `circuit-trace-ferrari-red.png` — Ferrari team color verification
+- `circuit-trace-ghost-selected.png` — Ghost driver overlay rendering
+- `circuit-trace-single-driver.png` — Single driver trace path
+
+**Test Execution:**
+```bash
+# Full frontend test suite (CI mode — single run, no watch)
+cd frontend && yarn test:ci
+
+# Watch mode for development
+cd frontend && yarn vitest
+```
+
+### Infrastructure Testing
+
+| Category | Tool | Description |
+|----------|------|-------------|
+| **Security Scanning** | tfsec | Static analysis of all 11 OpenTofu modules against security best practices. Enforces a minimum severity threshold of `HIGH` — any violation fails the pipeline. Runs on both PR checks (GitHub Actions) and deployment pipelines (Cloud Build). |
+| **Module Validation** | OpenTofu `validate` | Syntax and semantic validation of each Terraform module individually (`tofu init -backend=false && tofu validate`). Catches HCL errors, missing variables, and invalid resource references before any plan or apply. |
+| **Deployment Planning** | Terragrunt `plan` | Generates an execution plan showing all proposed infrastructure changes before applying, serving as a safety gate in the Cloud Build pipeline. |
+| **API Contract Validation** | OpenAPI 2.0 Spec | The `openapi.yaml` specification defines the full API contract (paths, methods, request/response schemas, Auth0 security scheme). The API Gateway pipeline validates the spec and runs a smoke test against the deployed gateway's `/health` endpoint. |
+| **Container Scanning** | Trivy | Filesystem-level vulnerability scanning of all backend service JARs before Docker image construction. Configured with `--exit-code 1 --severity CRITICAL,HIGH` — any critical or high-severity CVE fails the build immediately. |
+
+### Test Distribution Summary
+
+| Layer | Test Files | Test Framework | Test Types |
+|-------|-----------|---------------|------------|
+| **Backend** | 25 files, 105+ test methods | JUnit 5, Mockito, Spring Boot Test | Unit, controller, security, reactive, serialization, parameterized |
+| **Frontend** | 23 files | Vitest, React Testing Library | Component, visual regression, hook, utility, API client, auth |
+| **Infrastructure** | — | tfsec, OpenTofu, Trivy | Security scanning, module validation, container scanning |
+
+### CI Test Integration
+
+Tests execute at two stages in the delivery pipeline:
+
+1. **PR Quality Gate (GitHub Actions)** — Three parallel jobs run on every pull request to `main`:
+   - Backend: `mvn clean package -am` (compiles and tests all modules)
+   - Frontend: `yarn lint` then `yarn test:ci` (ESLint + Vitest)
+   - Infrastructure: tfsec scan + `tofu validate` per module
+
+2. **Deployment Pipeline (Cloud Build)** — Tests re-run as part of each service's build-scan-deploy pipeline on environment branches (`dev`, `uat`, `prod`). The frontend pipeline additionally installs native C++ dependencies (Cairo, Pango, Python, g++) on Alpine Linux to support the `canvas` package required by the visual regression test suite.
+
+---
+
 ## Security Architecture
 
 Security is enforced at every layer of the stack:

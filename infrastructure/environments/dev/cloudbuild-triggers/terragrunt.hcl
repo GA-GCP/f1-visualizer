@@ -22,6 +22,6 @@ inputs = {
   branch_pattern = "^dev$"
 
   # Auth0 configuration for dev environment
-  auth0_issuer   = "https://example-tenant.us.auth0.com"
+  auth0_issuer   = "https://elysianarts-dev.us.auth0.com"
   auth0_audience = "dev.api.f1visualizer.com"
 }

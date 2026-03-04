@@ -31,7 +31,7 @@ public class ReferenceDataService {
      */
     @PostConstruct
     public void warmCache() {
-        Thread.ofVirtual().name("cache-warmup").start(() -> {
+        new Thread(() -> {
             try {
                 log.info("Warming Firestore reference-data cache from BigQuery...");
 
@@ -50,7 +50,7 @@ public class ReferenceDataService {
             } catch (Exception e) {
                 log.error("Cache warm-up failed (will fall back to BigQuery on requests)", e);
             }
-        });
+        }, "cache-warmup").start();
     }
 
     // ── Public API (Firestore-first, BigQuery fallback) ──

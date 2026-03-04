@@ -38,12 +38,6 @@ resource "google_compute_backend_service" "telemetry_backend" {
   load_balancing_scheme = "EXTERNAL_MANAGED"
   project               = var.project_id
 
-  # WebSocket / SockJS connections are long-lived.  The default timeout of
-  # 30 s would terminate the STOMP connection well before the user starts a
-  # simulation, causing the hooks to lose their subscriptions.  3600 s (1 h)
-  # gives ample headroom for a full race replay.
-  timeout_sec = 3600
-
   backend {
     group = google_compute_region_network_endpoint_group.telemetry_neg.id
   }

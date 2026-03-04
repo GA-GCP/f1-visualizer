@@ -7,6 +7,8 @@ resource "google_cloud_run_v2_service" "service" {
   deletion_protection = var.deletion_protection
 
   template {
+    timeout = var.timeout
+
     # Scaling settings
     scaling {
       min_instance_count = var.min_instance_count

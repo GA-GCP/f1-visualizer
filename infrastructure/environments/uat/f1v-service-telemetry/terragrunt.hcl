@@ -46,6 +46,10 @@ inputs = {
   cpu    = "2000m"
   memory = "1024Mi"
 
+  # WebSocket / SockJS connections are long-lived. 3600s (1h) gives ample
+  # headroom for a full race replay without the connection being terminated.
+  timeout = "3600s"
+
   # Keep 1 instance warm to eliminate cold-start delays on WebSocket connections.
   # The frontend establishes a STOMP/SockJS connection immediately after login;
   # a cold-starting backend causes transient connection failures.

@@ -64,3 +64,8 @@ variable "memory" {
   type        = string
   default     = "512Mi"
 }
+variable "timeout" {
+  description = "Maximum request duration (e.g., '300s', '3600s'). Defaults to Cloud Run's 300s."
+  type        = string
+  default     = null
+}

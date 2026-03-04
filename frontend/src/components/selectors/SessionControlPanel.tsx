@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, Button, Typography, ToggleButton, ToggleButtonGroup, CircularProgress, Autocomplete, TextField } from '@mui/material';
 import { motion } from 'framer-motion';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -18,14 +18,16 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
     const [selectedSession, setSelectedSession] = useState<RaceSession | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [inputValue, setInputValue] = useState('');
+    const hasAutoSelected = useRef(false);
 
     // Initial load & search trigger
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
             searchSessions(inputValue).then(data => {
                 setSessions(data);
-                // Auto-select if first load
-                if (data.length > 0 && inputValue === '') {
+                // Auto-select only on first load
+                if (!hasAutoSelected.current && data.length > 0 && inputValue === '') {
+                    hasAutoSelected.current = true;
                     setSelectedSession(prev => prev ? prev : data[0]);
                 }
             });

@@ -31,7 +31,7 @@ public class ReferenceDataService {
      */
     @PostConstruct
     public void warmCache() {
-        Thread.startVirtualThread(() -> {
+        Thread.ofVirtual().name("cache-warmup").start(() -> {
             try {
                 log.info("Warming Firestore reference-data cache from BigQuery...");
 

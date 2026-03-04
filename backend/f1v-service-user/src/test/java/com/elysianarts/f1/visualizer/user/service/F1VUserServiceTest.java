@@ -9,7 +9,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Instant;
+import com.google.cloud.Timestamp;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,7 +33,7 @@ class F1VUserServiceTest {
         existingUser = F1VUserDocument.builder()
                 .authSubId(testAuthId)
                 .email(testEmail)
-                .createdAt(Instant.now())
+                .createdAt(Timestamp.now())
                 .preferences(new F1VUserDocument.UserPreferences())
                 .build();
     }

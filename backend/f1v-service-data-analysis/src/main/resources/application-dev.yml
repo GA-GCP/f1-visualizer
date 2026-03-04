@@ -3,6 +3,9 @@ spring:
     gcp:
       bigquery:
         dataset-name: f1_dataset
+      firestore:
+        project-id: f1-visualizer-488201
+        database-id: f1v-db-dev
   security:
     oauth2:
       resourceserver:

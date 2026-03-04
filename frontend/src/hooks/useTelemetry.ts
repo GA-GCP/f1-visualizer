@@ -17,23 +17,28 @@ export const useTelemetry = (onDataReceived: (data: TelemetryPacket) => void) =>
         let subscription: { unsubscribe: () => void } | null = null;
         let animationFrameId: number;
 
-        // Defer subscription until the STOMP client is actually connected.
-        // Without this guard, stompClient.subscribe() throws a synchronous
-        // "There is no underlying STOMP connection" TypeError on mount because
-        // the SockJS handshake (started by StompAuthHandler) is still in-flight.
+        // Poll for STOMP connectivity and (re-)subscribe when the connection
+        // comes back up.  The interval is NOT cleared after the first
+        // subscription so that after a disconnect/reconnect cycle (e.g. LB
+        // timeout, Cloud Run cold-start) we detect the restored connection
+        // and re-create the subscription that was lost with the old socket.
         const checkConnection = setInterval(() => {
-            if (stompClient.connected) {
+            if (stompClient.connected && !subscription) {
                 setIsConnected(true);
-                clearInterval(checkConnection);
 
                 subscription = stompClient.subscribe('/topic/race-data', (message: IMessage) => {
                     try {
                         const payload: TelemetryPacket = JSON.parse(message.body);
-                        bufferRef.current.push(payload); // Push silently
+                        bufferRef.current.push(payload);
                     } catch (err) {
                         console.error('Failed to parse telemetry:', err);
                     }
                 });
+            } else if (!stompClient.connected && subscription) {
+                // Connection dropped — clear the stale reference so we
+                // re-subscribe on the next successful connection.
+                subscription = null;
+                setIsConnected(false);
             }
         }, 500);
 

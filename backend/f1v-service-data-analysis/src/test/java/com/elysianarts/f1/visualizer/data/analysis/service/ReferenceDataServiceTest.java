@@ -2,6 +2,7 @@ package com.elysianarts.f1.visualizer.data.analysis.service;
 
 import com.elysianarts.f1.visualizer.data.analysis.model.DriverProfile;
 import com.elysianarts.f1.visualizer.data.analysis.model.RaceSession;
+import com.elysianarts.f1.visualizer.data.analysis.repository.ReferenceDataCacheRepository;
 import com.google.cloud.bigquery.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +21,9 @@ class ReferenceDataServiceTest {
 
     @Mock
     private BigQuery bigQuery;
+
+    @Mock
+    private ReferenceDataCacheRepository cacheRepository;
 
     @Mock
     private TableResult tableResult;
@@ -63,7 +67,9 @@ class ReferenceDataServiceTest {
 
     @Test
     void getMasterDriverList_GeneratesCodeAndMapsColor() throws InterruptedException {
-        // Arrange
+        // Arrange — cache miss forces BigQuery fallback
+        when(cacheRepository.getCachedDrivers()).thenReturn(List.of());
+
         FieldValue driverNumVal = mock(FieldValue.class);
         when(driverNumVal.getLongValue()).thenReturn(16L);
         when(mockRow.get("driver_number")).thenReturn(driverNumVal);

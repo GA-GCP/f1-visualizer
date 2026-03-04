@@ -5,6 +5,7 @@ import com.elysianarts.f1.visualizer.commons.service.config.JacksonObjectMapperC
 import com.elysianarts.f1.visualizer.data.analysis.model.DriverProfile;
 import com.elysianarts.f1.visualizer.data.analysis.model.LapDataRecord;
 import com.elysianarts.f1.visualizer.data.analysis.service.RaceAnalysisService;
+import com.google.cloud.firestore.Firestore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -37,6 +38,9 @@ class AnalysisControllerTest {
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
+
+    @MockitoBean
+    private Firestore firestore;
 
     @Test
     void getSessionLaps_ReturnsLaps_WhenAuthenticated() throws Exception {

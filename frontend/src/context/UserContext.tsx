@@ -30,13 +30,25 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         setError(null);
                     }
                 } catch (err: unknown) {
-                    if (axios.isAxiosError(err) && err.response?.status === 404) {
-                        console.warn(
-                            "[UserContext] User Service returned 404. " +
-                            "The service may not be running or the user may not exist yet."
-                        );
+                    if (axios.isAxiosError(err)) {
+                        const status = err.response?.status;
+                        if (status === 404) {
+                            console.warn(
+                                "[UserContext] User Service returned 404. " +
+                                "The service may not be running or the user may not exist yet."
+                            );
+                        } else if (status === 400) {
+                            console.error(
+                                "[UserContext] User Service returned 400. " +
+                                "JWT may be missing the 'email' claim. " +
+                                "Ensure the Auth0 Post-Login Action enriches the access token.",
+                                err.response?.data
+                            );
+                        } else {
+                            console.error("[UserContext] Failed to load user profile:", status, err.response?.data);
+                        }
                     } else {
-                        console.error("Failed to load user profile:", err);
+                        console.error("[UserContext] Failed to load user profile:", err);
                     }
                     if (isMounted) setError('service_unavailable');
                 }

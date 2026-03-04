@@ -18,10 +18,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
-import java.time.Instant;
+import com.google.cloud.Timestamp;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -59,7 +58,7 @@ class F1VUserControllerTest {
         F1VUserDocument mockUser = F1VUserDocument.builder()
                 .authSubId(TEST_SUB)
                 .email(TEST_EMAIL)
-                .createdAt(Instant.now())
+                .createdAt(Timestamp.now())
                 .preferences(new F1VUserDocument.UserPreferences("Charles Leclerc", "Ferrari", "detailed", List.of()))
                 .build();
 
@@ -107,15 +106,16 @@ class F1VUserControllerTest {
     }
 
     @Test
-    void getCurrentUser_PropagatesException_WhenServiceThrows() {
+    void getCurrentUser_Returns500_WhenServiceThrows() throws Exception {
         when(f1VUserService.getOrCreateUser(eq(TEST_SUB), eq(TEST_EMAIL)))
                 .thenThrow(new RuntimeException("Firestore connection failed"));
 
-        assertThrows(Exception.class, () ->
-                mockMvc.perform(get("/api/v1/users/me")
+        mockMvc.perform(get("/api/v1/users/me")
                         .with(jwt().jwt(jwt -> jwt
                                 .subject(TEST_SUB)
-                                .claim("email", TEST_EMAIL)))));
+                                .claim("email", TEST_EMAIL))))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500));
     }
 
     @Test

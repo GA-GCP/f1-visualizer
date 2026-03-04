@@ -3,9 +3,8 @@ package com.elysianarts.f1.visualizer.user.service;
 import com.elysianarts.f1.visualizer.user.exception.UserNotFoundException;
 import com.elysianarts.f1.visualizer.user.firestore.document.F1VUserDocument;
 import com.elysianarts.f1.visualizer.user.firestore.repository.F1VUserRepository;
+import com.google.cloud.Timestamp;
 import org.springframework.stereotype.Service;
-
-import java.time.Instant;
 
 @Service
 public class F1VUserService {
@@ -23,7 +22,7 @@ public class F1VUserService {
         F1VUserDocument newUser = F1VUserDocument.builder()
                 .authSubId(authSubId)
                 .email(email)
-                .createdAt(Instant.now())
+                .createdAt(Timestamp.now())
                 .preferences(new F1VUserDocument.UserPreferences())
                 .build();
         return userRepository.save(newUser);

@@ -75,9 +75,16 @@ const HistoricalData: React.FC = () => {
                 <Box sx={{ width: 300 }}>
                     <Autocomplete
                         options={sessions}
-                        getOptionLabel={(option) => `${option.year} ${option.meetingName}`}
+                        getOptionLabel={(option) => `${option.year} ${option.meetingName} - ${option.sessionName}`}
                         value={selectedSession}
                         onChange={(_, newValue) => setSelectedSession(newValue)}
+                        isOptionEqualToValue={(option, value) => option.sessionKey === value.sessionKey}
+                        renderOption={(props, option) => (
+                            <Box component="li" {...props} key={option.sessionKey}>
+                                <Typography variant="body2">{option.year} {option.meetingName}</Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>[{option.sessionName}]</Typography>
+                            </Box>
+                        )}
                         renderInput={(params) => (
                             <TextField
                                 {...params}

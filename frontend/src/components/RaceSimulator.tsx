@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 // 1. ADD Snackbar AND Alert TO THE MUI IMPORTS
 import { Box, Typography, Paper, Grid, Chip, Snackbar, Alert, CircularProgress } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,7 +26,10 @@ const RaceSimulator: React.FC = () => {
     const [selectedDriver, setSelectedDriver] = useState<DriverProfile | null>(null);
     const [activeSession, setActiveSession] = useState<{ key: number, mode: string } | null>(null);
     const [lastTelemetry, setLastTelemetry] = useState<TelemetryPacket | null>(null);
-    const [lastLocation, setLastLocation] = useState<LocationPacket | null>(null);
+    // Location data bypasses React state entirely to avoid React 18 batching
+    // that would drop intermediate GPS points.  The ref acts as a lock-free
+    // queue that useLocation writes to and CircuitTrace drains each frame.
+    const locationQueueRef = useRef<LocationPacket[]>([]);
     const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
     const [streamError, setStreamError] = useState<string | null>(null);
 
@@ -70,13 +73,13 @@ const RaceSimulator: React.FC = () => {
     });
 
     const { isConnected: isLocationConnected } = useLocation((data) => {
-        setLastLocation(data);
+        locationQueueRef.current.push(data);
     });
 
     const handleStreamStarted = (sessionKey: number, mode: 'LIVE' | 'SIMULATION') => {
         setActiveSession({ key: sessionKey, mode });
         setLastTelemetry(null);
-        setLastLocation(null);
+        locationQueueRef.current = [];
     };
 
     // 2. NEW: Determine if we have dropped connection while a session is active
@@ -180,7 +183,7 @@ const RaceSimulator: React.FC = () => {
 
                 <Grid size={{ xs: 12, md: 8 }}>
                     <CircuitTrace
-                        latestLocation={lastLocation}
+                        locationQueueRef={locationQueueRef}
                         selectedDriver={selectedDriver}
                     />
                 </Grid>

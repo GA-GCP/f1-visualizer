@@ -1,11 +1,11 @@
 package com.elysianarts.f1.visualizer.user.firestore.document;
 
+import com.google.cloud.Timestamp;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.Instant;
 import java.util.List;
 
 @Data
@@ -16,7 +16,7 @@ public class F1VUserDocument {
     private String authSubId;
 
     private String email;
-    private Instant createdAt;
+    private Timestamp createdAt;
     private UserPreferences preferences;
 
     @Data

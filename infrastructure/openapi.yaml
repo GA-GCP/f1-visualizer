@@ -3,6 +3,7 @@ info:
   title: F1 Visualizer API
   description: The central API Gateway routing traffic to F1V microservices.
   version: 1.0.0
+host: "API_GATEWAY_HOST_PLACEHOLDER"
 schemes:
   - https
 produces:

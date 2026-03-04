@@ -25,7 +25,7 @@ steps:
       - |
         set -euo pipefail
 
-        # --- 1. Dynamic Cloud Run URL Discovery ---
+        # --- 1. Dynamic Cloud Run URL & Gateway Host Discovery ---
         echo "Discovering Cloud Run service URLs for environment: ${_ENV}"
 
         TELEMETRY_URL=$(gcloud run services describe f1v-service-telemetry-${_ENV} --region=us-central1 --format='value(status.url)')
@@ -33,18 +33,25 @@ steps:
         USER_URL=$(gcloud run services describe f1v-service-user-${_ENV} --region=us-central1 --format='value(status.url)')
         DATA_INGESTION_URL=$(gcloud run services describe f1v-service-data-ingestion-${_ENV} --region=us-central1 --format='value(status.url)')
 
+        GATEWAY_HOST=$(gcloud api-gateway gateways describe f1v-gateway-${_ENV} \
+          --location=us-central1 \
+          --project=$PROJECT_ID \
+          --format='value(defaultHostname)')
+
         echo "  Telemetry:      $$TELEMETRY_URL"
         echo "  Data Analysis:  $$DATA_ANALYSIS_URL"
         echo "  User:           $$USER_URL"
         echo "  Data Ingestion: $$DATA_INGESTION_URL"
+        echo "  Gateway Host:   $$GATEWAY_HOST"
         echo "  Auth0 Issuer:   ${_AUTH0_ISSUER}"
         echo "  Auth0 Audience: ${_AUTH0_AUDIENCE}"
 
-        # --- 2. Inject Service URLs into OpenAPI Spec ---
+        # --- 2. Inject Service URLs and Gateway Host into OpenAPI Spec ---
         sed -i "s|TELEMETRY_SERVICE_URL_PLACEHOLDER|$$TELEMETRY_URL|g" infrastructure/openapi.yaml
         sed -i "s|DATA_ANALYSIS_SERVICE_URL_PLACEHOLDER|$$DATA_ANALYSIS_URL|g" infrastructure/openapi.yaml
         sed -i "s|USER_SERVICE_URL_PLACEHOLDER|$$USER_URL|g" infrastructure/openapi.yaml
         sed -i "s|DATA_INGESTION_SERVICE_URL_PLACEHOLDER|$$DATA_INGESTION_URL|g" infrastructure/openapi.yaml
+        sed -i "s|API_GATEWAY_HOST_PLACEHOLDER|$$GATEWAY_HOST|g" infrastructure/openapi.yaml
 
         # --- 3. Inject Auth0 Configuration (externalized via substitutions) ---
         sed -i "s|AUTH0_ISSUER_URI_PLACEHOLDER|${_AUTH0_ISSUER}|g" infrastructure/openapi.yaml

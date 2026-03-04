@@ -24,7 +24,7 @@ vi.mock('../../api/referenceApi');
 describe('RaceSimulator', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(useUser).mockReturnValue({ userProfile: null, isLoading: false, updatePreferences: vi.fn() });
+        vi.mocked(useUser).mockReturnValue({ userProfile: null, isLoading: false, updatePreferences: vi.fn(), error: null });
         vi.mocked(fetchDrivers).mockResolvedValue([]);
     });
 

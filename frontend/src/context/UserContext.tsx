@@ -7,6 +7,7 @@ interface UserContextType {
     userProfile: UserProfile | null;
     updatePreferences: (prefs: UserPreferences) => Promise<void>;
     isLoading: boolean;
+    error: string | null;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -15,6 +16,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { isAuthenticated } = useAuth0();
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         let isMounted = true;
@@ -25,6 +27,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     if (isMounted) setUserProfile(profile);
                 } catch (err) {
                     console.error("Failed to load user profile. Is the User Service running?", err);
+                    if (isMounted) setError(err instanceof Error ? err.message : String(err));
                 }
             } else {
                 if (isMounted) setUserProfile(null);
@@ -42,7 +45,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     return (
-        <UserContext.Provider value={{ userProfile, updatePreferences: handleUpdatePreferences, isLoading }}>
+        <UserContext.Provider value={{ userProfile, updatePreferences: handleUpdatePreferences, isLoading, error }}>
             {children}
         </UserContext.Provider>
     );

@@ -28,7 +28,8 @@ describe('UserSettingsModal', () => {
         (useUser as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
             userProfile: { preferences: { favoriteDriver: 'LEC' } },
             updatePreferences: mockUpdatePreferences,
-            isLoading: false
+            isLoading: false,
+            error: null
         });
     });
 

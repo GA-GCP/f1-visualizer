@@ -1,6 +1,78 @@
-# F1 Visualizer
+# <img src="frontend/public/speed-favicon.svg" width="32" height="32" alt="F1 Visualizer Logo" /> F1 Visualizer
 
 > *An enterprise-grade, cloud-native Formula 1 telemetry and historical data visualization platform.*
+
+<p align="center">
+  <!-- Frontend -->
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript 5.9" />
+  <img src="https://img.shields.io/badge/Vite-7.3-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite 7.3" />
+  <img src="https://img.shields.io/badge/D3.js-7-F9A03C?style=for-the-badge&logo=d3dotjs&logoColor=white" alt="D3.js" />
+  <img src="https://img.shields.io/badge/MUI-7.3-007FFF?style=for-the-badge&logo=mui&logoColor=white" alt="MUI" />
+  <img src="https://img.shields.io/badge/Framer_Motion-12-0055FF?style=for-the-badge&logo=framer&logoColor=white" alt="Framer Motion" />
+  <img src="https://img.shields.io/badge/Auth0-EB5424?style=for-the-badge&logo=auth0&logoColor=white" alt="Auth0" />
+  <br />
+  <!-- Backend -->
+  <img src="https://img.shields.io/badge/Java-25-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 25" />
+  <img src="https://img.shields.io/badge/Spring_Boot-4.0-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot 4.0" />
+  <img src="https://img.shields.io/badge/Maven-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white" alt="Maven" />
+  <br />
+  <!-- Data -->
+  <img src="https://img.shields.io/badge/BigQuery-669DF6?style=for-the-badge&logo=googlebigquery&logoColor=white" alt="BigQuery" />
+  <img src="https://img.shields.io/badge/Firestore-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firestore" />
+  <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white" alt="Redis" />
+  <br />
+  <!-- Cloud -->
+  <img src="https://img.shields.io/badge/Google_Cloud-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white" alt="Google Cloud" />
+  <img src="https://img.shields.io/badge/Cloud_Run-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white" alt="Cloud Run" />
+  <img src="https://img.shields.io/badge/API_Gateway-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white" alt="API Gateway" />
+  <br />
+  <!-- IaC -->
+  <img src="https://img.shields.io/badge/OpenTofu-1.9-FFDA18?style=for-the-badge&logo=opentofu&logoColor=black" alt="OpenTofu 1.9" />
+  <img src="https://img.shields.io/badge/Terragrunt-0.77-E5F2FC?style=for-the-badge&logo=terraform&logoColor=5C4EE5" alt="Terragrunt 0.77" />
+  <br />
+  <!-- CI/CD & Containers -->
+  <img src="https://img.shields.io/badge/Cloud_Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white" alt="Cloud Build" />
+  <img src="https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Actions" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/Trivy-1904DA?style=for-the-badge&logo=aquasecurity&logoColor=white" alt="Trivy" />
+</p>
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Highlights](#highlights)
+- [Quick Start (Local Development)](#quick-start-local-development)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+  - [High-Level System Architecture](#high-level-system-architecture)
+  - [Real-Time Data Flow](#real-time-data-flow)
+  - [Historical Data Flow](#historical-data-flow)
+- [Repository Structure](#repository-structure)
+- [Backend Architecture](#backend-architecture)
+  - [Microservice Decomposition](#microservice-decomposition)
+  - [Commons Bill of Materials](#commons-bill-of-materials)
+  - [Key Backend Patterns](#key-backend-patterns)
+- [Frontend Architecture](#frontend-architecture)
+  - [Page Structure](#page-structure)
+  - [Real-Time Rendering Pipeline](#real-time-rendering-pipeline)
+  - [Visualization Details](#visualization-details)
+  - [Security & Auth](#security--auth)
+- [Infrastructure as Code](#infrastructure-as-code)
+  - [Module Architecture](#module-architecture)
+  - [Dependency Orchestration](#dependency-orchestration)
+  - [Key Infrastructure Patterns](#key-infrastructure-patterns)
+- [Branching Strategy](#branching-strategy)
+- [CI/CD Pipeline](#cicd-pipeline)
+  - [Dual-Layer Pipeline Strategy](#dual-layer-pipeline-strategy)
+  - [PR Quality Gates (GitHub Actions)](#pr-quality-gates-github-actions)
+  - [Environment Pipelines (Cloud Build)](#environment-pipelines-cloud-build)
+  - [Key CI/CD Patterns](#key-cicd-patterns)
+- [Testing](#testing)
+- [Security Architecture](#security-architecture)
+- [Disclaimer](#disclaimer)
 
 ---
 
@@ -21,6 +93,40 @@ The project enforces enterprise-grade practices throughout: Zero-Trust security 
 - **Head-to-Head Comparison** — A split-screen analytical dashboard using D3.js radar charts (speed, consistency, aggression, tire management, experience) and animated Framer Motion stat bars (wins, podiums) to compare driver performance profiles side-by-side.
 
 - **Race Engineer Aesthetic** — A dark-mode glassmorphism UI built with Material UI and the Titillium Web typeface (the official F1 broadcast font family), using real team hex colors, driver numbers, and a radial gradient canvas that evokes an authentic pit wall data console.
+
+---
+
+## Quick Start (Local Development)
+
+### Prerequisites
+
+- **JDK 25** (Temurin recommended)
+- **Maven 3.9+**
+- **Node.js 22+** with **Yarn**
+- **GCP credentials** configured via `gcloud auth application-default login` (for BigQuery/Firestore access)
+
+### Backend
+
+```bash
+cd backend
+mvn clean install
+```
+
+Each service can be started individually. The Vite dev server proxies API calls to:
+- Telemetry: `localhost:8080`
+- Ingestion: `localhost:8081`
+- Analysis: `localhost:8082`
+- User: `localhost:8083`
+
+### Frontend
+
+```bash
+cd frontend
+yarn install
+yarn dev
+```
+
+Opens at `http://localhost:5173` with Hot Module Replacement.
 
 ---
 
@@ -699,40 +805,6 @@ Security is enforced at every layer of the stack:
 | **Image Scanning** | Trivy | Filesystem vulnerability scan on every backend build |
 | **Session Policy** | Stateless | No server-side sessions; CSRF disabled (JWT-only auth) |
 | **CORS** | Origin Allowlist | Strict origin validation with credential support |
-
----
-
-## Quick Start (Local Development)
-
-### Prerequisites
-
-- **JDK 25** (Temurin recommended)
-- **Maven 3.9+**
-- **Node.js 22+** with **Yarn**
-- **GCP credentials** configured via `gcloud auth application-default login` (for BigQuery/Firestore access)
-
-### Backend
-
-```bash
-cd backend
-mvn clean install
-```
-
-Each service can be started individually. The Vite dev server proxies API calls to:
-- Telemetry: `localhost:8080`
-- Ingestion: `localhost:8081`
-- Analysis: `localhost:8082`
-- User: `localhost:8083`
-
-### Frontend
-
-```bash
-cd frontend
-yarn install
-yarn dev
-```
-
-Opens at `http://localhost:5173` with Hot Module Replacement.
 
 ---
 

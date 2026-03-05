@@ -106,6 +106,16 @@ const RequiredAuth: React.FC = () => {
     const { isAuthenticated, isLoading, loginWithRedirect, error } = useAuth0();
     const { pending: showSplash, dismiss: dismissSplash } = useContext(SplashContext);
 
+    // Post-login splash: flag is set in onRedirectCallback, consumed here once
+    const [showSplash, setShowSplash] = useState(() => {
+        const flag = sessionStorage.getItem('f1v_just_logged_in');
+        if (flag) {
+            sessionStorage.removeItem('f1v_just_logged_in');
+            return true;
+        }
+        return false;
+    });
+
     useEffect(() => {
         if (!isLoading && !isAuthenticated && !error) {
             void loginWithRedirect();

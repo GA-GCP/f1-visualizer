@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export type SplashPhase = 'background' | 'circuit' | 'text' | 'progress' | 'hold' | 'exit';
 
@@ -33,32 +33,35 @@ export function useSplashSequence(onComplete: () => void): SplashSequenceState {
         elapsed: 0,
     });
 
-    const stableOnComplete = useCallback(onComplete, [onComplete]);
+    const onCompleteRef = useRef(onComplete);
+    onCompleteRef.current = onComplete;
 
     useEffect(() => {
         const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (prefersReduced) {
             setState({ phase: 'hold', progress: 1, elapsed: TOTAL_DURATION });
-            const timer = setTimeout(stableOnComplete, 500);
+            const timer = setTimeout(() => onCompleteRef.current(), 500);
             return () => clearTimeout(timer);
         }
 
         const start = performance.now();
         let rafId: number;
         let prevPhase: SplashPhase = 'background';
+        let prevProgress = 0;
 
         const tick = (now: number) => {
             const elapsed = now - start;
             const progress = Math.min(elapsed / PROGRESS_DURATION, 1);
             const phase = getPhase(elapsed);
 
-            if (phase !== prevPhase || Math.abs(progress - state.progress) > 0.005) {
+            if (phase !== prevPhase || Math.abs(progress - prevProgress) > 0.005) {
                 prevPhase = phase;
+                prevProgress = progress;
                 setState({ phase, progress, elapsed });
             }
 
             if (elapsed >= TOTAL_DURATION) {
-                stableOnComplete();
+                onCompleteRef.current();
                 return;
             }
             rafId = requestAnimationFrame(tick);
@@ -66,7 +69,7 @@ export function useSplashSequence(onComplete: () => void): SplashSequenceState {
 
         rafId = requestAnimationFrame(tick);
         return () => cancelAnimationFrame(rafId);
-    }, [stableOnComplete]);
+    }, []);
 
     return state;
 }

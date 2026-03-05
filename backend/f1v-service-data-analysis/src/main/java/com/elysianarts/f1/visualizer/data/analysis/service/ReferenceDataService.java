@@ -88,13 +88,19 @@ public class ReferenceDataService {
     }
 
     public List<RaceSession> searchSessions(String query) {
-        // Empty searches can be served from cache (same as getAvailableSessions)
+        // All searches are served from the Firestore cache and filtered in-memory.
+        // This avoids slow BigQuery round-trips on every keystroke.
+        List<RaceSession> all = getAvailableSessions();
         if (query == null || query.isBlank()) {
-            return getAvailableSessions();
+            return all;
         }
-
-        // Non-empty search queries still go to BigQuery for LIKE matching
-        return querySessionsFromBigQuery(query);
+        String lower = query.toLowerCase();
+        return all.stream()
+                .filter(s -> s.getMeetingName().toLowerCase().contains(lower)
+                        || s.getCountryName().toLowerCase().contains(lower)
+                        || String.valueOf(s.getYear()).contains(lower)
+                        || s.getSessionName().toLowerCase().contains(lower))
+                .toList();
     }
 
     // ── BigQuery Queries (source-of-truth) ──
@@ -105,7 +111,6 @@ public class ReferenceDataService {
             FROM `%s.sessions`
             WHERE LOWER(meeting_name) LIKE LOWER(@search) OR LOWER(country_name) LIKE LOWER(@search)
             ORDER BY year DESC, meeting_key DESC, session_key DESC
-            LIMIT 50
             """, DATASET);
 
         try {

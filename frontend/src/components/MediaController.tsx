@@ -7,7 +7,11 @@ import { type StompSubscription } from '@stomp/stompjs';
 import { playSimulation, pauseSimulation, seekSimulation } from '../api/ingestionApi';
 import { stompClient } from '../api/stompClient';
 
-const MediaController: React.FC = () => {
+interface MediaControllerProps {
+    onSeek?: () => void;
+}
+
+const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
     const [isPlaying, setIsPlaying] = useState(true);
     const [progress, setProgress] = useState(0);
     const [isPending, setIsPending] = useState(false);
@@ -66,6 +70,7 @@ const MediaController: React.FC = () => {
 
     const handleSeekCommitted = async (_: React.SyntheticEvent | Event, newValue: number | number[]) => {
         await seekSimulation(newValue as number);
+        onSeek?.();
         // Automatically resume playing if we seek
         if (!isPlaying) {
             await playSimulation();

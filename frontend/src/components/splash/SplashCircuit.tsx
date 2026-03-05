@@ -49,18 +49,22 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase }) => {
     useEffect(() => {
         if (!circuitDrawn || pathLength === 0) return;
 
+        let controls: ReturnType<typeof animate> | null = null;
+
         // Wait for path-draw to mostly finish before starting the dot
         const delay = phase === 'circuit' ? 800 : 0;
         const timer = setTimeout(() => {
-            const controls = animate(dotProgress, 1, {
+            controls = animate(dotProgress, 1, {
                 duration: 2.5,
                 repeat: Infinity,
                 ease: 'linear',
             });
-            return () => controls.stop();
         }, delay);
 
-        return () => clearTimeout(timer);
+        return () => {
+            clearTimeout(timer);
+            controls?.stop();
+        };
     }, [circuitDrawn, pathLength, phase, dotProgress]);
 
     // Track dot position along the path

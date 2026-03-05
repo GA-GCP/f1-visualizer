@@ -26,23 +26,32 @@ function getPhase(elapsed: number): SplashPhase {
 const TOTAL_DURATION = 3500;
 const PROGRESS_DURATION = 3000;
 
+const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 export function useSplashSequence(onComplete: () => void): SplashSequenceState {
-    const [state, setState] = useState<SplashSequenceState>({
-        phase: 'background',
-        progress: 0,
-        elapsed: 0,
-    });
+    const [state, setState] = useState<SplashSequenceState>(() =>
+        prefersReducedMotion
+            ? { phase: 'hold', progress: 1, elapsed: TOTAL_DURATION }
+            : { phase: 'background', progress: 0, elapsed: 0 },
+    );
 
     const onCompleteRef = useRef(onComplete);
-    onCompleteRef.current = onComplete;
-
     useEffect(() => {
-        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (prefersReduced) {
-            setState({ phase: 'hold', progress: 1, elapsed: TOTAL_DURATION });
-            const timer = setTimeout(() => onCompleteRef.current(), 500);
-            return () => clearTimeout(timer);
-        }
+        onCompleteRef.current = onComplete;
+    });
+
+    // Reduced motion: skip animations, fire onComplete after brief display
+    useEffect(() => {
+        if (!prefersReducedMotion) return;
+        const timer = setTimeout(() => onCompleteRef.current(), 500);
+        return () => clearTimeout(timer);
+    }, []);
+
+    // Full animation: RAF-driven timeline
+    useEffect(() => {
+        if (prefersReducedMotion) return;
 
         const start = performance.now();
         let rafId: number;

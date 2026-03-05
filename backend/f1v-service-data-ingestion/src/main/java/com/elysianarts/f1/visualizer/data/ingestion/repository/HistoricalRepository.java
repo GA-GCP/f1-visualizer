@@ -6,7 +6,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,9 +52,13 @@ public class HistoricalRepository {
                 data.setBrake((int) row.get("brake").getLongValue());
                 data.setDrs((int) row.get("drs").getLongValue());
 
-                // Parse Timestamp
-                String ts = row.get("date").getStringValue(); // Returns ISO string
-                data.setDate(OffsetDateTime.parse(ts)); // Ensure BigQuery returns ISO 8601
+                // BigQuery TIMESTAMP columns return epoch microseconds from getTimestampValue(),
+                // NOT ISO 8601 strings. getStringValue() returns e.g. "1.709394600E9" which
+                // OffsetDateTime.parse() cannot handle.
+                long micros = row.get("date").getTimestampValue();
+                data.setDate(OffsetDateTime.ofInstant(
+                        Instant.ofEpochSecond(micros / 1_000_000, (micros % 1_000_000) * 1_000),
+                        ZoneOffset.UTC));
 
                 telemetry.add(data);
             }

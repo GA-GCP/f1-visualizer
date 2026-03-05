@@ -8,6 +8,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -30,9 +32,9 @@ class HistoricalRepositoryTest {
         return fv;
     }
 
-    private FieldValue stringFieldValue(String value) {
+    private FieldValue timestampFieldValue(long epochMicros) {
         FieldValue fv = mock(FieldValue.class);
-        when(fv.getStringValue()).thenReturn(value);
+        when(fv.getTimestampValue()).thenReturn(epochMicros);
         return fv;
     }
 
@@ -60,7 +62,7 @@ class HistoricalRepositoryTest {
         FieldValue throttle = longFieldValue(100);
         FieldValue brake = longFieldValue(0);
         FieldValue drs = longFieldValue(1);
-        FieldValue date = stringFieldValue("2023-09-17T12:00:00.000Z");
+        FieldValue date = timestampFieldValue(1694952000000000L); // 2023-09-17T12:00:00Z
 
         FieldValueList row = mock(FieldValueList.class);
         when(row.get("meeting_key")).thenReturn(meetingKey);
@@ -86,6 +88,7 @@ class HistoricalRepositoryTest {
         assertEquals(1, data.getDriverNumber());
         assertEquals(310, data.getSpeed());
         assertEquals(8, data.getGear());
+        assertEquals(OffsetDateTime.of(2023, 9, 17, 12, 0, 0, 0, ZoneOffset.UTC), data.getDate());
     }
 
     @Test
@@ -98,7 +101,7 @@ class HistoricalRepositoryTest {
         FieldValue throttle = longFieldValue(100);
         FieldValue brake = longFieldValue(0);
         FieldValue drs = longFieldValue(1);
-        FieldValue date = stringFieldValue("2023-09-17T12:00:00.000Z");
+        FieldValue date = timestampFieldValue(1694952000000000L); // 2023-09-17T12:00:00Z
 
         FieldValueList row = mock(FieldValueList.class);
         when(row.get("meeting_key")).thenReturn(meetingKey);

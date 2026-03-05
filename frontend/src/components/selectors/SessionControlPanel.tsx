@@ -1,11 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Box, Button, Typography, ToggleButton, ToggleButtonGroup, CircularProgress, Autocomplete, TextField } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Button, Typography, ToggleButton, ToggleButtonGroup, CircularProgress, Autocomplete, TextField, createFilterOptions } from '@mui/material';
 import { motion } from 'framer-motion';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SensorsIcon from '@mui/icons-material/Sensors';
 import HistoryIcon from '@mui/icons-material/History';
 import { sendIngestionCommand } from '@/api/ingestionApi.ts';
-import { searchSessions, type RaceSession } from '@/api/referenceApi';
+import { fetchSessions, type RaceSession } from '@/api/referenceApi';
+
+// Client-side filter that searches across year, meeting name, session name, and country
+const sessionFilter = createFilterOptions<RaceSession>({
+    stringify: (option) => `${option.year} ${option.meetingName} ${option.sessionName} ${option.countryName}`,
+});
 
 interface SessionControlPanelProps {
     onStreamStarted: (sessionKey: number, mode: 'LIVE' | 'SIMULATION') => void;
@@ -17,24 +22,25 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
     const [sessions, setSessions] = useState<RaceSession[]>([]);
     const [selectedSession, setSelectedSession] = useState<RaceSession | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [inputValue, setInputValue] = useState('');
-    const hasAutoSelected = useRef(false);
+    const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
-    // Initial load & search trigger
+    // Load all sessions once from Firestore cache (fast) — no server-side search needed
     useEffect(() => {
-        const delayDebounceFn = setTimeout(() => {
-            searchSessions(inputValue).then(data => {
-                setSessions(data);
-                // Auto-select only on first load
-                if (!hasAutoSelected.current && data.length > 0 && inputValue === '') {
-                    hasAutoSelected.current = true;
-                    setSelectedSession(prev => prev ? prev : data[0]);
+        let isMounted = true;
+        setIsLoadingSessions(true);
+        fetchSessions()
+            .then(data => {
+                if (isMounted) {
+                    setSessions(data);
+                    if (data.length > 0) {
+                        setSelectedSession(data[0]);
+                    }
                 }
-            });
-        }, 300); // 300ms debounce
-
-        return () => clearTimeout(delayDebounceFn);
-    }, [inputValue]);
+            })
+            .catch(err => console.error('Failed to load sessions', err))
+            .finally(() => { if (isMounted) setIsLoadingSessions(false); });
+        return () => { isMounted = false; };
+    }, []);
 
     const handleStart = async () => {
         if (!selectedSession) return;
@@ -77,12 +83,12 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
 
             <Autocomplete
                 options={sessions}
+                loading={isLoadingSessions}
                 getOptionLabel={(option) => `${option.year} ${option.meetingName} - ${option.sessionName}`}
+                isOptionEqualToValue={(option, value) => option.sessionKey === value.sessionKey}
                 value={selectedSession}
                 onChange={(_, newValue) => setSelectedSession(newValue)}
-                inputValue={inputValue}
-                onInputChange={(_, newInputValue) => setInputValue(newInputValue)} // <-- Handle typing
-                filterOptions={(x) => x} // Disable built-in filtering, we do it server-side
+                filterOptions={sessionFilter}
                 renderOption={(props, option) => (
                     <Box component="li" {...props} key={option.sessionKey}>
                         <Typography variant="body1">{option.year} {option.meetingName}</Typography>
@@ -92,7 +98,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                 renderInput={(params) => (
                     <TextField
                         {...params}
-                        label="Search Grand Prix..." // <-- Updated Label
+                        label="Search Grand Prix..."
                         variant="outlined"
                         sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#121212' } }}
                     />

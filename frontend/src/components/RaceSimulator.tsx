@@ -30,6 +30,7 @@ const RaceSimulator: React.FC = () => {
     // that would drop intermediate GPS points.  The ref acts as a lock-free
     // queue that useLocation writes to and CircuitTrace drains each frame.
     const locationQueueRef = useRef<LocationPacket[]>([]);
+    const [traceResetKey, setTraceResetKey] = useState(0);
     const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
     const [streamError, setStreamError] = useState<string | null>(null);
 
@@ -67,7 +68,8 @@ const RaceSimulator: React.FC = () => {
     }, [userProfile]);
 
     const { isConnected: isTelemetryConnected } = useTelemetry((data) => {
-        if (selectedDriver && data.driver_number === selectedDriver.id) {
+        if (selectedDriver && data.driver_number === selectedDriver.id &&
+            activeSession && data.session_key === activeSession.key) {
             setLastTelemetry(data);
         }
     });
@@ -78,6 +80,12 @@ const RaceSimulator: React.FC = () => {
         setActiveSession({ key: sessionKey, mode });
         setLastTelemetry(null);
         locationQueueRef.current = [];
+        setTraceResetKey(prev => prev + 1);
+    };
+
+    const handleSeek = () => {
+        locationQueueRef.current = [];
+        setTraceResetKey(prev => prev + 1);
     };
 
     // 2. NEW: Determine if we have dropped connection while a session is active
@@ -117,7 +125,7 @@ const RaceSimulator: React.FC = () => {
                                     exit={{ opacity: 0, height: 0 }}
                                     transition={{ duration: 0.35, ease: 'easeOut' }}
                                 >
-                                    <MediaController />
+                                    <MediaController onSeek={handleSeek} />
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -184,6 +192,7 @@ const RaceSimulator: React.FC = () => {
                         locationQueueRef={locationQueueRef}
                         selectedDriver={selectedDriver}
                         sessionKey={activeSession?.key ?? null}
+                        resetKey={traceResetKey}
                     />
                 </Grid>
             </Grid>

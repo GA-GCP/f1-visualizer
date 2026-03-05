@@ -68,7 +68,6 @@ public class ReferenceDataCacheRepository {
             QuerySnapshot snapshot = firestore.collection(SESSIONS_COLLECTION)
                     .orderBy("year", com.google.cloud.firestore.Query.Direction.DESCENDING)
                     .orderBy("sessionKey", com.google.cloud.firestore.Query.Direction.DESCENDING)
-                    .limit(50)
                     .get().get();
 
             List<RaceSession> sessions = new ArrayList<>();

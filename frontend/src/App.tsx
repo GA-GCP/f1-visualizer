@@ -1,15 +1,29 @@
-import React, { useEffect } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Routes, Route, Outlet, BrowserRouter, useNavigate } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import LayoutMain from './components/layout/LayoutMain';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AxiosAuthInterceptor } from './auth/AuthHandler';
 import { StompAuthHandler } from './auth/StompAuthHandler';
+import SplashScreen from './components/splash/SplashScreen';
 import Home from './pages/Home';
 import HistoricalData from './pages/HistoricalData';
 import VersusMode from './pages/VersusMode';
 import { UserProvider } from "@/context/UserContext.tsx";
+
+// --- POST-LOGIN SPLASH CONTEXT ---
+// Lets onRedirectCallback (event handler) signal RequiredAuth to show
+// the splash without sessionStorage, refs-during-render, or setState-in-effect.
+interface SplashCtx {
+    pending: boolean;
+    dismiss: () => void;
+}
+const SplashContext = React.createContext<SplashCtx>({
+    pending: false,
+    dismiss: () => {},
+});
 
 // --- THE BROADCAST THEME ---
 const broadcastTheme = createTheme({
@@ -89,11 +103,10 @@ const broadcastTheme = createTheme({
 
 // --- AUTH GUARD COMPONENT ---
 const RequiredAuth: React.FC = () => {
-    // 1. Destructure the 'error' object from Auth0
     const { isAuthenticated, isLoading, loginWithRedirect, error } = useAuth0();
+    const { pending: showSplash, dismiss: dismissSplash } = useContext(SplashContext);
 
     useEffect(() => {
-        // 2. Do not attempt a redirect if an error already exists!
         if (!isLoading && !isAuthenticated && !error) {
             void loginWithRedirect();
         }
@@ -103,7 +116,6 @@ const RequiredAuth: React.FC = () => {
         return null;
     }
 
-    // 3. Gracefully display the error to stop the infinite loop
     if (error) {
         return (
             <div style={{ padding: '2rem', textAlign: 'center', color: '#ff4444', fontFamily: 'sans-serif' }}>
@@ -120,7 +132,20 @@ const RequiredAuth: React.FC = () => {
 
     return (
         <UserProvider>
-            <Outlet />
+            <AnimatePresence mode="wait">
+                {showSplash ? (
+                    <SplashScreen key="splash" onComplete={dismissSplash} />
+                ) : (
+                    <motion.div
+                        key="app-content"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.4 }}
+                    >
+                        <Outlet />
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </UserProvider>
     );
 };
@@ -129,12 +154,14 @@ const RequiredAuth: React.FC = () => {
 // We wrap this inside BrowserRouter so we can use useNavigate for the Auth0 callback redirect
 const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const navigate = useNavigate();
+    const [splashPending, setSplashPending] = useState(false);
 
     const domain = import.meta.env.VITE_AUTH0_DOMAIN;
     const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
     const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
     const onRedirectCallback = (appState?: { returnTo?: string }) => {
+        setSplashPending(true);
         navigate(appState?.returnTo || window.location.pathname);
     };
 
@@ -143,17 +170,21 @@ const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ ch
     }
 
     return (
-        <Auth0Provider
-            domain={domain}
-            clientId={clientId}
-            authorizationParams={{
-                redirect_uri: window.location.origin,
-                audience: audience
-            }}
-            onRedirectCallback={onRedirectCallback}
+        <SplashContext.Provider
+            value={{ pending: splashPending, dismiss: () => setSplashPending(false) }}
         >
-            {children}
-        </Auth0Provider>
+            <Auth0Provider
+                domain={domain}
+                clientId={clientId}
+                authorizationParams={{
+                    redirect_uri: window.location.origin,
+                    audience: audience
+                }}
+                onRedirectCallback={onRedirectCallback}
+            >
+                {children}
+            </Auth0Provider>
+        </SplashContext.Provider>
     );
 };
 

@@ -3,21 +3,22 @@ import { type IMessage } from '@stomp/stompjs';
 import { stompClient } from '../api/stompClient';
 import type { LocationPacket } from '../types/telemetry';
 
-type LocationCallback = (data: LocationPacket) => void;
-
-export const useLocation = (onDataReceived: LocationCallback) => {
+/**
+ * Subscribes to the `/topic/race-location` STOMP topic and pushes every
+ * incoming {@link LocationPacket} directly into the provided mutable queue.
+ *
+ * Unlike the telemetry hook (which only needs the *latest* frame), every
+ * GPS point matters for drawing the circuit trace, so we push immediately
+ * in the STOMP callback — no intermediate rAF buffer needed because the
+ * queue is a plain mutable array (not React state), so React 18 batching
+ * doesn't apply.
+ */
+export const useLocation = (locationQueueRef: React.RefObject<LocationPacket[]>) => {
     const [isConnected, setIsConnected] = useState(false);
-    const callbackRef = useRef(onDataReceived);
-    // NEW: Buffer for spatial data
-    const bufferRef = useRef<LocationPacket[]>([]);
-
-    useEffect(() => {
-        callbackRef.current = onDataReceived;
-    }, [onDataReceived]);
+    const packetCountRef = useRef(0);
 
     useEffect(() => {
         let subscription: { unsubscribe: () => void } | null = null;
-        let animationFrameId: number;
 
         // Poll for STOMP connectivity and (re-)subscribe when the connection
         // comes back up.  The interval is NOT cleared after the first
@@ -31,38 +32,44 @@ export const useLocation = (onDataReceived: LocationCallback) => {
                 subscription = stompClient.subscribe('/topic/race-location', (message: IMessage) => {
                     try {
                         const payload: LocationPacket = JSON.parse(message.body);
-                        bufferRef.current.push(payload);
+
+                        // ── Diagnostic: validate the parsed payload ──
+                        if (typeof payload !== 'object' || payload === null) {
+                            console.error('[GPS] Parsed payload is not an object:', typeof payload, payload);
+                            return;
+                        }
+                        if (payload.x === undefined || payload.y === undefined || payload.driver_number === undefined) {
+                            console.error('[GPS] Payload missing required fields (x, y, driver_number):', payload);
+                            return;
+                        }
+
+                        locationQueueRef.current.push(payload);
+
+                        // Log first packet and then every 500th packet
+                        packetCountRef.current++;
+                        if (packetCountRef.current === 1 || packetCountRef.current % 500 === 0) {
+                            console.log(`[GPS] Packet #${packetCountRef.current} | driver=${payload.driver_number} x=${payload.x} y=${payload.y} | queue=${locationQueueRef.current.length}`);
+                        }
                     } catch (err) {
-                        console.error('Failed to parse location packet:', err);
+                        console.error('[GPS] Failed to parse location packet:', err, 'raw body:', message.body?.substring(0, 200));
                     }
                 });
+
+                console.log('[GPS] Subscribed to /topic/race-location');
             } else if (!stompClient.connected && subscription) {
                 // Connection dropped — clear the stale reference so we
                 // re-subscribe on the next successful connection.
                 subscription = null;
                 setIsConnected(false);
+                console.warn('[GPS] STOMP connection lost, will resubscribe on reconnect');
             }
         }, 500);
-
-        // Flush all buffered spatial points to the Canvas trace
-        const flushBuffer = () => {
-            if (bufferRef.current.length > 0 && callbackRef.current) {
-                // Unlike Telemetry (where we only need the latest speed),
-                // for the track trace, we need to send ALL intermediate points
-                // so the line doesn't skip segments.
-                bufferRef.current.forEach(packet => callbackRef.current(packet));
-                bufferRef.current = [];
-            }
-            animationFrameId = requestAnimationFrame(flushBuffer);
-        };
-        flushBuffer();
 
         return () => {
             clearInterval(checkConnection);
             if (subscription) subscription.unsubscribe();
-            cancelAnimationFrame(animationFrameId);
         };
-    }, []);
+    }, [locationQueueRef]);
 
     return { isConnected };
 };

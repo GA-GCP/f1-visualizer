@@ -10,11 +10,13 @@ interface CircuitTraceProps {
      *  (React 18's automatic batching would swallow them via setState). */
     locationQueueRef: React.RefObject<LocationPacket[]>;
     selectedDriver: DriverProfile | null;
+    /** When this value changes, all accumulated trace history is cleared. */
+    sessionKey: number | null;
 }
 
 const ASPECT_RATIO = 1.6; // width:height = 1.6:1
 
-const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedDriver }) => {
+const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedDriver, sessionKey }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [canvasSize, setCanvasSize] = useState({ width: 800, height: 500 });
@@ -27,11 +29,24 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
         minY: Infinity, maxY: -Infinity
     });
 
+    // Diagnostic counters (visible in the canvas overlay)
+    const diagRef = useRef({ totalPackets: 0, driversSeenSet: new Set<number>(), lastDrainSize: 0 });
+
     // Keep selectedDriver available to the animation loop without re-creating it
     const selectedDriverRef = useRef(selectedDriver);
     useEffect(() => {
         selectedDriverRef.current = selectedDriver;
     }, [selectedDriver]);
+
+    // ── Clear ALL accumulated state when the session changes ──
+    useEffect(() => {
+        historyRef.current = {};
+        boundsRef.current = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+        diagRef.current = { totalPackets: 0, driversSeenSet: new Set(), lastDrainSize: 0 };
+        if (sessionKey !== null) {
+            console.log(`[CircuitTrace] Session changed to ${sessionKey} — cleared all history and bounds`);
+        }
+    }, [sessionKey]);
 
     // Reset the camera bounds when the selected driver changes
     useEffect(() => {
@@ -71,13 +86,23 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
             // ── 1. Drain the location queue (written by useLocation) ──
             const queue = locationQueueRef.current;
             if (queue.length > 0) {
+                const drainSize = queue.length;
+                diagRef.current.lastDrainSize = drainSize;
+
                 for (const packet of queue) {
                     const { driver_number, x, y } = packet;
+
+                    // Validate data before processing
+                    if (typeof x !== 'number' || typeof y !== 'number' || isNaN(x) || isNaN(y)) {
+                        continue;
+                    }
 
                     if (!historyRef.current[driver_number]) {
                         historyRef.current[driver_number] = [];
                     }
                     historyRef.current[driver_number].push({ x, y });
+                    diagRef.current.totalPackets++;
+                    diagRef.current.driversSeenSet.add(driver_number);
 
                     // Update auto-scale bounds only for the SELECTED driver
                     if (driver && driver_number === driver.id) {
@@ -89,7 +114,19 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                     }
                 }
                 // Clear the queue in-place so the ref stays the same object
-                locationQueueRef.current.length = 0;
+                queue.length = 0;
+
+                // Log first drain and then periodically
+                if (diagRef.current.totalPackets <= drainSize || diagRef.current.totalPackets % 2000 < drainSize) {
+                    const b = boundsRef.current;
+                    const boundsValid = b.minX !== Infinity;
+                    console.log(
+                        `[CircuitTrace] Drained ${drainSize} packets | total=${diagRef.current.totalPackets} | ` +
+                        `drivers=${diagRef.current.driversSeenSet.size} | ` +
+                        `selected=${driver?.id ?? 'none'} | ` +
+                        `boundsValid=${boundsValid} (${boundsValid ? `${b.minX.toFixed(0)}..${b.maxX.toFixed(0)}, ${b.minY.toFixed(0)}..${b.maxY.toFixed(0)}` : 'Infinity'})`
+                    );
+                }
             }
 
             // ── 2. Render the canvas ──
@@ -154,6 +191,16 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                     ctx.shadowColor = 'transparent';
                 });
             }
+
+            // ── 3. Draw diagnostic overlay (bottom-left) ──
+            const diag = diagRef.current;
+            ctx.save();
+            ctx.font = '11px monospace';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+            ctx.textBaseline = 'bottom';
+            const boundsValid = b.minX !== Infinity;
+            ctx.fillText(`PKT: ${diag.totalPackets}  DRV: ${diag.driversSeenSet.size}  BOUNDS: ${boundsValid ? 'OK' : 'WAITING'}`, 8, height - 6);
+            ctx.restore();
 
             animationFrameId = requestAnimationFrame(render);
         };

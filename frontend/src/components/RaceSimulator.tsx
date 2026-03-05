@@ -72,9 +72,7 @@ const RaceSimulator: React.FC = () => {
         }
     });
 
-    const { isConnected: isLocationConnected } = useLocation((data) => {
-        locationQueueRef.current.push(data);
-    });
+    const { isConnected: isLocationConnected } = useLocation(locationQueueRef);
 
     const handleStreamStarted = (sessionKey: number, mode: 'LIVE' | 'SIMULATION') => {
         setActiveSession({ key: sessionKey, mode });
@@ -185,6 +183,7 @@ const RaceSimulator: React.FC = () => {
                     <CircuitTrace
                         locationQueueRef={locationQueueRef}
                         selectedDriver={selectedDriver}
+                        sessionKey={activeSession?.key ?? null}
                     />
                 </Grid>
             </Grid>

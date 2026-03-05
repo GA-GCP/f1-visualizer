@@ -12,11 +12,14 @@ interface CircuitTraceProps {
     selectedDriver: DriverProfile | null;
     /** When this value changes, all accumulated trace history is cleared. */
     sessionKey: number | null;
+    /** Monotonic counter — incrementing this forces a full trace reset (used on
+     *  seek and session restart to clear stale history). */
+    resetKey: number;
 }
 
 const ASPECT_RATIO = 1.6; // width:height = 1.6:1
 
-const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedDriver, sessionKey }) => {
+const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedDriver, sessionKey, resetKey }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [canvasSize, setCanvasSize] = useState({ width: 800, height: 500 });
@@ -32,21 +35,26 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
     // Diagnostic counters (visible in the canvas overlay)
     const diagRef = useRef({ totalPackets: 0, driversSeenSet: new Set<number>(), lastDrainSize: 0 });
 
-    // Keep selectedDriver available to the animation loop without re-creating it
+    // Keep selectedDriver and sessionKey available to the animation loop via refs
     const selectedDriverRef = useRef(selectedDriver);
     useEffect(() => {
         selectedDriverRef.current = selectedDriver;
     }, [selectedDriver]);
 
-    // ── Clear ALL accumulated state when the session changes ──
+    const sessionKeyRef = useRef(sessionKey);
+    useEffect(() => {
+        sessionKeyRef.current = sessionKey;
+    }, [sessionKey]);
+
+    // ── Clear ALL accumulated state when the session or resetKey changes ──
     useEffect(() => {
         historyRef.current = {};
         boundsRef.current = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
         diagRef.current = { totalPackets: 0, driversSeenSet: new Set(), lastDrainSize: 0 };
         if (sessionKey !== null) {
-            console.log(`[CircuitTrace] Session changed to ${sessionKey} — cleared all history and bounds`);
+            console.log(`[CircuitTrace] Reset (session=${sessionKey}, resetKey=${resetKey}) — cleared all history and bounds`);
         }
-    }, [sessionKey]);
+    }, [sessionKey, resetKey]);
 
     // Reset the camera bounds when the selected driver changes
     useEffect(() => {
@@ -82,6 +90,7 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
 
         const render = () => {
             const driver = selectedDriverRef.current;
+            const activeSessionKey = sessionKeyRef.current;
 
             // ── 1. Drain the location queue (written by useLocation) ──
             const queue = locationQueueRef.current;
@@ -90,7 +99,13 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                 diagRef.current.lastDrainSize = drainSize;
 
                 for (const packet of queue) {
-                    const { driver_number, x, y } = packet;
+                    const { driver_number, x, y, session_key } = packet;
+
+                    // Filter: only process packets belonging to the active session.
+                    // Discard stale packets from a previous (or no) session.
+                    if (activeSessionKey === null || session_key !== activeSessionKey) {
+                        continue;
+                    }
 
                     // Validate data before processing
                     if (typeof x !== 'number' || typeof y !== 'number' || isNaN(x) || isNaN(y)) {

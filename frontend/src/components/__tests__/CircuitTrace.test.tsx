@@ -32,8 +32,10 @@ describe('CircuitTrace', () => {
         stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98 }
     };
 
+    const SESSION_KEY = 9165;
+
     const mockLocation: LocationPacket = {
-        session_key: 1,
+        session_key: SESSION_KEY,
         meeting_key: 1,
         date: '2024-01-01',
         driver_number: 1,
@@ -80,7 +82,7 @@ describe('CircuitTrace', () => {
 
     it('clears canvas on each render frame', async () => {
         const queueRef = makeQueueRef([mockLocation]);
-        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={9165} />);
+        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} />);
 
         await act(async () => {
             await new Promise(r => setTimeout(r, 50));
@@ -94,7 +96,7 @@ describe('CircuitTrace', () => {
         const location2: LocationPacket = { ...mockLocation, x: 150, y: 250 };
         const queueRef = makeQueueRef([location1, location2]);
 
-        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={9165} />);
+        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} />);
 
         await act(async () => {
             await new Promise(r => setTimeout(r, 50));
@@ -120,7 +122,7 @@ describe('CircuitTrace', () => {
             otherDriverLocation, otherDriverLocation2
         ]);
 
-        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={9165} />);
+        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} />);
 
         await act(async () => {
             await new Promise(r => setTimeout(r, 50));
@@ -132,14 +134,14 @@ describe('CircuitTrace', () => {
 
     it('shows "None" when no driver is selected', () => {
         const queueRef = makeQueueRef();
-        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={null} sessionKey={null} />);
+        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={null} sessionKey={null} resetKey={0} />);
 
         expect(screen.getByText(/None/)).toBeInTheDocument();
     });
 
     it('handles empty queue gracefully', async () => {
         const queueRef = makeQueueRef();
-        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={9165} />);
+        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} />);
 
         expect(screen.getByText('CIRCUIT TRACE')).toBeInTheDocument();
         expect(screen.getByText(/VER/)).toBeInTheDocument();

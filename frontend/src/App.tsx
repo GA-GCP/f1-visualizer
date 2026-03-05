@@ -1,11 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, Outlet, BrowserRouter, useNavigate } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import LayoutMain from './components/layout/LayoutMain';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AxiosAuthInterceptor } from './auth/AuthHandler';
 import { StompAuthHandler } from './auth/StompAuthHandler';
+import SplashScreen from './components/splash/SplashScreen';
 import Home from './pages/Home';
 import HistoricalData from './pages/HistoricalData';
 import VersusMode from './pages/VersusMode';
@@ -92,6 +94,16 @@ const RequiredAuth: React.FC = () => {
     // 1. Destructure the 'error' object from Auth0
     const { isAuthenticated, isLoading, loginWithRedirect, error } = useAuth0();
 
+    // Post-login splash: flag is set in onRedirectCallback, consumed here once
+    const [showSplash, setShowSplash] = useState(() => {
+        const flag = sessionStorage.getItem('f1v_just_logged_in');
+        if (flag) {
+            sessionStorage.removeItem('f1v_just_logged_in');
+            return true;
+        }
+        return false;
+    });
+
     useEffect(() => {
         // 2. Do not attempt a redirect if an error already exists!
         if (!isLoading && !isAuthenticated && !error) {
@@ -120,7 +132,20 @@ const RequiredAuth: React.FC = () => {
 
     return (
         <UserProvider>
-            <Outlet />
+            <AnimatePresence mode="wait">
+                {showSplash ? (
+                    <SplashScreen key="splash" onComplete={() => setShowSplash(false)} />
+                ) : (
+                    <motion.div
+                        key="app-content"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.4 }}
+                    >
+                        <Outlet />
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </UserProvider>
     );
 };
@@ -135,6 +160,7 @@ const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ ch
     const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
     const onRedirectCallback = (appState?: { returnTo?: string }) => {
+        sessionStorage.setItem('f1v_just_logged_in', 'true');
         navigate(appState?.returnTo || window.location.pathname);
     };
 

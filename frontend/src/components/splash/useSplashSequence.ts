@@ -1,0 +1,72 @@
+import { useState, useEffect, useCallback } from 'react';
+
+export type SplashPhase = 'background' | 'circuit' | 'text' | 'progress' | 'hold' | 'exit';
+
+export interface SplashSequenceState {
+    phase: SplashPhase;
+    progress: number;
+    elapsed: number;
+}
+
+const PHASE_THRESHOLDS: { maxMs: number; phase: SplashPhase }[] = [
+    { maxMs: 300, phase: 'background' },
+    { maxMs: 1200, phase: 'circuit' },
+    { maxMs: 1500, phase: 'text' },
+    { maxMs: 3000, phase: 'progress' },
+    { maxMs: 3200, phase: 'hold' },
+];
+
+function getPhase(elapsed: number): SplashPhase {
+    for (const { maxMs, phase } of PHASE_THRESHOLDS) {
+        if (elapsed < maxMs) return phase;
+    }
+    return 'exit';
+}
+
+const TOTAL_DURATION = 3500;
+const PROGRESS_DURATION = 3000;
+
+export function useSplashSequence(onComplete: () => void): SplashSequenceState {
+    const [state, setState] = useState<SplashSequenceState>({
+        phase: 'background',
+        progress: 0,
+        elapsed: 0,
+    });
+
+    const stableOnComplete = useCallback(onComplete, [onComplete]);
+
+    useEffect(() => {
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReduced) {
+            setState({ phase: 'hold', progress: 1, elapsed: TOTAL_DURATION });
+            const timer = setTimeout(stableOnComplete, 500);
+            return () => clearTimeout(timer);
+        }
+
+        const start = performance.now();
+        let rafId: number;
+        let prevPhase: SplashPhase = 'background';
+
+        const tick = (now: number) => {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / PROGRESS_DURATION, 1);
+            const phase = getPhase(elapsed);
+
+            if (phase !== prevPhase || Math.abs(progress - state.progress) > 0.005) {
+                prevPhase = phase;
+                setState({ phase, progress, elapsed });
+            }
+
+            if (elapsed >= TOTAL_DURATION) {
+                stableOnComplete();
+                return;
+            }
+            rafId = requestAnimationFrame(tick);
+        };
+
+        rafId = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(rafId);
+    }, [stableOnComplete]);
+
+    return state;
+}

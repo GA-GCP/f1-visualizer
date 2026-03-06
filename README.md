@@ -1,4 +1,4 @@
-# <img src="frontend/public/speed-favicon.svg" width="40" height="40" alt="F1 Visualizer Logo" /> F1 Visualizer
+# <img src="frontend/public/speed-favicon.svg" width="40" height="40" align="middle" alt="F1 Visualizer Logo" />&nbsp;&nbsp;F1 Visualizer
 
 > *An enterprise-grade, cloud-native Formula 1 telemetry and historical data visualization platform.*
 

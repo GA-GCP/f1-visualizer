@@ -35,6 +35,7 @@ resource "google_cloud_run_v2_service" "service" {
           cpu    = var.cpu
           memory = var.memory
         }
+        startup_cpu_boost = true # JVM warm-up benefits for Spring Boot services
       }
 
       # Environment Variables
@@ -49,7 +50,7 @@ resource "google_cloud_run_v2_service" "service" {
   }
 }
 
-# Optional: Public Access Binding (Used for Frontend)
+# Optional: Public Access Binding
 resource "google_cloud_run_service_iam_member" "public_access" {
   count    = var.is_public ? 1 : 0
   service  = google_cloud_run_v2_service.service.name

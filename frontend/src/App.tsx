@@ -12,6 +12,7 @@ import Home from './pages/Home';
 import HistoricalData from './pages/HistoricalData';
 import VersusMode from './pages/VersusMode';
 import { UserProvider } from "@/context/UserContext.tsx";
+import { fetchDrivers, fetchSessions } from './api/referenceApi';
 
 // --- THE BROADCAST THEME ---
 const broadcastTheme = createTheme({
@@ -114,6 +115,20 @@ const RequiredAuth: React.FC = () => {
             void loginWithRedirect();
         }
     }, [isLoading, isAuthenticated, error, loginWithRedirect]);
+
+    // Prefetch reference data during the splash screen animation.
+    // The splash runs for ~7 seconds — plenty of time for these API calls
+    // to resolve and populate the in-memory cache in referenceApi.ts.
+    // When components mount after splash, they hit the cache instantly,
+    // eliminating the CircularProgress / Skeleton loading states.
+    // Note: AxiosAuthInterceptor is already mounted (sibling above this
+    // component), so these requests will have the Auth0 JWT attached.
+    useEffect(() => {
+        if (showSplash && isAuthenticated) {
+            void fetchDrivers();
+            void fetchSessions();
+        }
+    }, [showSplash, isAuthenticated]);
 
     if (isLoading) {
         return null;

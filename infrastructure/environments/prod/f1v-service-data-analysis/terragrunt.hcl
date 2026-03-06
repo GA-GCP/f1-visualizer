@@ -3,7 +3,7 @@ include "root" {
 }
 
 terraform {
-  source = "../../../modules/cloud-run"
+  source = "../../../modules/cloud-run-backend"
 }
 
 # 1. Dependency on IAM module
@@ -22,6 +22,12 @@ inputs = {
   service_account_email = dependency.iam.outputs.sa_data_analysis_email
 
   is_public    = true
+
+  # Keep 1 instance warm to eliminate cold-start latency for the dropdown
+  # reference data API (/analysis/drivers, /analysis/sessions). The frontend
+  # prefetches this data during the splash screen; a cold-starting JVM would
+  # negate the prefetch benefit.
+  min_instance_count = 1
 
   env_vars = {
     "SPRING_PROFILES_ACTIVE" = "prod"

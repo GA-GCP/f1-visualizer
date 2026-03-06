@@ -3,7 +3,7 @@ include "root" {
 }
 
 terraform {
-  source = "../../../modules/cloud-run"
+  source = "../../../modules/cloud-run-backend"
 }
 
 # 1. Dependency on IAM module

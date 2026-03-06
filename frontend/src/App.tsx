@@ -94,15 +94,19 @@ const RequiredAuth: React.FC = () => {
     // 1. Destructure the 'error' object from Auth0
     const { isAuthenticated, isLoading, loginWithRedirect, error } = useAuth0();
 
-    // Post-login splash: flag is set in onRedirectCallback, consumed here once
-    const [showSplash, setShowSplash] = useState(() => {
-        const flag = sessionStorage.getItem('f1v_just_logged_in');
-        if (flag) {
-            sessionStorage.removeItem('f1v_just_logged_in');
-            return true;
-        }
-        return false;
-    });
+    // Post-login splash: subscribe for the custom event dispatched by onRedirectCallback.
+    // Cannot use a useState initializer (runs before onRedirectCallback sets the flag)
+    // or synchronous setState in an effect (React compiler forbids it). Subscribing to
+    // a DOM event and calling setState in the listener callback is compiler-approved.
+    const [showSplash, setShowSplash] = useState(false);
+
+    useEffect(() => {
+        const handler = () => {
+            setShowSplash(true);
+        };
+        window.addEventListener('f1v:post-login', handler);
+        return () => window.removeEventListener('f1v:post-login', handler);
+    }, []);
 
     useEffect(() => {
         // 2. Do not attempt a redirect if an error already exists!
@@ -160,7 +164,7 @@ const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ ch
     const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
     const onRedirectCallback = (appState?: { returnTo?: string }) => {
-        sessionStorage.setItem('f1v_just_logged_in', 'true');
+        window.dispatchEvent(new Event('f1v:post-login'));
         navigate(appState?.returnTo || window.location.pathname);
     };
 

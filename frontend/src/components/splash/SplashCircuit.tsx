@@ -27,10 +27,13 @@ const CIRCUIT_PATH =
     'Q 60,60 150,60 Z';
 
 interface SplashCircuitProps {
-    phase: SplashPhase;
+    /** Splash-sequence phase (used by the post-login splash screen). */
+    phase?: SplashPhase;
+    /** When true, animates immediately and perpetually without a phase controller. */
+    continuous?: boolean;
 }
 
-const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase }) => {
+const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase, continuous }) => {
     const measureRef = useRef<SVGPathElement>(null);
     const pathRef = useRef<SVGPathElement>(null);
     const [pathLength, setPathLength] = useState(0);
@@ -49,14 +52,15 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase }) => {
     }, []);
 
     // Start the orbiting dot once the circuit finishes drawing
-    const circuitDrawn = phase !== 'background';
+    const circuitDrawn = continuous || phase !== 'background';
     useEffect(() => {
         if (!circuitDrawn || pathLength === 0) return;
 
         let controls: ReturnType<typeof animate> | null = null;
 
-        // Wait for path-draw to mostly finish before starting the dot
-        const delay = phase === 'circuit' ? 1600 : 0;
+        // Wait for path-draw to mostly finish before starting the dot.
+        // In continuous mode, use a fixed delay after the draw animation.
+        const delay = continuous ? 2200 : phase === 'circuit' ? 1600 : 0;
         const timer = setTimeout(() => {
             controls = animate(dotProgress, 1, {
                 duration: 2.5,
@@ -69,7 +73,7 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase }) => {
             clearTimeout(timer);
             controls?.stop();
         };
-    }, [circuitDrawn, pathLength, phase, dotProgress]);
+    }, [circuitDrawn, pathLength, phase, continuous, dotProgress]);
 
     // Track dot position along the path
     useMotionValueEvent(dotProgress, 'change', (v) => {
@@ -80,7 +84,7 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase }) => {
         }
     });
 
-    const showDot = phase !== 'background' && pathLength > 0;
+    const showDot = (continuous || phase !== 'background') && pathLength > 0;
 
     return (
         <Box

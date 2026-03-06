@@ -12,4 +12,5 @@ inputs = {
   domain                 = "uat.api.f1visualizer.com"
   api_gateway_fqdn       = "f1v-gateway-uat-placeholder.uc.gateway.dev"
   telemetry_service_name = "f1v-service-telemetry-uat"
+  frontend_origin        = "https://uat.f1visualizer.com"
 }

@@ -9,3 +9,7 @@ variable "telemetry_service_name" {
   description = "The Cloud Run service name for telemetry to bypass API Gateway for WebSockets"
   type = string
 }
+variable "frontend_origin" {
+  description = "The frontend origin for CORS headers (e.g., https://dev.f1visualizer.com)"
+  type = string
+}

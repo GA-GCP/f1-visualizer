@@ -1,3 +1,13 @@
+locals {
+  cors_response_headers = [
+    "Access-Control-Allow-Origin: ${var.frontend_origin}",
+    "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, PATCH",
+    "Access-Control-Allow-Headers: Authorization, Cache-Control, Content-Type",
+    "Access-Control-Allow-Credentials: true",
+    "Access-Control-Max-Age: 3600",
+  ]
+}
+
 # Reserve a Global Static IP
 resource "google_compute_global_address" "default" {
   name    = "${var.name_prefix}-ip"
@@ -38,6 +48,8 @@ resource "google_compute_backend_service" "telemetry_backend" {
   load_balancing_scheme = "EXTERNAL_MANAGED"
   project               = var.project_id
 
+  custom_response_headers = local.cors_response_headers
+
   backend {
     group = google_compute_region_network_endpoint_group.telemetry_neg.id
   }
@@ -52,7 +64,8 @@ resource "google_compute_backend_service" "default" {
 
   # API Gateway WILL REJECT the request if the Host header is our custom domain.
   # We MUST rewrite it to the default gateway FQDN.
-  custom_request_headers = ["Host: ${var.api_gateway_fqdn}"]
+  custom_request_headers  = ["Host: ${var.api_gateway_fqdn}"]
+  custom_response_headers = local.cors_response_headers
 
   backend {
     group = google_compute_global_network_endpoint_group.internet_neg.id

@@ -142,8 +142,8 @@ Opens at `http://localhost:5173` with Hot Module Replacement.
                                                  |
                                           JWT Validation
                                                  |
-    +------------------+                +--------v---------+                +-------------------+
-    |                  |   HTTPS/WSS    |                  |   HTTPS        |                   |
+    +------------------+                +--------v---------+               +--------------------+
+    |                  |   HTTPS/WSS    |                  |   HTTPS       |                    |
     |   React SPA      +--------------->+  Global HTTPS    +<------------->+   Google Cloud     |
     |   (Cloud Run)    |                |  Load Balancer   |               |   API Gateway      |
     |                  |                |                  |               |   (OpenAPI 2.0)    |
@@ -160,15 +160,15 @@ Opens at `http://localhost:5173` with Hot Module Replacement.
                   |  (WebSocket/STOMP)    |              |  Service    |  | Service   |   |  Service   |
                   |                       |              |  (REST)     |  | (Reactive)|   |  (REST)    |
                   +-----------+-----------+              +------+------+  +-----+-----+   +-----+------+
-                              |                                |                |               |
-                              |  subscribe                     |                |               |
-                              v                                v                |               v
-                  +-----------+-----------+          +---------+--------+       |       +-------+------+
-                  |                       |          |                  |       |       |              |
-                  |    Redis Memorystore  |          |     BigQuery     |       |       |   Firestore  |
-                  |    (Pub/Sub Broker)   |          |  (Data Warehouse)|       |       | (User Store) |
-                  |                       |          |                  |       |       |              |
-                  +-----------+-----------+          +------------------+       |       +--------------+
+                              |                                 |               |               |
+                              |  subscribe                      |               |               |
+                              v                                 v               |               v
+                  +-----------+-----------+           +---------+--------+      |       +-------+------+
+                  |                       |           |                  |      |       |              |
+                  |    Redis Memorystore  |           |     BigQuery     |      |       |   Firestore  |
+                  |    (Pub/Sub Broker)   |           |  (Data Warehouse)|      |       | (User Store) |
+                  |                       |           |                  |      |       |              |
+                  +-----------+-----------+           +------------------+      |       +--------------+
                               ^                                                 |
                               |  publish                                        |
                               |                                                 |

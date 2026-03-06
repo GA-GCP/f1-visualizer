@@ -46,6 +46,18 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
         sessionKeyRef.current = sessionKey;
     }, [sessionKey]);
 
+    // Mirror resetKey into a ref so the animation loop can detect changes
+    // synchronously — React's deferred useEffect leaves a gap where stale
+    // STOMP packets can sneak into history before the reset fires.
+    const resetKeyRef = useRef(resetKey);
+    useEffect(() => {
+        resetKeyRef.current = resetKey;
+    }, [resetKey]);
+
+    // Tracks the last resetKey the animation loop actually processed,
+    // so it can detect when a new reset is pending.
+    const lastProcessedResetKeyRef = useRef(resetKey);
+
     // ── Clear ALL accumulated state when the session or resetKey changes ──
     useEffect(() => {
         historyRef.current = {};
@@ -91,6 +103,20 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
         const render = () => {
             const driver = selectedDriverRef.current;
             const activeSessionKey = sessionKeyRef.current;
+
+            // ── 0. Synchronous reset check ──
+            // React's useEffect for resetKey is deferred until after render,
+            // leaving a gap where stale STOMP packets (old-position data still
+            // in-flight after a seek) can be drained into history.  By checking
+            // the ref here we clear history atomically BEFORE processing any
+            // packets, closing the race window entirely.
+            if (resetKeyRef.current !== lastProcessedResetKeyRef.current) {
+                historyRef.current = {};
+                boundsRef.current = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+                diagRef.current = { totalPackets: 0, driversSeenSet: new Set(), lastDrainSize: 0 };
+                locationQueueRef.current.length = 0;
+                lastProcessedResetKeyRef.current = resetKeyRef.current;
+            }
 
             // ── 1. Drain the location queue (written by useLocation) ──
             const queue = locationQueueRef.current;

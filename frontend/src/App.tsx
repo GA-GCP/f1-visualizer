@@ -123,10 +123,15 @@ const RequiredAuth: React.FC = () => {
     // eliminating the CircularProgress / Skeleton loading states.
     // Note: AxiosAuthInterceptor is already mounted (sibling above this
     // component), so these requests will have the Auth0 JWT attached.
+    //
+    // Calls are staggered by 400ms to avoid a simultaneous OPTIONS preflight
+    // burst that can trigger the API Gateway rate limiter (429), which then
+    // cascades into CORS failures and blocks the STOMP WebSocket handshake.
     useEffect(() => {
         if (showSplash && isAuthenticated) {
             void fetchDrivers();
-            void fetchSessions();
+            const tid = setTimeout(() => void fetchSessions(), 400);
+            return () => clearTimeout(tid);
         }
     }, [showSplash, isAuthenticated]);
 

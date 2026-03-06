@@ -24,6 +24,13 @@ export interface RaceSession {
 // doubles each call.  Without dedup, 6-8 concurrent requests fire on page load,
 // triggering the backend rate limiter (429) which cascades to block STOMP WebSocket
 // connections — killing the Circuit Trace live feed.
+//
+// On failure the rejected promise is kept for a cooldown period so that concurrent
+// callers share the same rejection instead of each spawning a brand-new request,
+// which would compound the rate-limit pressure.  After the cooldown expires the
+// slot is cleared and the next caller may try a fresh request.
+const FAILURE_COOLDOWN_MS = 3_000;
+
 let driversCache: DriverProfile[] | null = null;
 let driversInflight: Promise<DriverProfile[]> | null = null;
 
@@ -39,7 +46,7 @@ export const fetchDrivers = async (): Promise<DriverProfile[]> => {
         driversInflight = null;
         return res.data as DriverProfile[];
     }).catch(err => {
-        driversInflight = null;
+        setTimeout(() => { driversInflight = null; }, FAILURE_COOLDOWN_MS);
         throw err;
     });
 
@@ -58,7 +65,7 @@ export const fetchSessions = async (): Promise<RaceSession[]> => {
         sessionsInflight = null;
         return raceOnly;
     }).catch(err => {
-        sessionsInflight = null;
+        setTimeout(() => { sessionsInflight = null; }, FAILURE_COOLDOWN_MS);
         throw err;
     });
 

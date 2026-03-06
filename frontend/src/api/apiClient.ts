@@ -41,6 +41,22 @@ apiClient.interceptors.response.use(
             return apiClient(config);
         }
 
+        // Retry on network errors (CORS preflight failures, connection refused, DNS
+        // resolution, cold-start timeouts).  These arrive with error.response === undefined
+        // so the 429 check above never fires — without this, REST calls fail permanently
+        // while the STOMP WebSocket (which has its own circuit-breaker) recovers fine.
+        const isNetworkError = !error.response && error.code === 'ERR_NETWORK';
+        if (isNetworkError && config && (config._networkRetryCount ?? 0) < 3) {
+            config._networkRetryCount = (config._networkRetryCount ?? 0) + 1;
+            const delayMs = 1000 * Math.pow(2, config._networkRetryCount); // 2s, 4s, 8s
+            console.warn(
+                `[API] Network error (${error.message}), retrying in ${delayMs}ms ` +
+                `(attempt ${config._networkRetryCount}/3)`,
+            );
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+            return apiClient(config);
+        }
+
         return Promise.reject(error);
     }
 );

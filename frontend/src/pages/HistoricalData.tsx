@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
-// Replace CircularProgress with Skeleton
-import { Box, Typography, Container, Skeleton, Autocomplete, TextField } from '@mui/material';
+import { Box, Typography, Container, Autocomplete, TextField } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import LapTimeChart from '../components/LapTimeChart';
+import DataVaultLoader from '../components/DataVaultLoader';
 import type { LapDataRecord } from '../types/telemetry';
 import { fetchDrivers, fetchSessions, fetchSessionLaps, type DriverProfile, type RaceSession } from '../api/referenceApi';
 
 const HistoricalData: React.FC = () => {
     const [laps, setLaps] = useState<LapDataRecord[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [driverColorMap, setDriverColorMap] = useState<Record<number, string>>({});
 
     // Dynamic Session state
@@ -19,8 +19,12 @@ const HistoricalData: React.FC = () => {
     useEffect(() => {
         fetchSessions().then(data => {
             setSessions(data);
-            if (data.length > 0) setSelectedSession(data[0]);
-        });
+            if (data.length > 0) {
+                setSelectedSession(data[0]);
+            } else {
+                setLoading(false);
+            }
+        }).catch(() => setLoading(false));
         fetchDrivers().then((drivers: DriverProfile[]) => {
             const colorMap: Record<number, string> = {};
             for (const d of drivers) {
@@ -101,17 +105,13 @@ const HistoricalData: React.FC = () => {
             <AnimatePresence mode="wait">
                 {loading ? (
                     <motion.div
-                        key="skeleton"
+                        key="loader"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.15 }}
+                        transition={{ duration: 0.3 }}
                     >
-                        <Skeleton
-                            variant="rectangular"
-                            height={400}
-                            sx={{ bgcolor: '#1e1e1e', borderRadius: 2, mt: 2 }}
-                        />
+                        <DataVaultLoader />
                     </motion.div>
                 ) : (
                     <motion.div

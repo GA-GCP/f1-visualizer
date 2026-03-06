@@ -96,19 +96,19 @@ const RequiredAuth: React.FC = () => {
     // 1. Destructure the 'error' object from Auth0
     const { isAuthenticated, isLoading, error } = useAuth0();
 
-    // Post-login splash: subscribe for the custom event dispatched by onRedirectCallback.
-    // Cannot use a useState initializer (runs before onRedirectCallback sets the flag)
-    // or synchronous setState in an effect (React compiler forbids it). Subscribing to
-    // a DOM event and calling setState in the listener callback is compiler-approved.
-    const [showSplash, setShowSplash] = useState(false);
-
-    useEffect(() => {
-        const handler = () => {
-            setShowSplash(true);
-        };
-        window.addEventListener('f1v:post-login', handler);
-        return () => window.removeEventListener('f1v:post-login', handler);
-    }, []);
+    // Post-login splash: read a sessionStorage flag set by onRedirectCallback.
+    // With the Landing page routing, RequiredAuth only mounts AFTER navigate('/dashboard'),
+    // so the flag is guaranteed to be set by the time this initializer runs.
+    // (The old DOM-event approach no longer works because RequiredAuth isn't mounted
+    // when onRedirectCallback fires — it lives on /dashboard while the callback lands on /.)
+    const [showSplash, setShowSplash] = useState(() => {
+        const flag = sessionStorage.getItem('f1v:post-login');
+        if (flag) {
+            sessionStorage.removeItem('f1v:post-login');
+            return true;
+        }
+        return false;
+    });
 
     // Prefetch reference data during the splash screen animation.
     // The splash runs for ~7 seconds — plenty of time for these API calls
@@ -195,7 +195,12 @@ const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ ch
     const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
     const onRedirectCallback = (appState?: { returnTo?: string }) => {
-        window.dispatchEvent(new Event('f1v:post-login'));
+        // Signal to RequiredAuth that it should show the post-login splash.
+        // We use sessionStorage instead of a DOM event because RequiredAuth
+        // is NOT mounted yet at this point — it lives on /dashboard, but the
+        // Auth0 callback lands on /.  The flag survives the navigate() call
+        // and is read (then cleared) when RequiredAuth mounts.
+        sessionStorage.setItem('f1v:post-login', '1');
         navigate(appState?.returnTo || '/dashboard');
     };
 

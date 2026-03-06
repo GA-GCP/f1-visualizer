@@ -23,6 +23,12 @@ inputs = {
 
   is_public    = true
 
+  # Keep 1 instance warm to eliminate cold-start latency on /users/me.
+  # This endpoint is called immediately after splash; a cold-starting JVM
+  # adds seconds to the first authenticated request and compounds the
+  # rate-limit burst that triggers CORS preflight failures.
+  min_instance_count = 1
+
   env_vars = {
     "SPRING_PROFILES_ACTIVE" = "dev"
 

@@ -26,6 +26,8 @@ resource "google_cloud_run_v2_service" "service" {
 
     service_account = var.service_account_email
 
+    max_instance_request_concurrency = var.container_concurrency
+
     containers {
       image = var.image_url
 

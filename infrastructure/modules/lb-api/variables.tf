@@ -3,13 +3,13 @@ variable "name_prefix" { type = string }
 variable "domain" { type = string }
 variable "api_gateway_fqdn" {
   description = "The default hostname of the API Gateway (e.g., my-gateway-xxx.uc.gateway.dev)"
-  type = string
+  type        = string
 }
 variable "telemetry_service_name" {
   description = "The Cloud Run service name for telemetry to bypass API Gateway for WebSockets"
-  type = string
+  type        = string
 }
 variable "frontend_origin" {
   description = "The frontend origin for CORS headers (e.g., https://dev.f1visualizer.com)"
-  type = string
+  type        = string
 }

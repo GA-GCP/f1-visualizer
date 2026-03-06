@@ -45,9 +45,9 @@ describe('LayoutMain', () => {
         const dataVaultButton = screen.getByText('Data Vault').closest('a');
         expect(dataVaultButton).toHaveAttribute('href', '/historical');
 
-        // The Live Console link points to /
+        // The Live Console link points to /dashboard
         const liveConsoleButton = screen.getByText('Live Console').closest('a');
-        expect(liveConsoleButton).toHaveAttribute('href', '/');
+        expect(liveConsoleButton).toHaveAttribute('href', '/dashboard');
     });
 
     it('renders footer text', () => {

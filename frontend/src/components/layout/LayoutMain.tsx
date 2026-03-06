@@ -43,7 +43,7 @@ const LayoutMain: React.FC = () => {
                         </Typography>
 
                         <LayoutGroup>
-                            <NavButton to="/" label="Live Console" icon={<SpeedIcon />} currentPath={location.pathname} />
+                            <NavButton to="/dashboard" label="Live Console" icon={<SpeedIcon />} currentPath={location.pathname} />
                             <NavButton to="/historical" label="Data Vault" icon={<StorageIcon />} currentPath={location.pathname} />
                             <NavButton to="/versus" label="Head-to-Head" icon={<CompareArrowsIcon />} currentPath={location.pathname} />
                         </LayoutGroup>

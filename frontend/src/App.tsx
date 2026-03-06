@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, Outlet, BrowserRouter, useNavigate } from 'react-router-dom';
+import { Routes, Route, Outlet, BrowserRouter, useNavigate, Navigate } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -13,6 +13,7 @@ import HistoricalData from './pages/HistoricalData';
 import VersusMode from './pages/VersusMode';
 import { UserProvider } from "@/context/UserContext.tsx";
 import { fetchDrivers, fetchSessions } from './api/referenceApi';
+import Landing from './pages/Landing';
 
 // --- THE BROADCAST THEME ---
 const broadcastTheme = createTheme({
@@ -93,7 +94,7 @@ const broadcastTheme = createTheme({
 // --- AUTH GUARD COMPONENT ---
 const RequiredAuth: React.FC = () => {
     // 1. Destructure the 'error' object from Auth0
-    const { isAuthenticated, isLoading, loginWithRedirect, error } = useAuth0();
+    const { isAuthenticated, isLoading, error } = useAuth0();
 
     // Post-login splash: subscribe for the custom event dispatched by onRedirectCallback.
     // Cannot use a useState initializer (runs before onRedirectCallback sets the flag)
@@ -108,13 +109,6 @@ const RequiredAuth: React.FC = () => {
         window.addEventListener('f1v:post-login', handler);
         return () => window.removeEventListener('f1v:post-login', handler);
     }, []);
-
-    useEffect(() => {
-        // 2. Do not attempt a redirect if an error already exists!
-        if (!isLoading && !isAuthenticated && !error) {
-            void loginWithRedirect();
-        }
-    }, [isLoading, isAuthenticated, error, loginWithRedirect]);
 
     // Prefetch reference data during the splash screen animation.
     // The splash runs for ~7 seconds — plenty of time for these API calls
@@ -150,8 +144,9 @@ const RequiredAuth: React.FC = () => {
         );
     }
 
+    // Redirect unauthenticated users to the public landing page
     if (!isAuthenticated) {
-        return null;
+        return <Navigate to="/" replace />;
     }
 
     return (
@@ -174,6 +169,22 @@ const RequiredAuth: React.FC = () => {
     );
 };
 
+// --- LANDING GATE (public root route) ---
+// Shows the Landing page for unauthenticated visitors; redirects to /dashboard if already logged in.
+const LandingGate: React.FC = () => {
+    const { isAuthenticated, isLoading } = useAuth0();
+
+    if (isLoading) {
+        return null;
+    }
+
+    if (isAuthenticated) {
+        return <Navigate to="/dashboard" replace />;
+    }
+
+    return <Landing />;
+};
+
 // --- AUTH0 PROVIDER WRAPPER ---
 // We wrap this inside BrowserRouter so we can use useNavigate for the Auth0 callback redirect
 const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -185,7 +196,7 @@ const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ ch
 
     const onRedirectCallback = (appState?: { returnTo?: string }) => {
         window.dispatchEvent(new Event('f1v:post-login'));
-        navigate(appState?.returnTo || window.location.pathname);
+        navigate(appState?.returnTo || '/dashboard');
     };
 
     if (!(domain && clientId && audience)) {
@@ -217,9 +228,13 @@ function App() {
                     <StompAuthHandler />
                     <ErrorBoundary>
                         <Routes>
+                            {/* Public landing page — outside the auth guard */}
+                            <Route path="/" element={<LandingGate />} />
+
+                            {/* Protected app routes */}
                             <Route element={<RequiredAuth />}>
                                 <Route element={<LayoutMain />}>
-                                    <Route path="/" element={<Home />} />
+                                    <Route path="/dashboard" element={<Home />} />
                                     <Route path="/historical" element={<HistoricalData />} />
                                     <Route path="/versus" element={<VersusMode />} />
                                 </Route>

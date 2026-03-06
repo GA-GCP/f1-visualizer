@@ -9,11 +9,11 @@ export interface SplashSequenceState {
 }
 
 const PHASE_THRESHOLDS: { maxMs: number; phase: SplashPhase }[] = [
-    { maxMs: 300, phase: 'background' },
-    { maxMs: 1200, phase: 'circuit' },
-    { maxMs: 1500, phase: 'text' },
-    { maxMs: 3000, phase: 'progress' },
-    { maxMs: 3200, phase: 'hold' },
+    { maxMs: 600, phase: 'background' },
+    { maxMs: 2400, phase: 'circuit' },
+    { maxMs: 3000, phase: 'text' },
+    { maxMs: 6000, phase: 'progress' },
+    { maxMs: 6400, phase: 'hold' },
 ];
 
 function getPhase(elapsed: number): SplashPhase {
@@ -23,8 +23,8 @@ function getPhase(elapsed: number): SplashPhase {
     return 'exit';
 }
 
-const TOTAL_DURATION = 3500;
-const PROGRESS_DURATION = 3000;
+const TOTAL_DURATION = 7000;
+const PROGRESS_DURATION = 6000;
 
 const prefersReducedMotion =
     typeof window !== 'undefined' &&

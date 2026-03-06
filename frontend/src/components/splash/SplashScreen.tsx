@@ -14,7 +14,7 @@ const LETTERS = TITLE_TEXT.split('');
 const letterContainerVariants = {
     hidden: {},
     visible: {
-        transition: { staggerChildren: 0.04, delayChildren: 0.8 },
+        transition: { staggerChildren: 0.06, delayChildren: 1.6 },
     },
 };
 
@@ -82,27 +82,32 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
                         flexWrap: 'wrap',
                     }}
                 >
-                    {LETTERS.map((letter, i) => (
-                        <motion.span
-                            key={i}
-                            variants={letterVariants}
-                            style={{
-                                display: 'inline-block',
-                                fontFamily: '"Titillium Web", sans-serif',
-                                fontWeight: 900,
-                                fontStyle: 'italic',
-                                fontSize: 'clamp(2rem, 5vw, 4rem)',
-                                letterSpacing: '-0.02em',
-                                background: 'linear-gradient(45deg, #FFF 30%, #999 90%)',
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                                minWidth: letter === ' ' ? '0.3em' : undefined,
-                                willChange: 'transform, opacity, filter',
-                            }}
-                        >
-                            {letter}
-                        </motion.span>
-                    ))}
+                    {LETTERS.map((letter, i) => {
+                        // Per-letter color ramp (white → light gray) replaces
+                        // the old per-span background-clip gradient that caused
+                        // visible seam lines between italic glyphs.
+                        const t = LETTERS.length > 1 ? i / (LETTERS.length - 1) : 0;
+                        const gray = Math.round(255 - t * 100); // 255 → 155
+                        return (
+                            <motion.span
+                                key={i}
+                                variants={letterVariants}
+                                style={{
+                                    display: 'inline-block',
+                                    fontFamily: '"Titillium Web", sans-serif',
+                                    fontWeight: 900,
+                                    fontStyle: 'italic',
+                                    fontSize: 'clamp(2rem, 5vw, 4rem)',
+                                    letterSpacing: '-0.02em',
+                                    color: `rgb(${gray}, ${gray}, ${gray})`,
+                                    minWidth: letter === ' ' ? '0.3em' : undefined,
+                                    willChange: 'transform, opacity, filter',
+                                }}
+                            >
+                                {letter}
+                            </motion.span>
+                        );
+                    })}
                 </motion.div>
 
                 {/* Circuit animation */}

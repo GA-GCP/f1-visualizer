@@ -56,7 +56,7 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase }) => {
         let controls: ReturnType<typeof animate> | null = null;
 
         // Wait for path-draw to mostly finish before starting the dot
-        const delay = phase === 'circuit' ? 800 : 0;
+        const delay = phase === 'circuit' ? 1600 : 0;
         const timer = setTimeout(() => {
             controls = animate(dotProgress, 1, {
                 duration: 2.5,
@@ -135,8 +135,8 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase }) => {
                         initial={{ strokeDashoffset: pathLength }}
                         animate={{ strokeDashoffset: 0 }}
                         transition={{
-                            duration: 1,
-                            delay: 0.2,
+                            duration: 2,
+                            delay: 0.4,
                             ease: [0.4, 0, 0.2, 1],
                         }}
                         style={{ filter: 'drop-shadow(0 0 4px rgba(225,6,0,0.4))' }}
@@ -152,7 +152,7 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase }) => {
                         fill="#ffffff"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        transition={{ duration: 0.3, delay: 1.0 }}
+                        transition={{ duration: 0.3, delay: 2.0 }}
                         style={{
                             filter: 'drop-shadow(0 0 6px #e10600) drop-shadow(0 0 12px rgba(225,6,0,0.4))',
                         }}

@@ -148,36 +148,36 @@ Opens at `http://localhost:5173` with Hot Module Replacement.
     |   (Cloud Run)    |                |  Load Balancer   |               |   API Gateway      |
     |                  |                |                  |               |   (OpenAPI 2.0)    |
     +------------------+                +----+--------+----+               +----+----------+----+
-                                             |        |                        |          |
-                                        /ws  |        | /*                     |          |
-                                             |        |            +-----------+          |
-                              +--------------+        +----------->+                      |
-                              |                                    |   Path-Based         |
-                              v                                    |   Routing            |
-                  +-----------+-----------+                        |                      |
-                  |                       |              +---------v---+  +-----------+  +v-----------+
-                  |  Telemetry Service    |              |  Analysis   |  | Ingestion |  |   User     |
-                  |  (WebSocket/STOMP)    |              |  Service    |  | Service   |  |  Service   |
-                  |                       |              |  (REST)     |  | (Reactive)|  |  (REST)    |
-                  +-----------+-----------+              +------+------+  +-----+-----+  +-----+------+
-                              |                                |               |               |
-                              |  subscribe                     |               |               |
-                              v                                v               |               v
-                  +-----------+-----------+          +---------+--------+      |       +-------+------+
-                  |                       |          |                  |      |       |              |
-                  |    Redis Memorystore  |          |     BigQuery     |      |       |   Firestore  |
-                  |    (Pub/Sub Broker)   |          |  (Data Warehouse)|      |       | (User Store) |
-                  |                       |          |                  |      |       |              |
-                  +-----------+-----------+          +------------------+      |       +--------------+
-                              ^                                               |
-                              |  publish                                      |
-                              |                                               |
-                  +-----------+-----------+                                   |
-                  |                       |              +--------------------v---+
-                  |  Ingestion Service    |              |                        |
-                  |  (Redis Publisher)    |              |  OpenF1 API (External) |
-                  |                       |              |  REST + MQTT Streams   |
-                  +-----------+-----------+              +------------------------+
+                                             |        |                         |          |
+                                        /ws  |        | /*                      |          |
+                                             |        |            +------------+          |
+                              +--------------+        +----------->+                       |
+                              |                                    |   Path-Based          |
+                              v                                    |   Routing             |
+                  +-----------+-----------+                        |                       |
+                  |                       |              +---------v---+  +-----------+   +v-----------+
+                  |  Telemetry Service    |              |  Analysis   |  | Ingestion |   |   User     |
+                  |  (WebSocket/STOMP)    |              |  Service    |  | Service   |   |  Service   |
+                  |                       |              |  (REST)     |  | (Reactive)|   |  (REST)    |
+                  +-----------+-----------+              +------+------+  +-----+-----+   +-----+------+
+                              |                                |                |               |
+                              |  subscribe                     |                |               |
+                              v                                v                |               v
+                  +-----------+-----------+          +---------+--------+       |       +-------+------+
+                  |                       |          |                  |       |       |              |
+                  |    Redis Memorystore  |          |     BigQuery     |       |       |   Firestore  |
+                  |    (Pub/Sub Broker)   |          |  (Data Warehouse)|       |       | (User Store) |
+                  |                       |          |                  |       |       |              |
+                  +-----------+-----------+          +------------------+       |       +--------------+
+                              ^                                                 |
+                              |  publish                                        |
+                              |                                                 |
+                  +-----------+-----------+                                     |
+                  |                       |                +--------------------v---+
+                  |  Ingestion Service    |                |                        |
+                  |  (Redis Publisher)    |                |  OpenF1 API (External) |
+                  |                       |                |  REST + MQTT Streams   |
+                  +-----------+-----------+                +------------------------+
                               ^
                               |
                   +-----------+-----------+
@@ -300,99 +300,104 @@ The real-time pipeline is the core of the platform — a four-hop event-driven c
 ```
 f1-visualizer/
 |
-+-- frontend/                          # React 19 Single Page Application
++-- frontend/                                   # React 19 Single Page Application
 |   +-- src/
-|   |   +-- api/                       # Axios HTTP client + STOMP WebSocket client
-|   |   |   +-- apiClient.ts           #   Environment-aware Axios instance with JWT interceptor
-|   |   |   +-- referenceApi.ts        #   Drivers, sessions, stats endpoints
-|   |   |   +-- ingestionApi.ts        #   Live/simulation commands and playback control
-|   |   |   +-- userApi.ts             #   User profile and preferences
-|   |   |   +-- stompClient.ts         #   STOMP-over-SockJS with JWT authentication
-|   |   +-- auth/                      # Auth0 integration
-|   |   |   +-- AuthHandler.tsx        #   Axios request interceptor (Bearer token injection)
-|   |   |   +-- StompAuthHandler.tsx   #   WebSocket STOMP CONNECT authentication
-|   |   +-- components/                # React components
-|   |   |   +-- RaceSimulator.tsx      #   Main live console: telemetry panels + circuit trace
-|   |   |   +-- CircuitTrace.tsx       #   HTML5 Canvas real-time track visualization
-|   |   |   +-- LapTimeChart.tsx       #   D3.js SVG multi-driver lap time line chart
-|   |   |   +-- MediaController.tsx    #   Play/pause/seek for simulation replay
-|   |   |   +-- ErrorBoundary.tsx      #   Auto-retry error boundary (3 attempts, 2s delay)
-|   |   |   +-- layout/               #   App shell, navigation, user settings modal
-|   |   |   +-- selectors/            #   Reusable driver and session autocomplete selectors
-|   |   |   +-- versus/               #   Radar chart and animated stat comparison bars
-|   |   +-- context/                   # React Context
-|   |   |   +-- UserContext.tsx        #   Global user profile + preferences state
-|   |   +-- hooks/                     # Custom React hooks
-|   |   |   +-- useTelemetry.ts       #   STOMP subscription with 60fps buffered flush
-|   |   |   +-- useLocation.ts        #   STOMP subscription preserving all GPS points
-|   |   +-- pages/                     # Route-level page components
-|   |   |   +-- Home.tsx              #   Live Console (RaceSimulator)
-|   |   |   +-- HistoricalData.tsx    #   Data Vault (session search + lap charts)
-|   |   |   +-- VersusMode.tsx        #   Head-to-Head (radar + stat bars)
-|   |   +-- types/                     # TypeScript interfaces
-|   |   +-- App.tsx                    # Auth0 provider, theme, routing
-|   |   +-- main.tsx                   # Vite entry point
-|   +-- nginx.conf                     # SPA-aware nginx config for production
-|   +-- Dockerfile                     # Multi-stage local build (Node -> nginx)
-|   +-- Dockerfile.ci                  # Lean CI image (pre-built dist -> nginx)
-|   +-- vite.config.ts                 # Dev server proxy to 4 backend services + WebSocket
-|   +-- vitest.config.ts               # jsdom test environment with setup
-|   +-- eslint.config.js               # TypeScript-ESLint + React Hooks rules
+|   |   +-- api/                                # Axios HTTP client + STOMP WebSocket client
+|   |   |   +-- apiClient.ts                    #   Environment-aware Axios instance with JWT interceptor
+|   |   |   +-- referenceApi.ts                 #   Drivers, sessions, stats endpoints
+|   |   |   +-- ingestionApi.ts                 #   Live/simulation commands and playback control
+|   |   |   +-- userApi.ts                      #   User profile and preferences
+|   |   |   +-- stompClient.ts                  #   STOMP-over-SockJS with JWT authentication
+|   |   +-- auth/                               # Auth0 integration
+|   |   |   +-- AuthHandler.tsx                 #   Axios request interceptor (Bearer token injection)
+|   |   |   +-- StompAuthHandler.tsx            #   WebSocket STOMP CONNECT authentication
+|   |   +-- components/                         # React components
+|   |   |   +-- RaceSimulator.tsx               #   Main live console: telemetry panels + circuit trace
+|   |   |   +-- CircuitTrace.tsx                #   HTML5 Canvas real-time track visualization
+|   |   |   +-- LapTimeChart.tsx                #   D3.js SVG multi-driver lap time line chart
+|   |   |   +-- MediaController.tsx             #   Play/pause/seek for simulation replay
+|   |   |   +-- ErrorBoundary.tsx               #   Auto-retry error boundary (3 attempts, 2s delay)
+|   |   |   +-- layout/                         #   App shell, navigation, user settings modal
+|   |   |   +-- selectors/                      #   Reusable driver and session autocomplete selectors
+|   |   |   +-- versus/                         #   Radar chart and animated stat comparison bars
+|   |   +-- context/                            # React Context
+|   |   |   +-- UserContext.tsx                 #   Global user profile + preferences state
+|   |   +-- hooks/                              # Custom React hooks
+|   |   |   +-- useTelemetry.ts                 #   STOMP subscription with 60fps buffered flush
+|   |   |   +-- useLocation.ts                  #   STOMP subscription preserving all GPS points
+|   |   +-- pages/                              # Route-level page components
+|   |   |   +-- Home.tsx                        #   Live Console (RaceSimulator)
+|   |   |   +-- HistoricalData.tsx              #   Data Vault (session search + lap charts)
+|   |   |   +-- VersusMode.tsx                  #   Head-to-Head (radar + stat bars)
+|   |   +-- types/                              # TypeScript interfaces
+|   |   +-- App.tsx                             # Auth0 provider, theme, routing
+|   |   +-- main.tsx                            # Vite entry point
+|   +-- nginx.conf                              # SPA-aware nginx config for production
+|   +-- Dockerfile                              # Multi-stage local build (Node -> nginx)
+|   +-- Dockerfile.ci                           # Lean CI image (pre-built dist -> nginx)
+|   +-- vite.config.ts                          # Dev server proxy to 4 backend services + WebSocket
+|   +-- vitest.config.ts                        # jsdom test environment with setup
+|   +-- eslint.config.js                        # TypeScript-ESLint + React Hooks rules
 |
-+-- backend/                           # Maven Multi-Module Spring Boot Microservices
-|   +-- pom.xml                        # Aggregator POM (Java 25)
-|   +-- Dockerfile                     # Multi-stage local build (Maven -> distroless)
-|   +-- Dockerfile.ci                  # Lean CI image (pre-extracted layers -> distroless)
++-- backend/                                    # Maven Multi-Module Spring Boot Microservices
+|   +-- pom.xml                                 # Aggregator POM (Java 25)
+|   +-- Dockerfile                              # Multi-stage local build (Maven -> distroless)
+|   +-- Dockerfile.ci                           # Lean CI image (pre-extracted layers -> distroless)
 |   |
-|   +-- f1v-commons-parent/            # Spring Boot 4.0.3 parent POM
-|   +-- f1v-commons-bom/               # Bill of Materials (10 shared libraries)
-|   |   +-- f1v-commons-base/          #   Lombok, base model annotations
-|   |   +-- f1v-commons-security/      #   OAuth2 JWT resource server, CORS policy, STOMP auth
-|   |   +-- f1v-commons-service-base/  #   WebMvc, Actuator, Jackson 3, Secret Manager client
-|   |   +-- f1v-commons-service-rest/  #   REST service foundation (extends service-base)
-|   |   +-- f1v-commons-service-reactive/  # WebFlux foundation (extends service-base)
-|   |   +-- f1v-commons-service-websocket/ # STOMP + MQTT dependencies
-|   |   +-- f1v-commons-gcp-bq/        #   BigQuery client configuration
-|   |   +-- f1v-commons-gcp-firestore/ #   Firestore client configuration
-|   |   +-- f1v-commons-gcp-memorystore-redis/  # Redis template + Pub/Sub listener config
-|   |   +-- f1v-commons-api-openf1/    #   OpenF1 REST + MQTT client, auth token management
+|   +-- f1v-commons-parent/                     # Spring Boot 4.0.3 parent POM
+|   +-- f1v-commons-bom/                        # Bill of Materials (10 shared libraries)
+|   |   +-- f1v-commons-base/                   #   Lombok, base model annotations
+|   |   +-- f1v-commons-security/               #   OAuth2 JWT resource server, CORS policy, STOMP auth
+|   |   +-- f1v-commons-service-base/           #   WebMvc, Actuator, Jackson 3, Secret Manager client
+|   |   +-- f1v-commons-service-rest/           #   REST service foundation (extends service-base)
+|   |   +-- f1v-commons-service-reactive/       #   WebFlux foundation (extends service-base)
+|   |   +-- f1v-commons-service-websocket/      #   STOMP + MQTT dependencies
+|   |   +-- f1v-commons-gcp-bq/                 #   BigQuery client configuration
+|   |   +-- f1v-commons-gcp-firestore/          #   Firestore client configuration
+|   |   +-- f1v-commons-gcp-memorystore-redis/  #   Redis template + Pub/Sub listener config
+|   |   +-- f1v-commons-api-openf1/             #   OpenF1 REST + MQTT client, auth token management
 |   |
-|   +-- f1v-service-data-analysis/     # REST: BigQuery queries for laps, stats, reference data
-|   +-- f1v-service-data-ingestion/    # Reactive: OpenF1 ingest, batch loaders, replay engine
-|   +-- f1v-service-telemetry/         # WebSocket: Redis listener -> STOMP broadcaster
-|   +-- f1v-service-user/              # REST: Firestore user profiles and preferences
+|   +-- f1v-service-data-analysis/              # REST: BigQuery queries for laps, stats, reference data
+|   +-- f1v-service-data-ingestion/             # Reactive: OpenF1 ingest, batch loaders, replay engine
+|   +-- f1v-service-telemetry/                  # WebSocket: Redis listener -> STOMP broadcaster
+|   +-- f1v-service-user/                       # REST: Firestore user profiles and preferences
 |
-+-- infrastructure/                    # OpenTofu + Terragrunt IaC
-|   +-- root.hcl                       # Terragrunt root config (GCS state backend)
-|   +-- modules/                       # 11 reusable OpenTofu modules
-|   |   +-- cloud-run/                 #   Serverless container services
-|   |   +-- api-gateway/               #   OpenAPI-driven request routing
-|   |   +-- bigquery/                  #   Dataset + 6 tables with partitioning/clustering
-|   |   +-- firestore/                 #   Document database with delete protection
-|   |   +-- redis/                     #   Memorystore instance (HA in production)
-|   |   +-- artifact-registry/         #   Docker image repository
-|   |   +-- networking/                #   VPC, subnets, firewall rules, VPC connector
-|   |   +-- iam-and-secrets/           #   6 service accounts with scoped IAM bindings
-|   |   +-- lb-api/                    #   Global HTTPS LB with WebSocket path bypass
-|   |   +-- lb-frontend/              #   Global HTTPS LB for React SPA
-|   |   +-- cloudbuild-triggers/       #   7 path-filtered CI/CD triggers
++-- infrastructure/                             # OpenTofu + Terragrunt IaC
+|   +-- root.hcl                                # Terragrunt root config (GCS state backend)
+|   +-- modules/                                # 12 reusable OpenTofu modules
+|   |   +-- cloud-run-backend/                  #   Serverless container services for Maven/Java/SpringBoot
+|   |   +-- cloud-run-frontend/                 #   Serverless container services for Vite/React/Typescript
+|   |   +-- api-gateway/                        #   OpenAPI-driven request routing
+|   |   +-- bigquery/                           #   Dataset + 6 tables with partitioning/clustering
+|   |   +-- firestore/                          #   Document database with delete protection
+|   |   +-- redis/                              #   Memorystore instance (HA in production)
+|   |   +-- artifact-registry/                  #   Docker image repository
+|   |   +-- networking/                         #   VPC, subnets, firewall rules, VPC connector
+|   |   +-- iam-and-secrets/                    #   6 service accounts with scoped IAM bindings
+|   |   +-- lb-api/                             #   Global HTTPS LB with WebSocket path bypass
+|   |   +-- lb-frontend/                        #   Global HTTPS LB for React SPA
+|   |   +-- cloudbuild-triggers/                #   7 path-filtered CI/CD triggers
 |   +-- environments/
-|   |   +-- dev/                       # Dev environment Terragrunt configurations
+|   |   +-- dev/                                # DEV environment Terragrunt configurations
 |   |       +-- (16 module instances with dependency declarations)
-|   +-- openapi.yaml                   # API Gateway OpenAPI 2.0 specification
+|   |   +-- prod/                               # PROD environment Terragrunt configurations
+|   |       +-- (16 module instances with dependency declarations)
+|   |   +-- uat/                                # UAT environment Terragrunt configurations
+|   |       +-- (16 module instances with dependency declarations)
+|   +-- openapi.yaml                            # API Gateway OpenAPI 2.0 specification
 |
-+-- cloudbuild/                        # GCP Cloud Build Pipeline Definitions
-|   +-- backend-data-analysis.yaml     # Build, scan, deploy: Analysis Service
-|   +-- backend-data-ingestion.yaml    # Build, scan, deploy: Ingestion Service
-|   +-- backend-telemetry.yaml         # Build, scan, deploy: Telemetry Service
-|   +-- backend-user.yaml              # Build, scan, deploy: User Service
-|   +-- frontend.yaml                  # Lint, test, build, deploy: React SPA
-|   +-- api-gateway.yaml               # Discover URLs, inject, validate, deploy, smoke test
-|   +-- infrastructure.yaml            # tfsec scan, Terragrunt init/plan/apply
++-- cloudbuild/                                 # GCP Cloud Build Pipeline Definitions
+|   +-- backend-data-analysis.yaml              # Build, scan, deploy: Analysis Service
+|   +-- backend-data-ingestion.yaml             # Build, scan, deploy: Ingestion Service
+|   +-- backend-telemetry.yaml                  # Build, scan, deploy: Telemetry Service
+|   +-- backend-user.yaml                       # Build, scan, deploy: User Service
+|   +-- frontend.yaml                           # Lint, test, build, deploy: React SPA
+|   +-- api-gateway.yaml                        # Discover URLs, inject, validate, deploy, smoke test
+|   +-- infrastructure.yaml                     # tfsec scan, Terragrunt init/plan/apply
 |
 +-- .github/
     +-- workflows/
-        +-- pr-checks.yml              # 3 parallel PR jobs: backend, frontend, infrastructure
+        +-- pr-checks.yml                       # 3 parallel PR jobs: backend, frontend, infrastructure
 ```
 
 ---
@@ -510,7 +515,7 @@ infrastructure/modules/
 +-- bigquery             Dataset + 6 tables (partitioned + clustered)
 +-- redis                Memorystore (BASIC for dev, STANDARD_HA for prod)
 |       |
-+-- cloud-run (x5)      Frontend + 4 backend services (VPC connector for Redis access)
++-- cloud-run (x5)       Frontend + 4 backend services (VPC connector for Redis access)
 |       |
 +-- api-gateway          OpenAPI 2.0 routing with JWT enforcement
 |       |
@@ -634,9 +639,9 @@ Pull Request to main                        Promotion to env branch (dev/uat/pro
     v                                             v
 GitHub Actions (3 parallel jobs)            Cloud Build (7 path-filtered triggers)
     |                                             |
-    +-- Backend: mvn clean package               +-- backend-data-analysis.yaml
-    +-- Frontend: yarn lint + test               +-- backend-data-ingestion.yaml
-    +-- Infra: tfsec + tofu validate             +-- backend-telemetry.yaml
+    +-- Backend: mvn clean package                +-- backend-data-analysis.yaml
+    +-- Frontend: yarn lint + test                +-- backend-data-ingestion.yaml
+    +-- Infra: tfsec + tofu validate              +-- backend-telemetry.yaml
                                                   +-- backend-user.yaml
                                                   +-- frontend.yaml
                                                   +-- api-gateway.yaml

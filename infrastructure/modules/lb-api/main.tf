@@ -1,5 +1,7 @@
 locals {
-  cors_response_headers = [
+  # CORS response headers for the telemetry backend (WebSocket route).
+  # REST API routes use the URL Map cors_policy instead (see below).
+  ws_cors_response_headers = [
     "Access-Control-Allow-Origin: ${var.frontend_origin}",
     "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, PATCH",
     "Access-Control-Allow-Headers: Authorization, Cache-Control, Content-Type",
@@ -48,7 +50,7 @@ resource "google_compute_backend_service" "telemetry_backend" {
   load_balancing_scheme = "EXTERNAL_MANAGED"
   project               = var.project_id
 
-  custom_response_headers = local.cors_response_headers
+  custom_response_headers = local.ws_cors_response_headers
 
   backend {
     group = google_compute_region_network_endpoint_group.telemetry_neg.id
@@ -56,6 +58,12 @@ resource "google_compute_backend_service" "telemetry_backend" {
 }
 
 # Backend Service (CRUCIAL: Host Header Rewrite)
+# NOTE: CORS response headers for this backend are handled by the URL Map's
+# cors_policy (see below), NOT by custom_response_headers here.  This avoids
+# duplicate Access-Control-Allow-* headers and — critically — lets the LB
+# respond to OPTIONS preflight requests directly (HTTP 204) without ever
+# forwarding them to the API Gateway, which eliminates the cascade:
+#   cold-start / rate-limit → non-2xx OPTIONS → CORS block → retry storm.
 resource "google_compute_backend_service" "default" {
   name                  = "${var.name_prefix}-backend"
   protocol              = "HTTPS"
@@ -64,8 +72,7 @@ resource "google_compute_backend_service" "default" {
 
   # API Gateway WILL REJECT the request if the Host header is our custom domain.
   # We MUST rewrite it to the default gateway FQDN.
-  custom_request_headers  = ["Host: ${var.api_gateway_fqdn}"]
-  custom_response_headers = local.cors_response_headers
+  custom_request_headers = ["Host: ${var.api_gateway_fqdn}"]
 
   backend {
     group = google_compute_global_network_endpoint_group.internet_neg.id
@@ -73,9 +80,15 @@ resource "google_compute_backend_service" "default" {
 }
 
 # URL Map
+# The cors_policy on default_route_action makes the LB handle OPTIONS preflight
+# requests at the edge, responding with 204 + CORS headers WITHOUT forwarding
+# to the API Gateway.  This is essential because preflight failures cascade:
+# a non-2xx OPTIONS (from cold-start, rate-limit, or gateway misconfiguration)
+# causes the browser to block the real request, triggering retries that compound
+# the problem.  Handling CORS at the LB eliminates this entire failure mode.
 resource "google_compute_url_map" "default" {
   name            = "${var.name_prefix}-url-map"
-  default_service = google_compute_backend_service.default.id # Default routes to API Gateway
+  default_service = google_compute_backend_service.default.id
   project         = var.project_id
 
   host_rule {
@@ -84,10 +97,27 @@ resource "google_compute_url_map" "default" {
   }
 
   path_matcher {
-    name            = "api-paths"
-    default_service = google_compute_backend_service.default.id
+    name = "api-paths"
 
-    # Route WebSockets directly to the Telemetry Cloud Run service
+    # REST API routes → API Gateway, with LB-level CORS handling
+    default_route_action {
+      cors_policy {
+        allow_origins     = [var.frontend_origin]
+        allow_methods     = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
+        allow_headers     = ["Authorization", "Cache-Control", "Content-Type"]
+        allow_credentials = true
+        max_age           = 3600
+      }
+
+      weighted_backend_services {
+        backend_service = google_compute_backend_service.default.id
+        weight          = 100
+      }
+    }
+
+    # Route WebSockets directly to the Telemetry Cloud Run service.
+    # CORS for this path is handled by custom_response_headers on the
+    # telemetry backend service (cors_policy doesn't apply to path_rules).
     path_rule {
       paths   = ["/ws", "/ws/*"]
       service = google_compute_backend_service.telemetry_backend.id

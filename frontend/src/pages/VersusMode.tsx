@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Container, Grid, Typography, Paper, Skeleton } from '@mui/material';
+import { Box, Container, Grid, Typography, Paper } from '@mui/material';
 import { motion } from 'framer-motion';
 import DriverSelector from '../components/selectors/DriverSelector';
 import RadarChart from '../components/versus/RadarChart';
 import StatComparisonBar from '../components/versus/StatComparisonBar';
+import HeadToHeadLoader from '../components/HeadToHeadLoader';
 import { fetchDrivers, fetchDriverStats, type DriverProfile } from '../api/referenceApi';
 
 const VersusMode: React.FC = () => {
@@ -60,30 +61,7 @@ const VersusMode: React.FC = () => {
     }, [handleDriverSelect]);
 
     if (!driverA || !driverB) {
-        return (
-            <Container maxWidth="xl" sx={{ mt: 4, pb: 8 }}>
-                <Box sx={{ mb: 6, textAlign: 'center' }}>
-                    <Skeleton variant="text" width={300} height={50} sx={{ mx: 'auto', bgcolor: '#2a2a2a' }} />
-                    <Skeleton variant="text" width={200} height={24} sx={{ mx: 'auto', bgcolor: '#2a2a2a' }} />
-                </Box>
-                <Grid container spacing={4} sx={{ mb: 6 }}>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                        <Skeleton variant="rectangular" height={80} sx={{ bgcolor: '#1e1e1e', borderRadius: 1 }} />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                        <Skeleton variant="rectangular" height={80} sx={{ bgcolor: '#1e1e1e', borderRadius: 1 }} />
-                    </Grid>
-                </Grid>
-                <Grid container spacing={4}>
-                    <Grid size={{ xs: 12, md: 5 }}>
-                        <Skeleton variant="rectangular" height={400} sx={{ bgcolor: '#1e1e1e', borderRadius: 1 }} />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 7 }}>
-                        <Skeleton variant="rectangular" height={400} sx={{ bgcolor: '#1e1e1e', borderRadius: 1 }} />
-                    </Grid>
-                </Grid>
-            </Container>
-        );
+        return <HeadToHeadLoader />;
     }
 
     return (

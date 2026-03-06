@@ -8,7 +8,7 @@ variable "region" {
 }
 variable "service_name" {
   description = "GCP CloudRun service name"
-  type = string
+  type        = string
 }
 variable "image_url" {
   description = "Docker image URL (e.g., us-central1-docker.pkg.dev/...)"

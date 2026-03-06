@@ -42,7 +42,9 @@ describe('HistoricalData Page', () => {
             expect(fetchSessionLaps).toHaveBeenCalledWith(9165);
         });
 
-        // Ensure the chart renders
-        expect(screen.getByTestId('mock-lap-chart')).toBeInTheDocument();
+        // Ensure the chart renders after loading completes
+        await waitFor(() => {
+            expect(screen.getByTestId('mock-lap-chart')).toBeInTheDocument();
+        });
     });
 });

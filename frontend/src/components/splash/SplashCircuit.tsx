@@ -31,16 +31,20 @@ interface SplashCircuitProps {
 }
 
 const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase }) => {
+    const measureRef = useRef<SVGPathElement>(null);
     const pathRef = useRef<SVGPathElement>(null);
     const [pathLength, setPathLength] = useState(0);
     const dotX = useMotionValue(0);
     const dotY = useMotionValue(0);
     const dotProgress = useMotionValue(0);
 
-    // Measure SVG path length on mount
+    // Measure SVG path length on mount via the hidden measurement element.
+    // The animated <motion.path> is only rendered once pathLength > 0 so
+    // Framer Motion receives the correct strokeDasharray/offset from the
+    // start — avoiding the 1px-dash fallback that caused scattered dots.
     useEffect(() => {
-        if (pathRef.current) {
-            setPathLength(pathRef.current.getTotalLength());
+        if (measureRef.current) {
+            setPathLength(measureRef.current.getTotalLength());
         }
     }, []);
 
@@ -92,6 +96,16 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase }) => {
                 width="100%"
                 style={{ display: 'block', overflow: 'visible' }}
             >
+                {/* Hidden path solely for getTotalLength() measurement.
+                    Rendered unconditionally so the useEffect can measure on
+                    mount, but invisible (no stroke, no fill). */}
+                <path
+                    ref={measureRef}
+                    d={CIRCUIT_PATH}
+                    fill="none"
+                    stroke="none"
+                />
+
                 {/* Faint track "shadow" outline always visible once measured */}
                 {pathLength > 0 && (
                     <path
@@ -104,25 +118,30 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase }) => {
                     />
                 )}
 
-                {/* Animated circuit draw */}
-                <motion.path
-                    ref={pathRef}
-                    d={CIRCUIT_PATH}
-                    fill="none"
-                    stroke="#e10600"
-                    strokeWidth={2.5}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeDasharray={pathLength || 1}
-                    initial={{ strokeDashoffset: pathLength || 1 }}
-                    animate={{ strokeDashoffset: 0 }}
-                    transition={{
-                        duration: 1,
-                        delay: 0.2,
-                        ease: [0.4, 0, 0.2, 1],
-                    }}
-                    style={{ filter: 'drop-shadow(0 0 4px rgba(225,6,0,0.4))' }}
-                />
+                {/* Animated circuit draw — only rendered once pathLength is
+                    known so strokeDasharray receives the real value, not the
+                    fallback of 1 which caused a 1px-dash/1px-gap pattern
+                    (scattered dots along the entire path). */}
+                {pathLength > 0 && (
+                    <motion.path
+                        ref={pathRef}
+                        d={CIRCUIT_PATH}
+                        fill="none"
+                        stroke="#e10600"
+                        strokeWidth={2.5}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeDasharray={pathLength}
+                        initial={{ strokeDashoffset: pathLength }}
+                        animate={{ strokeDashoffset: 0 }}
+                        transition={{
+                            duration: 1,
+                            delay: 0.2,
+                            ease: [0.4, 0, 0.2, 1],
+                        }}
+                        style={{ filter: 'drop-shadow(0 0 4px rgba(225,6,0,0.4))' }}
+                    />
+                )}
 
                 {/* Orbiting racing dot */}
                 {showDot && (

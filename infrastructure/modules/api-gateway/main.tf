@@ -28,4 +28,14 @@ resource "google_api_gateway_gateway" "gateway" {
   gateway_id = var.gateway_id
   project    = var.project_id
   region     = var.region
+
+  # The active API config is managed by the Cloud Build pipeline
+  # (cloudbuild/api-gateway.yaml), NOT by Terraform.  The config in this
+  # module is a bootstrap placeholder used only for initial creation.
+  # Without this lifecycle rule, every `terragrunt run-all apply` reverts
+  # the gateway to the bootstrap spec, destroying all real routes and
+  # causing 404s on every endpoint.
+  lifecycle {
+    ignore_changes = [api_config]
+  }
 }

@@ -517,38 +517,3 @@ paths:
   # Frontend connects via: wss://<domain>/ws (SockJS + STOMP)
   # ===============================================================
 
-  # --- TELEMETRY SERVICE ---
-  /api/v1/debug/publish:
-    post:
-      summary: Publish Debug Telemetry
-      operationId: debugPublish
-      x-google-backend:
-        address: TELEMETRY_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-        deadline: 60.0
-        disable_auth: true
-      responses:
-        '200':
-          description: OK
-      security:
-        - auth0_jwt: [ ]
-    options:
-      summary: CORS support
-      operationId: debugPublishOptions
-      x-google-backend:
-        address: TELEMETRY_SERVICE_URL_PLACEHOLDER
-        path_translation: APPEND_PATH_TO_ADDRESS
-        deadline: 60.0
-        disable_auth: true
-      responses:
-        '200':
-          description: OK
-          headers:
-            Access-Control-Allow-Origin:
-              type: string
-            Access-Control-Allow-Methods:
-              type: string
-            Access-Control-Allow-Headers:
-              type: string
-            Access-Control-Allow-Credentials:
-              type: string

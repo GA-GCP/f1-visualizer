@@ -28,7 +28,9 @@ resource "google_bigquery_table" "laps" {
   { "name": "sector_1_duration", "type": "FLOAT", "mode": "NULLABLE" },
   { "name": "sector_2_duration", "type": "FLOAT", "mode": "NULLABLE" },
   { "name": "sector_3_duration", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "compound", "type": "STRING", "mode": "NULLABLE" }
+  { "name": "compound", "type": "STRING", "mode": "NULLABLE" },
+  { "name": "date_start", "type": "TIMESTAMP", "mode": "NULLABLE" },
+  { "name": "is_pit_out_lap", "type": "BOOLEAN", "mode": "NULLABLE" }
 ]
 EOF
 }

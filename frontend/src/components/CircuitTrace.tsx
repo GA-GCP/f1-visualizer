@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import * as d3 from 'd3';
 import { Box, Paper, Typography } from '@mui/material';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -57,14 +57,14 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
         sessionKeyRef.current = sessionKey;
     }, [sessionKey]);
 
-    // Mirror resetKey into a ref so the animation loop can detect changes
-    // synchronously.  We update during render (not via useEffect) to close
-    // the race window: deferred useEffect left a gap where stale STOMP
-    // packets could be drained into history before the ref was updated.
+    // Mirror resetKey into a ref so the animation loop can detect changes.
+    // useLayoutEffect fires synchronously after DOM commit — before the
+    // next requestAnimationFrame — closing the race window where deferred
+    // useEffect allowed stale STOMP packets to be drained into history.
     const resetKeyRef = useRef(resetKey);
-    if (resetKeyRef.current !== resetKey) {
+    useLayoutEffect(() => {
         resetKeyRef.current = resetKey;
-    }
+    }, [resetKey]);
 
     // Tracks the last resetKey the animation loop actually processed,
     // so it can detect when a new reset is pending.

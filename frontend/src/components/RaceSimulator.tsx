@@ -155,7 +155,7 @@ const RaceSimulator: React.FC = () => {
             name: entry.broadcastName || 'Unknown',
             team: entry.teamName || 'Unknown',
             teamColor: '#' + (entry.teamColour || 'ffffff'),
-            stats: { speed: 80, consistency: 80, aggression: 80, tireMgmt: 80, experience: 80, wins: 0, podiums: 0 },
+            stats: { speed: 80, consistency: 80, aggression: 80, tireMgmt: 80, experience: 80, wins: 0, podiums: 0, totalPoints: 0, bestChampionshipFinish: 0, totalRaces: 0, teamsDrivenFor: [] },
         }));
 
         setSessionDrivers(profiles);

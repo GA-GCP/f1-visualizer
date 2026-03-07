@@ -47,7 +47,7 @@ describe('CircuitTrace', () => {
         name: 'Max Verstappen',
         team: 'Red Bull Racing',
         teamColor: '#3671C6',
-        stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98 }
+        stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] }
     };
 
     const SESSION_KEY = 9165;

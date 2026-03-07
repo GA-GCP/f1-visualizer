@@ -1,8 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as d3 from 'd3';
 import { Box, Paper, Typography } from '@mui/material';
+import { AnimatePresence, motion } from 'framer-motion';
 import type { LocationPacket } from '../types/telemetry';
 import type { DriverProfile } from '../api/referenceApi';
+import CircuitTraceIdleOverlay from './CircuitTraceIdleOverlay';
+import CircuitTraceLoadingOverlay from './CircuitTraceLoadingOverlay';
 
 interface CircuitTraceProps {
     /** Mutable queue of LocationPackets written by useLocation.  The animation
@@ -15,11 +18,19 @@ interface CircuitTraceProps {
     /** Monotonic counter — incrementing this forces a full trace reset (used on
      *  seek and session restart to clear stale history). */
     resetKey: number;
+    /** Whether a session is currently active (started by the user). */
+    isSessionActive: boolean;
+    /** Whether the session is initializing (waiting for first telemetry data). */
+    isInitializing: boolean;
+    /** Metadata about the active session (year and meeting name). */
+    sessionMeta: { year: number; meetingName: string } | null;
+    /** Driver code for the selected driver (e.g. "VER"). */
+    driverCode: string | null;
 }
 
 const ASPECT_RATIO = 1.6; // width:height = 1.6:1
 
-const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedDriver, sessionKey, resetKey }) => {
+const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedDriver, sessionKey, resetKey, isSessionActive, isInitializing, sessionMeta, driverCode }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [canvasSize, setCanvasSize] = useState({ width: 800, height: 500 });
@@ -253,16 +264,53 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
 
     return (
         <Paper sx={{ p: 2, bgcolor: '#1e1e1e', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Typography variant="h6" color="primary" sx={{ mb: 1, alignSelf: 'flex-start' }}>
-                CIRCUIT TRACE
-            </Typography>
-            <Box ref={containerRef} sx={{ border: '1px solid #333', borderRadius: 1, bgcolor: '#121212', width: '100%', overflow: 'hidden' }}>
+            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2, mb: 1, alignSelf: 'flex-start' }}>
+                <Typography variant="h6" color="primary">
+                    CIRCUIT TRACE
+                </Typography>
+                <AnimatePresence>
+                    {isSessionActive && !isInitializing && sessionMeta && (
+                        <motion.div
+                            key="race-info"
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 0.4, x: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.5, delay: 0.3 }}
+                        >
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    color: 'rgba(255,255,255,0.4)',
+                                    fontFamily: '"Titillium Web", sans-serif',
+                                    letterSpacing: '0.1em',
+                                }}
+                            >
+                                {sessionMeta.year} | {sessionMeta.meetingName.toUpperCase()}
+                            </Typography>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </Box>
+            <Box ref={containerRef} sx={{ position: 'relative', border: '1px solid #333', borderRadius: 1, bgcolor: '#121212', width: '100%', overflow: 'hidden' }}>
                 <canvas
                     ref={canvasRef}
                     width={canvasSize.width}
                     height={canvasSize.height}
                     style={{ display: 'block', width: '100%', height: 'auto' }}
                 />
+                <AnimatePresence mode="wait">
+                    {!isSessionActive && (
+                        <CircuitTraceIdleOverlay key="idle" />
+                    )}
+                    {isSessionActive && isInitializing && (
+                        <CircuitTraceLoadingOverlay
+                            key="loading"
+                            year={sessionMeta!.year}
+                            meetingName={sessionMeta!.meetingName}
+                            driverCode={driverCode || 'N/A'}
+                        />
+                    )}
+                </AnimatePresence>
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
                 Live Plotting (Tracking Driver: {selectedDriver?.code || 'None'})

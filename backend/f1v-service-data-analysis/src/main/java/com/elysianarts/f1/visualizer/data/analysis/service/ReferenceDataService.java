@@ -1,7 +1,9 @@
 package com.elysianarts.f1.visualizer.data.analysis.service;
 
 import com.elysianarts.f1.visualizer.data.analysis.model.DriverProfile;
+import com.elysianarts.f1.visualizer.data.analysis.model.RaceEntryRoster;
 import com.elysianarts.f1.visualizer.data.analysis.model.RaceSession;
+import com.elysianarts.f1.visualizer.data.analysis.model.SessionDriverEntry;
 import com.elysianarts.f1.visualizer.data.analysis.repository.ReferenceDataCacheRepository;
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.FieldValueList;
@@ -10,11 +12,12 @@ import com.google.cloud.bigquery.TableResult;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -103,6 +106,52 @@ public class ReferenceDataService {
                 .toList();
     }
 
+    /**
+     * Returns the exact driver roster for a specific race session, including
+     * each driver's team and team color at the time of that race.
+     * Firestore-first, BigQuery fallback.
+     */
+    public RaceEntryRoster getDriversForSession(long sessionKey) {
+        // Try Firestore cache first
+        RaceEntryRoster cached = cacheRepository.getCachedRaceEntries(sessionKey);
+        if (cached != null) {
+            return cached;
+        }
+
+        // Cache miss — query BigQuery and populate cache
+        log.info("Firestore cache miss for session drivers (session={}), querying BigQuery", sessionKey);
+        RaceEntryRoster roster = querySessionDriversFromBigQuery(sessionKey);
+        if (roster != null && !roster.getDrivers().isEmpty()) {
+            cacheRepository.cacheRaceEntries(roster);
+        }
+        return roster;
+    }
+
+    /**
+     * Returns the distinct years available in the sessions data,
+     * sorted descending (newest first).
+     */
+    public List<Integer> getAvailableYears() {
+        List<RaceSession> allSessions = getAvailableSessions();
+        return allSessions.stream()
+                .map(RaceSession::getYear)
+                .distinct()
+                .sorted(Comparator.reverseOrder())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Returns all Race sessions for a specific year, sorted by session key descending.
+     */
+    public List<RaceSession> getSessionsByYear(int year) {
+        List<RaceSession> allSessions = getAvailableSessions();
+        return allSessions.stream()
+                .filter(s -> s.getYear() == year)
+                .filter(s -> "Race".equalsIgnoreCase(s.getSessionName()))
+                .sorted(Comparator.comparingLong(RaceSession::getSessionKey).reversed())
+                .collect(Collectors.toList());
+    }
+
     // ── BigQuery Queries (source-of-truth) ──
 
     private List<RaceSession> querySessionsFromBigQuery(String query) {
@@ -133,6 +182,48 @@ public class ReferenceDataService {
         } catch (Exception e) {
             log.error("Failed to fetch sessions from BigQuery", e);
             return List.of();
+        }
+    }
+
+    private RaceEntryRoster querySessionDriversFromBigQuery(long sessionKey) {
+        String sql = String.format("""
+            SELECT session_key, year, driver_number, broadcast_name, name_acronym, team_name, team_colour, country_code
+            FROM `%s.session_drivers`
+            WHERE session_key = @sessionKey
+            ORDER BY driver_number ASC
+            """, DATASET);
+
+        try {
+            QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(sql)
+                    .addNamedParameter("sessionKey", com.google.cloud.bigquery.QueryParameterValue.int64(sessionKey))
+                    .build();
+
+            TableResult result = bigQuery.query(queryConfig);
+            List<SessionDriverEntry> drivers = new ArrayList<>();
+            int year = 0;
+
+            for (FieldValueList row : result.iterateAll()) {
+                if (year == 0) {
+                    year = row.get("year").isNull() ? 2023 : (int) row.get("year").getLongValue();
+                }
+                drivers.add(SessionDriverEntry.builder()
+                        .driverNumber((int) row.get("driver_number").getLongValue())
+                        .broadcastName(row.get("broadcast_name").isNull() ? "Unknown" : row.get("broadcast_name").getStringValue())
+                        .nameAcronym(row.get("name_acronym").isNull() ? null : row.get("name_acronym").getStringValue())
+                        .teamName(row.get("team_name").isNull() ? "Unknown" : row.get("team_name").getStringValue())
+                        .teamColour(row.get("team_colour").isNull() ? "ffffff" : row.get("team_colour").getStringValue())
+                        .countryCode(row.get("country_code").isNull() ? "" : row.get("country_code").getStringValue())
+                        .build());
+            }
+
+            return RaceEntryRoster.builder()
+                    .sessionKey(sessionKey)
+                    .year(year)
+                    .drivers(drivers)
+                    .build();
+        } catch (Exception e) {
+            log.error("Failed to fetch session drivers from BigQuery for session {}", sessionKey, e);
+            return RaceEntryRoster.builder().sessionKey(sessionKey).year(0).drivers(List.of()).build();
         }
     }
 

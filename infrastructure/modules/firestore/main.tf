@@ -8,5 +8,19 @@ resource "google_firestore_database" "database" {
   delete_protection_state = var.delete_protection
 }
 
-# Future-proofing: Placeholder for Composite Indexes
-# We will add google_firestore_index resources here later based on your "Error-Driven" discovery plan.
+# Composite index for querying race entry rosters by year and session
+resource "google_firestore_index" "race_entries_by_year" {
+  project    = var.project_id
+  database   = google_firestore_database.database.name
+  collection = "reference_race_entries"
+
+  fields {
+    field_path = "year"
+    order      = "DESCENDING"
+  }
+
+  fields {
+    field_path = "sessionKey"
+    order      = "DESCENDING"
+  }
+}

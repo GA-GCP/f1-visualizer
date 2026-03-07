@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import LapTimeChart from '../components/LapTimeChart';
 import DataVaultLoader from '../components/DataVaultLoader';
 import type { LapDataRecord } from '../types/telemetry';
-import { fetchDrivers, fetchSessions, fetchSessionLaps, type DriverProfile, type RaceSession } from '../api/referenceApi';
+import { fetchSessions, fetchSessionDrivers, fetchSessionLaps, type RaceSession } from '../api/referenceApi';
 
 const HistoricalData: React.FC = () => {
     const [laps, setLaps] = useState<LapDataRecord[]>([]);
@@ -15,7 +15,7 @@ const HistoricalData: React.FC = () => {
     const [sessions, setSessions] = useState<RaceSession[]>([]);
     const [selectedSession, setSelectedSession] = useState<RaceSession | null>(null);
 
-    // Fetch available sessions and driver colors on mount
+    // Fetch available sessions on mount
     useEffect(() => {
         fetchSessions().then(data => {
             setSessions(data);
@@ -25,26 +25,29 @@ const HistoricalData: React.FC = () => {
                 setLoading(false);
             }
         }).catch(() => setLoading(false));
-        fetchDrivers().then((drivers: DriverProfile[]) => {
-            const colorMap: Record<number, string> = {};
-            for (const d of drivers) {
-                colorMap[d.id] = d.teamColor;
-            }
-            setDriverColorMap(colorMap);
-        });
     }, []);
 
+    // When session changes, fetch both laps and session-specific driver colors
     useEffect(() => {
         if (!selectedSession) return;
 
         let isMounted = true;
 
-        const fetchLaps = async () => {
+        const fetchData = async () => {
             setLoading(true);
             try {
-                const data = await fetchSessionLaps(selectedSession.sessionKey);
+                const [lapsData, roster] = await Promise.all([
+                    fetchSessionLaps(selectedSession.sessionKey),
+                    fetchSessionDrivers(selectedSession.sessionKey),
+                ]);
                 if (isMounted) {
-                    setLaps(data);
+                    setLaps(lapsData);
+                    // Build color map from session-specific driver roster
+                    const colorMap: Record<number, string> = {};
+                    for (const d of roster.drivers) {
+                        colorMap[d.driverNumber] = '#' + (d.teamColour || 'ffffff');
+                    }
+                    setDriverColorMap(colorMap);
                 }
             } catch (err) {
                 if (isMounted) {
@@ -57,7 +60,7 @@ const HistoricalData: React.FC = () => {
             }
         };
 
-        void fetchLaps();
+        void fetchData();
         return () => {
             isMounted = false;
         };

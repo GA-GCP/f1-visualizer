@@ -3,6 +3,8 @@ package com.elysianarts.f1.visualizer.data.analysis.model;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 @Builder
 public class DriverProfile {
@@ -23,5 +25,10 @@ public class DriverProfile {
         private int experience;
         private int wins;
         private int podiums;
+        private int totalPoints;
+        private int bestChampionshipFinish;
+        private int totalRaces;
+        @Builder.Default
+        private List<String> teamsDrivenFor = List.of();
     }
 }

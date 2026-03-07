@@ -180,6 +180,10 @@ public class ReferenceDataCacheRepository {
         stats.put("experience", driver.getStats().getExperience());
         stats.put("wins", driver.getStats().getWins());
         stats.put("podiums", driver.getStats().getPodiums());
+        stats.put("totalPoints", driver.getStats().getTotalPoints());
+        stats.put("bestChampionshipFinish", driver.getStats().getBestChampionshipFinish());
+        stats.put("totalRaces", driver.getStats().getTotalRaces());
+        stats.put("teamsDrivenFor", driver.getStats().getTeamsDrivenFor());
         map.put("stats", stats);
         return map;
     }
@@ -187,21 +191,36 @@ public class ReferenceDataCacheRepository {
     @SuppressWarnings("unchecked")
     private DriverProfile docToDriver(DocumentSnapshot doc) {
         Map<String, Object> statsMap = (Map<String, Object>) doc.get("stats");
+        DriverProfile.DriverStats.DriverStatsBuilder statsBuilder = DriverProfile.DriverStats.builder()
+                .speed(((Number) statsMap.get("speed")).intValue())
+                .consistency(((Number) statsMap.get("consistency")).intValue())
+                .aggression(((Number) statsMap.get("aggression")).intValue())
+                .tireMgmt(((Number) statsMap.get("tireMgmt")).intValue())
+                .experience(((Number) statsMap.get("experience")).intValue())
+                .wins(((Number) statsMap.get("wins")).intValue())
+                .podiums(((Number) statsMap.get("podiums")).intValue());
+
+        // Gracefully handle documents cached before these fields existed
+        if (statsMap.containsKey("totalPoints")) {
+            statsBuilder.totalPoints(((Number) statsMap.get("totalPoints")).intValue());
+        }
+        if (statsMap.containsKey("bestChampionshipFinish")) {
+            statsBuilder.bestChampionshipFinish(((Number) statsMap.get("bestChampionshipFinish")).intValue());
+        }
+        if (statsMap.containsKey("totalRaces")) {
+            statsBuilder.totalRaces(((Number) statsMap.get("totalRaces")).intValue());
+        }
+        if (statsMap.containsKey("teamsDrivenFor") && statsMap.get("teamsDrivenFor") instanceof List<?> teams) {
+            statsBuilder.teamsDrivenFor(teams.stream().map(Object::toString).toList());
+        }
+
         return DriverProfile.builder()
                 .id(doc.getLong("id").intValue())
                 .code(doc.getString("code"))
                 .name(doc.getString("name"))
                 .team(doc.getString("team"))
                 .teamColor(doc.getString("teamColor"))
-                .stats(DriverProfile.DriverStats.builder()
-                        .speed(((Number) statsMap.get("speed")).intValue())
-                        .consistency(((Number) statsMap.get("consistency")).intValue())
-                        .aggression(((Number) statsMap.get("aggression")).intValue())
-                        .tireMgmt(((Number) statsMap.get("tireMgmt")).intValue())
-                        .experience(((Number) statsMap.get("experience")).intValue())
-                        .wins(((Number) statsMap.get("wins")).intValue())
-                        .podiums(((Number) statsMap.get("podiums")).intValue())
-                        .build())
+                .stats(statsBuilder.build())
                 .build();
     }
 

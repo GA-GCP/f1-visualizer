@@ -254,7 +254,10 @@ public class ReferenceDataService {
                         .name(name)
                         .team(row.get("team_name").isNull() ? "Unknown" : row.get("team_name").getStringValue())
                         .teamColor("#" + teamColor)
-                        .stats(DriverProfile.DriverStats.builder().speed(80).consistency(80).aggression(80).tireMgmt(80).experience(80).wins(0).podiums(0).build())
+                        .stats(DriverProfile.DriverStats.builder()
+                                .speed(50).consistency(50).aggression(50).tireMgmt(50).experience(30)
+                                .wins(0).podiums(0).totalPoints(0).bestChampionshipFinish(0).totalRaces(0)
+                                .teamsDrivenFor(List.of()).build())
                         .build());
             }
             return drivers;

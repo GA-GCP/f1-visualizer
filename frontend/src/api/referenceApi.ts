@@ -7,7 +7,11 @@ export interface DriverProfile {
     name: string;
     team: string;
     teamColor: string;
-    stats: { speed: number; consistency: number; aggression: number; tireMgmt: number; experience: number; wins: number; podiums: number; };
+    stats: {
+        speed: number; consistency: number; aggression: number; tireMgmt: number; experience: number;
+        wins: number; podiums: number;
+        totalPoints: number; bestChampionshipFinish: number; totalRaces: number; teamsDrivenFor: string[];
+    };
 }
 
 export interface RaceSession {

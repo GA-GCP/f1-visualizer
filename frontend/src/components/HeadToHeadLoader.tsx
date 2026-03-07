@@ -49,6 +49,9 @@ function radarPath(fractions: number[]): string {
 const GHOST_STATS = [
     { label: 'RACE WINS', splitA: 0.55, splitB: 0.45 },
     { label: 'PODIUM FINISHES', splitA: 0.4, splitB: 0.6 },
+    { label: 'TOTAL CAREER POINTS', splitA: 0.65, splitB: 0.35 },
+    { label: 'TOTAL RACES', splitA: 0.48, splitB: 0.52 },
+    { label: 'BEST CHAMPIONSHIP FINISH', splitA: 0.6, splitB: 0.4 },
 ];
 
 /**

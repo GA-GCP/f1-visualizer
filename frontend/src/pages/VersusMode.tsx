@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Container, Grid, Typography, Paper } from '@mui/material';
+import { Box, Chip, Container, Grid, Typography, Paper } from '@mui/material';
 import { motion } from 'framer-motion';
 import DriverSelector from '../components/selectors/DriverSelector';
 import RadarChart from '../components/versus/RadarChart';
@@ -146,6 +146,54 @@ const VersusMode: React.FC = () => {
 
                             <StatComparisonBar label="Race Wins" driverA={driverA} driverB={driverB} metric="wins" />
                             <StatComparisonBar label="Podium Finishes" driverA={driverA} driverB={driverB} metric="podiums" />
+                            <StatComparisonBar label="Total Career Points" driverA={driverA} driverB={driverB} metric="totalPoints" />
+                            <StatComparisonBar label="Total Races" driverA={driverA} driverB={driverB} metric="totalRaces" />
+                            <StatComparisonBar label="Best Championship Finish" driverA={driverA} driverB={driverB} metric="bestChampionshipFinish" invert />
+
+                            {/* Teams Driven For */}
+                            <Box sx={{ mt: 4 }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ textTransform: 'uppercase', textAlign: 'center', mb: 2 }}>
+                                    Teams Driven For
+                                </Typography>
+                                <Grid container spacing={2}>
+                                    <Grid size={{ xs: 6 }}>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, justifyContent: 'center' }}>
+                                            {(driverA.stats.teamsDrivenFor ?? []).map((team) => (
+                                                <Chip
+                                                    key={team}
+                                                    label={team}
+                                                    size="small"
+                                                    sx={{
+                                                        bgcolor: 'rgba(255,255,255,0.06)',
+                                                        color: driverA.teamColor,
+                                                        borderColor: driverA.teamColor,
+                                                        border: '1px solid',
+                                                        fontSize: '0.7rem',
+                                                    }}
+                                                />
+                                            ))}
+                                        </Box>
+                                    </Grid>
+                                    <Grid size={{ xs: 6 }}>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, justifyContent: 'center' }}>
+                                            {(driverB.stats.teamsDrivenFor ?? []).map((team) => (
+                                                <Chip
+                                                    key={team}
+                                                    label={team}
+                                                    size="small"
+                                                    sx={{
+                                                        bgcolor: 'rgba(255,255,255,0.06)',
+                                                        color: driverB.teamColor,
+                                                        borderColor: driverB.teamColor,
+                                                        border: '1px solid',
+                                                        fontSize: '0.7rem',
+                                                    }}
+                                                />
+                                            ))}
+                                        </Box>
+                                    </Grid>
+                                </Grid>
+                            </Box>
 
                             <Box sx={{ mt: 6, p: 2, border: '1px dashed #444', borderRadius: 1 }}>
                                 <Typography variant="caption" color="text.secondary">

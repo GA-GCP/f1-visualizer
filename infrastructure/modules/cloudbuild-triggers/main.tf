@@ -194,6 +194,7 @@ resource "google_cloudbuild_trigger" "api_gateway" {
 
   included_files = [
     "infrastructure/openapi.yaml",
+    "infrastructure/modules/**",
     "cloudbuild/api-gateway.yaml",
   ]
 

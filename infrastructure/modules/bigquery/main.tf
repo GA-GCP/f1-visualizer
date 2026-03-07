@@ -138,3 +138,23 @@ resource "google_bigquery_table" "results" {
 ]
 EOF
 }
+
+# 7. SESSION_DRIVERS TABLE (Per-race driver rosters with team at time of race)
+resource "google_bigquery_table" "session_drivers" {
+  dataset_id = google_bigquery_dataset.f1_dataset.dataset_id
+  table_id   = "session_drivers"
+  project    = var.project_id
+
+  schema = <<EOF
+[
+  { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
+  { "name": "year", "type": "INTEGER", "mode": "REQUIRED" },
+  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
+  { "name": "broadcast_name", "type": "STRING", "mode": "NULLABLE" },
+  { "name": "name_acronym", "type": "STRING", "mode": "NULLABLE" },
+  { "name": "team_name", "type": "STRING", "mode": "NULLABLE" },
+  { "name": "team_colour", "type": "STRING", "mode": "NULLABLE" },
+  { "name": "country_code", "type": "STRING", "mode": "NULLABLE" }
+]
+EOF
+}

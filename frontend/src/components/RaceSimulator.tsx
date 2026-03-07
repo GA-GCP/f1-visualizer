@@ -8,9 +8,10 @@ import CircuitTrace from './CircuitTrace';
 import DriverSelector from './selectors/DriverSelector';
 import SessionControlPanel from './selectors/SessionControlPanel';
 import MediaController from './MediaController';
-import { fetchDrivers, type DriverProfile } from '../api/referenceApi';
+import { fetchDrivers, type DriverProfile, type RaceEntryRoster } from '../api/referenceApi';
 import type { TelemetryPacket, LocationPacket } from '../types/telemetry';
 import { useUser } from '../context/UserContext';
+import { useCallback } from 'react';
 
 const containerVariants = {
     hidden: {},
@@ -33,6 +34,7 @@ const RaceSimulator: React.FC = () => {
     const [traceResetKey, setTraceResetKey] = useState(0);
     const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
     const [streamError, setStreamError] = useState<string | null>(null);
+    const [sessionDrivers, setSessionDrivers] = useState<DriverProfile[]>([]);
 
     const { userProfile } = useUser();
 
@@ -88,6 +90,28 @@ const RaceSimulator: React.FC = () => {
         setTraceResetKey(prev => prev + 1);
     };
 
+    // Convert a session's driver roster into DriverProfile[] for the DriverSelector
+    const handleSessionSelected = useCallback((roster: RaceEntryRoster) => {
+        const profiles: DriverProfile[] = roster.drivers.map(entry => ({
+            id: entry.driverNumber,
+            code: entry.nameAcronym || (entry.broadcastName?.length >= 3 ? entry.broadcastName.substring(0, 3).toUpperCase() : String(entry.driverNumber)),
+            name: entry.broadcastName || 'Unknown',
+            team: entry.teamName || 'Unknown',
+            teamColor: '#' + (entry.teamColour || 'ffffff'),
+            stats: { speed: 80, consistency: 80, aggression: 80, tireMgmt: 80, experience: 80, wins: 0, podiums: 0 },
+        }));
+
+        setSessionDrivers(profiles);
+        if (profiles.length > 0) {
+            const favCode = userProfile?.preferences?.favoriteDriver;
+            const defaultDriver = profiles.find(d => d.code === favCode) || profiles[0];
+            setSelectedDriver(defaultDriver);
+        }
+    }, [userProfile]);
+
+    // Use session-specific drivers when available, otherwise fall back to global drivers
+    const displayDrivers = sessionDrivers.length > 0 ? sessionDrivers : drivers;
+
     // 2. NEW: Determine if we have dropped connection while a session is active
     const connectionLost = activeSession !== null && (!isTelemetryConnected || !isLocationConnected);
 
@@ -113,7 +137,7 @@ const RaceSimulator: React.FC = () => {
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 
                         <Paper sx={{ bgcolor: '#1e1e1e', border: '1px solid #333' }}>
-                            <SessionControlPanel onStreamStarted={handleStreamStarted} onError={setStreamError} />
+                            <SessionControlPanel onStreamStarted={handleStreamStarted} onSessionSelected={handleSessionSelected} onError={setStreamError} />
                         </Paper>
 
                         <AnimatePresence>
@@ -138,7 +162,7 @@ const RaceSimulator: React.FC = () => {
                             ) : (
                                 <DriverSelector
                                     label="SELECT DRIVER CHANNEL"
-                                    options={drivers}
+                                    options={displayDrivers}
                                     value={selectedDriver}
                                     onChange={setSelectedDriver}
                                 />

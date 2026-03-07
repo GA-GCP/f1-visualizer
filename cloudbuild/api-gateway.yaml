@@ -106,14 +106,23 @@ steps:
           --project=$PROJECT_ID \
           --format='value(defaultHostname)')
 
-        echo "Testing gateway: https://$$GATEWAY_URL/health"
-        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$$GATEWAY_URL/health" || true)
+        # Test a real endpoint defined in the OpenAPI spec.
+        # /api/v1/analysis/drivers requires auth but returns 401 (not 404)
+        # when the route exists.  A 404 means the spec wasn't applied.
+        SMOKE_PATH="/api/v1/analysis/drivers"
+        echo "Testing gateway: https://$$GATEWAY_URL$$SMOKE_PATH"
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$$GATEWAY_URL$$SMOKE_PATH" || true)
 
         echo "Smoke test HTTP status: $$HTTP_STATUS"
+
+        if [ "$$HTTP_STATUS" -eq 404 ]; then
+          echo "ERROR: Gateway returned 404 — routes not registered. Config may be stale."
+          exit 1
+        fi
 
         if [ "$$HTTP_STATUS" -ge 500 ]; then
           echo "ERROR: Gateway returned server error ($$HTTP_STATUS)"
           exit 1
         fi
 
-        echo "Smoke test passed."
+        echo "Smoke test passed (HTTP $$HTTP_STATUS)."

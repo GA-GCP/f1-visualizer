@@ -15,13 +15,11 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // 1. TELEMETRY (Port 8080)
-      '/api/v1/debug': { target: 'http://localhost:8080', changeOrigin: true, secure: false },
-      // 2. INGESTION (Port 8081)
+      // 1. INGESTION (Port 8081)
       '/api/v1/ingestion': { target: 'http://localhost:8081', changeOrigin: true, secure: false },
-      // 3. ANALYSIS (Port 8082)
+      // 2. ANALYSIS (Port 8082)
       '/api/v1/analysis': { target: 'http://localhost:8082', changeOrigin: true, secure: false },
-      // 4. USER PROFILES (Port 8083)
+      // 3. USER PROFILES (Port 8083)
       '/api/v1/users': { target: 'http://localhost:8083', changeOrigin: true, secure: false },
 
       // WEBSOCKETS (Port 8080)

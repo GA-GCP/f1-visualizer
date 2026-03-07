@@ -72,9 +72,19 @@ class ReferenceDataLoaderTest {
                 .setBody("[{\"session_key\": 9165, \"meeting_key\": 1219}]")
                 .addHeader("Content-Type", "application/json"));
 
-        // 3rd for /drivers
+        // 3rd for /drivers (latest grid)
         mockWebServer.enqueue(new MockResponse()
                 .setBody("[{\"driver_number\": 1, \"broadcast_name\": \"M VERSTAPPEN\", \"team_colour\": \"3671C6\"}]")
+                .addHeader("Content-Type", "application/json"));
+
+        // 4th for /sessions (re-fetched inside loadSessionDrivers)
+        mockWebServer.enqueue(new MockResponse()
+                .setBody("[{\"session_key\": 9165, \"meeting_key\": 1219}]")
+                .addHeader("Content-Type", "application/json"));
+
+        // 5th for /drivers?session_key=9165 (per-session roster)
+        mockWebServer.enqueue(new MockResponse()
+                .setBody("[{\"driver_number\": 1, \"broadcast_name\": \"M VERSTAPPEN\", \"name_acronym\": \"VER\", \"team_name\": \"Red Bull Racing\", \"team_colour\": \"3671C6\", \"country_code\": \"NED\"}]")
                 .addHeader("Content-Type", "application/json"));
 
         // Act
@@ -82,7 +92,7 @@ class ReferenceDataLoaderTest {
 
         // Assert
         ArgumentCaptor<InsertAllRequest> requestCaptor = ArgumentCaptor.forClass(InsertAllRequest.class);
-        verify(bigQuery, times(2)).insertAll(requestCaptor.capture());
+        verify(bigQuery, times(3)).insertAll(requestCaptor.capture());
 
         // Validate Sessions Insert (First Call)
         InsertAllRequest sessionsRequest = requestCaptor.getAllValues().get(0);
@@ -99,5 +109,13 @@ class ReferenceDataLoaderTest {
         assertEquals("drivers", driversTable.getTable());
         assertEquals(1, driversRequest.getRows().size());
         assertTrue(driversRequest.getRows().get(0).getContent().containsValue(1));
+
+        // Validate Session Drivers Insert (Third Call)
+        InsertAllRequest sessionDriversRequest = requestCaptor.getAllValues().get(2);
+        TableId sessionDriversTable = sessionDriversRequest.getTable();
+        assertEquals("f1_dataset", sessionDriversTable.getDataset());
+        assertEquals("session_drivers", sessionDriversTable.getTable());
+        assertEquals(1, sessionDriversRequest.getRows().size());
+        assertTrue(sessionDriversRequest.getRows().get(0).getContent().containsValue(9165));
     }
 }

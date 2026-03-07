@@ -8,7 +8,7 @@ import CircuitTrace from './CircuitTrace';
 import DriverSelector from './selectors/DriverSelector';
 import SessionControlPanel from './selectors/SessionControlPanel';
 import MediaController from './MediaController';
-import { fetchDrivers, type DriverProfile, type RaceEntryRoster } from '../api/referenceApi';
+import { fetchDrivers, type DriverProfile, type RaceEntryRoster, type RaceSession } from '../api/referenceApi';
 import type { TelemetryPacket, LocationPacket } from '../types/telemetry';
 import { useUser } from '../context/UserContext';
 import { useCallback } from 'react';
@@ -35,6 +35,9 @@ const RaceSimulator: React.FC = () => {
     const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
     const [streamError, setStreamError] = useState<string | null>(null);
     const [sessionDrivers, setSessionDrivers] = useState<DriverProfile[]>([]);
+    const [sessionMeta, setSessionMeta] = useState<{ year: number; meetingName: string } | null>(null);
+    const [isInitializing, setIsInitializing] = useState(false);
+    const isInitializingRef = useRef(false);
 
     const { userProfile } = useUser();
 
@@ -69,16 +72,21 @@ const RaceSimulator: React.FC = () => {
         };
     }, [userProfile]);
 
+    useEffect(() => { isInitializingRef.current = isInitializing; }, [isInitializing]);
+
     const { isConnected: isTelemetryConnected } = useTelemetry((data) => {
         if (selectedDriver && data.driver_number === selectedDriver.id &&
             activeSession && data.session_key === activeSession.key) {
             setLastTelemetry(data);
+            if (isInitializingRef.current) setIsInitializing(false);
         }
     });
 
     const { isConnected: isLocationConnected } = useLocation(locationQueueRef);
 
-    const handleStreamStarted = (sessionKey: number, mode: 'LIVE' | 'SIMULATION') => {
+    const handleStreamStarted = (sessionKey: number, mode: 'LIVE' | 'SIMULATION', session: RaceSession) => {
+        setSessionMeta({ year: session.year, meetingName: session.meetingName });
+        setIsInitializing(true);
         setActiveSession({ key: sessionKey, mode });
         setLastTelemetry(null);
         locationQueueRef.current = [];
@@ -111,6 +119,9 @@ const RaceSimulator: React.FC = () => {
 
     // Use session-specific drivers when available, otherwise fall back to global drivers
     const displayDrivers = sessionDrivers.length > 0 ? sessionDrivers : drivers;
+
+    // Determine if DRS is currently active for the selected driver
+    const isDrsActive = lastTelemetry?.drs !== undefined && lastTelemetry.drs !== 0;
 
     // 2. NEW: Determine if we have dropped connection while a session is active
     const connectionLost = activeSession !== null && (!isTelemetryConnected || !isLocationConnected);
@@ -169,44 +180,84 @@ const RaceSimulator: React.FC = () => {
                             )}
                         </Paper>
 
-                        <Paper sx={{ p: 3, bgcolor: '#1e1e1e', color: 'white', minHeight: '200px', borderTop: `4px solid ${selectedDriver?.teamColor || '#333'}` }}>
-                            <Typography variant="h6" color="secondary" sx={{ mb: 2 }}>
-                                LIVE TELEMETRY
-                            </Typography>
-                            {lastTelemetry ? (
-                                <motion.div variants={containerVariants} initial="hidden" animate="visible">
-                                    <motion.div variants={itemVariants}>
-                                        <Typography variant="h2" sx={{ fontWeight: 'bold', color: 'white' }}>
-                                            {lastTelemetry.speed} <span style={{ fontSize: '1.5rem', color: '#666' }}>KM/H</span>
-                                        </Typography>
-                                    </motion.div>
-                                    <Grid container spacing={2} sx={{ mt: 2 }}>
-                                        <Grid size={4}>
-                                            <motion.div variants={itemVariants}>
-                                                <Typography variant="caption" color="text.secondary">RPM</Typography>
-                                                <Typography variant="h6">{lastTelemetry.rpm}</Typography>
-                                            </motion.div>
-                                        </Grid>
-                                        <Grid size={4}>
-                                            <motion.div variants={itemVariants}>
-                                                <Typography variant="caption" color="text.secondary">GEAR</Typography>
-                                                <Typography variant="h6">{lastTelemetry.gear}</Typography>
-                                            </motion.div>
-                                        </Grid>
-                                        <Grid size={4}>
-                                            <motion.div variants={itemVariants}>
-                                                <Typography variant="caption" color="text.secondary">THROTTLE</Typography>
-                                                <Typography variant="h6">{lastTelemetry.throttle}%</Typography>
-                                            </motion.div>
-                                        </Grid>
-                                    </Grid>
-                                </motion.div>
-                            ) : (
-                                <Typography color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>
-                                    {activeSession ? `Waiting for data from ${selectedDriver?.code}...` : "Initialize a session to begin."}
+                        <motion.div
+                            animate={{
+                                boxShadow: isDrsActive
+                                    ? ['0 0 0px rgba(0,255,136,0)', '0 0 20px rgba(0,255,136,0.3)', '0 0 0px rgba(0,255,136,0)']
+                                    : '0 0 0px rgba(0,255,136,0)',
+                            }}
+                            transition={isDrsActive
+                                ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' }
+                                : { duration: 0.5 }
+                            }
+                            style={{ borderRadius: 4 }}
+                        >
+                            <Paper sx={{
+                                p: 3,
+                                bgcolor: '#1e1e1e',
+                                color: 'white',
+                                minHeight: '200px',
+                                borderTop: `4px solid ${selectedDriver?.teamColor || '#333'}`,
+                                border: isDrsActive ? '1px solid rgba(0,255,136,0.2)' : '1px solid transparent',
+                                transition: 'border-color 0.5s ease',
+                            }}>
+                                <Typography variant="h6" color="secondary" sx={{ mb: 2 }}>
+                                    LIVE TELEMETRY
                                 </Typography>
-                            )}
-                        </Paper>
+                                {lastTelemetry ? (
+                                    <motion.div variants={containerVariants} initial="hidden" animate="visible">
+                                        <motion.div variants={itemVariants}>
+                                            <Typography variant="h2" sx={{ fontWeight: 'bold', color: 'white' }}>
+                                                {lastTelemetry.speed} <span style={{ fontSize: '1.5rem', color: '#666' }}>KM/H</span>
+                                            </Typography>
+                                        </motion.div>
+                                        <Grid container spacing={2} sx={{ mt: 2 }}>
+                                            <Grid size={4}>
+                                                <motion.div variants={itemVariants}>
+                                                    <Typography variant="caption" color="text.secondary">RPM</Typography>
+                                                    <Typography variant="h6">{lastTelemetry.rpm}</Typography>
+                                                </motion.div>
+                                            </Grid>
+                                            <Grid size={4}>
+                                                <motion.div variants={itemVariants}>
+                                                    <Typography variant="caption" color="text.secondary">GEAR</Typography>
+                                                    <Typography variant="h6">{lastTelemetry.gear}</Typography>
+                                                </motion.div>
+                                            </Grid>
+                                            <Grid size={4}>
+                                                <motion.div variants={itemVariants}>
+                                                    <Typography variant="caption" color="text.secondary">THROTTLE</Typography>
+                                                    <Typography variant="h6">{lastTelemetry.throttle}%</Typography>
+                                                </motion.div>
+                                            </Grid>
+                                            <Grid size={4}>
+                                                <motion.div variants={itemVariants}>
+                                                    <Typography variant="caption" color="text.secondary">BRAKE</Typography>
+                                                    <Typography variant="h6" sx={{ color: lastTelemetry.brake > 0 ? '#ff4444' : 'white' }}>
+                                                        {lastTelemetry.brake}%
+                                                    </Typography>
+                                                </motion.div>
+                                            </Grid>
+                                            <Grid size={4}>
+                                                <motion.div variants={itemVariants}>
+                                                    <Typography variant="caption" color="text.secondary">DRS</Typography>
+                                                    <Typography variant="h6" sx={{
+                                                        color: lastTelemetry.drs !== 0 ? '#00ff88' : 'rgba(255,255,255,0.3)',
+                                                        fontWeight: lastTelemetry.drs !== 0 ? 'bold' : 'normal',
+                                                    }}>
+                                                        {lastTelemetry.drs !== 0 ? 'ACTIVATED' : 'OFF'}
+                                                    </Typography>
+                                                </motion.div>
+                                            </Grid>
+                                        </Grid>
+                                    </motion.div>
+                                ) : (
+                                    <Typography color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>
+                                        {activeSession ? `Waiting for data from ${selectedDriver?.code}...` : "Initialize a session to begin."}
+                                    </Typography>
+                                )}
+                            </Paper>
+                        </motion.div>
 
                     </Box>
                 </Grid>
@@ -217,6 +268,10 @@ const RaceSimulator: React.FC = () => {
                         selectedDriver={selectedDriver}
                         sessionKey={activeSession?.key ?? null}
                         resetKey={traceResetKey}
+                        isSessionActive={activeSession !== null}
+                        isInitializing={isInitializing}
+                        sessionMeta={sessionMeta}
+                        driverCode={selectedDriver?.code ?? null}
                     />
                 </Grid>
             </Grid>

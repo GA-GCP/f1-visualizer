@@ -15,10 +15,28 @@ vi.mock('d3', () => ({
     }
 }));
 
+// Mock overlay components to isolate CircuitTrace logic
+vi.mock('../CircuitTraceIdleOverlay', () => ({
+    default: () => <div data-testid="idle-overlay">SELECT A RACE AND START A SIMULATION</div>
+}));
+vi.mock('../CircuitTraceLoadingOverlay', () => ({
+    default: ({ year, meetingName, driverCode }: { year: number; meetingName: string; driverCode: string }) => (
+        <div data-testid="loading-overlay">{year} {meetingName} {driverCode}</div>
+    )
+}));
+
 /** Helper: creates a mutable ref pre-loaded with packets */
 function makeQueueRef(packets: LocationPacket[] = []): React.RefObject<LocationPacket[]> {
     return { current: [...packets] };
 }
+
+/** Default props shared across all tests */
+const defaultOverlayProps = {
+    isSessionActive: true,
+    isInitializing: false,
+    sessionMeta: null,
+    driverCode: null,
+};
 
 describe('CircuitTrace', () => {
     let mockCtx: Record<string, ReturnType<typeof vi.fn> | number | string>;
@@ -82,7 +100,7 @@ describe('CircuitTrace', () => {
 
     it('clears canvas on each render frame', async () => {
         const queueRef = makeQueueRef([mockLocation]);
-        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} />);
+        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} {...defaultOverlayProps} />);
 
         await act(async () => {
             await new Promise(r => setTimeout(r, 50));
@@ -96,7 +114,7 @@ describe('CircuitTrace', () => {
         const location2: LocationPacket = { ...mockLocation, x: 150, y: 250 };
         const queueRef = makeQueueRef([location1, location2]);
 
-        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} />);
+        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} {...defaultOverlayProps} />);
 
         await act(async () => {
             await new Promise(r => setTimeout(r, 50));
@@ -122,7 +140,7 @@ describe('CircuitTrace', () => {
             otherDriverLocation, otherDriverLocation2
         ]);
 
-        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} />);
+        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} {...defaultOverlayProps} />);
 
         await act(async () => {
             await new Promise(r => setTimeout(r, 50));
@@ -134,14 +152,14 @@ describe('CircuitTrace', () => {
 
     it('shows "None" when no driver is selected', () => {
         const queueRef = makeQueueRef();
-        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={null} sessionKey={null} resetKey={0} />);
+        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={null} sessionKey={null} resetKey={0} {...defaultOverlayProps} />);
 
         expect(screen.getByText(/None/)).toBeInTheDocument();
     });
 
     it('handles empty queue gracefully', async () => {
         const queueRef = makeQueueRef();
-        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} />);
+        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} {...defaultOverlayProps} />);
 
         expect(screen.getByText('CIRCUIT TRACE')).toBeInTheDocument();
         expect(screen.getByText(/VER/)).toBeInTheDocument();
@@ -151,5 +169,79 @@ describe('CircuitTrace', () => {
         });
 
         expect(mockCtx.clearRect).toHaveBeenCalled();
+    });
+
+    it('renders idle overlay when no session is active', () => {
+        const queueRef = makeQueueRef();
+        render(
+            <CircuitTrace
+                locationQueueRef={queueRef}
+                selectedDriver={null}
+                sessionKey={null}
+                resetKey={0}
+                isSessionActive={false}
+                isInitializing={false}
+                sessionMeta={null}
+                driverCode={null}
+            />
+        );
+
+        expect(screen.getByTestId('idle-overlay')).toBeInTheDocument();
+    });
+
+    it('renders loading overlay when session is initializing', () => {
+        const queueRef = makeQueueRef();
+        render(
+            <CircuitTrace
+                locationQueueRef={queueRef}
+                selectedDriver={mockDriver}
+                sessionKey={SESSION_KEY}
+                resetKey={0}
+                isSessionActive={true}
+                isInitializing={true}
+                sessionMeta={{ year: 2024, meetingName: 'Bahrain Grand Prix' }}
+                driverCode="VER"
+            />
+        );
+
+        expect(screen.getByTestId('loading-overlay')).toBeInTheDocument();
+        expect(screen.getByText(/2024 Bahrain Grand Prix VER/)).toBeInTheDocument();
+    });
+
+    it('renders no overlay when session is active and loaded', () => {
+        const queueRef = makeQueueRef();
+        render(
+            <CircuitTrace
+                locationQueueRef={queueRef}
+                selectedDriver={mockDriver}
+                sessionKey={SESSION_KEY}
+                resetKey={0}
+                isSessionActive={true}
+                isInitializing={false}
+                sessionMeta={{ year: 2024, meetingName: 'Bahrain Grand Prix' }}
+                driverCode="VER"
+            />
+        );
+
+        expect(screen.queryByTestId('idle-overlay')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('loading-overlay')).not.toBeInTheDocument();
+    });
+
+    it('displays race info text after successful load', () => {
+        const queueRef = makeQueueRef();
+        render(
+            <CircuitTrace
+                locationQueueRef={queueRef}
+                selectedDriver={mockDriver}
+                sessionKey={SESSION_KEY}
+                resetKey={0}
+                isSessionActive={true}
+                isInitializing={false}
+                sessionMeta={{ year: 2024, meetingName: 'Bahrain Grand Prix' }}
+                driverCode="VER"
+            />
+        );
+
+        expect(screen.getByText('2024 | BAHRAIN GRAND PRIX')).toBeInTheDocument();
     });
 });

@@ -89,7 +89,7 @@ describe('SessionControlPanel', () => {
 
         // Assert 3: Wait for the async operation to finish and verify the parent callback was fired
         await waitFor(() => {
-            expect(mockOnStreamStarted).toHaveBeenCalledWith(9165, 'SIMULATION');
+            expect(mockOnStreamStarted).toHaveBeenCalledWith(9165, 'SIMULATION', mockSessions[0]);
         });
     });
 

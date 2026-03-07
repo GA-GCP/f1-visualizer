@@ -8,7 +8,7 @@ import { sendIngestionCommand } from '@/api/ingestionApi.ts';
 import { fetchYears, fetchSessionsByYear, fetchSessionDrivers, type RaceSession, type RaceEntryRoster } from '@/api/referenceApi';
 
 interface SessionControlPanelProps {
-    onStreamStarted: (sessionKey: number, mode: 'LIVE' | 'SIMULATION') => void;
+    onStreamStarted: (sessionKey: number, mode: 'LIVE' | 'SIMULATION', session: RaceSession) => void;
     onSessionSelected?: (roster: RaceEntryRoster) => void;
     onError?: (message: string) => void;
 }
@@ -88,7 +88,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
         setIsLoading(true);
         try {
             await sendIngestionCommand({ mode, sessionKey: selectedSession.sessionKey });
-            onStreamStarted(selectedSession.sessionKey, mode);
+            onStreamStarted(selectedSession.sessionKey, mode, selectedSession);
         } catch (error) {
             console.error(error);
             const msg = mode === 'LIVE'

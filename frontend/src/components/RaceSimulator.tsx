@@ -145,6 +145,10 @@ const RaceSimulator: React.FC = () => {
     const handleSeek = () => {
         locationQueueRef.current = [];
         setTraceResetKey(prev => prev + 1);
+        // Clear stale telemetry and lap state so the UI shows "waiting"
+        // instead of data from the wrong race position after a seek.
+        setLastTelemetry(null);
+        setCurrentLap(null);
     };
 
     // Convert a session's driver roster into DriverProfile[] for the DriverSelector

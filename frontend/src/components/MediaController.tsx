@@ -69,8 +69,11 @@ const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
     };
 
     const handleSeekCommitted = async (_: React.SyntheticEvent | Event, newValue: number | number[]) => {
-        await seekSimulation(newValue as number);
+        // Clear the trace and stale state BEFORE the seek API call.
+        // This prevents in-flight STOMP packets (from the old position)
+        // from contaminating the trace while the HTTP request is pending.
         onSeek?.();
+        await seekSimulation(newValue as number);
         // Automatically resume playing if we seek
         if (!isPlaying) {
             await playSimulation();

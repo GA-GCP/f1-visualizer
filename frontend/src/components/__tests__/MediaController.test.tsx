@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'; // <-- 'act' imported here
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MediaController from '../MediaController';
-import { playSimulation, pauseSimulation } from '@/api/ingestionApi.ts';
+import { playSimulation, pauseSimulation, seekSimulation } from '@/api/ingestionApi.ts';
 
 // Mock the API calls (mockResolvedValue ensures the await inside the component finishes)
 vi.mock('../../api/ingestionApi', () => ({
@@ -49,5 +49,29 @@ describe('MediaController', () => {
 
         expect(playSimulation).toHaveBeenCalledTimes(1);
         expect(pauseSimulation).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onSeek before seekSimulation to clear stale trace data', async () => {
+        const callOrder: string[] = [];
+        const onSeek = vi.fn(() => { callOrder.push('onSeek'); });
+        vi.mocked(seekSimulation).mockImplementation(async () => { callOrder.push('seekSimulation'); });
+
+        render(<MediaController onSeek={onSeek} />);
+
+        const slider = screen.getByRole('slider');
+
+        // Simulate a committed seek (mouseup after dragging the slider)
+        await act(async () => {
+            fireEvent.change(slider, { target: { value: 30 } });
+            fireEvent.mouseUp(slider);
+        });
+
+        // Wait for async handlers to finish
+        await waitFor(() => {
+            expect(seekSimulation).toHaveBeenCalled();
+        });
+
+        expect(onSeek).toHaveBeenCalled();
+        expect(callOrder.indexOf('onSeek')).toBeLessThan(callOrder.indexOf('seekSimulation'));
     });
 });

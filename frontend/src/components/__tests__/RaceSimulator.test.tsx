@@ -19,10 +19,17 @@ const mockRaceSession = {
 vi.mock('../CircuitTrace', () => ({ default: () => <div data-testid="circuit-trace" /> }));
 vi.mock('../selectors/SessionControlPanel', () => ({
     default: ({ onStreamStarted }: { onStreamStarted: (key: number, mode: string, session: typeof mockRaceSession) => void }) => (
-        <button onClick={() => onStreamStarted(9165, 'LIVE', mockRaceSession)}>Start Mock Stream</button>
+        <button onClick={() => onStreamStarted(9165, 'SIMULATION', mockRaceSession)}>Start Mock Stream</button>
     )
 }));
-vi.mock('../MediaController', () => ({ default: () => <div /> }));
+// Expose onSeek so tests can trigger it to simulate a seek
+let capturedOnSeek: (() => void) | undefined;
+vi.mock('../MediaController', () => ({
+    default: ({ onSeek }: { onSeek?: () => void }) => {
+        capturedOnSeek = onSeek;
+        return <div data-testid="media-controller" />;
+    }
+}));
 
 // Mock hooks
 vi.mock('../../hooks/useTelemetry');
@@ -217,6 +224,51 @@ describe('RaceSimulator', () => {
         });
 
         expect(await screen.findByText('FORMATION LAP')).toBeInTheDocument();
+    });
+
+    it('clears telemetry and lap state on seek to prevent stale data', async () => {
+        vi.mocked(fetchSessionLaps).mockResolvedValue([
+            { driverNumber: 1, lapNumber: 1, dateStart: '2024-01-01T00:02:00Z', isPitOutLap: false, compound: 'SOFT' },
+            { driverNumber: 1, lapNumber: 2, dateStart: '2024-01-01T00:03:30Z', isPitOutLap: false, compound: 'MEDIUM' },
+        ]);
+
+        let telemetryCallback: ((data: TelemetryPacket) => void) | undefined;
+        vi.mocked(useTelemetry).mockImplementation((cb) => {
+            telemetryCallback = cb;
+            return { isConnected: true };
+        });
+        vi.mocked(useLocation).mockReturnValue({ isConnected: true });
+        vi.mocked(fetchDrivers).mockResolvedValue([
+            { id: 1, code: 'VER', name: 'Max Verstappen', team: 'Red Bull', teamColor: '#3671C6', stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] } }
+        ]);
+
+        render(<RaceSimulator />);
+
+        await waitFor(() => { expect(fetchDrivers).toHaveBeenCalled(); });
+        await act(async () => { await new Promise(r => setTimeout(r, 0)); });
+        await act(async () => { screen.getByText('Start Mock Stream').click(); });
+        await act(async () => { await new Promise(r => setTimeout(r, 0)); });
+
+        // Send telemetry to populate lap and tire data
+        act(() => {
+            telemetryCallback?.({
+                session_key: 9165, meeting_key: 1, date: '2024-01-01T00:03:45.000Z',
+                driver_number: 1, speed: 280, rpm: 10000, gear: 6, throttle: 80, brake: 0, drs: 0,
+            });
+        });
+
+        // Verify lap and speed are visible before seek
+        expect(await screen.findByText(/LAP 2/)).toBeInTheDocument();
+        expect(await screen.findByText(/280/)).toBeInTheDocument();
+
+        // Simulate a seek — should clear telemetry and lap state
+        act(() => { capturedOnSeek?.(); });
+
+        // After seek, telemetry section should show "waiting" message
+        await waitFor(() => {
+            expect(screen.queryByText(/LAP 2/)).not.toBeInTheDocument();
+            expect(screen.queryByText(/280/)).not.toBeInTheDocument();
+        });
     });
 
     it('shows PIT OUT badge and compound change chip', async () => {

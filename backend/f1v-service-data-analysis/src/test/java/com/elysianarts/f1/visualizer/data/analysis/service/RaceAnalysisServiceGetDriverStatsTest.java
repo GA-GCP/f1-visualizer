@@ -31,20 +31,20 @@ class RaceAnalysisServiceGetDriverStatsTest {
     @InjectMocks
     private RaceAnalysisService raceAnalysisService;
 
-    @ParameterizedTest(name = "speed: maxSpeed={0} -> expected={1}")
+    @ParameterizedTest(name = "speed (avg position): avgPos={0} -> expected={1}")
     @CsvSource({
-            "350.0, 99",   // max boundary: (350/350)*100 = 100, min(99,100) = 99
-            "0.0, 0",      // zero speed
-            "175.0, 50",   // mid-range: (175/350)*100 = 50
-            "700.0, 99",   // above cap: (700/350)*100 = 200, min(99,200) = 99
+            "1.0, 99",    // Best possible: 100 - (1-1)*(90/19) = 100, min(99,100) = 99
+            "5.0, 81",    // 100 - (5-1)*(90/19) = 100 - 18.9 = 81
+            "10.0, 57",   // 100 - (10-1)*(90/19) = 100 - 42.6 = 57
+            "20.0, 10",   // 100 - (20-1)*(90/19) = 100 - 90 = 10
     })
-    void getDriverStats_CalculatesSpeedScore_Correctly(double maxSpeed, int expected) throws InterruptedException {
+    void getDriverStats_CalculatesSpeedScore_FromAvgPosition(double avgPos, int expected) throws InterruptedException {
         setupMockRowWithAllNulls();
 
-        FieldValue speedVal = mock(FieldValue.class);
-        when(speedVal.isNull()).thenReturn(false);
-        when(speedVal.getDoubleValue()).thenReturn(maxSpeed);
-        when(mockRow.get("max_speed")).thenReturn(speedVal);
+        FieldValue avgPosVal = mock(FieldValue.class);
+        when(avgPosVal.isNull()).thenReturn(false);
+        when(avgPosVal.getDoubleValue()).thenReturn(avgPos);
+        when(mockRow.get("avg_position")).thenReturn(avgPosVal);
 
         when(tableResult.iterateAll()).thenReturn(List.of(mockRow));
         when(bigQuery.query(any(QueryJobConfiguration.class))).thenReturn(tableResult);
@@ -54,21 +54,21 @@ class RaceAnalysisServiceGetDriverStatsTest {
         assertEquals(expected, stats.getSpeed());
     }
 
-    @ParameterizedTest(name = "consistency: stdDev={0} -> expected={1}")
+    @ParameterizedTest(name = "consistency (position stddev): stdDev={0} -> expected={1}")
     @CsvSource({
-            "0.0, 100",    // perfect consistency: 100 - (0*10) = 100, max(10,100) = 100
-            "1.0, 90",     // 100 - (1*10) = 90
-            "5.0, 50",     // 100 - (5*10) = 50
-            "9.0, 10",     // 100 - (9*10) = 10, max(10,10) = 10
-            "15.0, 10",    // 100 - (15*10) = -50, max(10,-50) = 10
+            "0.0, 99",    // Perfect consistency: 100 - 0*7 = 100, min(99,100) = 99
+            "1.0, 93",    // 100 - 1*7 = 93
+            "3.0, 79",    // 100 - 3*7 = 79
+            "5.0, 65",    // 100 - 5*7 = 65
+            "13.0, 10",   // 100 - 13*7 = 9, max(10,9) = 10
     })
-    void getDriverStats_CalculatesConsistencyScore_Correctly(double stdDev, int expected) throws InterruptedException {
+    void getDriverStats_CalculatesConsistencyScore_FromPositionStdDev(double stdDev, int expected) throws InterruptedException {
         setupMockRowWithAllNulls();
 
         FieldValue stdDevVal = mock(FieldValue.class);
         when(stdDevVal.isNull()).thenReturn(false);
         when(stdDevVal.getDoubleValue()).thenReturn(stdDev);
-        when(mockRow.get("lap_stddev")).thenReturn(stdDevVal);
+        when(mockRow.get("position_stddev")).thenReturn(stdDevVal);
 
         when(tableResult.iterateAll()).thenReturn(List.of(mockRow));
         when(bigQuery.query(any(QueryJobConfiguration.class))).thenReturn(tableResult);
@@ -78,43 +78,20 @@ class RaceAnalysisServiceGetDriverStatsTest {
         assertEquals(expected, stats.getConsistency());
     }
 
-    @ParameterizedTest(name = "experience: sessions={0} -> expected={1}")
+    @ParameterizedTest(name = "aggression (full throttle %): pct={0} -> expected={1}")
     @CsvSource({
-            "0, 0",        // no sessions: (0/20)*100 = 0
-            "10, 50",      // (10/20)*100 = 50
-            "20, 99",      // (20/20)*100 = 100, min(99,100) = 99
-            "50, 99",      // capped at 99
+            "60.0, 90",   // 60 * 1.5 = 90
+            "40.0, 60",   // 40 * 1.5 = 60
+            "5.0, 10",    // 5 * 1.5 = 7.5, max(10, 8) = 10
+            "70.0, 99",   // 70 * 1.5 = 105, min(99, 105) = 99
     })
-    void getDriverStats_CalculatesExperienceScore_Correctly(long sessions, int expected) throws InterruptedException {
+    void getDriverStats_CalculatesAggressionScore_FromThrottlePct(double pct, int expected) throws InterruptedException {
         setupMockRowWithAllNulls();
 
-        FieldValue sessionsVal = mock(FieldValue.class);
-        when(sessionsVal.isNull()).thenReturn(false);
-        when(sessionsVal.getLongValue()).thenReturn(sessions);
-        when(mockRow.get("sessions_participated")).thenReturn(sessionsVal);
-
-        when(tableResult.iterateAll()).thenReturn(List.of(mockRow));
-        when(bigQuery.query(any(QueryJobConfiguration.class))).thenReturn(tableResult);
-
-        DriverProfile.DriverStats stats = raceAnalysisService.getDriverStats(1);
-
-        assertEquals(expected, stats.getExperience());
-    }
-
-    @ParameterizedTest(name = "aggression: avgBrake={0} -> expected={1}")
-    @CsvSource({
-            "50.0, 50",    // mid-range
-            "5.0, 10",     // below floor: max(10, 5) = 10
-            "99.0, 99",    // at cap
-            "150.0, 99",   // above cap: min(99, 150) = 99
-    })
-    void getDriverStats_CalculatesAggressionScore_Correctly(double avgBrake, int expected) throws InterruptedException {
-        setupMockRowWithAllNulls();
-
-        FieldValue brakeVal = mock(FieldValue.class);
-        when(brakeVal.isNull()).thenReturn(false);
-        when(brakeVal.getDoubleValue()).thenReturn(avgBrake);
-        when(mockRow.get("avg_brake")).thenReturn(brakeVal);
+        FieldValue throttleVal = mock(FieldValue.class);
+        when(throttleVal.isNull()).thenReturn(false);
+        when(throttleVal.getDoubleValue()).thenReturn(pct);
+        when(mockRow.get("full_throttle_pct")).thenReturn(throttleVal);
 
         when(tableResult.iterateAll()).thenReturn(List.of(mockRow));
         when(bigQuery.query(any(QueryJobConfiguration.class))).thenReturn(tableResult);
@@ -124,12 +101,13 @@ class RaceAnalysisServiceGetDriverStatsTest {
         assertEquals(expected, stats.getAggression());
     }
 
-    @ParameterizedTest(name = "tireMgmt: avgStintLen={0} -> expected={1}")
+    @ParameterizedTest(name = "tireMgmt (avg stint length): stintLen={0} -> expected={1}")
     @CsvSource({
-            "15.0, 50",    // (15/30)*100 = 50
-            "30.0, 99",    // (30/30)*100 = 100, min(99,100) = 99
-            "1.0, 10",     // (1/30)*100 = 3.3, max(10,3) = 10
-            "60.0, 99",    // above cap
+            "15.0, 48",    // (15/25)*80 = 48
+            "25.0, 80",    // (25/25)*80 = 80
+            "30.0, 96",    // (30/25)*80 = 96
+            "1.0, 10",     // (1/25)*80 = 3.2, max(10,3) = 10
+            "35.0, 99",    // (35/25)*80 = 112, min(99,112) = 99
     })
     void getDriverStats_CalculatesTireMgmtScore_Correctly(double avgStintLen, int expected) throws InterruptedException {
         setupMockRowWithAllNulls();
@@ -145,6 +123,30 @@ class RaceAnalysisServiceGetDriverStatsTest {
         DriverProfile.DriverStats stats = raceAnalysisService.getDriverStats(1);
 
         assertEquals(expected, stats.getTireMgmt());
+    }
+
+    @ParameterizedTest(name = "experience (total races): races={0} -> expected={1}")
+    @CsvSource({
+            "0, 0",        // No races
+            "20, 25",      // (20/80)*99 = 24.75 → round = 25
+            "40, 50",      // (40/80)*99 = 49.5 → round = 50
+            "80, 99",      // (80/80)*99 = 99
+            "100, 99",     // Capped at 99
+    })
+    void getDriverStats_CalculatesExperienceScore_FromTotalRaces(long races, int expected) throws InterruptedException {
+        setupMockRowWithAllNulls();
+
+        FieldValue racesVal = mock(FieldValue.class);
+        when(racesVal.isNull()).thenReturn(false);
+        when(racesVal.getLongValue()).thenReturn(races);
+        when(mockRow.get("total_races")).thenReturn(racesVal);
+
+        when(tableResult.iterateAll()).thenReturn(List.of(mockRow));
+        when(bigQuery.query(any(QueryJobConfiguration.class))).thenReturn(tableResult);
+
+        DriverProfile.DriverStats stats = raceAnalysisService.getDriverStats(1);
+
+        assertEquals(expected, stats.getExperience());
     }
 
     @Test
@@ -171,6 +173,41 @@ class RaceAnalysisServiceGetDriverStatsTest {
     }
 
     @Test
+    void getDriverStats_MapsNewCareerFields_Correctly() throws InterruptedException {
+        setupMockRowWithAllNulls();
+
+        FieldValue totalPointsVal = mock(FieldValue.class);
+        when(totalPointsVal.isNull()).thenReturn(false);
+        when(totalPointsVal.getLongValue()).thenReturn(250L);
+        when(mockRow.get("total_points")).thenReturn(totalPointsVal);
+
+        FieldValue bestFinishVal = mock(FieldValue.class);
+        when(bestFinishVal.isNull()).thenReturn(false);
+        when(bestFinishVal.getLongValue()).thenReturn(2L);
+        when(mockRow.get("best_finish")).thenReturn(bestFinishVal);
+
+        FieldValue totalRacesVal = mock(FieldValue.class);
+        when(totalRacesVal.isNull()).thenReturn(false);
+        when(totalRacesVal.getLongValue()).thenReturn(45L);
+        when(mockRow.get("total_races")).thenReturn(totalRacesVal);
+
+        FieldValue teamsVal = mock(FieldValue.class);
+        when(teamsVal.isNull()).thenReturn(false);
+        when(teamsVal.getStringValue()).thenReturn("McLaren|Red Bull Racing");
+        when(mockRow.get("teams_list")).thenReturn(teamsVal);
+
+        when(tableResult.iterateAll()).thenReturn(List.of(mockRow));
+        when(bigQuery.query(any(QueryJobConfiguration.class))).thenReturn(tableResult);
+
+        DriverProfile.DriverStats stats = raceAnalysisService.getDriverStats(1);
+
+        assertEquals(250, stats.getTotalPoints());
+        assertEquals(2, stats.getBestChampionshipFinish());
+        assertEquals(45, stats.getTotalRaces());
+        assertEquals(List.of("McLaren", "Red Bull Racing"), stats.getTeamsDrivenFor());
+    }
+
+    @Test
     void getDriverStats_ReturnsDefaults_WhenAllFieldsAreNull() throws InterruptedException {
         setupMockRowWithAllNulls();
 
@@ -180,13 +217,17 @@ class RaceAnalysisServiceGetDriverStatsTest {
         DriverProfile.DriverStats stats = raceAnalysisService.getDriverStats(1);
 
         // All defaults from the initialization block
-        assertEquals(80, stats.getSpeed());
-        assertEquals(80, stats.getConsistency());
-        assertEquals(50, stats.getExperience());
-        assertEquals(85, stats.getAggression());
-        assertEquals(85, stats.getTireMgmt());
+        assertEquals(50, stats.getSpeed());
+        assertEquals(50, stats.getConsistency());
+        assertEquals(30, stats.getExperience());
+        assertEquals(50, stats.getAggression());
+        assertEquals(50, stats.getTireMgmt());
         assertEquals(0, stats.getWins());
         assertEquals(0, stats.getPodiums());
+        assertEquals(0, stats.getTotalPoints());
+        assertEquals(0, stats.getBestChampionshipFinish());
+        assertEquals(0, stats.getTotalRaces());
+        assertEquals(List.of(), stats.getTeamsDrivenFor());
     }
 
     @Test
@@ -196,25 +237,32 @@ class RaceAnalysisServiceGetDriverStatsTest {
 
         DriverProfile.DriverStats stats = raceAnalysisService.getDriverStats(1);
 
-        assertEquals(80, stats.getSpeed());
-        assertEquals(80, stats.getConsistency());
-        assertEquals(50, stats.getExperience());
-        assertEquals(80, stats.getAggression());
-        assertEquals(80, stats.getTireMgmt());
+        assertEquals(50, stats.getSpeed());
+        assertEquals(50, stats.getConsistency());
+        assertEquals(30, stats.getExperience());
+        assertEquals(50, stats.getAggression());
+        assertEquals(50, stats.getTireMgmt());
         assertEquals(0, stats.getWins());
         assertEquals(0, stats.getPodiums());
+        assertEquals(0, stats.getTotalPoints());
+        assertEquals(0, stats.getBestChampionshipFinish());
+        assertEquals(0, stats.getTotalRaces());
+        assertEquals(List.of(), stats.getTeamsDrivenFor());
     }
 
     private void setupMockRowWithAllNulls() {
         FieldValue nullField = mock(FieldValue.class);
         when(nullField.isNull()).thenReturn(true);
 
-        when(mockRow.get("max_speed")).thenReturn(nullField);
-        when(mockRow.get("lap_stddev")).thenReturn(nullField);
-        when(mockRow.get("sessions_participated")).thenReturn(nullField);
+        when(mockRow.get("avg_position")).thenReturn(nullField);
+        when(mockRow.get("position_stddev")).thenReturn(nullField);
+        when(mockRow.get("full_throttle_pct")).thenReturn(nullField);
+        when(mockRow.get("avg_stint_length")).thenReturn(nullField);
+        when(mockRow.get("total_races")).thenReturn(nullField);
         when(mockRow.get("wins")).thenReturn(nullField);
         when(mockRow.get("podiums")).thenReturn(nullField);
-        when(mockRow.get("avg_brake")).thenReturn(nullField);
-        when(mockRow.get("avg_stint_length")).thenReturn(nullField);
+        when(mockRow.get("total_points")).thenReturn(nullField);
+        when(mockRow.get("best_finish")).thenReturn(nullField);
+        when(mockRow.get("teams_list")).thenReturn(nullField);
     }
 }

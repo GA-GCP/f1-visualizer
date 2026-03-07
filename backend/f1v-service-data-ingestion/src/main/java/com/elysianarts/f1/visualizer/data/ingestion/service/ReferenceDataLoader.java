@@ -97,6 +97,75 @@ public class ReferenceDataLoader {
         } catch (Exception e) {
             log.error("❌ Failed to fetch drivers: {}", e.getMessage());
         }
+
+        // 4. Fetch & Load Session Drivers (Per-race driver rosters with team at time of race)
+        loadSessionDrivers(year, token);
+    }
+
+    /**
+     * For every session in the given year, fetches the driver roster from OpenF1
+     * and inserts into the session_drivers BigQuery table. This captures which
+     * drivers raced for which teams at each specific race.
+     */
+    private void loadSessionDrivers(int year, String token) {
+        log.info("⬇️ Loading per-session driver rosters for year {}...", year);
+
+        try {
+            // Fetch all sessions for this year to iterate through
+            List<Map> sessions = webClient.get()
+                    .uri("/sessions?year=" + year)
+                    .header("Authorization", "Bearer " + token)
+                    .retrieve().bodyToFlux(Map.class).collectList().block();
+
+            if (sessions == null || sessions.isEmpty()) {
+                log.warn("⚠️ No sessions found for year {} — skipping session driver load", year);
+                return;
+            }
+
+            // Clear existing session_drivers for this year before re-loading
+            deleteExistingData("session_drivers", "year = " + year);
+
+            int totalDriverRows = 0;
+
+            for (Map session : sessions) {
+                Object sessionKeyObj = session.get("session_key");
+                if (sessionKeyObj == null) continue;
+
+                int sessionKey = ((Number) sessionKeyObj).intValue();
+
+                try {
+                    List<Map> drivers = webClient.get()
+                            .uri("/drivers?session_key=" + sessionKey)
+                            .header("Authorization", "Bearer " + token)
+                            .retrieve().bodyToFlux(Map.class).collectList().block();
+
+                    if (drivers != null && !drivers.isEmpty()) {
+                        List<InsertAllRequest.RowToInsert> rows = new ArrayList<>();
+                        for (Map d : drivers) {
+                            Map<String, Object> row = new HashMap<>();
+                            row.put("session_key", sessionKey);
+                            row.put("year", year);
+                            row.put("driver_number", d.get("driver_number"));
+                            row.put("broadcast_name", d.get("broadcast_name"));
+                            row.put("name_acronym", d.get("name_acronym"));
+                            row.put("team_name", d.get("team_name"));
+                            row.put("team_colour", d.get("team_colour"));
+                            row.put("country_code", d.get("country_code"));
+                            rows.add(InsertAllRequest.RowToInsert.of(row));
+                        }
+                        flushToBigQuery("session_drivers", rows);
+                        totalDriverRows += rows.size();
+                    }
+                } catch (Exception e) {
+                    log.warn("⚠️ Failed to fetch drivers for session {}: {}", sessionKey, e.getMessage());
+                }
+            }
+
+            log.info("✅ Loaded {} total session-driver entries across {} sessions for year {}",
+                    totalDriverRows, sessions.size(), year);
+        } catch (Exception e) {
+            log.error("❌ Failed to load session drivers for year {}: {}", year, e.getMessage());
+        }
     }
 
     private Map<Object, String> buildMeetingNameLookup(int year, String token) {

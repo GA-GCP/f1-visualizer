@@ -18,6 +18,21 @@ export interface RaceSession {
     countryName: string;
 }
 
+export interface SessionDriverEntry {
+    driverNumber: number;
+    broadcastName: string;
+    nameAcronym: string;
+    teamName: string;
+    teamColour: string; // hex without '#' prefix
+    countryCode: string;
+}
+
+export interface RaceEntryRoster {
+    sessionKey: number;
+    year: number;
+    drivers: SessionDriverEntry[];
+}
+
 // ── Request deduplication + in-memory cache ──
 // Multiple components (RaceSimulator, VersusMode, HistoricalData, SessionControlPanel)
 // independently call fetchDrivers()/fetchSessions() on mount.  React StrictMode
@@ -85,4 +100,49 @@ export const fetchDriverStats = async (driverId: number): Promise<DriverProfile[
 export const fetchSessionLaps = async (sessionKey: number): Promise<LapDataRecord[]> => {
     const res = await apiClient.get(`/analysis/session/${sessionKey}/laps`);
     return res.data;
+};
+
+// ── Season-aware API functions ──
+
+let yearsCache: number[] | null = null;
+let yearsInflight: Promise<number[]> | null = null;
+
+export const fetchYears = async (): Promise<number[]> => {
+    if (yearsCache) return yearsCache;
+    if (yearsInflight) return yearsInflight;
+
+    yearsInflight = apiClient.get('/analysis/years').then(res => {
+        yearsCache = res.data;
+        yearsInflight = null;
+        return res.data as number[];
+    }).catch(err => {
+        setTimeout(() => { yearsInflight = null; }, FAILURE_COOLDOWN_MS);
+        throw err;
+    });
+
+    return yearsInflight;
+};
+
+const sessionsByYearCache = new Map<number, RaceSession[]>();
+
+export const fetchSessionsByYear = async (year: number): Promise<RaceSession[]> => {
+    const cached = sessionsByYearCache.get(year);
+    if (cached) return cached;
+
+    const res = await apiClient.get(`/analysis/sessions/year/${year}`);
+    const sessions = res.data as RaceSession[];
+    sessionsByYearCache.set(year, sessions);
+    return sessions;
+};
+
+const sessionDriversCache = new Map<number, RaceEntryRoster>();
+
+export const fetchSessionDrivers = async (sessionKey: number): Promise<RaceEntryRoster> => {
+    const cached = sessionDriversCache.get(sessionKey);
+    if (cached) return cached;
+
+    const res = await apiClient.get(`/analysis/sessions/${sessionKey}/drivers`);
+    const roster = res.data as RaceEntryRoster;
+    sessionDriversCache.set(sessionKey, roster);
+    return roster;
 };

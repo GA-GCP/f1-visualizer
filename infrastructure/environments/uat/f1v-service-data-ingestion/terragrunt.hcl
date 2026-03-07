@@ -37,6 +37,9 @@ inputs = {
 
   is_public    = true
 
+  # Always-on: eliminates cold starts for ingestion commands and reference data loading
+  min_instance_count = 1
+
   # Elevated resources: batch BigQuery inserts, 100K-object replay buffers, MQTT + Redis I/O
   cpu    = "2000m"
   memory = "1024Mi"

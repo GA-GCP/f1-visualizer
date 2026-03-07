@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SessionControlPanel from '../selectors/SessionControlPanel';
 import { sendIngestionCommand } from '@/api/ingestionApi.ts';
-import { fetchSessions } from '@/api/referenceApi.ts';
+import { fetchYears, fetchSessionsByYear, fetchSessionDrivers } from '@/api/referenceApi.ts';
 
 // 1. Mock BOTH API modules
 vi.mock('../../api/ingestionApi', () => ({
@@ -10,20 +10,32 @@ vi.mock('../../api/ingestionApi', () => ({
 }));
 
 vi.mock('../../api/referenceApi', () => ({
-    fetchSessions: vi.fn()
+    fetchYears: vi.fn(),
+    fetchSessionsByYear: vi.fn(),
+    fetchSessionDrivers: vi.fn(),
 }));
 
 describe('SessionControlPanel', () => {
     const mockOnStreamStarted = vi.fn();
 
-    // Mock response from the backend
+    // Mock data
+    const mockYears = [2023];
     const mockSessions = [
         { sessionKey: 9165, sessionName: "Race", meetingName: "Singapore Grand Prix", year: 2023, countryName: "Singapore" }
     ];
+    const mockRoster = {
+        sessionKey: 9165,
+        year: 2023,
+        drivers: [
+            { driverNumber: 1, broadcastName: "M VERSTAPPEN", nameAcronym: "VER", teamName: "Red Bull Racing", teamColour: "3671C6", countryCode: "NED" }
+        ]
+    };
 
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.mocked(fetchSessions).mockResolvedValue(mockSessions);
+        vi.mocked(fetchYears).mockResolvedValue(mockYears);
+        vi.mocked(fetchSessionsByYear).mockResolvedValue(mockSessions);
+        vi.mocked(fetchSessionDrivers).mockResolvedValue(mockRoster);
     });
 
     it('renders the control panel with default SIMULATION mode', async () => {
@@ -31,10 +43,9 @@ describe('SessionControlPanel', () => {
 
         expect(screen.getByText('RACE INITIALIZATION')).toBeInTheDocument();
 
-        // Wait for the async fetch to populate the Autocomplete
+        // Wait for the cascading fetch to populate both dropdowns
         await waitFor(() => {
-            // <-- UPDATED LABEL TEXT -->
-            expect(screen.getByLabelText(/Search Grand Prix/i)).toHaveValue('2023 Singapore Grand Prix - Race');
+            expect(screen.getByLabelText(/Select Grand Prix/i)).toHaveValue('Singapore Grand Prix - Race');
         });
 
         expect(screen.getByRole('button', { name: /START SIMULATION STREAM/i })).toBeInTheDocument();

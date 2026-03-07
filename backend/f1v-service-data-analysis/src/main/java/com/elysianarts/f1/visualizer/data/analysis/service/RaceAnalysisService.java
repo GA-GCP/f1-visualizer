@@ -38,7 +38,9 @@ public class RaceAnalysisService {
                     sector_1_duration,
                     sector_2_duration,
                     sector_3_duration,
-                    compound
+                    compound,
+                    date_start,
+                    is_pit_out_lap
                 FROM `%s.%s`
                 WHERE session_key = %d
                 ORDER BY lap_number ASC
@@ -63,6 +65,8 @@ public class RaceAnalysisService {
                         .sector2(row.get("sector_2_duration").isNull() ? null : row.get("sector_2_duration").getDoubleValue())
                         .sector3(row.get("sector_3_duration").isNull() ? null : row.get("sector_3_duration").getDoubleValue())
                         .compound(row.get("compound").isNull() ? null : row.get("compound").getStringValue())
+                        .dateStart(row.get("date_start").isNull() ? null : row.get("date_start").getStringValue())
+                        .isPitOutLap(row.get("is_pit_out_lap").isNull() ? null : row.get("is_pit_out_lap").getBooleanValue())
                         .build());
             }
 

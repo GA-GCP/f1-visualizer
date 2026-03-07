@@ -29,4 +29,6 @@ export interface LapDataRecord {
     sector2?: number;
     sector3?: number;
     compound?: string;
+    dateStart?: string;     // ISO-8601 timestamp
+    isPitOutLap?: boolean;
 }

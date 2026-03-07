@@ -13,4 +13,6 @@ public class LapDataRecord {
     private Double sector2;
     private Double sector3;
     private String compound; // e.g., "SOFT", "HARD"
+    private String dateStart; // ISO-8601 timestamp from BigQuery
+    private Boolean isPitOutLap;
 }

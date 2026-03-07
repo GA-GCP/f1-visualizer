@@ -77,6 +77,18 @@ class RaceAnalysisServiceTest {
         when(compoundVal.getStringValue()).thenReturn("SOFT");
         when(mockRow.get("compound")).thenReturn(compoundVal);
 
+        // Date Start
+        FieldValue dateStartVal = mock(FieldValue.class);
+        when(dateStartVal.isNull()).thenReturn(false);
+        when(dateStartVal.getStringValue()).thenReturn("2024-03-02T15:10:00Z");
+        when(mockRow.get("date_start")).thenReturn(dateStartVal);
+
+        // Is Pit Out Lap
+        FieldValue isPitOutVal = mock(FieldValue.class);
+        when(isPitOutVal.isNull()).thenReturn(false);
+        when(isPitOutVal.getBooleanValue()).thenReturn(true);
+        when(mockRow.get("is_pit_out_lap")).thenReturn(isPitOutVal);
+
         // 2. Mock the TableResult to return our single mockRow
         when(tableResult.iterateAll()).thenReturn(List.of(mockRow));
 
@@ -96,6 +108,8 @@ class RaceAnalysisServiceTest {
         assertEquals(5, record.getLapNumber());
         assertEquals(85.5, record.getLapDuration());
         assertEquals(20.1, record.getSector1());
+        assertEquals("2024-03-02T15:10:00Z", record.getDateStart());
+        assertTrue(record.getIsPitOutLap());
     }
 
     @Test
@@ -124,6 +138,8 @@ class RaceAnalysisServiceTest {
         when(mockRow.get("sector_2_duration")).thenReturn(nullField);
         when(mockRow.get("sector_3_duration")).thenReturn(nullField);
         when(mockRow.get("compound")).thenReturn(nullField);
+        when(mockRow.get("date_start")).thenReturn(nullField);
+        when(mockRow.get("is_pit_out_lap")).thenReturn(nullField);
 
         when(tableResult.iterateAll()).thenReturn(List.of(mockRow));
         when(bigQuery.query(any(QueryJobConfiguration.class))).thenReturn(tableResult);
@@ -137,6 +153,8 @@ class RaceAnalysisServiceTest {
         assertNull(results.get(0).getLapDuration(), "Lap duration should be null");
         assertNull(results.get(0).getSector1(), "Sector 1 should be null");
         assertNull(results.get(0).getCompound(), "Compound should be null");
+        assertNull(results.get(0).getDateStart(), "Date start should be null");
+        assertNull(results.get(0).getIsPitOutLap(), "Is pit out lap should be null");
     }
 
     @Test

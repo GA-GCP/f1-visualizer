@@ -52,6 +52,13 @@ public class LapDataLoader {
                 rowContent.put("sector_2_duration", lap.getSector2Duration());
                 rowContent.put("sector_3_duration", lap.getSector3Duration());
 
+                if (lap.getDateStart() != null) {
+                    rowContent.put("date_start", lap.getDateStart().toString());
+                }
+                if (lap.getIsPitOutLap() != null) {
+                    rowContent.put("is_pit_out_lap", lap.getIsPitOutLap());
+                }
+
                 // Look up tire compound from stint data
                 String key = lap.getDriverNumber() + ":" + lap.getLapNumber();
                 String compound = compoundLookup.get(key);

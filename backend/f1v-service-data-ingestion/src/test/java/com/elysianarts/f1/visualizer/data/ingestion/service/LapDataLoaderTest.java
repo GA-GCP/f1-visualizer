@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Flux;
 
+import java.time.OffsetDateTime;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,6 +45,8 @@ class LapDataLoaderTest {
         lap.setDriverNumber(1);
         lap.setLapNumber(5);
         lap.setLapDuration(85.5);
+        lap.setDateStart(OffsetDateTime.parse("2024-03-02T15:10:00+00:00"));
+        lap.setIsPitOutLap(true);
 
         // Create a stint covering laps 1-10 with SOFT compound
         OpenF1StintData stint = new OpenF1StintData();
@@ -66,6 +69,8 @@ class LapDataLoaderTest {
 
         Map<String, Object> rowContent = request.getRows().get(0).getContent();
         assertEquals("SOFT", rowContent.get("compound"));
+        assertNotNull(rowContent.get("date_start"));
+        assertEquals(true, rowContent.get("is_pit_out_lap"));
     }
 
     @Test

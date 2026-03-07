@@ -8,8 +8,8 @@ import CircuitTrace from './CircuitTrace';
 import DriverSelector from './selectors/DriverSelector';
 import SessionControlPanel from './selectors/SessionControlPanel';
 import MediaController from './MediaController';
-import { fetchDrivers, type DriverProfile, type RaceEntryRoster, type RaceSession } from '../api/referenceApi';
-import type { TelemetryPacket, LocationPacket } from '../types/telemetry';
+import { fetchDrivers, fetchSessionLaps, type DriverProfile, type RaceEntryRoster, type RaceSession } from '../api/referenceApi';
+import type { TelemetryPacket, LocationPacket, LapDataRecord } from '../types/telemetry';
 import { useUser } from '../context/UserContext';
 import { useCallback } from 'react';
 
@@ -38,6 +38,16 @@ const RaceSimulator: React.FC = () => {
     const [sessionMeta, setSessionMeta] = useState<{ year: number; meetingName: string } | null>(null);
     const [isInitializing, setIsInitializing] = useState(false);
     const isInitializingRef = useRef(false);
+    const [sessionLaps, setSessionLaps] = useState<LapDataRecord[]>([]);
+    const sessionLapsRef = useRef<LapDataRecord[]>([]);
+    const [currentLap, setCurrentLap] = useState<{
+        lapNumber: number;
+        totalLaps: number;
+        isPitOutLap: boolean;
+        compound: string | null;
+        prevCompound: string | null;
+        isFormationLap: boolean;
+    } | null>(null);
 
     const { userProfile } = useUser();
 
@@ -73,12 +83,44 @@ const RaceSimulator: React.FC = () => {
     }, [userProfile]);
 
     useEffect(() => { isInitializingRef.current = isInitializing; }, [isInitializing]);
+    useEffect(() => { sessionLapsRef.current = sessionLaps; }, [sessionLaps]);
 
     const { isConnected: isTelemetryConnected } = useTelemetry((data) => {
         if (selectedDriver && data.driver_number === selectedDriver.id &&
             activeSession && data.session_key === activeSession.key) {
             setLastTelemetry(data);
             if (isInitializingRef.current) setIsInitializing(false);
+
+            // Lap correlation: find which lap corresponds to this telemetry timestamp
+            const driverLaps = sessionLapsRef.current
+                .filter(l => l.driverNumber === data.driver_number && l.dateStart)
+                .sort((a, b) => new Date(a.dateStart!).getTime() - new Date(b.dateStart!).getTime());
+
+            if (driverLaps.length > 0) {
+                const telemetryTime = new Date(data.date).getTime();
+                let matched: LapDataRecord | null = null;
+
+                for (let i = driverLaps.length - 1; i >= 0; i--) {
+                    if (new Date(driverLaps[i].dateStart!).getTime() <= telemetryTime) {
+                        matched = driverLaps[i];
+                        break;
+                    }
+                }
+
+                if (matched) {
+                    const totalLaps = Math.max(...driverLaps.map(l => l.lapNumber));
+                    const prevLap = driverLaps.find(l => l.lapNumber === matched!.lapNumber - 1);
+
+                    setCurrentLap({
+                        lapNumber: matched.lapNumber,
+                        totalLaps,
+                        isPitOutLap: matched.isPitOutLap ?? false,
+                        compound: matched.compound ?? null,
+                        prevCompound: prevLap?.compound ?? null,
+                        isFormationLap: matched.lapNumber === 0,
+                    });
+                }
+            }
         }
     });
 
@@ -89,8 +131,15 @@ const RaceSimulator: React.FC = () => {
         setIsInitializing(true);
         setActiveSession({ key: sessionKey, mode });
         setLastTelemetry(null);
+        setCurrentLap(null);
+        setSessionLaps([]);
         locationQueueRef.current = [];
         setTraceResetKey(prev => prev + 1);
+
+        // Pre-load lap data for lap tracking correlation
+        fetchSessionLaps(sessionKey).then(laps => {
+            setSessionLaps(laps);
+        }).catch(err => console.error('Failed to pre-load lap data', err));
     };
 
     const handleSeek = () => {
@@ -206,6 +255,51 @@ const RaceSimulator: React.FC = () => {
                                 </Typography>
                                 {lastTelemetry ? (
                                     <motion.div variants={containerVariants} initial="hidden" animate="visible">
+                                        {currentLap && (
+                                            <motion.div variants={itemVariants}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                                                    <Typography variant="h6" sx={{
+                                                        fontFamily: '"Titillium Web", sans-serif',
+                                                        fontWeight: 700,
+                                                        letterSpacing: '0.05em',
+                                                    }}>
+                                                        LAP {currentLap.lapNumber}
+                                                        <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>
+                                                            /{currentLap.totalLaps}
+                                                        </span>
+                                                    </Typography>
+                                                    {currentLap.isFormationLap && (
+                                                        <Chip label="FORMATION LAP" size="small"
+                                                            sx={{ bgcolor: '#ff9800', color: 'black', fontWeight: 700, fontSize: '0.65rem' }} />
+                                                    )}
+                                                    {currentLap.isPitOutLap && (
+                                                        <Chip label="PIT OUT" size="small"
+                                                            sx={{ bgcolor: '#2196f3', color: 'white', fontWeight: 700, fontSize: '0.65rem' }} />
+                                                    )}
+                                                    {currentLap.compound && currentLap.prevCompound &&
+                                                     currentLap.compound !== currentLap.prevCompound && (
+                                                        <Chip
+                                                            label={`${currentLap.prevCompound} \u2192 ${currentLap.compound}`}
+                                                            size="small"
+                                                            sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'white', fontSize: '0.65rem' }}
+                                                        />
+                                                    )}
+                                                    {currentLap.compound && (
+                                                        <Chip label={currentLap.compound} size="small" variant="outlined"
+                                                            sx={{
+                                                                borderColor: currentLap.compound === 'SOFT' ? '#e10600'
+                                                                    : currentLap.compound === 'MEDIUM' ? '#ffd700'
+                                                                    : currentLap.compound === 'HARD' ? '#ffffff'
+                                                                    : currentLap.compound === 'INTERMEDIATE' ? '#43b02a'
+                                                                    : '#2196f3',
+                                                                color: 'white',
+                                                                fontSize: '0.65rem',
+                                                            }}
+                                                        />
+                                                    )}
+                                                </Box>
+                                            </motion.div>
+                                        )}
                                         <motion.div variants={itemVariants}>
                                             <Typography variant="h2" sx={{ fontWeight: 'bold', color: 'white' }}>
                                                 {lastTelemetry.speed} <span style={{ fontSize: '1.5rem', color: '#666' }}>KM/H</span>

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.OffsetDateTime;
+
 @Data
 @NoArgsConstructor
 public class OpenF1LapData {
@@ -30,4 +32,10 @@ public class OpenF1LapData {
 
     @JsonProperty("duration_sector_3")
     private Double sector3Duration;
+
+    @JsonProperty("date_start")
+    private OffsetDateTime dateStart;
+
+    @JsonProperty("is_pit_out_lap")
+    private Boolean isPitOutLap;
 }

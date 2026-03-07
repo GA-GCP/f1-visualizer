@@ -58,12 +58,13 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
     }, [sessionKey]);
 
     // Mirror resetKey into a ref so the animation loop can detect changes
-    // synchronously — React's deferred useEffect leaves a gap where stale
-    // STOMP packets can sneak into history before the reset fires.
+    // synchronously.  We update during render (not via useEffect) to close
+    // the race window: deferred useEffect left a gap where stale STOMP
+    // packets could be drained into history before the ref was updated.
     const resetKeyRef = useRef(resetKey);
-    useEffect(() => {
+    if (resetKeyRef.current !== resetKey) {
         resetKeyRef.current = resetKey;
-    }, [resetKey]);
+    }
 
     // Tracks the last resetKey the animation loop actually processed,
     // so it can detect when a new reset is pending.

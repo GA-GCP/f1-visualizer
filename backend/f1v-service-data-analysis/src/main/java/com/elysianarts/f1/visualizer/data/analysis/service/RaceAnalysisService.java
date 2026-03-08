@@ -83,23 +83,34 @@ public class RaceAnalysisService {
     }
 
     public DriverProfile.DriverStats getDriverStats(int driverNumber) {
-        // Single CTE-based query that computes all radar metrics + new career data points.
-        // Radar formulas were redesigned to produce meaningful differentiation between drivers:
-        //   Speed      → based on average finishing position (race pace proxy), not max telemetry speed
-        //   Consistency → based on STDDEV of finishing positions, not noisy lap-time variance
-        //   Aggression  → based on full-throttle percentage from telemetry
-        //   Tire Mgmt   → based on average stint length with recalibrated scale
-        //   Experience  → based on total race entries with higher ceiling (80 races, not 20 sessions)
+        // Single CTE-based query that computes all radar metrics + career data points.
+        // A shared "race_results" CTE joins results with sessions (filtered to Race only)
+        // so that career stats (wins, podiums, points, race count) and position-based radar
+        // metrics (speed, consistency) reflect actual race performance — not practice or
+        // qualifying classifications.
+        //
+        // Radar formulas:
+        //   Speed      → based on average Race finishing position (race pace proxy)
+        //   Consistency → based on STDDEV of Race finishing positions
+        //   Aggression  → based on full-throttle percentage from telemetry (all sessions)
+        //   Tire Mgmt   → based on average stint length from laps (all sessions)
+        //   Experience  → based on total Race entries with ceiling at 80 races
         String query = String.format("""
                 WITH
+                race_results AS (
+                  SELECT r.session_key, r.driver_number, r.position, s.year
+                  FROM `%s.results` r
+                  JOIN `%s.sessions` s ON r.session_key = s.session_key
+                  WHERE s.session_name = 'Race'
+                ),
                 avg_pos AS (
                   SELECT AVG(position) as avg_position
-                  FROM `%s.results`
+                  FROM race_results
                   WHERE driver_number = %d AND position IS NOT NULL
                 ),
                 pos_consistency AS (
                   SELECT STDDEV(position) as position_stddev
-                  FROM `%s.results`
+                  FROM race_results
                   WHERE driver_number = %d AND position IS NOT NULL
                 ),
                 throttle_stats AS (
@@ -118,14 +129,14 @@ public class RaceAnalysisService {
                 ),
                 race_counts AS (
                   SELECT COUNT(DISTINCT session_key) as total_races
-                  FROM `%s.results`
+                  FROM race_results
                   WHERE driver_number = %d
                 ),
                 win_podium AS (
                   SELECT
                     COUNTIF(position = 1) as wins,
                     COUNTIF(position <= 3) as podiums
-                  FROM `%s.results`
+                  FROM race_results
                   WHERE driver_number = %d
                 ),
                 career_points AS (
@@ -135,21 +146,19 @@ public class RaceAnalysisService {
                     WHEN position = 7 THEN 6 WHEN position = 8 THEN 4
                     WHEN position = 9 THEN 2 WHEN position = 10 THEN 1 ELSE 0
                   END), 0) as total_points
-                  FROM `%s.results`
+                  FROM race_results
                   WHERE driver_number = %d
                 ),
                 all_season_points AS (
-                  SELECT s.year, r.driver_number,
+                  SELECT year, driver_number,
                     SUM(CASE
-                      WHEN r.position = 1 THEN 25 WHEN r.position = 2 THEN 18 WHEN r.position = 3 THEN 15
-                      WHEN r.position = 4 THEN 12 WHEN r.position = 5 THEN 10 WHEN r.position = 6 THEN 8
-                      WHEN r.position = 7 THEN 6 WHEN r.position = 8 THEN 4
-                      WHEN r.position = 9 THEN 2 WHEN r.position = 10 THEN 1 ELSE 0
+                      WHEN position = 1 THEN 25 WHEN position = 2 THEN 18 WHEN position = 3 THEN 15
+                      WHEN position = 4 THEN 12 WHEN position = 5 THEN 10 WHEN position = 6 THEN 8
+                      WHEN position = 7 THEN 6 WHEN position = 8 THEN 4
+                      WHEN position = 9 THEN 2 WHEN position = 10 THEN 1 ELSE 0
                     END) as season_points
-                  FROM `%s.results` r
-                  JOIN `%s.sessions` s ON r.session_key = s.session_key
-                  WHERE s.session_name = 'Race'
-                  GROUP BY s.year, r.driver_number
+                  FROM race_results
+                  GROUP BY year, driver_number
                 ),
                 championship_ranks AS (
                   SELECT year, driver_number,
@@ -180,14 +189,14 @@ public class RaceAnalysisService {
                 FROM avg_pos ap, pos_consistency pc, throttle_stats ts, stint_avg sa,
                      race_counts rc, win_podium wp, career_points cp, best_championship bc, teams t
                 """,
-                DATASET_NAME, driverNumber,   // avg_pos
-                DATASET_NAME, driverNumber,   // pos_consistency
+                DATASET_NAME, DATASET_NAME,   // race_results (results + sessions join)
+                driverNumber,                 // avg_pos
+                driverNumber,                 // pos_consistency
                 DATASET_NAME, driverNumber,   // throttle_stats
                 DATASET_NAME, driverNumber,   // stint_avg
-                DATASET_NAME, driverNumber,   // race_counts
-                DATASET_NAME, driverNumber,   // win_podium
-                DATASET_NAME, driverNumber,   // career_points
-                DATASET_NAME, DATASET_NAME,   // all_season_points (results + sessions join)
+                driverNumber,                 // race_counts
+                driverNumber,                 // win_podium
+                driverNumber,                 // career_points
                 driverNumber,                 // best_championship filter
                 DATASET_NAME, driverNumber    // teams
         );

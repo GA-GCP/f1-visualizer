@@ -4,21 +4,24 @@ import {
     computeInnerDimensions,
     createLapChartScales,
     groupByDriver,
+    buildDriverColorMap,
+    buildDriverLabelMap,
     FALLBACK_COLORS,
     LAP_CHART_ASPECT_RATIO,
     LAP_CHART_MARGIN,
 } from '../chartScales';
 import type { LapDataRecord } from '../../types/telemetry';
+import type { SessionDriverEntry } from '../../api/referenceApi';
 
 describe('getDriverColor', () => {
-    it('returns the color from the map prefixed with # when present', () => {
-        const colorMap = { 44: 'FF0000', 1: '00FF00' };
+    it('returns the color from the map when present', () => {
+        const colorMap = { 44: '#FF0000', 1: '#00FF00' };
         expect(getDriverColor(44, 0, colorMap)).toBe('#FF0000');
         expect(getDriverColor(1, 1, colorMap)).toBe('#00FF00');
     });
 
     it('falls back to FALLBACK_COLORS when driver is not in the map', () => {
-        const colorMap = { 44: 'FF0000' };
+        const colorMap = { 44: '#FF0000' };
         expect(getDriverColor(99, 2, colorMap)).toBe(FALLBACK_COLORS[2]);
     });
 
@@ -31,6 +34,87 @@ describe('getDriverColor', () => {
         const len = FALLBACK_COLORS.length;
         expect(getDriverColor(1, len)).toBe(FALLBACK_COLORS[0]);
         expect(getDriverColor(1, len + 3)).toBe(FALLBACK_COLORS[3]);
+    });
+});
+
+describe('buildDriverColorMap', () => {
+    const makeDriver = (overrides: Partial<SessionDriverEntry>): SessionDriverEntry => ({
+        driverNumber: 1,
+        broadcastName: 'TEST',
+        nameAcronym: 'TST',
+        teamName: 'Test Team',
+        teamColour: 'ffffff',
+        countryCode: 'TST',
+        ...overrides,
+    });
+
+    it('assigns base team color to first teammate and lighter variant to second', () => {
+        const drivers = [
+            makeDriver({ driverNumber: 44, nameAcronym: 'HAM', teamName: 'Mercedes', teamColour: '00D2BE' }),
+            makeDriver({ driverNumber: 63, nameAcronym: 'RUS', teamName: 'Mercedes', teamColour: '00D2BE' }),
+        ];
+        const map = buildDriverColorMap(drivers);
+
+        expect(map[44]).toBe('#00d2be');
+        expect(map[63]).not.toBe('#00d2be');
+        expect(map[63]).toMatch(/^#[0-9a-f]{6}$/i);
+    });
+
+    it('assigns unique colors to drivers on different teams', () => {
+        const drivers = [
+            makeDriver({ driverNumber: 44, teamName: 'Mercedes', teamColour: '00D2BE' }),
+            makeDriver({ driverNumber: 1, teamName: 'Red Bull', teamColour: '3671C6' }),
+        ];
+        const map = buildDriverColorMap(drivers);
+
+        expect(map[44]).toBe('#00d2be');
+        expect(map[1]).toBe('#3671c6');
+    });
+
+    it('falls back to white for missing teamColour', () => {
+        const drivers = [
+            makeDriver({ driverNumber: 44, teamColour: '' }),
+        ];
+        const map = buildDriverColorMap(drivers);
+        expect(map[44]).toBe('#ffffff');
+    });
+
+    it('handles empty roster', () => {
+        expect(buildDriverColorMap([])).toEqual({});
+    });
+});
+
+describe('buildDriverLabelMap', () => {
+    const makeDriver = (overrides: Partial<SessionDriverEntry>): SessionDriverEntry => ({
+        driverNumber: 1,
+        broadcastName: 'TEST',
+        nameAcronym: 'TST',
+        teamName: 'Test Team',
+        teamColour: 'ffffff',
+        countryCode: 'TST',
+        ...overrides,
+    });
+
+    it('maps driver numbers to name acronyms', () => {
+        const drivers = [
+            makeDriver({ driverNumber: 44, nameAcronym: 'HAM' }),
+            makeDriver({ driverNumber: 63, nameAcronym: 'RUS' }),
+        ];
+        const map = buildDriverLabelMap(drivers);
+        expect(map[44]).toBe('HAM');
+        expect(map[63]).toBe('RUS');
+    });
+
+    it('falls back to driver number string when nameAcronym is empty', () => {
+        const drivers = [
+            makeDriver({ driverNumber: 44, nameAcronym: '' }),
+        ];
+        const map = buildDriverLabelMap(drivers);
+        expect(map[44]).toBe('44');
+    });
+
+    it('handles empty roster', () => {
+        expect(buildDriverLabelMap([])).toEqual({});
     });
 });
 

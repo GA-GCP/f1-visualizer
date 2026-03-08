@@ -94,8 +94,17 @@ describe('LapTimeChart', () => {
     });
 
     it('renders with driverColorMap', () => {
-        const colorMap = { 1: '3671C6', 16: 'E80020' };
+        const colorMap = { 1: '#3671C6', 16: '#E80020' };
         const { container } = render(<LapTimeChart data={mockLapData} driverColorMap={colorMap} />);
+        expect(container.querySelector('svg')).toBeInTheDocument();
+    });
+
+    it('renders with driverLabelMap', () => {
+        const colorMap = { 1: '#3671C6', 16: '#E80020' };
+        const labelMap = { 1: 'VER', 16: 'LEC' };
+        const { container } = render(
+            <LapTimeChart data={mockLapData} driverColorMap={colorMap} driverLabelMap={labelMap} />
+        );
         expect(container.querySelector('svg')).toBeInTheDocument();
     });
 });

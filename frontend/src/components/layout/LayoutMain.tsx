@@ -89,7 +89,7 @@ const LayoutMain: React.FC = () => {
             {/* 3. Footer */}
             <Box component="footer" sx={{ py: 3, textAlign: 'center', opacity: 0.5 }}>
                 <Typography variant="caption" sx={{ letterSpacing: '0.1em' }}>
-                    UNOFFICIAL TELEMETRY TOOL // F1 24
+                    UNOFFICIAL TELEMETRY TOOL // F1 23-25
                 </Typography>
             </Box>
         </Box>

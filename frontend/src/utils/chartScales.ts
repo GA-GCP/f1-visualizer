@@ -1,5 +1,6 @@
 import * as d3 from 'd3';
 import type { LapDataRecord } from '../types/telemetry';
+import type { SessionDriverEntry } from '../api/referenceApi';
 
 export const LAP_CHART_ASPECT_RATIO = 2;
 export const LAP_CHART_MARGIN = { top: 20, right: 120, bottom: 50, left: 60 };
@@ -11,14 +12,68 @@ export const FALLBACK_COLORS = [
 /**
  * Resolves the display color for a given driver number, using the
  * team color map with a fallback to a static palette.
+ * Color map values must include the '#' prefix.
  */
 export function getDriverColor(
     driverNum: number,
     index: number,
     driverColorMap?: Record<number, string>
 ): string {
-    if (driverColorMap?.[driverNum]) return `#${driverColorMap[driverNum]}`;
+    if (driverColorMap?.[driverNum]) return driverColorMap[driverNum];
     return FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+}
+
+/**
+ * Builds a per-driver color map from a session roster, differentiating
+ * teammates by lightening the second driver's color via HSL adjustment.
+ * Returns colors with '#' prefix included.
+ */
+export function buildDriverColorMap(
+    drivers: SessionDriverEntry[]
+): Record<number, string> {
+    const colorMap: Record<number, string> = {};
+
+    // Group drivers by team
+    const teamGroups = new Map<string, SessionDriverEntry[]>();
+    for (const d of drivers) {
+        const team = d.teamName || 'Unknown';
+        if (!teamGroups.has(team)) teamGroups.set(team, []);
+        teamGroups.get(team)!.push(d);
+    }
+
+    for (const teammates of teamGroups.values()) {
+        const rawHex = '#' + (teammates[0].teamColour || 'ffffff');
+        const baseHex = d3.color(rawHex)?.formatHex() ?? rawHex;
+        colorMap[teammates[0].driverNumber] = baseHex;
+
+        if (teammates.length > 1) {
+            const hsl = d3.hsl(baseHex);
+            hsl.l = Math.min(hsl.l + 0.25, 0.85);
+            colorMap[teammates[1].driverNumber] = hsl.formatHex();
+        }
+
+        // Mid-season replacement edge case: 3+ drivers on a team
+        for (let i = 2; i < teammates.length; i++) {
+            const hsl = d3.hsl('#' + (teammates[i].teamColour || 'ffffff'));
+            hsl.l = Math.min(hsl.l + 0.15 * i, 0.90);
+            colorMap[teammates[i].driverNumber] = hsl.formatHex();
+        }
+    }
+
+    return colorMap;
+}
+
+/**
+ * Builds a driver-number-to-label map from the roster using nameAcronym.
+ */
+export function buildDriverLabelMap(
+    drivers: SessionDriverEntry[]
+): Record<number, string> {
+    const labelMap: Record<number, string> = {};
+    for (const d of drivers) {
+        labelMap[d.driverNumber] = d.nameAcronym || String(d.driverNumber);
+    }
+    return labelMap;
 }
 
 /**

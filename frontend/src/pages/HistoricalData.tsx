@@ -5,11 +5,13 @@ import LapTimeChart from '../components/LapTimeChart';
 import DataVaultLoader from '../components/DataVaultLoader';
 import type { LapDataRecord } from '../types/telemetry';
 import { fetchSessions, fetchSessionDrivers, fetchSessionLaps, type RaceSession } from '../api/referenceApi';
+import { buildDriverColorMap, buildDriverLabelMap } from '../utils/chartScales';
 
 const HistoricalData: React.FC = () => {
     const [laps, setLaps] = useState<LapDataRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [driverColorMap, setDriverColorMap] = useState<Record<number, string>>({});
+    const [driverLabelMap, setDriverLabelMap] = useState<Record<number, string>>({});
 
     // Dynamic Session state
     const [sessions, setSessions] = useState<RaceSession[]>([]);
@@ -42,12 +44,8 @@ const HistoricalData: React.FC = () => {
                 ]);
                 if (isMounted) {
                     setLaps(lapsData);
-                    // Build color map from session-specific driver roster
-                    const colorMap: Record<number, string> = {};
-                    for (const d of roster.drivers) {
-                        colorMap[d.driverNumber] = '#' + (d.teamColour || 'ffffff');
-                    }
-                    setDriverColorMap(colorMap);
+                    setDriverColorMap(buildDriverColorMap(roster.drivers));
+                    setDriverLabelMap(buildDriverLabelMap(roster.drivers));
                 }
             } catch (err) {
                 if (isMounted) {
@@ -128,6 +126,7 @@ const HistoricalData: React.FC = () => {
                             data={laps}
                             title={selectedSession ? `LAP TIMES // ${selectedSession.year} ${selectedSession.meetingName}` : undefined}
                             driverColorMap={driverColorMap}
+                            driverLabelMap={driverLabelMap}
                         />
                     </motion.div>
                 )}

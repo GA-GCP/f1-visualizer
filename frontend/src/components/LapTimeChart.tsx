@@ -2,17 +2,22 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { Box, Paper, Typography } from '@mui/material';
 import type { LapDataRecord } from '../types/telemetry';
+import {
+    getDriverColor,
+    computeInnerDimensions,
+    createLapChartScales,
+    groupByDriver,
+    LAP_CHART_MARGIN,
+} from '../utils/chartScales';
 
 interface LapTimeChartProps {
     data: LapDataRecord[];
     title?: string;
     driverColorMap?: Record<number, string>;
+    driverLabelMap?: Record<number, string>;
 }
 
-const FALLBACK_COLORS = ['#e10600', '#00D2BE', '#0600EF', '#FF8700', '#006F62', '#2B4562', '#B6BABD', '#C92D4B', '#5E8FAA', '#27F4D2'];
-const ASPECT_RATIO = 2; // width:height = 2:1
-
-const LapTimeChart: React.FC<LapTimeChartProps> = ({ data, title, driverColorMap }) => {
+const LapTimeChart: React.FC<LapTimeChartProps> = ({ data, title, driverColorMap, driverLabelMap }) => {
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState(800);
@@ -36,11 +41,7 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({ data, title, driverColorMap
         // Clear previous render
         d3.select(svgRef.current).selectAll("*").remove();
 
-        const width = containerWidth;
-        const height = Math.round(width / ASPECT_RATIO);
-        const margin = { top: 20, right: 120, bottom: 50, left: 60 };
-        const innerWidth = width - margin.left - margin.right;
-        const innerHeight = height - margin.top - margin.bottom;
+        const { width, height, innerWidth, innerHeight } = computeInnerDimensions(containerWidth);
 
         if (innerWidth <= 0 || innerHeight <= 0) return;
 
@@ -50,31 +51,17 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({ data, title, driverColorMap
             .style("background", "#1e1e1e")
             .style("overflow", "visible")
             .append("g")
-            .attr("transform", `translate(${margin.left},${margin.top})`);
+            .attr("transform", `translate(${LAP_CHART_MARGIN.left},${LAP_CHART_MARGIN.top})`);
 
         // Group data by driver
-        const grouped = d3.group(data.filter(d => d.lapDuration), d => d.driverNumber);
+        const grouped = groupByDriver(data);
         const driverNumbers = Array.from(grouped.keys());
 
-        // Assign colors per driver (driverColorMap values already include '#')
-        const getColor = (driverNum: number, idx: number): string => {
-            if (driverColorMap?.[driverNum]) return driverColorMap[driverNum];
-            return FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
-        };
-
         // Scales
-        const x = d3.scaleLinear()
-            .domain(d3.extent(data, d => d.lapNumber) as [number, number])
-            .range([0, innerWidth]);
-
         const validDurations = data.filter(d => d.lapDuration != null && d.lapDuration > 0).map(d => d.lapDuration!);
         if (validDurations.length === 0) return;
 
-        const yMin = d3.min(validDurations)!;
-        const yMax = d3.max(validDurations)!;
-        const y = d3.scaleLinear()
-            .domain([yMin - 2, yMax + 2])
-            .range([innerHeight, 0]);
+        const { xScale: x, yScale: y } = createLapChartScales(data, innerWidth, innerHeight);
 
         // Axes (adaptive tick count based on available width)
         svg.append("g")
@@ -113,7 +100,7 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({ data, title, driverColorMap
         // Draw a line per driver
         driverNumbers.forEach((driverNum, idx) => {
             const driverLaps = grouped.get(driverNum)!;
-            const color = getColor(driverNum, idx);
+            const color = getDriverColor(driverNum, idx, driverColorMap);
 
             svg.append("path")
                 .datum(driverLaps)
@@ -130,8 +117,9 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({ data, title, driverColorMap
         driverNumbers.forEach((driverNum, idx) => {
             const g = legend.append("g")
                 .attr("transform", `translate(0, ${idx * 18})`);
-            g.append("rect").attr("width", 12).attr("height", 12).attr("fill", getColor(driverNum, idx));
-            g.append("text").attr("x", 16).attr("y", 10).text(`#${driverNum}`).attr("fill", "#ccc").attr("font-size", "11px");
+            const label = driverLabelMap?.[driverNum] ?? `#${driverNum}`;
+            g.append("rect").attr("width", 12).attr("height", 12).attr("fill", getDriverColor(driverNum, idx, driverColorMap));
+            g.append("text").attr("x", 16).attr("y", 10).text(label).attr("fill", "#ccc").attr("font-size", "11px");
         });
 
         // Tooltip
@@ -160,10 +148,11 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({ data, title, driverColorMap
             .attr("cursor", "crosshair")
             .on("mouseenter", (_event: MouseEvent, d: LapDataRecord) => {
                 const driverIdx = driverNumbers.indexOf(d.driverNumber);
-                const color = getColor(d.driverNumber, driverIdx);
+                const color = getDriverColor(d.driverNumber, driverIdx, driverColorMap);
+                const driverLabel = driverLabelMap?.[d.driverNumber] ?? `#${d.driverNumber}`;
                 tooltip
                     .style("opacity", 1)
-                    .html(`<strong style="color:${color}">#${d.driverNumber}</strong> Lap ${d.lapNumber}<br/>${d.lapDuration!.toFixed(3)}s`);
+                    .html(`<strong style="color:${color}">${driverLabel}</strong> Lap ${d.lapNumber}<br/>${d.lapDuration!.toFixed(3)}s`);
             })
             .on("mousemove", (event: MouseEvent) => {
                 const [mx, my] = d3.pointer(event, containerRef.current);
@@ -176,7 +165,7 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({ data, title, driverColorMap
         // Cleanup tooltip on unmount/redraw
         return () => { tooltip.remove(); };
 
-    }, [data, driverColorMap, containerWidth]);
+    }, [data, driverColorMap, driverLabelMap, containerWidth]);
 
     return (
         <Paper sx={{ p: 3, bgcolor: '#1e1e1e', color: 'white' }}>

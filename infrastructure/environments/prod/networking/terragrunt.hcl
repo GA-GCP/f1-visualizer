@@ -11,7 +11,8 @@ terraform {
 # 3. Pass in the PROD-specific variables
 inputs = {
   environment  = "prod"
-  project_id   = "f1v-example-prod"
+  project_id   = "f1v-example-project"
   region       = "us-central1"
-  network_name = "f1v-vpc-prod"
+  network_name   = "f1v-vpc-prod"
+  connector_cidr = "10.8.0.32/28"
 }

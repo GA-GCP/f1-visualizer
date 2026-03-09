@@ -14,7 +14,7 @@ terraform {
 }
 
 inputs = {
-  project_id     = "f1v-example-prod"
+  project_id     = "f1v-example-project"
   region         = "us-central1"
   environment    = "prod"
   github_owner   = "GA-GCP"

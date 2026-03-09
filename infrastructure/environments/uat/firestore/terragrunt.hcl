@@ -7,7 +7,7 @@ terraform {
 }
 
 inputs = {
-  project_id        = "f1v-example-uat"
+  project_id        = "f1v-example-project"
   environment       = "uat"
   database_name     = "f1v-db-uat"
   location_id       = "us-central1"

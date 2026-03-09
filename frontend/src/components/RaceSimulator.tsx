@@ -9,6 +9,7 @@ import DriverSelector from './selectors/DriverSelector';
 import SessionControlPanel from './selectors/SessionControlPanel';
 import MediaController from './MediaController';
 import { fetchDrivers, fetchSessionLaps, type DriverProfile, type RaceEntryRoster, type RaceSession } from '../api/referenceApi';
+import { pauseSimulation } from '../api/ingestionApi';
 import type { TelemetryPacket, LocationPacket, LapDataRecord } from '../types/telemetry';
 import { useUser } from '../context/UserContext';
 import { useCallback } from 'react';
@@ -151,6 +152,22 @@ const RaceSimulator: React.FC = () => {
         setCurrentLap(null);
     };
 
+    const handleCancelSimulation = useCallback(async () => {
+        try {
+            await pauseSimulation();
+        } catch (err) {
+            console.error('Failed to pause simulation on cancel', err);
+        }
+        setActiveSession(null);
+        setLastTelemetry(null);
+        setCurrentLap(null);
+        setSessionLaps([]);
+        setSessionMeta(null);
+        setIsInitializing(false);
+        locationQueueRef.current = [];
+        setTraceResetKey(prev => prev + 1);
+    }, []);
+
     // Convert a session's driver roster into DriverProfile[] for the DriverSelector
     const handleSessionSelected = useCallback((roster: RaceEntryRoster) => {
         const profiles: DriverProfile[] = roster.drivers.map(entry => ({
@@ -173,9 +190,6 @@ const RaceSimulator: React.FC = () => {
     // Use session-specific drivers when available, otherwise fall back to global drivers
     const displayDrivers = sessionDrivers.length > 0 ? sessionDrivers : drivers;
 
-    // Determine if DRS is currently active for the selected driver
-    const isDrsActive = lastTelemetry?.drs !== undefined && lastTelemetry.drs !== 0;
-
     // 2. NEW: Determine if we have dropped connection while a session is active
     const connectionLost = activeSession !== null && (!isTelemetryConnected || !isLocationConnected);
 
@@ -185,9 +199,6 @@ const RaceSimulator: React.FC = () => {
                 <Box>
                     <Typography variant="h4" sx={{ fontWeight: 'bold', letterSpacing: 1 }}>
                         🏎️ RACE ENGINEER CONSOLE
-                    </Typography>
-                    <Typography variant="subtitle2" color="primary">
-                        SESSION: {activeSession ? `${activeSession.key} [${activeSession.mode}]` : "AWAITING INITIALIZATION"}
                     </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1 }}>
@@ -201,7 +212,7 @@ const RaceSimulator: React.FC = () => {
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 
                         <Paper sx={{ bgcolor: '#1e1e1e', border: '1px solid #333' }}>
-                            <SessionControlPanel onStreamStarted={handleStreamStarted} onSessionSelected={handleSessionSelected} onError={setStreamError} />
+                            <SessionControlPanel onStreamStarted={handleStreamStarted} onSessionSelected={handleSessionSelected} onError={setStreamError} isSessionActive={activeSession !== null} onCancel={handleCancelSimulation} />
                         </Paper>
 
                         <AnimatePresence>
@@ -233,26 +244,12 @@ const RaceSimulator: React.FC = () => {
                             )}
                         </Paper>
 
-                        <motion.div
-                            animate={{
-                                boxShadow: isDrsActive
-                                    ? ['0 0 0px rgba(0,255,136,0)', '0 0 20px rgba(0,255,136,0.3)', '0 0 0px rgba(0,255,136,0)']
-                                    : '0 0 0px rgba(0,255,136,0)',
-                            }}
-                            transition={isDrsActive
-                                ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' }
-                                : { duration: 0.5 }
-                            }
-                            style={{ borderRadius: 4 }}
-                        >
                             <Paper sx={{
                                 p: 3,
                                 bgcolor: '#1e1e1e',
                                 color: 'white',
                                 minHeight: '200px',
                                 borderTop: `4px solid ${selectedDriver?.teamColor || '#333'}`,
-                                border: isDrsActive ? '1px solid rgba(0,255,136,0.2)' : '1px solid transparent',
-                                transition: 'border-color 0.5s ease',
                             }}>
                                 <Typography variant="h6" color="secondary" sx={{ mb: 2 }}>
                                     LIVE TELEMETRY
@@ -336,17 +333,6 @@ const RaceSimulator: React.FC = () => {
                                                     </Typography>
                                                 </motion.div>
                                             </Grid>
-                                            <Grid size={4}>
-                                                <motion.div variants={itemVariants}>
-                                                    <Typography variant="caption" color="text.secondary">DRS</Typography>
-                                                    <Typography variant="h6" sx={{
-                                                        color: lastTelemetry.drs !== 0 ? '#00ff88' : 'rgba(255,255,255,0.3)',
-                                                        fontWeight: lastTelemetry.drs !== 0 ? 'bold' : 'normal',
-                                                    }}>
-                                                        {lastTelemetry.drs !== 0 ? 'ACTIVATED' : 'OFF'}
-                                                    </Typography>
-                                                </motion.div>
-                                            </Grid>
                                         </Grid>
                                     </motion.div>
                                 ) : (
@@ -355,7 +341,6 @@ const RaceSimulator: React.FC = () => {
                                     </Typography>
                                 )}
                             </Paper>
-                        </motion.div>
 
                     </Box>
                 </Grid>

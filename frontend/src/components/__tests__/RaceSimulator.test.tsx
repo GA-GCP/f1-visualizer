@@ -59,7 +59,7 @@ describe('RaceSimulator', () => {
         expect(await screen.findByText(/CRITICAL: LIVE FEED CONNECTION LOST/i)).toBeInTheDocument();
     });
 
-    it('renders BRAKE and DRS values when telemetry is active', async () => {
+    it('renders BRAKE value when telemetry is active', async () => {
         const mockTelemetry: TelemetryPacket = {
             session_key: 9165,
             meeting_key: 1,
@@ -105,54 +105,8 @@ describe('RaceSimulator', () => {
             telemetryCallback?.(mockTelemetry);
         });
 
-        // Assert brake and DRS values
+        // Assert brake value (DRS removed for v1.0)
         expect(await screen.findByText('0%')).toBeInTheDocument();
-        expect(await screen.findByText('ACTIVATED')).toBeInTheDocument();
-    });
-
-    it('shows DRS OFF when drs value is 0', async () => {
-        const mockTelemetry: TelemetryPacket = {
-            session_key: 9165,
-            meeting_key: 1,
-            date: '2024-01-01',
-            driver_number: 1,
-            speed: 200,
-            rpm: 9000,
-            gear: 5,
-            throttle: 60,
-            brake: 50,
-            drs: 0,
-        };
-
-        let telemetryCallback: ((data: TelemetryPacket) => void) | undefined;
-        vi.mocked(useTelemetry).mockImplementation((cb) => {
-            telemetryCallback = cb;
-            return { isConnected: true };
-        });
-        vi.mocked(useLocation).mockReturnValue({ isConnected: true });
-        vi.mocked(fetchDrivers).mockResolvedValue([
-            { id: 1, code: 'VER', name: 'Max Verstappen', team: 'Red Bull', teamColor: '#3671C6', stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] } }
-        ]);
-
-        render(<RaceSimulator />);
-
-        // Wait for drivers to load
-        await act(async () => {
-            await new Promise(r => setTimeout(r, 0));
-        });
-
-        // Start stream
-        await act(async () => {
-            screen.getByText('Start Mock Stream').click();
-        });
-
-        // Trigger telemetry
-        act(() => {
-            telemetryCallback?.(mockTelemetry);
-        });
-
-        expect(await screen.findByText('OFF')).toBeInTheDocument();
-        expect(await screen.findByText('50%')).toBeInTheDocument();
     });
 
     it('displays lap counter when lap data is available', async () => {

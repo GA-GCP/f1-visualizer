@@ -209,7 +209,7 @@ const Landing: React.FC = () => {
                             fontSize: '0.6rem',
                         }}
                     >
-                        UNOFFICIAL TELEMETRY TOOL // F1 24
+                        UNOFFICIAL TELEMETRY TOOL // F1 23-25
                     </Typography>
                 </motion.div>
             </Box>

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, Typography, ToggleButton, ToggleButtonGroup, CircularProgress, Autocomplete, TextField } from '@mui/material';
-import { motion } from 'framer-motion';
+import { Box, Button, Typography, CircularProgress, Autocomplete, TextField } from '@mui/material';
+import { motion, AnimatePresence } from 'framer-motion';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import SensorsIcon from '@mui/icons-material/Sensors';
-import HistoryIcon from '@mui/icons-material/History';
+import StopIcon from '@mui/icons-material/Stop';
 import { sendIngestionCommand } from '@/api/ingestionApi.ts';
 import { fetchYears, fetchSessionsByYear, fetchSessionDrivers, type RaceSession, type RaceEntryRoster } from '@/api/referenceApi';
 
@@ -11,11 +10,11 @@ interface SessionControlPanelProps {
     onStreamStarted: (sessionKey: number, mode: 'LIVE' | 'SIMULATION', session: RaceSession) => void;
     onSessionSelected?: (roster: RaceEntryRoster) => void;
     onError?: (message: string) => void;
+    isSessionActive?: boolean;
+    onCancel?: () => void;
 }
 
-const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStarted, onSessionSelected, onError }) => {
-    const [mode, setMode] = useState<'LIVE' | 'SIMULATION'>('SIMULATION');
-
+const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStarted, onSessionSelected, onError, isSessionActive = false, onCancel }) => {
     // Cascading state: Year → Sessions → Selected Session
     const [years, setYears] = useState<number[]>([]);
     const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -87,14 +86,11 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
 
         setIsLoading(true);
         try {
-            await sendIngestionCommand({ mode, sessionKey: selectedSession.sessionKey });
-            onStreamStarted(selectedSession.sessionKey, mode, selectedSession);
+            await sendIngestionCommand({ mode: 'SIMULATION', sessionKey: selectedSession.sessionKey });
+            onStreamStarted(selectedSession.sessionKey, 'SIMULATION', selectedSession);
         } catch (error) {
             console.error(error);
-            const msg = mode === 'LIVE'
-                ? 'LIVE STREAM FAILED: Could not connect to ingestion engine.'
-                : 'SIMULATION FAILED: Could not start historical replay.';
-            onError?.(msg);
+            onError?.('SIMULATION FAILED: Could not start historical replay.');
         } finally {
             setIsLoading(false);
         }
@@ -105,21 +101,6 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
             <Typography variant="h6" color="text.secondary">
                 RACE INITIALIZATION
             </Typography>
-
-            <ToggleButtonGroup
-                value={mode}
-                exclusive
-                onChange={(_, newMode) => newMode && setMode(newMode)}
-                fullWidth
-                sx={{ bgcolor: 'rgba(0,0,0,0.2)' }}
-            >
-                <ToggleButton value="LIVE" color="error">
-                    <SensorsIcon sx={{ mr: 1 }} /> LIVE FEED
-                </ToggleButton>
-                <ToggleButton value="SIMULATION" color="primary">
-                    <HistoryIcon sx={{ mr: 1 }} /> HISTORICAL VAULT
-                </ToggleButton>
-            </ToggleButtonGroup>
 
             {/* Year Selector */}
             <Autocomplete
@@ -164,19 +145,44 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                 )}
             />
 
-            <motion.div whileTap={{ scale: 0.97 }} whileHover={{ scale: 1.02 }}>
-                <Button
-                    variant="contained"
-                    color={mode === 'LIVE' ? 'error' : 'primary'}
-                    size="large"
-                    startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
-                    onClick={handleStart}
-                    disabled={isLoading || !selectedSession}
-                    sx={{ fontWeight: 'bold', py: 1.5 }}
-                >
-                    {isLoading ? 'INITIALIZING...' : `START ${mode} STREAM`}
-                </Button>
-            </motion.div>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <motion.div whileTap={!isSessionActive ? { scale: 0.97 } : {}} whileHover={!isSessionActive ? { scale: 1.02 } : {}}>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        size="large"
+                        fullWidth
+                        startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
+                        onClick={handleStart}
+                        disabled={isLoading || !selectedSession || isSessionActive}
+                        sx={{ fontWeight: 'bold', py: 1.5 }}
+                    >
+                        {isLoading ? 'INITIALIZING...' : 'START SIMULATION'}
+                    </Button>
+                </motion.div>
+                <AnimatePresence>
+                    {isSessionActive && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.25, ease: 'easeOut' }}
+                        >
+                            <Button
+                                variant="outlined"
+                                color="error"
+                                size="large"
+                                fullWidth
+                                startIcon={<StopIcon />}
+                                onClick={onCancel}
+                                sx={{ fontWeight: 'bold', py: 1.5, borderWidth: 2, '&:hover': { borderWidth: 2 } }}
+                            >
+                                CANCEL SIMULATION
+                            </Button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </Box>
         </Box>
     );
 };

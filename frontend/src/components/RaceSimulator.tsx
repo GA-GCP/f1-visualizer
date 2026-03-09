@@ -307,25 +307,25 @@ const RaceSimulator: React.FC = () => {
                                             </Typography>
                                         </motion.div>
                                         <Grid container spacing={2} sx={{ mt: 2 }}>
-                                            <Grid size={4}>
+                                            <Grid size={3}>
                                                 <motion.div variants={itemVariants}>
                                                     <Typography variant="caption" color="text.secondary">RPM</Typography>
                                                     <Typography variant="h6">{lastTelemetry.rpm}</Typography>
                                                 </motion.div>
                                             </Grid>
-                                            <Grid size={4}>
+                                            <Grid size={3}>
                                                 <motion.div variants={itemVariants}>
                                                     <Typography variant="caption" color="text.secondary">GEAR</Typography>
                                                     <Typography variant="h6">{lastTelemetry.gear}</Typography>
                                                 </motion.div>
                                             </Grid>
-                                            <Grid size={4}>
+                                            <Grid size={3}>
                                                 <motion.div variants={itemVariants}>
                                                     <Typography variant="caption" color="text.secondary">THROTTLE</Typography>
                                                     <Typography variant="h6">{lastTelemetry.throttle}%</Typography>
                                                 </motion.div>
                                             </Grid>
-                                            <Grid size={4}>
+                                            <Grid size={3}>
                                                 <motion.div variants={itemVariants}>
                                                     <Typography variant="caption" color="text.secondary">BRAKE</Typography>
                                                     <Typography variant="h6" sx={{ color: lastTelemetry.brake > 0 ? '#ff4444' : 'white' }}>

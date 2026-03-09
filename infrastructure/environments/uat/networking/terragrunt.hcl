@@ -11,7 +11,8 @@ terraform {
 # 3. Pass in the UAT-specific variables
 inputs = {
   environment  = "uat"
-  project_id   = "f1v-example-uat"
+  project_id   = "f1v-example-project"
   region       = "us-central1"
-  network_name = "f1v-vpc-uat"
+  network_name   = "f1v-vpc-uat"
+  connector_cidr = "10.8.0.16/28"
 }

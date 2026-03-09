@@ -14,12 +14,12 @@ dependency "networking" {
   # This allows the plan to succeed even if the network hasn't been created yet.
   # -----------------------------------------------------------
   mock_outputs = {
-    network_id = "projects/f1v-example-uat/global/networks/f1v-vpc-uat-MOCK"
+    network_id = "projects/f1v-example-project/global/networks/f1v-vpc-uat-MOCK"
   }
 }
 
 inputs = {
-  project_id  = "f1v-example-uat"
+  project_id  = "f1v-example-project"
   environment = "uat"
   region      = "us-central1"
 

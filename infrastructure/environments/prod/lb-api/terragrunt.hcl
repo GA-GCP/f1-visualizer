@@ -7,7 +7,7 @@ terraform {
 }
 
 inputs = {
-  project_id             = "f1v-example-prod"
+  project_id             = "f1v-example-project"
   name_prefix            = "f1v-api-prod"
   domain                 = "api.f1visualizer.com"
   api_gateway_fqdn       = "f1v-gateway-prod-placeholder.uc.gateway.dev"

@@ -7,7 +7,7 @@ terraform {
 }
 
 inputs = {
-  project_id        = "f1v-example-prod"
+  project_id        = "f1v-example-project"
   environment       = "prod"
   database_name     = "f1v-db-prod"
   location_id       = "us-central1"

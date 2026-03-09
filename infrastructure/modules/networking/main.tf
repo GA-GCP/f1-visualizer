@@ -52,7 +52,7 @@ resource "google_vpc_access_connector" "connector" {
   name          = "${var.network_name}-conn"
   project       = var.project_id
   region        = var.region
-  ip_cidr_range = "10.8.0.0/28" # Dedicated range for serverless throughput
+  ip_cidr_range = var.connector_cidr
   network       = google_compute_network.f1v_vpc.name
   min_throughput = 200
   max_throughput = 300

@@ -7,7 +7,7 @@ terraform {
 }
 
 inputs = {
-  project_id = "f1v-example-uat"
+  project_id = "f1v-example-project"
   region     = "us-central1"
   gateway_id = "f1v-gateway-uat"
 

@@ -9,14 +9,14 @@ terraform {
 dependency "iam" {
   config_path = "../iam-and-secrets"
   mock_outputs = {
-    sa_data_ingestion_email = "sa-f1v-data-ingestion-prod@f1v-example-prod.iam.gserviceaccount.com"
+    sa_data_ingestion_email = "sa-f1v-data-ingestion-prod@f1v-example-project.iam.gserviceaccount.com"
   }
 }
 
 dependency "networking" {
   config_path = "../networking"
   mock_outputs = {
-    vpc_access_connector_id = "projects/f1v-example-prod/locations/us-central1/connectors/f1v-vpc-prod-conn-MOCK"
+    vpc_access_connector_id = "projects/f1v-example-project/locations/us-central1/connectors/f1v-vpc-prod-conn-MOCK"
   }
 }
 
@@ -29,11 +29,11 @@ dependency "redis" {
 }
 
 inputs = {
-  project_id   = "f1v-example-prod"
+  project_id   = "f1v-example-project"
   region       = "us-central1"
   service_name = "f1v-service-data-ingestion-prod"
   service_account_email = dependency.iam.outputs.sa_data_ingestion_email
-  image_url    = get_env("TF_VAR_image_url", "us-central1-docker.pkg.dev/f1v-example-prod/f1v-repo/data-ingestion:latest")
+  image_url    = get_env("TF_VAR_image_url", "us-central1-docker.pkg.dev/f1v-example-project/f1v-repo/data-ingestion:latest")
 
   is_public    = true
 

@@ -7,7 +7,7 @@ terraform {
 }
 
 inputs = {
-  project_id             = "f1-visualizer-prod"
+  project_id             = "f1-visualizer-488201"
   region                 = "us-central1"
   name_prefix            = "f1v-frontend-prod"
   domain                 = "f1visualizer.com"

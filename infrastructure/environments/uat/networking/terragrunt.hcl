@@ -11,7 +11,8 @@ terraform {
 # 3. Pass in the UAT-specific variables
 inputs = {
   environment  = "uat"
-  project_id   = "f1-visualizer-uat"
+  project_id   = "f1-visualizer-488201"
   region       = "us-central1"
-  network_name = "f1v-vpc-uat"
+  network_name   = "f1v-vpc-uat"
+  connector_cidr = "10.8.0.16/28"
 }

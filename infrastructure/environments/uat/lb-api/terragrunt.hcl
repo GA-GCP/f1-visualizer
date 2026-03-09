@@ -7,10 +7,10 @@ terraform {
 }
 
 inputs = {
-  project_id             = "f1-visualizer-uat"
+  project_id             = "f1-visualizer-488201"
   name_prefix            = "f1v-api-uat"
   domain                 = "uat.api.f1visualizer.com"
-  api_gateway_fqdn       = "f1v-gateway-uat-placeholder.uc.gateway.dev"
+  api_gateway_fqdn       = "f1v-gateway-uat-2udaafhz.uc.gateway.dev"
   telemetry_service_name = "f1v-service-telemetry-uat"
   frontend_origin        = "https://uat.f1visualizer.com"
 }

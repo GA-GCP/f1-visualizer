@@ -7,7 +7,7 @@ terraform {
 }
 
 inputs = {
-  project_id = "f1-visualizer-uat"
+  project_id = "f1-visualizer-488201"
   region     = "us-central1"
   gateway_id = "f1v-gateway-uat"
 

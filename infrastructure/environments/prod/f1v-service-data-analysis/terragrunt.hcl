@@ -10,15 +10,15 @@ terraform {
 dependency "iam" {
   config_path = "../iam-and-secrets"
   mock_outputs = {
-    sa_data_analysis_email = "sa-f1v-data-analysis-prod@f1-visualizer-prod.iam.gserviceaccount.com"
+    sa_data_analysis_email = "sa-f1v-data-analysis-prod@f1-visualizer-488201.iam.gserviceaccount.com"
   }
 }
 
 inputs = {
-  project_id   = "f1-visualizer-prod"
+  project_id   = "f1-visualizer-488201"
   region       = "us-central1"
   service_name = "f1v-service-data-analysis-prod"
-  image_url    = "us-central1-docker.pkg.dev/f1-visualizer-prod/f1v-repo/data-analysis:latest"
+  image_url    = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/data-analysis:latest"
   service_account_email = dependency.iam.outputs.sa_data_analysis_email
 
   is_public    = true
@@ -37,7 +37,7 @@ inputs = {
     "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_AUDIENCES"  = "api.f1visualizer.com"
 
     # --- NEW: Explicitly inject Firestore Properties ---
-    "SPRING_CLOUD_GCP_FIRESTORE_PROJECT_ID"  = "f1-visualizer-prod"
+    "SPRING_CLOUD_GCP_FIRESTORE_PROJECT_ID"  = "f1-visualizer-488201"
     "SPRING_CLOUD_GCP_FIRESTORE_DATABASE_ID" = "f1v-db-prod"
   }
 }

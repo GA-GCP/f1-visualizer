@@ -7,7 +7,7 @@ terraform {
 }
 
 inputs = {
-  project_id        = "f1-visualizer-uat"
+  project_id        = "f1-visualizer-488201"
   environment       = "uat"
   database_name     = "f1v-db-uat"
   location_id       = "us-central1"

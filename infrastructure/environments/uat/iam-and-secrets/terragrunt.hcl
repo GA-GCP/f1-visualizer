@@ -11,5 +11,5 @@ terraform {
 # 3. Pass in the UAT-specific variables
 inputs = {
   environment = "uat"
-  project_id  = "f1-visualizer-uat"
+  project_id  = "f1-visualizer-488201"
 }

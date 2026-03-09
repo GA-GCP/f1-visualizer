@@ -63,7 +63,7 @@ steps:
       - '--dockerfile=/workspace/frontend/Dockerfile.ci'
       - '--context=/workspace/frontend'
       - '--destination=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:${_SHORT_SHA}'
-      - '--destination=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:latest'
+      - '--destination=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:latest-${_ENV}'
       - '--cache=true'
       - '--cache-repo=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend-cache'
 

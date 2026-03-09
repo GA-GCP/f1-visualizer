@@ -57,7 +57,7 @@ describe('LayoutMain', () => {
             </MemoryRouter>
         );
 
-        expect(screen.getByText('UNOFFICIAL TELEMETRY TOOL // F1 24')).toBeInTheDocument();
+        expect(screen.getByText('UNOFFICIAL TELEMETRY TOOL // F1 23-25')).toBeInTheDocument();
     });
 
     it('renders the app title', () => {

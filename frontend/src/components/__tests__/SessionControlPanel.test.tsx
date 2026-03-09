@@ -38,7 +38,7 @@ describe('SessionControlPanel', () => {
         vi.mocked(fetchSessionDrivers).mockResolvedValue(mockRoster);
     });
 
-    it('renders the control panel with default SIMULATION mode', async () => {
+    it('renders the control panel with simulation mode', async () => {
         render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
 
         expect(screen.getByText('RACE INITIALIZATION')).toBeInTheDocument();
@@ -48,22 +48,7 @@ describe('SessionControlPanel', () => {
             expect(screen.getByLabelText(/Select Grand Prix/i)).toHaveValue('Singapore Grand Prix - Race');
         });
 
-        expect(screen.getByRole('button', { name: /START SIMULATION STREAM/i })).toBeInTheDocument();
-    });
-
-    it('toggles to LIVE mode and updates the start button', async () => {
-        render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
-
-        // Wait for data to load so the component is fully ready
-        await waitFor(() => {
-            expect(screen.getByRole('button', { name: /START SIMULATION STREAM/i })).toBeEnabled();
-        });
-
-        // Find and click the LIVE toggle button
-        const liveToggle = screen.getByRole('button', { name: /LIVE FEED/i });
-        fireEvent.click(liveToggle);
-
-        expect(screen.getByRole('button', { name: /START LIVE STREAM/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /START SIMULATION/i })).toBeInTheDocument();
     });
 
     it('successfully sends the ingestion command and triggers the callback', async () => {
@@ -73,7 +58,7 @@ describe('SessionControlPanel', () => {
         render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
 
         // Wait for Start button to be enabled (data loaded)
-        const startButton = await screen.findByRole('button', { name: /START SIMULATION STREAM/i });
+        const startButton = await screen.findByRole('button', { name: /START SIMULATION/i });
         await waitFor(() => expect(startButton).toBeEnabled());
 
         fireEvent.click(startButton);
@@ -103,7 +88,7 @@ describe('SessionControlPanel', () => {
         // 2. Pass the mock into the component
         render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} onError={mockOnError} />);
 
-        const startButton = await screen.findByRole('button', { name: /START SIMULATION STREAM/i });
+        const startButton = await screen.findByRole('button', { name: /START SIMULATION/i });
         await waitFor(() => expect(startButton).toBeEnabled());
 
         fireEvent.click(startButton);

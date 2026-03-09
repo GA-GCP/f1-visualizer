@@ -10,7 +10,7 @@ terraform {
 dependency "iam" {
   config_path = "../iam-and-secrets"
   mock_outputs = {
-    sa_telemetry_email = "sa-f1v-telemetry-prod@f1-visualizer-prod.iam.gserviceaccount.com"
+    sa_telemetry_email = "sa-f1v-telemetry-prod@f1-visualizer-488201.iam.gserviceaccount.com"
   }
 }
 
@@ -18,7 +18,7 @@ dependency "iam" {
 dependency "networking" {
   config_path = "../networking"
   mock_outputs = {
-    vpc_access_connector_id = "projects/f1-visualizer-prod/locations/us-central1/connectors/f1v-vpc-prod-conn-MOCK"
+    vpc_access_connector_id = "projects/f1-visualizer-488201/locations/us-central1/connectors/f1v-vpc-prod-conn-MOCK"
   }
 }
 
@@ -32,7 +32,7 @@ dependency "redis" {
 }
 
 inputs = {
-  project_id   = "f1-visualizer-prod"
+  project_id   = "f1-visualizer-488201"
   region       = "us-central1"
   service_name = "f1v-service-telemetry-prod"
   service_account_email = dependency.iam.outputs.sa_telemetry_email
@@ -40,7 +40,7 @@ inputs = {
   is_public    = true
 
   # Pointing to the Artifact Registry repo we created
-  image_url    = "us-central1-docker.pkg.dev/f1-visualizer-prod/f1v-repo/telemetry:latest"
+  image_url    = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/telemetry:latest"
 
   # Elevated resources: high-frequency Redis Pub/Sub to WebSocket broadcast (1000+ msg/sec during live sessions)
   cpu    = "2000m"

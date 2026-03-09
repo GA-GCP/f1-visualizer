@@ -7,10 +7,10 @@ terraform {
 }
 
 inputs = {
-  project_id   = "f1-visualizer-prod"
+  project_id   = "f1-visualizer-488201"
   region       = "us-central1"
   service_name = "f1v-webapp-prod"
-  image_url    = "us-central1-docker.pkg.dev/f1-visualizer-prod/f1v-repo/frontend:latest"
+  image_url    = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/frontend:latest"
 
   # IMPORTANT: This makes the React app accessible to the internet
   is_public    = true

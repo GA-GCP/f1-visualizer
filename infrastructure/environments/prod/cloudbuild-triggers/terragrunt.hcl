@@ -14,7 +14,7 @@ terraform {
 }
 
 inputs = {
-  project_id     = "f1-visualizer-prod"
+  project_id     = "f1-visualizer-488201"
   region         = "us-central1"
   environment    = "prod"
   github_owner   = "GA-GCP"

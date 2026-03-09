@@ -11,5 +11,5 @@ terraform {
 # 3. Pass in the PROD-specific variables
 inputs = {
   environment = "prod"
-  project_id  = "f1-visualizer-prod"
+  project_id  = "f1-visualizer-488201"
 }

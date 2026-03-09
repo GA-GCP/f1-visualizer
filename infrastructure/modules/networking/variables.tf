@@ -17,3 +17,9 @@ variable "network_name" {
   description = "The name of the VPC network"
   type        = string
 }
+
+variable "connector_cidr" {
+  description = "IP CIDR range for the Serverless VPC Access Connector (must be unique per project)"
+  type        = string
+  default     = "10.8.0.0/28"
+}

@@ -10,7 +10,7 @@ inputs = {
   project_id             = "f1-visualizer-488201"
   name_prefix            = "f1v-api-prod"
   domain                 = "api.f1visualizer.com"
-  api_gateway_fqdn       = "f1v-gateway-prod-placeholder.uc.gateway.dev"
+  api_gateway_fqdn       = "f1v-gateway-prod-2udaafhz.uc.gateway.dev"
   telemetry_service_name = "f1v-service-telemetry-prod"
   frontend_origin        = "https://f1visualizer.com"
 }

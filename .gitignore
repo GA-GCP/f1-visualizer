@@ -11,6 +11,12 @@
 *.env.development
 *.env.test
 *.env.production
+
+# Frontend env files are public SPA config (Auth0 client IDs, API URLs)
+# that must be present at Vite build time. These are NOT secrets.
+!frontend/.env.dev
+!frontend/.env.uat
+!frontend/.env.prod
 *.pem
 *.key
 secrets.json

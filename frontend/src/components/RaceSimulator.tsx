@@ -309,34 +309,34 @@ const RaceSimulator: React.FC = () => {
                                                 {lastTelemetry.speed} <span style={{ fontSize: '1.5rem', color: '#666' }}>KM/H</span>
                                             </Typography>
                                         </motion.div>
-                                        <Grid container spacing={2} sx={{ mt: 2 }}>
-                                            <Grid size={4}>
+                                        <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                                            <Box sx={{ flex: 1, minWidth: 0 }}>
                                                 <motion.div variants={itemVariants}>
                                                     <Typography variant="caption" color="text.secondary">RPM</Typography>
                                                     <Typography variant="h6">{lastTelemetry.rpm}</Typography>
                                                 </motion.div>
-                                            </Grid>
-                                            <Grid size={4}>
+                                            </Box>
+                                            <Box sx={{ flex: 1, minWidth: 0 }}>
                                                 <motion.div variants={itemVariants}>
                                                     <Typography variant="caption" color="text.secondary">GEAR</Typography>
                                                     <Typography variant="h6">{lastTelemetry.gear}</Typography>
                                                 </motion.div>
-                                            </Grid>
-                                            <Grid size={4}>
+                                            </Box>
+                                            <Box sx={{ flex: 1, minWidth: 0 }}>
                                                 <motion.div variants={itemVariants}>
                                                     <Typography variant="caption" color="text.secondary">THROTTLE</Typography>
                                                     <Typography variant="h6">{lastTelemetry.throttle}%</Typography>
                                                 </motion.div>
-                                            </Grid>
-                                            <Grid size={4}>
+                                            </Box>
+                                            <Box sx={{ flex: 1, minWidth: 0 }}>
                                                 <motion.div variants={itemVariants}>
                                                     <Typography variant="caption" color="text.secondary">BRAKE</Typography>
                                                     <Typography variant="h6" sx={{ color: lastTelemetry.brake > 0 ? '#ff4444' : 'white' }}>
                                                         {lastTelemetry.brake}%
                                                     </Typography>
                                                 </motion.div>
-                                            </Grid>
-                                            <Grid size={4}>
+                                            </Box>
+                                            <Box sx={{ flex: 1, minWidth: 0 }}>
                                                 <motion.div variants={itemVariants}>
                                                     <Typography variant="caption" color="text.secondary">DRS</Typography>
                                                     <Typography variant="h6" sx={{
@@ -346,8 +346,8 @@ const RaceSimulator: React.FC = () => {
                                                         {lastTelemetry.drs !== 0 ? 'ACTIVATED' : 'OFF'}
                                                     </Typography>
                                                 </motion.div>
-                                            </Grid>
-                                        </Grid>
+                                            </Box>
+                                        </Box>
                                     </motion.div>
                                 ) : (
                                     <Typography color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>

@@ -13,11 +13,13 @@ vi.mock('framer-motion', async () => {
 
 // jsdom doesn't implement SVG geometry methods. Patch them globally.
 beforeAll(() => {
-    if (!SVGElement.prototype.getTotalLength) {
-        (SVGElement.prototype as unknown as { getTotalLength: () => number }).getTotalLength = () => 1500;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const proto = SVGElement.prototype as any;
+    if (!proto.getTotalLength) {
+        proto.getTotalLength = () => 1500;
     }
-    if (!SVGElement.prototype.getPointAtLength) {
-        (SVGElement.prototype as unknown as { getPointAtLength: (d: number) => { x: number; y: number } }).getPointAtLength = () => ({ x: 100, y: 100 });
+    if (!proto.getPointAtLength) {
+        proto.getPointAtLength = () => ({ x: 100, y: 100 });
     }
 });
 

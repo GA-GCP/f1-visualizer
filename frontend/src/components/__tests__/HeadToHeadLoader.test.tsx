@@ -45,7 +45,7 @@ describe('HeadToHeadLoader', () => {
     });
 
     it('renders ghost stat bars for all five metrics', () => {
-        const { container } = render(<HeadToHeadLoader />);
+        render(<HeadToHeadLoader />);
 
         // 5 stat bars means 5 stat label rows
         const statLabels = ['RACE WINS', 'PODIUM FINISHES', 'TOTAL CAREER POINTS', 'TOTAL RACES', 'BEST CHAMPIONSHIP FINISH'];

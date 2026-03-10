@@ -36,7 +36,7 @@ resource "google_compute_global_network_endpoint" "api_gateway_endpoint" {
 resource "google_compute_region_network_endpoint_group" "telemetry_neg" {
   name                  = "${var.name_prefix}-telemetry-neg"
   network_endpoint_type = "SERVERLESS"
-  region                = "us-central1" # Hardcoded for simplicity, or add as a var
+  region                = var.region
   project               = var.project_id
   cloud_run {
     service = var.telemetry_service_name

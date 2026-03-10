@@ -16,7 +16,7 @@ dependency "iam" {
 dependency "networking" {
   config_path = "../networking"
   mock_outputs = {
-    vpc_access_connector_id = "projects/f1-visualizer-488201/locations/us-central1/connectors/f1v-vpc-uat-conn-MOCK"
+    vpc_access_connector_id = "projects/f1-visualizer-488201/locations/us-east1/connectors/f1v-vpc-uat-conn-MOCK"
   }
 }
 
@@ -30,10 +30,10 @@ dependency "redis" {
 
 inputs = {
   project_id   = "f1-visualizer-488201"
-  region       = "us-central1"
+  region       = "us-east1"
   service_name = "f1v-service-data-ingestion-uat"
   service_account_email = dependency.iam.outputs.sa_data_ingestion_email
-  image_url    = get_env("TF_VAR_image_url", "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/data-ingestion:latest")
+  image_url    = get_env("TF_VAR_image_url", "us-east1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/data-ingestion:latest")
 
   is_public    = true
 

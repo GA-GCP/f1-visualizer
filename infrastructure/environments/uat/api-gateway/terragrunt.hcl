@@ -8,7 +8,7 @@ terraform {
 
 inputs = {
   project_id = "f1v-example-project"
-  region     = "us-central1"
+  region     = "us-east1"
   gateway_id = "f1v-gateway-uat"
 
   # BOOTSTRAP CONFIGURATION:

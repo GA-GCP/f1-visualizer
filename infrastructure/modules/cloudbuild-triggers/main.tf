@@ -36,6 +36,7 @@ resource "google_cloudbuild_trigger" "backend_data_analysis" {
   substitutions = {
     _ENV       = var.environment
     _SHORT_SHA = "$SHORT_SHA"
+    _REGION    = var.region
   }
 
   service_account = "projects/${var.project_id}/serviceAccounts/sa-f1v-cloudbuild-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
@@ -70,6 +71,7 @@ resource "google_cloudbuild_trigger" "backend_data_ingestion" {
   substitutions = {
     _ENV       = var.environment
     _SHORT_SHA = "$SHORT_SHA"
+    _REGION    = var.region
   }
 
   service_account = "projects/${var.project_id}/serviceAccounts/sa-f1v-cloudbuild-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
@@ -104,6 +106,7 @@ resource "google_cloudbuild_trigger" "backend_telemetry" {
   substitutions = {
     _ENV       = var.environment
     _SHORT_SHA = "$SHORT_SHA"
+    _REGION    = var.region
   }
 
   service_account = "projects/${var.project_id}/serviceAccounts/sa-f1v-cloudbuild-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
@@ -138,6 +141,7 @@ resource "google_cloudbuild_trigger" "backend_user" {
   substitutions = {
     _ENV       = var.environment
     _SHORT_SHA = "$SHORT_SHA"
+    _REGION    = var.region
   }
 
   service_account = "projects/${var.project_id}/serviceAccounts/sa-f1v-cloudbuild-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
@@ -170,6 +174,7 @@ resource "google_cloudbuild_trigger" "frontend" {
   substitutions = {
     _ENV       = var.environment
     _SHORT_SHA = "$SHORT_SHA"
+    _REGION    = var.region
   }
 
   service_account = "projects/${var.project_id}/serviceAccounts/sa-f1v-cloudbuild-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
@@ -203,6 +208,7 @@ resource "google_cloudbuild_trigger" "api_gateway" {
   substitutions = {
     _ENV            = var.environment
     _SHORT_SHA      = "$SHORT_SHA"
+    _REGION         = var.region
     _AUTH0_ISSUER   = var.auth0_issuer
     _AUTH0_AUDIENCE = var.auth0_audience
   }
@@ -241,6 +247,7 @@ resource "google_cloudbuild_trigger" "infrastructure" {
   substitutions = {
     _ENV       = var.environment
     _SHORT_SHA = "$SHORT_SHA"
+    _REGION    = var.region
   }
 
   service_account = "projects/${var.project_id}/serviceAccounts/sa-f1v-cloudbuild-${var.environment}@${var.project_id}.iam.gserviceaccount.com"

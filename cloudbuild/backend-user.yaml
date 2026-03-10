@@ -9,6 +9,7 @@ serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@
 substitutions:
   _ENV: 'dev'
   _SHORT_SHA: 'manual-build'
+  _REGION: 'us-central1'
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -55,10 +56,10 @@ steps:
     args:
       - '--dockerfile=/workspace/backend/Dockerfile.ci'
       - '--context=/workspace/staging'
-      - '--destination=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/user:${_SHORT_SHA}'
-      - '--destination=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/user:latest'
+      - '--destination=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/user:${_SHORT_SHA}'
+      - '--destination=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/user:latest'
       - '--cache=true'
-      - '--cache-repo=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/user-cache'
+      - '--cache-repo=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/user-cache'
 
   # 5. Deploy to Cloud Run (immutable SHA tag)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -69,7 +70,7 @@ steps:
       - 'services'
       - 'update'
       - 'f1v-service-user-${_ENV}'
-      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/user:${_SHORT_SHA}'
-      - '--region=us-central1'
+      - '--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/user:${_SHORT_SHA}'
+      - '--region=${_REGION}'
       - '--project=$PROJECT_ID'
       - '--quiet'

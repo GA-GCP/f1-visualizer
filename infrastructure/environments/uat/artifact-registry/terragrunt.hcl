@@ -1,0 +1,14 @@
+include "root" {
+  path = find_in_parent_folders("root.hcl")
+}
+
+terraform {
+  source = "../../../modules/artifact-registry"
+}
+
+inputs = {
+  project_id    = "f1v-example-project"
+  location      = "us-east1"
+  repository_id = "f1v-repo"
+  environment   = "uat"
+}

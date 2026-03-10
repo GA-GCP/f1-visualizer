@@ -10,7 +10,7 @@ inputs = {
   project_id        = "f1v-example-project"
   environment       = "uat"
   database_name     = "f1v-db-uat"
-  location_id       = "us-central1"
+  location_id       = "us-east1"
 
   delete_protection = "DELETE_PROTECTION_DISABLED"
 }

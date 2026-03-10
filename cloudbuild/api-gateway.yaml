@@ -9,6 +9,7 @@ serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@
 substitutions:
   _ENV: 'dev'
   _SHORT_SHA: 'manual-build'
+  _REGION: 'us-central1'
   _AUTH0_ISSUER: 'https://elysianarts-dev.us.auth0.com'
   _AUTH0_AUDIENCE: 'dev.api.f1visualizer.com'
 
@@ -28,13 +29,13 @@ steps:
         # --- 1. Dynamic Cloud Run URL & Gateway Host Discovery ---
         echo "Discovering Cloud Run service URLs for environment: ${_ENV}"
 
-        TELEMETRY_URL=$(gcloud run services describe f1v-service-telemetry-${_ENV} --region=us-central1 --format='value(status.url)')
-        DATA_ANALYSIS_URL=$(gcloud run services describe f1v-service-data-analysis-${_ENV} --region=us-central1 --format='value(status.url)')
-        USER_URL=$(gcloud run services describe f1v-service-user-${_ENV} --region=us-central1 --format='value(status.url)')
-        DATA_INGESTION_URL=$(gcloud run services describe f1v-service-data-ingestion-${_ENV} --region=us-central1 --format='value(status.url)')
+        TELEMETRY_URL=$(gcloud run services describe f1v-service-telemetry-${_ENV} --region=${_REGION} --format='value(status.url)')
+        DATA_ANALYSIS_URL=$(gcloud run services describe f1v-service-data-analysis-${_ENV} --region=${_REGION} --format='value(status.url)')
+        USER_URL=$(gcloud run services describe f1v-service-user-${_ENV} --region=${_REGION} --format='value(status.url)')
+        DATA_INGESTION_URL=$(gcloud run services describe f1v-service-data-ingestion-${_ENV} --region=${_REGION} --format='value(status.url)')
 
         GATEWAY_HOST=$(gcloud api-gateway gateways describe f1v-gateway-${_ENV} \
-          --location=us-central1 \
+          --location=${_REGION} \
           --project=$PROJECT_ID \
           --format='value(defaultHostname)')
 
@@ -85,7 +86,7 @@ steps:
       - 'f1v-gateway-${_ENV}'
       - '--api=f1v-gateway-${_ENV}'
       - '--api-config=f1v-config-${_ENV}-${_SHORT_SHA}'
-      - '--location=us-central1'
+      - '--location=${_REGION}'
       - '--project=$PROJECT_ID'
       - '--quiet'
 
@@ -102,7 +103,7 @@ steps:
         sleep 30
 
         GATEWAY_URL=$(gcloud api-gateway gateways describe f1v-gateway-${_ENV} \
-          --location=us-central1 \
+          --location=${_REGION} \
           --project=$PROJECT_ID \
           --format='value(defaultHostname)')
 

@@ -16,9 +16,9 @@ dependency "iam" {
 
 inputs = {
   project_id   = "f1v-example-project"
-  region       = "us-central1"
+  region       = "us-east1"
   service_name = "f1v-service-data-analysis-uat"
-  image_url    = "us-central1-docker.pkg.dev/f1v-example-project/f1v-repo/data-analysis:latest"
+  image_url    = "us-east1-docker.pkg.dev/f1v-example-project/f1v-repo/data-analysis:latest"
   service_account_email = dependency.iam.outputs.sa_data_analysis_email
 
   is_public    = true

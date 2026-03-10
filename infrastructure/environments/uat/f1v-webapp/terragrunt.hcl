@@ -8,9 +8,9 @@ terraform {
 
 inputs = {
   project_id   = "f1v-example-project"
-  region       = "us-central1"
+  region       = "us-east1"
   service_name = "f1v-webapp-uat"
-  image_url    = "us-central1-docker.pkg.dev/f1v-example-project/f1v-repo/frontend:latest-uat"
+  image_url    = "us-east1-docker.pkg.dev/f1v-example-project/f1v-repo/frontend:latest-uat"
 
   # IMPORTANT: This makes the React app accessible to the internet
   is_public    = true

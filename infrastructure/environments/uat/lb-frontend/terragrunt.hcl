@@ -8,7 +8,7 @@ terraform {
 
 inputs = {
   project_id             = "f1v-example-project"
-  region                 = "us-central1"
+  region                 = "us-east1"
   name_prefix            = "f1v-frontend-uat"
   domain                 = "uat.f1visualizer.com"
   cloud_run_service_name = "f1v-webapp-uat"

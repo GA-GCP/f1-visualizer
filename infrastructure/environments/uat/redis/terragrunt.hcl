@@ -21,7 +21,7 @@ dependency "networking" {
 inputs = {
   project_id  = "f1-visualizer-488201"
   environment = "uat"
-  region      = "us-central1"
+  region      = "us-east1"
 
   # The mock output above allows this reference to resolve during the plan phase
   network_id  = dependency.networking.outputs.network_id

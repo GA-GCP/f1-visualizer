@@ -9,6 +9,7 @@ serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@
 substitutions:
   _ENV: 'dev'
   _SHORT_SHA: 'manual-build'
+  _REGION: 'us-central1'
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -62,10 +63,10 @@ steps:
     args:
       - '--dockerfile=/workspace/frontend/Dockerfile.ci'
       - '--context=/workspace/frontend'
-      - '--destination=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:${_SHORT_SHA}'
-      - '--destination=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:latest-${_ENV}'
+      - '--destination=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:${_SHORT_SHA}'
+      - '--destination=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:latest-${_ENV}'
       - '--cache=true'
-      - '--cache-repo=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend-cache'
+      - '--cache-repo=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend-cache'
 
   # 6. Deploy to Cloud Run (immutable SHA tag)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -76,7 +77,7 @@ steps:
       - 'services'
       - 'update'
       - 'f1v-webapp-${_ENV}'
-      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:${_SHORT_SHA}'
-      - '--region=us-central1'
+      - '--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:${_SHORT_SHA}'
+      - '--region=${_REGION}'
       - '--project=$PROJECT_ID'
       - '--quiet'

@@ -347,7 +347,7 @@ f1-visualizer/
 |   +-- Dockerfile.ci                           # Lean CI image (pre-built dist -> nginx)
 |   +-- vite.config.ts                          # Dev server proxy to 4 backend services + WebSocket
 |   +-- vitest.config.ts                        # jsdom test environment with setup
-|   +-- .env.dev / .env.uat / .env.prod          # Per-environment Auth0 + API config (Vite build modes)
+|   +-- .env.dev / .env.uat / .env.prod         # Per-environment Auth0 + API config (Vite build modes)
 |   +-- eslint.config.js                        # TypeScript-ESLint + React Hooks rules
 |
 +-- backend/                                    # Maven Multi-Module Spring Boot Microservices
@@ -433,16 +433,16 @@ All microservices compose their dependencies from a shared BOM of 10 internal li
 ```
 f1v-commons-bom
 |
-+-- f1v-commons-base                   Lombok, base annotations
-+-- f1v-commons-security               OAuth2 JWT, CORS, STOMP auth interceptor
-+-- f1v-commons-service-base           WebMvc, Actuator, Jackson 3, Secret Manager
-+-- f1v-commons-service-rest           REST service foundation
-+-- f1v-commons-service-reactive       WebFlux reactive foundation
-+-- f1v-commons-service-websocket      STOMP broker, MQTT client
-+-- f1v-commons-gcp-bq                 BigQuery client bean
-+-- f1v-commons-gcp-firestore          Firestore client bean
-+-- f1v-commons-gcp-memorystore-redis  Redis template + Pub/Sub listener container
-+-- f1v-commons-api-openf1             OpenF1 WebClient, auth token lifecycle
++-- f1v-commons-base                   # Lombok, base annotations
++-- f1v-commons-security               # OAuth2 JWT, CORS, STOMP auth interceptor
++-- f1v-commons-service-base           # WebMvc, Actuator, Jackson 3, Secret Manager
++-- f1v-commons-service-rest           # REST service foundation
++-- f1v-commons-service-reactive       # WebFlux reactive foundation
++-- f1v-commons-service-websocket      # STOMP broker, MQTT client
++-- f1v-commons-gcp-bq                 # BigQuery client bean
++-- f1v-commons-gcp-firestore          # Firestore client bean
++-- f1v-commons-gcp-memorystore-redis  # Redis template + Pub/Sub listener container
++-- f1v-commons-api-openf1             # OpenF1 WebClient, auth token lifecycle
 ```
 
 Each microservice picks only the modules it needs — for example, `f1v-service-telemetry` pulls in `commons-service-websocket` and `commons-gcp-memorystore-redis` but has no dependency on BigQuery or Firestore.

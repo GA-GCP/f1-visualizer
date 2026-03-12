@@ -24,12 +24,10 @@ RUN java -Djarmode=layertools -jar target/*.jar extract
 # ==========================================
 # STAGE 2: Run in Distroless (Production)
 # ==========================================
-# FIX: Java 25 is only available on Debian 13 in Distroless
 FROM gcr.io/distroless/java25-debian13
 
 WORKDIR /app
 
-# FIX: Re-declare ARG so it's visible in this stage
 ARG MODULE
 
 # 1. Copy the extracted layers

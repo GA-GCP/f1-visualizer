@@ -21,7 +21,6 @@ public class RaceAnalysisService {
         this.bigQuery = bigQuery;
     }
 
-    // TODO: Move project/dataset names to application.yml properties
     private static final String DATASET_NAME = "f1_dataset";
     private static final String TABLE_NAME = "laps";
 

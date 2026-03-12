@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-// 1. ADD Snackbar AND Alert TO THE MUI IMPORTS
 import { Box, Typography, Paper, Grid, Chip, Snackbar, Alert, CircularProgress } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTelemetry } from '../hooks/useTelemetry';
@@ -190,7 +189,6 @@ const RaceSimulator: React.FC = () => {
     // Use session-specific drivers when available, otherwise fall back to global drivers
     const displayDrivers = sessionDrivers.length > 0 ? sessionDrivers : drivers;
 
-    // 2. NEW: Determine if we have dropped connection while a session is active
     const connectionLost = activeSession !== null && (!isTelemetryConnected || !isLocationConnected);
 
     return (
@@ -359,7 +357,6 @@ const RaceSimulator: React.FC = () => {
                 </Grid>
             </Grid>
 
-            {/* 3. NEW: The Global Alert Banner */}
             <Snackbar open={connectionLost} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
                 <Alert severity="error" variant="filled" sx={{ width: '100%', fontWeight: 'bold', fontSize: '1.1rem' }}>
                     CRITICAL: LIVE FEED CONNECTION LOST. ATTEMPTING RECONNECT...

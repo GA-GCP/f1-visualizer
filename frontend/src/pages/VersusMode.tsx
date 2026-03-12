@@ -12,7 +12,6 @@ const VersusMode: React.FC = () => {
     const [driverA, setDriverA] = useState<DriverProfile | null>(null);
     const [driverB, setDriverB] = useState<DriverProfile | null>(null);
 
-    // 1. Wrap the fetcher in useCallback so it's a stable reference for the useEffect
     const handleDriverSelect = useCallback(async (driver: DriverProfile | null, slot: 'A' | 'B') => {
         if (!driver) {
             if (slot === 'A') setDriverA(null);
@@ -33,7 +32,6 @@ const VersusMode: React.FC = () => {
         }
     }, []);
 
-    // 2. Use the async/await initialization pattern
     useEffect(() => {
         let isMounted = true;
 
@@ -87,7 +85,6 @@ const VersusMode: React.FC = () => {
                                 label="DRIVER A"
                                 options={drivers}
                                 value={driverA}
-                                // 3. Explicitly wrap in void to satisfy ESLint's no-misused-promises
                                 onChange={(d) => { void handleDriverSelect(d, 'A'); }}
                             />
                         </Paper>
@@ -104,7 +101,6 @@ const VersusMode: React.FC = () => {
                                 label="DRIVER B"
                                 options={drivers}
                                 value={driverB}
-                                // 3. Explicitly wrap in void to satisfy ESLint's no-misused-promises
                                 onChange={(d) => { void handleDriverSelect(d, 'B'); }}
                             />
                         </Paper>

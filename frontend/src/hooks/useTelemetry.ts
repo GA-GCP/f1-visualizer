@@ -6,7 +6,6 @@ import type { TelemetryPacket } from '../types/telemetry';
 export const useTelemetry = (onDataReceived: (data: TelemetryPacket) => void) => {
     const [isConnected, setIsConnected] = useState(false);
     const callbackRef = useRef(onDataReceived);
-    // NEW: Buffer to hold incoming packets without triggering re-renders
     const bufferRef = useRef<TelemetryPacket[]>([]);
 
     useEffect(() => {

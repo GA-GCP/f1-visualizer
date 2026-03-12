@@ -24,7 +24,7 @@ public class LiveStreamService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final JsonMapper jsonMapper;
-    private final OpenF1AuthService authService; // <-- Inject Auth Service
+    private final OpenF1AuthService authService;
 
     @Value("${f1v.mqtt.url:wss://mqtt.openf1.org:443}")
     private String openF1MqttUrl;
@@ -93,7 +93,6 @@ public class LiveStreamService {
             String carDataTopic = "session/" + sessionKey + "/car_data";
             String locationTopic = "session/" + sessionKey + "/location";
 
-            // UPGRADED to QoS 1: Guarantee delivery so we don't skip frames on the front-end trace!
             mqttClient.subscribe(carDataTopic, 1);
             mqttClient.subscribe(locationTopic, 1);
 

@@ -18,7 +18,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Service
 public class OpenF1AuthService {
     private final WebClient webClient;
-    private final SecretManagerConfig.OpenF1Credentials credentials; // NEW: Hold our injected credentials
+    private final SecretManagerConfig.OpenF1Credentials credentials;
     private String currentAccessToken;
 
     public OpenF1AuthService(WebClient.Builder webClientBuilder, SecretManagerConfig.OpenF1Credentials credentials) {
@@ -37,7 +37,6 @@ public class OpenF1AuthService {
         log.info("🔐 Authenticating with OpenF1 API (Sponsorship Tier)...");
 
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
-        // NEW: Pull the username and password from the credentials record
         formData.add("username", credentials.username());
         formData.add("password", credentials.password());
 

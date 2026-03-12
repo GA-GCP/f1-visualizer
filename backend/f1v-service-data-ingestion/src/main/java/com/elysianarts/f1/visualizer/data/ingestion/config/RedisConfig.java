@@ -32,7 +32,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class RedisConfig {
     public static final String TELEMETRY_TOPIC = "live_telemetry";
     public static final String LOCATION_TOPIC = "live_location";
-    public static final String PLAYBACK_TOPIC = "playback_status"; // NEW TOPIC
+    public static final String PLAYBACK_TOPIC = "playback_status";
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {

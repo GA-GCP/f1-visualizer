@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// 1. Dynamically determine the base URL based on the Vite build mode
 let targetBaseUrl = '/api/v1'; // Default for local 'development' (uses Vite proxy)
 
 if (import.meta.env.MODE === 'prod') {

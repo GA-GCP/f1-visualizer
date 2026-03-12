@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Box, IconButton, Slider, Typography, Paper, CircularProgress } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
-// 1. IMPORT StompSubscription from the library
 import { type StompSubscription } from '@stomp/stompjs';
 import { playSimulation, pauseSimulation, seekSimulation } from '../api/ingestionApi';
 import { stompClient } from '../api/stompClient';

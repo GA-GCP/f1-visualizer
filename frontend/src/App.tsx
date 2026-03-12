@@ -93,7 +93,6 @@ const broadcastTheme = createTheme({
 
 // --- AUTH GUARD COMPONENT ---
 const RequiredAuth: React.FC = () => {
-    // 1. Destructure the 'error' object from Auth0
     const { isAuthenticated, isLoading, error } = useAuth0();
 
     // Post-login splash: read a sessionStorage flag set by onRedirectCallback.
@@ -133,7 +132,6 @@ const RequiredAuth: React.FC = () => {
         return null;
     }
 
-    // 3. Gracefully display the error to stop the infinite loop
     if (error) {
         return (
             <div style={{ padding: '2rem', textAlign: 'center', color: '#ff4444', fontFamily: 'sans-serif' }}>

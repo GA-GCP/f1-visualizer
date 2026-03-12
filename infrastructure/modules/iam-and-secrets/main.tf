@@ -127,7 +127,6 @@ resource "google_project_iam_member" "cloudbuild_apigateway_admin" {
 }
 
 # -- Cloud Run: Ensure it can "Describe" services to get URLs --
-# (It likely has this, but let's be explicit to avoid the next error)
 resource "google_project_iam_member" "cloudbuild_run_viewer" {
   project = var.project_id
   role    = "roles/run.viewer"

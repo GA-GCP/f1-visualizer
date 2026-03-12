@@ -48,14 +48,12 @@ const LayoutMain: React.FC = () => {
                             <NavButton to="/versus" label="Head-to-Head" icon={<CompareArrowsIcon />} currentPath={location.pathname} />
                         </LayoutGroup>
 
-                        {/* NEW: Settings Button */}
                         <Tooltip title="User Preferences">
                             <IconButton onClick={() => setIsSettingsOpen(true)} sx={{ ml: 2, color: 'text.secondary', '&:hover': { color: 'primary.main' } }}>
                                 <SettingsIcon />
                             </IconButton>
                         </Tooltip>
 
-                        {/* NEW: Logout Button */}
                         <Tooltip title="Secure Logout">
                             <IconButton
                                 onClick={handleLogout}
@@ -68,7 +66,6 @@ const LayoutMain: React.FC = () => {
                 </Container>
             </AppBar>
 
-            {/* NEW: Modal Component */}
             <UserSettingsModal open={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
             {/* 2. Content Area */}

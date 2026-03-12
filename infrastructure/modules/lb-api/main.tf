@@ -32,7 +32,7 @@ resource "google_compute_global_network_endpoint" "api_gateway_endpoint" {
 }
 
 
-# --- NEW: Serverless NEG for WebSocket Bypass ---
+# --- Serverless NEG for WebSocket Bypass ---
 resource "google_compute_region_network_endpoint_group" "telemetry_neg" {
   name                  = "${var.name_prefix}-telemetry-neg"
   network_endpoint_type = "SERVERLESS"

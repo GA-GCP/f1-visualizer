@@ -22,7 +22,6 @@ public class AnalysisController {
 
     @GetMapping("/session/{sessionKey}/laps")
     public ResponseEntity<List<LapDataRecord>> getSessionLaps(@PathVariable Long sessionKey) {
-        // In the future, we can add @RequestParam for specific drivers to filter SQL server-side
         List<LapDataRecord> data = raceAnalysisService.getSessionLapTimes(sessionKey);
         return ResponseEntity.ok(data);
     }

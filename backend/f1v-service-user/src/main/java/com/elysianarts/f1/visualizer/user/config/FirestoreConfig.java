@@ -20,7 +20,7 @@ public class FirestoreConfig {
         return FirestoreOptions.getDefaultInstance()
                 .toBuilder()
                 .setProjectId(projectId)
-                .setDatabaseId(databaseId) // NEW: Ensure we point to dev/uat/prod databases!
+                .setDatabaseId(databaseId)
                 .build()
                 .getService();
     }

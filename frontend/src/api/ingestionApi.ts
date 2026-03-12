@@ -15,7 +15,6 @@ export const sendIngestionCommand = async (command: IngestionCommandRequest): Pr
     }
 };
 
-// --- NEW: Playback Controls ---
 export const playSimulation = async (): Promise<void> => {
     await apiClient.post('/ingestion/playback/play');
 };

@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 @Builder
 public class RaceSession {
-    private long sessionKey; // Using camelCase standard
+    private long sessionKey;
     private String sessionName;
     private String meetingName;
     private int year;

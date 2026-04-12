@@ -17,7 +17,7 @@
     "@mui/icons-material": "^7.3.8",
     "@mui/material": "^7.3.8",
     "@stomp/stompjs": "^7.3.0",
-    "axios": "^1.13.5",
+    "axios": "^1.15.0",
     "d3": "^7.9.0",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.34.3",

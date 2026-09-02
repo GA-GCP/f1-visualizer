@@ -37,7 +37,7 @@
         <spring-cloud-gcp-bigquery.version>7.4.5</spring-cloud-gcp-bigquery.version>
         <google-cloud-firestore.version>3.38.0</google-cloud-firestore.version>
         <jackson-3.version>3.1.0</jackson-3.version>
-        <spring-data-commons.version>4.0.3</spring-data-commons.version>
+        <spring-data-commons.version>4.0.6</spring-data-commons.version>
         <spring-tx.version>7.0.5</spring-tx.version>
         <junit-jupiter-api.version>6.0.3</junit-jupiter-api.version>
         <lombok.version>1.18.42</lombok.version>

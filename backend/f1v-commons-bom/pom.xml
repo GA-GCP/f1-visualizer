@@ -32,7 +32,7 @@
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring-boot.version>4.0.3</spring-boot.version>
+        <spring-boot.version>4.0.4</spring-boot.version>
         <spring-cloud-gcp.version>7.4.5</spring-cloud-gcp.version>
         <spring-cloud-gcp-bigquery.version>7.4.5</spring-cloud-gcp-bigquery.version>
         <google-cloud-firestore.version>3.38.0</google-cloud-firestore.version>

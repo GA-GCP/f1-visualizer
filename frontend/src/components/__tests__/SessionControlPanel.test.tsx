@@ -51,6 +51,29 @@ describe('SessionControlPanel', () => {
         expect(screen.getByRole('button', { name: /START SIMULATION/i })).toBeInTheDocument();
     });
 
+    it('clears the session list and selection when the year changes', async () => {
+        vi.mocked(fetchYears).mockResolvedValue([2023, 2022]);
+        vi.mocked(fetchSessionsByYear).mockImplementation((year: number) =>
+            year === 2023
+                ? Promise.resolve(mockSessions)
+                // Never resolves, so 2022 stays in the loading state.
+                : new Promise<typeof mockSessions>(() => {})
+        );
+
+        render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
+
+        const grandPrix = screen.getByLabelText(/Select Grand Prix/i);
+        await waitFor(() => expect(grandPrix).toHaveValue('Singapore Grand Prix - Race'));
+
+        // Switch the season to 2022.
+        const season = screen.getByLabelText(/Select Season/i);
+        fireEvent.keyDown(season, { key: 'ArrowDown' });
+        fireEvent.click(await screen.findByText('2022'));
+
+        // The 2023 sessions and the auto-selected race must not linger.
+        await waitFor(() => expect(grandPrix).toHaveValue(''));
+    });
+
     it('successfully sends the ingestion command and triggers the callback', async () => {
         // Setup the mock to resolve successfully
         vi.mocked(sendIngestionCommand).mockResolvedValue('Simulation initiated');

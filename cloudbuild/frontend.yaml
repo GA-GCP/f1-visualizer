@@ -19,7 +19,7 @@ steps:
   #    canvas (node-canvas) is a native C++ addon used by visual-regression
   #    tests. Alpine needs Python, a C++ toolchain, and Cairo/Pango libs
   #    for node-gyp to compile it.
-  - name: 'node:25-alpine'
+  - name: 'node:26-alpine'
     id: 'install'
     entrypoint: 'sh'
     args:
@@ -31,7 +31,7 @@ steps:
     dir: 'frontend'
 
   # 2. ESLint Check
-  - name: 'node:25-alpine'
+  - name: 'node:26-alpine'
     id: 'lint'
     entrypoint: 'yarn'
     args: ['lint']
@@ -40,7 +40,7 @@ steps:
   # 3. Unit Tests
   #    canvas runtime libs needed for visual-regression tests (the compiled
   #    .node addon from step 1 links against cairo/pango shared libs).
-  - name: 'node:25-alpine'
+  - name: 'node:26-alpine'
     id: 'test'
     entrypoint: 'sh'
     args:
@@ -51,25 +51,39 @@ steps:
     dir: 'frontend'
 
   # 4. Production Build (produces dist/)
-  - name: 'node:25-alpine'
+  - name: 'node:26-alpine'
     id: 'build'
     entrypoint: 'yarn'
     args: ['build', '--mode', '${_ENV}']
     dir: 'frontend'
 
-  # 5. Kaniko Build + Push (with layer caching)
-  - name: 'gcr.io/kaniko-project/executor:latest'
+  # 5. Docker Build + Push (registry layer cache)
+  #    Kaniko was archived upstream; this uses the maintained Cloud Build
+  #    docker builder, seeding the cache from the previous env image.
+  - name: 'gcr.io/cloud-builders/docker'
     id: 'build-push-image'
+    entrypoint: 'bash'
     args:
-      - '--dockerfile=/workspace/frontend/Dockerfile.ci'
-      - '--context=/workspace/frontend'
-      - '--destination=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:${_SHORT_SHA}'
-      - '--destination=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:latest-${_ENV}'
-      - '--cache=true'
-      - '--cache-repo=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend-cache'
+      - '-c'
+      - |
+        set -euo pipefail
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend"
+
+        # A cold cache is not an error on the first build.
+        docker pull "$$IMAGE:latest-${_ENV}" || true
+
+        docker build \
+          --cache-from "$$IMAGE:latest-${_ENV}" \
+          -f /workspace/frontend/Dockerfile.ci \
+          -t "$$IMAGE:${_SHORT_SHA}" \
+          -t "$$IMAGE:latest-${_ENV}" \
+          /workspace/frontend
+
+        docker push "$$IMAGE:${_SHORT_SHA}"
+        docker push "$$IMAGE:latest-${_ENV}"
 
   # 6. Deploy to Cloud Run (immutable SHA tag)
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
     id: 'deploy'
     entrypoint: 'gcloud'
     args:

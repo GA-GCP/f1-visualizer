@@ -1,7 +1,7 @@
 # ==========================================
 # Pipeline: Infrastructure (OpenTofu + Terragrunt)
 # ==========================================
-# Installs tooling, runs tfsec security scan,
+# Installs tooling, runs a Trivy IaC security scan,
 # then plans and applies infrastructure changes.
 # ==========================================
 serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com'
@@ -9,15 +9,15 @@ serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@
 substitutions:
   _ENV: 'dev'
   _SHORT_SHA: 'manual-build'
-  _TOFU_VERSION: '1.9.0'
-  _TERRAGRUNT_VERSION: '0.77.0'
+  _TOFU_VERSION: '1.12.6'
+  _TERRAGRUNT_VERSION: '1.1.4'
 
 options:
   logging: CLOUD_LOGGING_ONLY
 
 steps:
   # 1. Install OpenTofu + Terragrunt into /workspace/bin (persists across steps)
-  - name: 'alpine:latest'
+  - name: 'alpine:3.24'
     id: 'install-tools'
     entrypoint: 'sh'
     args:
@@ -43,16 +43,22 @@ steps:
         /workspace/bin/tofu version
         /workspace/bin/terragrunt --version
 
-  # 2. tfsec Security Scan on All Modules
-  - name: 'aquasec/tfsec:latest'
-    id: 'tfsec-scan'
+  # 2. Trivy IaC Security Scan on All Modules
+  #    tfsec is retired and folded into Trivy; this matches the scanner used
+  #    by the GitHub Actions PR checks.
+  - name: 'aquasec/trivy:0.74.0'
+    id: 'security-scan'
     args:
-      - '--minimum-severity'
-      - 'HIGH'
+      - 'config'
+      - '--exit-code'
+      - '1'
+      - '--severity'
+      - 'CRITICAL,HIGH'
+      - '--no-progress'
       - 'infrastructure/modules/'
 
   # 3. Terragrunt Init
-  - name: 'alpine:latest'
+  - name: 'alpine:3.24'
     id: 'terragrunt-init'
     entrypoint: 'sh'
     args:
@@ -61,10 +67,10 @@ steps:
         set -e
         export PATH=/workspace/bin:$$PATH
         cd infrastructure/environments/${_ENV}
-        terragrunt run-all init --terragrunt-non-interactive
+        terragrunt run --all --non-interactive -- init
 
   # 4. Terragrunt Plan
-  - name: 'alpine:latest'
+  - name: 'alpine:3.24'
     id: 'terragrunt-plan'
     entrypoint: 'sh'
     args:
@@ -73,10 +79,10 @@ steps:
         set -e
         export PATH=/workspace/bin:$$PATH
         cd infrastructure/environments/${_ENV}
-        terragrunt run-all plan --terragrunt-non-interactive
+        terragrunt run --all --non-interactive -- plan
 
   # 5. Terragrunt Apply
-  - name: 'alpine:latest'
+  - name: 'alpine:3.24'
     id: 'terragrunt-apply'
     entrypoint: 'sh'
     args:
@@ -85,4 +91,4 @@ steps:
         set -e
         export PATH=/workspace/bin:$$PATH
         cd infrastructure/environments/${_ENV}
-        terragrunt run-all apply --terragrunt-non-interactive -auto-approve
+        terragrunt run --all --non-interactive -- apply -auto-approve

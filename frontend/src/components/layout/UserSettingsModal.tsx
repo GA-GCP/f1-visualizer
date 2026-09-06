@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, CircularProgress, Alert } from '@mui/material';
+import type { DialogProps } from '@mui/material';
 import { motion } from 'framer-motion';
 import DriverSelector from '../selectors/DriverSelector';
 import { fetchDrivers, type DriverProfile } from '../../api/referenceApi';
@@ -12,24 +13,42 @@ interface UserSettingsModalProps {
 
 const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) => {
     const { userProfile, updatePreferences } = useUser();
-    const [drivers, setDrivers] = useState<DriverProfile[]>([]);
+    // `null` means "not fetched yet", so the absence of data *is* the loading
+    // state. That removes the need to synchronously flip a boolean inside the
+    // effect, which cascades renders.
+    const [drivers, setDrivers] = useState<DriverProfile[] | null>(null);
     const [selectedDriver, setSelectedDriver] = useState<DriverProfile | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+    const isLoading = open && drivers === null;
 
     useEffect(() => {
         if (!open) return;
-        setIsLoading(true);
+        let cancelled = false;
+
         fetchDrivers()
             .then(data => {
+                if (cancelled) return;
                 setDrivers(data);
-                if (userProfile?.preferences?.favoriteDriver) {
-                    const fav = data.find(d => d.code === userProfile.preferences.favoriteDriver);
+                const favourite = userProfile?.preferences?.favoriteDriver;
+                if (favourite) {
+                    const fav = data.find(d => d.code === favourite);
                     if (fav) setSelectedDriver(fav);
                 }
             })
-            .finally(() => setIsLoading(false));
+            .catch(err => {
+                console.error('Failed to load drivers', err);
+                // Leaving `drivers` null would strand the spinner.
+                if (!cancelled) setDrivers([]);
+            });
+
+        // Discarding the data on close means reopening the dialog (or a profile
+        // change) shows the spinner again, as it did before.
+        return () => {
+            cancelled = true;
+            setDrivers(null);
+        };
     }, [userProfile, open]);
 
     const handleSave = async () => {
@@ -50,14 +69,20 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
     };
 
     return (
-        <Dialog open={open} onClose={onClose} PaperProps={{
-            component: motion.div,
-            initial: { opacity: 0, scale: 0.95 },
-            animate: { opacity: 1, scale: 1 },
-            exit: { opacity: 0, scale: 0.95 },
-            transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] },
-            sx: { bgcolor: '#1e1e1e', color: 'white', minWidth: 400, border: '1px solid #333' }
-        }}>
+        <Dialog
+            open={open}
+            onClose={onClose}
+            slots={{ paper: motion.div }}
+            slotProps={{
+                paper: {
+                    initial: { opacity: 0, scale: 0.95 },
+                    animate: { opacity: 1, scale: 1 },
+                    exit: { opacity: 0, scale: 0.95 },
+                    transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] as const },
+                    sx: { bgcolor: '#1e1e1e', color: 'white', minWidth: 400, border: '1px solid #333' }
+                } as NonNullable<DialogProps['slotProps']>['paper']
+            }}
+        >
             <DialogTitle sx={{ borderBottom: '1px solid #333', pb: 2 }}>⚙️ USER PREFERENCES</DialogTitle>
             <DialogContent sx={{ pt: 3 }}>
                 {errorMsg && (
@@ -72,7 +97,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
                         <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>DEFAULT DRIVER CHANNEL</Typography>
                         <DriverSelector
                             label="Select Driver"
-                            options={drivers}
+                            options={drivers ?? []}
                             value={selectedDriver}
                             onChange={setSelectedDriver}
                         />

@@ -18,17 +18,25 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
     // Cascading state: Year → Sessions → Selected Session
     const [years, setYears] = useState<number[]>([]);
     const [selectedYear, setSelectedYear] = useState<number | null>(null);
-    const [sessions, setSessions] = useState<RaceSession[]>([]);
-    const [selectedSession, setSelectedSession] = useState<RaceSession | null>(null);
+
+    // Sessions and the current pick are both stored alongside the year they
+    // belong to. A year change therefore empties the list, clears the selection
+    // and re-enters the loading state by derivation — none of which the effect
+    // has to write synchronously.
+    const [sessionsForYear, setSessionsForYear] = useState<{ year: number; sessions: RaceSession[] } | null>(null);
+    const [sessionChoice, setSessionChoice] = useState<{ year: number; session: RaceSession | null } | null>(null);
+
+    const sessions = sessionsForYear?.year === selectedYear ? sessionsForYear.sessions : [];
+    const selectedSession = sessionChoice?.year === selectedYear ? sessionChoice.session : null;
+    const isLoadingSessions = selectedYear !== null && sessionsForYear?.year !== selectedYear;
 
     const [isLoading, setIsLoading] = useState(false);
-    const [isLoadingYears, setIsLoadingYears] = useState(false);
-    const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+    // The mount effect below always fetches, so years start out loading.
+    const [isLoadingYears, setIsLoadingYears] = useState(true);
 
     // Step 1: Load available years on mount
     useEffect(() => {
         let isMounted = true;
-        setIsLoadingYears(true);
         fetchYears()
             .then(data => {
                 if (isMounted) {
@@ -48,21 +56,19 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
         if (selectedYear === null) return;
 
         let isMounted = true;
-        setIsLoadingSessions(true);
-        setSessions([]);
-        setSelectedSession(null);
-
         fetchSessionsByYear(selectedYear)
             .then(data => {
-                if (isMounted) {
-                    setSessions(data);
-                    if (data.length > 0) {
-                        setSelectedSession(data[0]);
-                    }
+                if (!isMounted) return;
+                setSessionsForYear({ year: selectedYear, sessions: data });
+                if (data.length > 0) {
+                    setSessionChoice({ year: selectedYear, session: data[0] });
                 }
             })
-            .catch(err => console.error('Failed to load sessions for year', err))
-            .finally(() => { if (isMounted) setIsLoadingSessions(false); });
+            .catch(err => {
+                console.error('Failed to load sessions for year', err);
+                // Recording an empty result clears the derived loading state.
+                if (isMounted) setSessionsForYear({ year: selectedYear, sessions: [] });
+            });
         return () => { isMounted = false; };
     }, [selectedYear]);
 
@@ -127,7 +133,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                 getOptionLabel={(option) => `${option.meetingName} - ${option.sessionName}`}
                 isOptionEqualToValue={(option, value) => option.sessionKey === value.sessionKey}
                 value={selectedSession}
-                onChange={(_, newValue) => setSelectedSession(newValue)}
+                onChange={(_, newValue) => { if (selectedYear !== null) setSessionChoice({ year: selectedYear, session: newValue }); }}
                 disabled={sessions.length === 0}
                 renderOption={(props, option) => (
                     <Box component="li" {...props} key={option.sessionKey}>

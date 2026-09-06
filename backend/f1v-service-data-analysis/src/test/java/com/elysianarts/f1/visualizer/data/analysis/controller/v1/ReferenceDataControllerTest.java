@@ -5,8 +5,6 @@ import com.elysianarts.f1.visualizer.commons.service.config.JacksonObjectMapperC
 import com.elysianarts.f1.visualizer.data.analysis.model.DriverProfile;
 import com.elysianarts.f1.visualizer.data.analysis.model.RaceSession;
 import com.elysianarts.f1.visualizer.data.analysis.service.ReferenceDataService;
-import com.google.cloud.bigquery.BigQuery;
-import com.google.cloud.firestore.Firestore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,12 +37,6 @@ class ReferenceDataControllerTest {
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
-
-    @MockitoBean
-    private BigQuery bigQuery;
-
-    @MockitoBean
-    private Firestore firestore;
 
     private DriverProfile mockDriver;
     private RaceSession mockSession;

@@ -4,7 +4,6 @@ import com.elysianarts.f1.visualizer.commons.api.openf1.config.SecretManagerConf
 import com.elysianarts.f1.visualizer.commons.security.config.F1VisualizerSecurityConfig;
 import com.elysianarts.f1.visualizer.commons.service.config.JacksonObjectMapperConfig;
 import com.elysianarts.f1.visualizer.data.ingestion.service.*;
-import com.google.cloud.bigquery.BigQuery;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -54,9 +53,6 @@ class IngestionControllerTest {
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
-
-    @MockitoBean
-    private BigQuery bigQuery;
 
     @MockitoBean
     private SecretManagerConfig.OpenF1Credentials openF1Credentials;

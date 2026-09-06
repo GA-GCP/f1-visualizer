@@ -2,12 +2,9 @@ package com.elysianarts.f1.visualizer.user;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.ComponentScan;
 
-@SpringBootApplication
-@ComponentScan(basePackages = {
+@SpringBootApplication(scanBasePackages = {
         "com.elysianarts.f1.visualizer.user",
-        "com.elysianarts.f1.visualizer.user.config",
         "com.elysianarts.f1.visualizer.commons"
 })
 public class F1VUserServiceApplication {

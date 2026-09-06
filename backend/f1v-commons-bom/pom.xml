@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.3</version>
+        <version>4.1.1</version>
         <relativePath/>
     </parent>
 
@@ -32,18 +32,18 @@
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring-boot.version>4.0.4</spring-boot.version>
-        <spring-cloud-gcp.version>7.4.5</spring-cloud-gcp.version>
-        <spring-cloud-gcp-bigquery.version>7.4.5</spring-cloud-gcp-bigquery.version>
-        <google-cloud-firestore.version>3.38.0</google-cloud-firestore.version>
-        <jackson-3.version>3.1.0</jackson-3.version>
-        <spring-data-commons.version>4.0.6</spring-data-commons.version>
-        <spring-tx.version>7.0.5</spring-tx.version>
-        <junit-jupiter-api.version>6.0.3</junit-jupiter-api.version>
-        <lombok.version>1.18.42</lombok.version>
+        <spring-boot.version>4.1.1</spring-boot.version>
+        <spring-cloud-gcp.version>8.1.1</spring-cloud-gcp.version>
+        <spring-cloud-gcp-bigquery.version>8.1.1</spring-cloud-gcp-bigquery.version>
+        <google-cloud-firestore.version>3.47.0</google-cloud-firestore.version>
+        <jackson-3.version>3.2.2</jackson-3.version>
+        <spring-data-commons.version>4.1.1</spring-data-commons.version>
+        <spring-tx.version>7.0.9</spring-tx.version>
+        <junit-jupiter-api.version>6.1.3</junit-jupiter-api.version>
+        <lombok.version>1.18.48</lombok.version>
         <eclipse-paho-mqtt3-client.version>1.2.5</eclipse-paho-mqtt3-client.version>
-        <io-reactor-test.version>3.8.3</io-reactor-test.version>
-        <mockwebserver.version>5.3.2</mockwebserver.version>
+        <io-reactor-test.version>3.8.7</io-reactor-test.version>
+        <mockwebserver.version>5.5.0</mockwebserver.version>
         <f1v-commons-api-openf1.version>1.0.0-SNAPSHOT</f1v-commons-api-openf1.version>
         <f1v-commons-base.version>1.0.0-SNAPSHOT</f1v-commons-base.version>
         <f1v-commons-gcp-bq.version>1.0.0-SNAPSHOT</f1v-commons-gcp-bq.version>

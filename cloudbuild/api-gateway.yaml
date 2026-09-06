@@ -18,7 +18,7 @@ options:
 
 steps:
   # 1. Discover Service URLs, Inject Placeholders, Validate, and Deploy Config
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
     id: 'inject-and-deploy-config'
     entrypoint: 'bash'
     args:
@@ -76,7 +76,7 @@ steps:
         echo "API Gateway config deployed: f1v-config-${_ENV}-${_SHORT_SHA}"
 
   # 2. Update Gateway to Use New Config
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
     id: 'update-gateway'
     entrypoint: 'gcloud'
     args:
@@ -91,7 +91,7 @@ steps:
       - '--quiet'
 
   # 3. Smoke Test: Verify Gateway is Responding
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
     id: 'smoke-test'
     entrypoint: 'bash'
     args:

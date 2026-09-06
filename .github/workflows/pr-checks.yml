@@ -25,10 +25,10 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           java-version: '25'
           distribution: 'temurin'
@@ -36,8 +36,6 @@ jobs:
 
       - name: Build & Test
         run: mvn clean package -am
-        env:
-          GOOGLE_CLOUD_PROJECT: ci-dummy-project
 
   # -----------------------------------------
   # Frontend: Lint + Test
@@ -49,12 +47,12 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - name: Set up Node 22
-        uses: actions/setup-node@v4
+      - name: Set up Node 26
+        uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '26'
           cache: 'yarn'
           cache-dependency-path: frontend/yarn.lock
 
@@ -74,20 +72,20 @@ jobs:
     name: Infrastructure Scan & Plan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install OpenTofu
-        uses: opentofu/setup-opentofu@v1
+        uses: opentofu/setup-opentofu@v2
         with:
-          tofu_version: '1.9.0'
+          tofu_version: '1.12.6'
 
-      - name: tfsec Security Scan
-        uses: aquasecurity/tfsec-action@v1.0.3
+      - name: Trivy IaC Security Scan
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
-          working_directory: infrastructure/modules
-          soft_fail: false
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+          scan-type: config
+          scan-ref: infrastructure/modules
+          severity: CRITICAL,HIGH
+          exit-code: '1'
 
       - name: Validate OpenTofu Modules
         run: |

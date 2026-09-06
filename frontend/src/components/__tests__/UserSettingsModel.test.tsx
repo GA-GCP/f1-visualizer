@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import UserSettingsModal from '../layout/UserSettingsModal';
 import { useUser } from '../../context/UserContext';
@@ -30,6 +30,24 @@ describe('UserSettingsModal', () => {
             updatePreferences: mockUpdatePreferences,
             isLoading: false
         });
+    });
+
+    it('shows the spinner while drivers load, and again when reopened', async () => {
+        let resolveFetch: (drivers: typeof mockDrivers) => void = () => {};
+        (fetchDrivers as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+            () => new Promise(resolve => { resolveFetch = resolve; })
+        );
+
+        const { rerender } = render(<UserSettingsModal open={true} onClose={vi.fn()} />);
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+
+        await act(async () => { resolveFetch(mockDrivers); });
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+
+        // Closing discards the fetched data, so reopening loads from scratch.
+        rerender(<UserSettingsModal open={false} onClose={vi.fn()} />);
+        rerender(<UserSettingsModal open={true} onClose={vi.fn()} />);
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
     });
 
     it('pre-selects the existing favorite driver and saves updates', async () => {

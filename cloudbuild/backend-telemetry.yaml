@@ -16,7 +16,7 @@ options:
 
 steps:
   # 1. Scoped Maven Build + Test (only this module and its dependencies)
-  - name: 'maven:3.9.12-eclipse-temurin-25'
+  - name: 'maven:3.9.16-eclipse-temurin-25'
     id: 'build-and-test'
     entrypoint: 'mvn'
     args:
@@ -39,7 +39,7 @@ steps:
         java -Djarmode=layertools -jar /workspace/backend/f1v-service-telemetry/target/*.jar extract
 
   # 3. Trivy Filesystem Security Scan
-  - name: 'aquasec/trivy:latest'
+  - name: 'aquasec/trivy:0.74.0'
     id: 'security-scan'
     args:
       - 'filesystem'
@@ -50,19 +50,33 @@ steps:
       - '--no-progress'
       - '/workspace/staging'
 
-  # 4. Kaniko Build + Push (with layer caching)
-  - name: 'gcr.io/kaniko-project/executor:latest'
+  # 4. Docker Build + Push (registry layer cache)
+  #    Kaniko was archived upstream; this uses the maintained Cloud Build
+  #    docker builder, seeding the cache from the previous :latest image.
+  - name: 'gcr.io/cloud-builders/docker'
     id: 'build-push-image'
+    entrypoint: 'bash'
     args:
-      - '--dockerfile=/workspace/backend/Dockerfile.ci'
-      - '--context=/workspace/staging'
-      - '--destination=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:${_SHORT_SHA}'
-      - '--destination=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry:latest'
-      - '--cache=true'
-      - '--cache-repo=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry-cache'
+      - '-c'
+      - |
+        set -euo pipefail
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/telemetry"
+
+        # A cold cache is not an error on the first build.
+        docker pull "$$IMAGE:latest" || true
+
+        docker build \
+          --cache-from "$$IMAGE:latest" \
+          -f /workspace/backend/Dockerfile.ci \
+          -t "$$IMAGE:${_SHORT_SHA}" \
+          -t "$$IMAGE:latest" \
+          /workspace/staging
+
+        docker push "$$IMAGE:${_SHORT_SHA}"
+        docker push "$$IMAGE:latest"
 
   # 5. Deploy to Cloud Run (immutable SHA tag)
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
     id: 'deploy'
     entrypoint: 'gcloud'
     args:

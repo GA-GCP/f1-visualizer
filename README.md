@@ -5,15 +5,15 @@
 <p align="center">
   <!-- Frontend -->
   <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white" alt="React 19" />
-  <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript 5.9" />
-  <img src="https://img.shields.io/badge/Vite-7.3-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite 7.3" />
+  <img src="https://img.shields.io/badge/TypeScript-6.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript 6.0" />
+  <img src="https://img.shields.io/badge/Vite-8.2-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite 8.2" />
   <img src="https://img.shields.io/badge/D3.js-7-F9A03C?style=for-the-badge&logo=d3dotjs&logoColor=white" alt="D3.js" />
-  <img src="https://img.shields.io/badge/MUI-7.3-007FFF?style=for-the-badge&logo=mui&logoColor=white" alt="MUI" />
-  <img src="https://img.shields.io/badge/Framer_Motion-12-0055FF?style=for-the-badge&logo=framer&logoColor=white" alt="Framer Motion" />
+  <img src="https://img.shields.io/badge/MUI-9.4-007FFF?style=for-the-badge&logo=mui&logoColor=white" alt="MUI" />
+  <img src="https://img.shields.io/badge/Framer_Motion-13-0055FF?style=for-the-badge&logo=framer&logoColor=white" alt="Framer Motion" />
   <br />
   <!-- Backend -->
   <img src="https://img.shields.io/badge/Java-25-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 25" />
-  <img src="https://img.shields.io/badge/Spring_Boot-4.0-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot 4.0" />
+  <img src="https://img.shields.io/badge/Spring_Boot-4.1-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot 4.1" />
   <img src="https://img.shields.io/badge/Maven-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white" alt="Maven" />
   <img src="https://img.shields.io/badge/Auth0-EB5424?style=for-the-badge&logo=auth0&logoColor=white" alt="Auth0" />
   <br />
@@ -28,8 +28,8 @@
   <img src="https://img.shields.io/badge/API_Gateway-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white" alt="API Gateway" />
   <br />
   <!-- IaC -->
-  <img src="https://img.shields.io/badge/OpenTofu-1.9-FFDA18?style=for-the-badge&logo=opentofu&logoColor=black" alt="OpenTofu 1.9" />
-  <img src="https://img.shields.io/badge/Terragrunt-0.77-E5F2FC?style=for-the-badge&logo=terraform&logoColor=5C4EE5" alt="Terragrunt 0.77" />
+  <img src="https://img.shields.io/badge/OpenTofu-1.12-FFDA18?style=for-the-badge&logo=opentofu&logoColor=black" alt="OpenTofu 1.12" />
+  <img src="https://img.shields.io/badge/Terragrunt-1.1-E5F2FC?style=for-the-badge&logo=terraform&logoColor=5C4EE5" alt="Terragrunt 1.1" />
   <br />
   <!-- CI/CD & Containers -->
   <img src="https://img.shields.io/badge/Cloud_Build-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white" alt="Cloud Build" />
@@ -105,7 +105,7 @@ The project enforces enterprise-grade practices throughout: Zero-Trust security 
 
 - **JDK 25** (Temurin recommended)
 - **Maven 3.9+**
-- **Node.js 22+** with **Yarn**
+- **Node.js 26** with **Yarn** (classic, 1.x)
 - **GCP credentials** configured via `gcloud auth application-default login` (for BigQuery/Firestore access)
 
 ### Backend
@@ -260,27 +260,27 @@ The real-time pipeline is the core of the platform — a four-hop event-driven c
 | Layer | Technology | Version | Purpose |
 |-------|-----------|---------|---------|
 | **Frontend** | React | 19 | Component-based UI framework |
-| | TypeScript | 5.9 | Static type safety across the codebase |
-| | Vite | 7.3 | Build tooling with HMR and environment modes |
+| | TypeScript | 6.0 | Static type safety across the codebase |
+| | Vite | 8.2 | Build tooling with HMR and environment modes |
 | | D3.js | 7 | Canvas and SVG data visualizations (circuit trace, line charts, radar charts) |
 | | HTML5 Canvas | — | High-performance 60fps circuit trace rendering |
-| | Material UI | 7.3 | Component library with dark-mode glassmorphism theme |
-| | Framer Motion | 12 | Page transitions, letter-stagger reveals, spring-physics nav indicators, stat bars |
+| | Material UI | 9.4 | Component library with dark-mode glassmorphism theme |
+| | Framer Motion | 13 | Page transitions, letter-stagger reveals, spring-physics nav indicators, stat bars |
 | | @stomp/stompjs | 7.3 | STOMP protocol client over SockJS WebSocket transport |
-| | Axios | 1.13 | HTTP client with JWT interceptor, retry logic, and 429 backoff |
+| | Axios | 1.20 | HTTP client with JWT interceptor, retry logic, and 429 backoff |
 | | Emotion | 11.14 | CSS-in-JS styling engine powering MUI's theme layer |
-| | date-fns | 4.1 | Lightweight date manipulation utilities |
-| | Auth0 React SDK | 2.15 | OAuth2/OIDC authentication flow with PKCE |
+| | date-fns | 4.4 | Lightweight date manipulation utilities |
+| | Auth0 React SDK | 2.24 | OAuth2/OIDC authentication flow with PKCE |
 | **Backend** | Java | 25 | Language runtime (Temurin distribution) |
-| | Spring Boot | 4.0 | Microservice framework |
+| | Spring Boot | 4.1 | Microservice framework |
 | | Spring Security | 7.x | OAuth2 Resource Server with JWT validation |
 | | Spring WebSocket | — | STOMP message broker with SockJS fallback |
 | | Spring WebFlux | — | Reactive non-blocking HTTP for the Ingestion Service |
-| | Spring Cloud GCP | 7.4.5 | GCP service integration (BigQuery, Firestore, Secret Manager) |
+| | Spring Cloud GCP | 8.1.1 | GCP service integration (BigQuery, Firestore, Secret Manager) |
 | | Eclipse Paho | 1.2.5 | MQTT 3.1.1 client for OpenF1 live data stream (QoS 1) |
-| | Project Reactor | 3.8.3 | Reactive streams for non-blocking data ingestion pipeline |
-| | Jackson 3 | 3.1.0 | JSON serialization with SNAKE_CASE convention |
-| | Lombok | 1.18.42 | Boilerplate reduction (@Builder, @Data) |
+| | Project Reactor | 3.8.7 | Reactive streams for non-blocking data ingestion pipeline |
+| | Jackson 3 | 3.2.2 | JSON serialization with SNAKE_CASE convention |
+| | Lombok | 1.18.48 | Boilerplate reduction (@Builder, @Data) |
 | **Data** | BigQuery | — | Columnar data warehouse with DAY-partitioned, clustered tables |
 | | Firestore | Native | Document database for user profiles and preferences |
 | | Redis (Memorystore) | 6.x | In-memory Pub/Sub broker between microservices |
@@ -290,13 +290,12 @@ The real-time pipeline is the core of the platform — a four-hop event-driven c
 | | Cloud Load Balancing | Global | HTTPS termination with managed SSL and path-based routing |
 | | VPC + Connector | — | Private networking for Cloud Run to Redis communication |
 | | Artifact Registry | — | Docker image repository with layer caching |
-| **IaC** | OpenTofu | 1.9 | Infrastructure as Code (Terraform-compatible, open-source) |
-| | Terragrunt | 0.77 | DRY configuration wrapper with dependency orchestration |
+| **IaC** | OpenTofu | 1.12 | Infrastructure as Code (Terraform-compatible, open-source) |
+| | Terragrunt | 1.1 | DRY configuration wrapper with dependency orchestration |
 | **CI/CD** | Cloud Build | — | 7 path-filtered pipelines (build, scan, deploy) |
 | | GitHub Actions | — | PR quality gates (lint, test, validate) |
-| | Kaniko | — | Rootless, layer-cached Docker image builds |
-| | Trivy | — | Container filesystem vulnerability scanning |
-| | tfsec | — | Infrastructure-as-Code static security analysis |
+| | Cloud Build Docker builder | — | Layer-cached image builds (replaced Kaniko, archived upstream) |
+| | Trivy | 0.74 | Container filesystem scanning and IaC static analysis (replaced tfsec, retired upstream) |
 | **Container** | Distroless | Java 25 | Minimal backend runtime (no shell, no package manager) |
 | | nginx-unprivileged | Alpine | Lightweight frontend serving with SPA routing |
 
@@ -355,7 +354,7 @@ f1-visualizer/
 |   +-- Dockerfile                              # Multi-stage local build (Maven -> distroless)
 |   +-- Dockerfile.ci                           # Lean CI image (pre-extracted layers -> distroless)
 |   |
-|   +-- f1v-commons-parent/                     # Spring Boot 4.0.3 parent POM
+|   +-- f1v-commons-parent/                     # Spring Boot 4.1.1 parent POM
 |   +-- f1v-commons-bom/                        # Bill of Materials (10 shared libraries)
 |   |   +-- f1v-commons-base/                   #   Lombok, base model annotations
 |   |   +-- f1v-commons-security/               #   OAuth2 JWT resource server, CORS policy, STOMP auth
@@ -392,9 +391,9 @@ f1-visualizer/
 |   |   +-- dev/                                # DEV environment Terragrunt configurations
 |   |       +-- (16 module instances with dependency declarations)
 |   |   +-- prod/                               # PROD environment Terragrunt configurations
-|   |       +-- (16 module instances with dependency declarations)
+|   |       +-- (14 module instances with dependency declarations)
 |   |   +-- uat/                                # UAT environment Terragrunt configurations
-|   |       +-- (16 module instances with dependency declarations)
+|   |       +-- (15 module instances with dependency declarations)
 |   +-- openapi.yaml                            # API Gateway OpenAPI 2.0 specification
 |
 +-- cloudbuild/                                 # GCP Cloud Build Pipeline Definitions
@@ -404,7 +403,7 @@ f1-visualizer/
 |   +-- backend-user.yaml                       # Build, scan, deploy: User Service
 |   +-- frontend.yaml                           # Lint, test, build, deploy: React SPA
 |   +-- api-gateway.yaml                        # Discover URLs, inject, validate, deploy, smoke test
-|   +-- infrastructure.yaml                     # tfsec scan, Terragrunt init/plan/apply
+|   +-- infrastructure.yaml                     # Trivy IaC scan, Terragrunt init/plan/apply
 |
 +-- .github/
     +-- workflows/
@@ -683,7 +682,7 @@ GitHub Actions (3 parallel jobs)            Cloud Build (7 path-filtered trigger
     |                                             |
     +-- Backend: mvn clean package                +-- backend-data-analysis.yaml
     +-- Frontend: yarn lint + test                +-- backend-data-ingestion.yaml
-    +-- Infra: tfsec + tofu validate              +-- backend-telemetry.yaml
+    +-- Infra: Trivy + tofu validate              +-- backend-telemetry.yaml
                                                   +-- backend-user.yaml
                                                   +-- frontend.yaml
                                                   +-- api-gateway.yaml
@@ -698,7 +697,7 @@ Every pull request targeting `main` triggers three parallel validation jobs:
 |-----|-------|---------|
 | **Backend** | `mvn clean package -am` | Compile all modules + run full test suite |
 | **Frontend** | `yarn lint` then `yarn test:ci` | ESLint checks + Vitest unit tests |
-| **Infrastructure** | tfsec scan + `tofu validate` per module | Security analysis + HCL syntax validation |
+| **Infrastructure** | Trivy config scan + `tofu validate` per module | Security analysis + HCL syntax validation |
 
 ### Environment Pipelines (Cloud Build)
 
@@ -711,7 +710,7 @@ Each Cloud Build pipeline is triggered only when files matching its path filter 
          |
 3. Trivy Security Scan      trivy filesystem --severity CRITICAL,HIGH
          |
-4. Kaniko Image Build       Layer-cached Docker build -> Artifact Registry
+4. Docker Image Build       Layer-cached build (--cache-from) -> Artifact Registry
          |
 5. Cloud Run Deploy         gcloud run services update --image=<sha-tagged>
 ```
@@ -719,7 +718,7 @@ Each Cloud Build pipeline is triggered only when files matching its path filter 
 The frontend pipeline extends this with lint and test gates:
 
 ```
-1. Install Dependencies     yarn install (Node 25 Alpine + native canvas deps)
+1. Install Dependencies     yarn install (Node 26 Alpine + native canvas deps)
          |
 2. ESLint Check             yarn lint
          |
@@ -727,7 +726,7 @@ The frontend pipeline extends this with lint and test gates:
          |
 4. Production Build         yarn build --mode ${_ENV}
          |
-5. Kaniko Image Build       Layer-cached Docker build -> Artifact Registry
+5. Docker Image Build       Layer-cached build (--cache-from) -> Artifact Registry
          |
 6. Cloud Run Deploy         gcloud run services update --image=<sha-tagged>
 ```
@@ -735,15 +734,15 @@ The frontend pipeline extends this with lint and test gates:
 The infrastructure pipeline uses a scan-plan-apply pattern:
 
 ```
-1. Install Tools            OpenTofu 1.9.0 + Terragrunt 0.77.0
+1. Install Tools            OpenTofu 1.12.6 + Terragrunt 1.1.4
          |
-2. tfsec Security Scan      tfsec --minimum-severity HIGH
+2. Trivy IaC Scan           trivy config --severity CRITICAL,HIGH
          |
-3. Terragrunt Init          terragrunt run-all init
+3. Terragrunt Init          terragrunt run --all -- init
          |
-4. Terragrunt Plan          terragrunt run-all plan
+4. Terragrunt Plan          terragrunt run --all -- plan
          |
-5. Terragrunt Apply         terragrunt run-all apply -auto-approve
+5. Terragrunt Apply         terragrunt run --all -- apply -auto-approve
 ```
 
 ### Key CI/CD Patterns
@@ -754,7 +753,7 @@ The infrastructure pipeline uses a scan-plan-apply pattern:
 
 - **Lean CI Dockerfiles** — Separate `Dockerfile.ci` files accept pre-built artifacts (extracted JAR layers for backend, `dist/` for frontend) from earlier Cloud Build steps, eliminating the double-compilation that would occur with a standard multi-stage Dockerfile.
 
-- **Layer-Cached Builds** — Kaniko's `--cache=true` with per-service `--cache-repo` repositories ensures that unchanged Docker layers are reused across builds, dramatically reducing build times for dependency-stable services.
+- **Layer-Cached Builds** — Image builds seed the Docker layer cache from the previously published tag (`--cache-from`), so unchanged layers are reused across builds. This replaced Kaniko's `--cache-repo` model after Kaniko was archived upstream.
 
 - **Pre-Image Security Scanning** — Trivy scans the extracted JAR filesystem before the Docker image is built. This fails fast on vulnerabilities without wasting time building an image that would be rejected.
 
@@ -768,7 +767,7 @@ The project maintains a comprehensive multi-layered testing strategy spanning un
 
 ### Backend Test Suite
 
-**Framework:** JUnit 5 (Jupiter 6.0.3) with Mockito, Spring Boot Test 4.0.3
+**Framework:** JUnit 5 (Jupiter 6.1.3) with Mockito, Spring Boot Test 4.1.1
 
 All backend test dependencies are centrally managed through the `f1v-commons-bom`, ensuring consistent versions across all four microservices. Each service has its own `src/test/java/` and `src/test/resources/` trees with environment-specific test profiles.
 
@@ -797,13 +796,13 @@ cd backend && mvn clean package -pl f1v-service-data-analysis -am
 
 ### Frontend Test Suite
 
-**Framework:** Vitest 4.0.18 with React Testing Library, jsdom, jest-image-snapshot
+**Framework:** Vitest 5.0 with React Testing Library, jsdom 30, jest-image-snapshot
 
 **Configuration:** `vitest.config.ts` — jsdom environment, global test APIs enabled, `@` path alias, and a setup file (`src/test/setup.ts`) that polyfills `ResizeObserver`, `requestAnimationFrame`/`cancelAnimationFrame`, and configures automatic React Testing Library cleanup between tests.
 
 | Category | Framework / Tool | Description |
 |----------|-----------------|-------------|
-| **Component Tests** | React Testing Library | Renders React components with `render()` and asserts on DOM output, user interactions (`fireEvent`), and async state updates (`waitFor`, `act`). Covers 15 components including `CircuitTrace`, `LapTimeChart`, `RadarChart`, `RaceSimulator`, `SessionControlPanel`, and `VersusMode`. |
+| **Component Tests** | React Testing Library | Renders React components with `render()` and asserts on DOM output, user interactions (`fireEvent`), and async state updates (`waitFor`, `act`). Spans 22 component test files including `CircuitTrace`, `LapTimeChart`, `RadarChart`, `RaceSimulator`, `SessionControlPanel`, and `VersusMode`. |
 | **Visual Regression Tests** | jest-image-snapshot + node-canvas | Renders the `CircuitTrace` component to a Node.js Canvas and compares pixel-level output against stored PNG baseline snapshots with a failure threshold of 0.01%. Baselines stored in `src/components/__tests__/__image_snapshots__/`. |
 | **Hook Tests** | `renderHook()` from React Testing Library | Tests custom React hooks (`useTelemetry`, `useLocation`) in isolation, validating STOMP subscription lifecycle, message buffering, and callback invocation patterns. |
 | **Utility Tests** | Vitest | Pure function tests for D3 scale factories (`chartScales`), world-to-canvas coordinate projection (`circuitProjection`), and radar chart geometry calculations (`radarGeometry`). |
@@ -837,19 +836,19 @@ cd frontend && yarn vitest
 
 | Category | Tool | Description |
 |----------|------|-------------|
-| **Security Scanning** | tfsec | Static analysis of all 11 OpenTofu modules against security best practices. Enforces a minimum severity threshold of `HIGH` — any violation fails the pipeline. Runs on both PR checks (GitHub Actions) and deployment pipelines (Cloud Build). |
+| **Security Scanning** | Trivy (`config`) | Static analysis of all 12 OpenTofu modules against security best practices, failing on `CRITICAL` or `HIGH` findings. Runs on both PR checks (GitHub Actions) and deployment pipelines (Cloud Build). Replaced tfsec, which was retired and folded into Trivy. |
 | **Module Validation** | OpenTofu `validate` | Syntax and semantic validation of each Terraform module individually (`tofu init -backend=false && tofu validate`). Catches HCL errors, missing variables, and invalid resource references before any plan or apply. |
 | **Deployment Planning** | Terragrunt `plan` | Generates an execution plan showing all proposed infrastructure changes before applying, serving as a safety gate in the Cloud Build pipeline. |
-| **API Contract Validation** | OpenAPI 2.0 Spec | The `openapi.yaml` specification defines the full API contract (paths, methods, request/response schemas, Auth0 security scheme). The API Gateway pipeline validates the spec and runs a smoke test against the deployed gateway's `/health` endpoint. |
+| **API Contract Validation** | OpenAPI 2.0 Spec | The `openapi.yaml` specification defines the full API contract (paths, methods, request/response schemas, Auth0 security scheme). The API Gateway pipeline validates the spec and runs a smoke test against the deployed gateway's `/api/v1/analysis/drivers` endpoint. |
 | **Container Scanning** | Trivy | Filesystem-level vulnerability scanning of all backend service JARs before Docker image construction. Configured with `--exit-code 1 --severity CRITICAL,HIGH` — any critical or high-severity CVE fails the build immediately. |
 
 ### Test Distribution Summary
 
 | Layer | Test Files | Test Framework | Test Types |
 |-------|-----------|---------------|------------|
-| **Backend** | 25 files, 105+ test methods | JUnit 5, Mockito, Spring Boot Test | Unit, controller, security, reactive, serialization, parameterized |
-| **Frontend** | 23 files | Vitest, React Testing Library | Component, visual regression, hook, utility, API client, auth |
-| **Infrastructure** | — | tfsec, OpenTofu, Trivy | Security scanning, module validation, container scanning |
+| **Backend** | 29 files, 182 tests | JUnit 5, Mockito, Spring Boot Test | Unit, controller, security, reactive, serialization, parameterized |
+| **Frontend** | 38 files, 188 tests | Vitest, React Testing Library | Component, visual regression, hook, utility, API client, auth |
+| **Infrastructure** | — | Trivy, OpenTofu | Security scanning, module validation, container scanning |
 
 ### CI Test Integration
 
@@ -858,7 +857,7 @@ Tests execute at two stages in the delivery pipeline:
 1. **PR Quality Gate (GitHub Actions)** — Three parallel jobs run on every pull request to `main`:
    - Backend: `mvn clean package -am` (compiles and tests all modules)
    - Frontend: `yarn lint` then `yarn test:ci` (ESLint + Vitest)
-   - Infrastructure: tfsec scan + `tofu validate` per module
+   - Infrastructure: Trivy config scan + `tofu validate` per module
 
 2. **Deployment Pipeline (Cloud Build)** — Tests re-run as part of each service's build-scan-deploy pipeline on environment branches (`dev`, `uat`, `prod`). The frontend pipeline additionally installs native C++ dependencies (Cairo, Pango, Python, g++) on Alpine Linux to support the `canvas` package required by the visual regression test suite.
 
@@ -878,7 +877,7 @@ Security is enforced at every layer of the stack:
 | **IAM** | Per-Service Accounts | 6 dedicated identities with principle-of-least-privilege |
 | **Secrets** | Secret Manager | External API credentials stored in Secret Manager, never in code |
 | **Container Hardening** | Distroless Images | No shell, no package manager — minimal attack surface |
-| **IaC Scanning** | tfsec | Static analysis of all OpenTofu modules on every PR |
+| **IaC Scanning** | Trivy (`config`) | Static analysis of all OpenTofu modules on every PR |
 | **Image Scanning** | Trivy | Filesystem vulnerability scan on every backend build |
 | **Session Policy** | Stateless | No server-side sessions; CSRF disabled (JWT-only auth) |
 | **CORS** | Multi-Layer | LB edge handles OPTIONS preflight; Spring CORS on REST; custom headers on WebSocket |

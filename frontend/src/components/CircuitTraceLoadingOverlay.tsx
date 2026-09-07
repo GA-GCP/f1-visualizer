@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import React from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import CyclingStatusLabel from './ui/CyclingStatusLabel';
 import { Box, Typography } from '@mui/material';
+import { BRAND_RED, FONT_FAMILY, SHIMMER_GRADIENT } from '../theme/tokens';
 
 const STATUS_MESSAGES = [
     'CONNECTING TO DATA FEED...',
@@ -25,16 +27,6 @@ interface CircuitTraceLoadingOverlayProps {
  */
 const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({ year, meetingName, driverCode }) => {
     const reduceMotion = useReducedMotion();
-    const [msgIdx, setMsgIdx] = useState(0);
-
-    useEffect(() => {
-        const id = setInterval(
-            () => setMsgIdx((p) => (p + 1) % STATUS_MESSAGES.length),
-            2200,
-        );
-        return () => clearInterval(id);
-    }, []);
-
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -58,7 +50,7 @@ const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({
             {/* Race info block */}
             <Typography
                 sx={{
-                    fontFamily: '"Titillium Web", sans-serif',
+                    fontFamily: FONT_FAMILY,
                     fontSize: '0.75rem',
                     letterSpacing: '0.3em',
                     color: 'rgba(255,255,255,0.6)',
@@ -71,11 +63,11 @@ const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({
 
             <Typography
                 sx={{
-                    fontFamily: '"Titillium Web", sans-serif',
+                    fontFamily: FONT_FAMILY,
                     fontSize: 'clamp(1rem, 2.5vw, 1.5rem)',
                     fontWeight: 700,
                     letterSpacing: '0.1em',
-                    color: '#e10600',
+                    color: BRAND_RED,
                     textTransform: 'uppercase',
                 }}
             >
@@ -84,7 +76,7 @@ const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({
 
             <Typography
                 sx={{
-                    fontFamily: '"Titillium Web", sans-serif',
+                    fontFamily: FONT_FAMILY,
                     fontSize: '0.75rem',
                     letterSpacing: '0.2em',
                     color: 'rgba(255,255,255,0.5)',
@@ -102,7 +94,7 @@ const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({
             >
                 <Typography
                     sx={{
-                        fontFamily: '"Titillium Web", sans-serif',
+                        fontFamily: FONT_FAMILY,
                         fontSize: '0.7rem',
                         fontWeight: 600,
                         letterSpacing: '0.3em',
@@ -138,7 +130,7 @@ const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({
                             height: '100%',
                             width: '200%',
                             background:
-                                'linear-gradient(90deg, #e10600 0%, #ff3030 25%, #e10600 50%, #ff3030 75%, #e10600 100%)',
+                                SHIMMER_GRADIENT,
                         }}
                         animate={reduceMotion ? undefined : { x: ['0%', '-50%'] }}
                         transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
@@ -148,28 +140,7 @@ const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({
 
             {/* Cycling status messages */}
             <Box sx={{ height: 20, position: 'relative', width: 280 }}>
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={msgIdx}
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -6 }}
-                        transition={{ duration: 0.25 }}
-                        style={{ position: 'absolute', width: '100%' }}
-                    >
-                        <Typography
-                            sx={{
-                                fontSize: '0.75rem',
-                                letterSpacing: '0.15em',
-                                color: 'rgba(255,255,255,0.6)',
-                                fontFamily: '"Titillium Web", sans-serif',
-                                textAlign: 'center',
-                            }}
-                        >
-                            {STATUS_MESSAGES[msgIdx]}
-                        </Typography>
-                    </motion.div>
-                </AnimatePresence>
+                <CyclingStatusLabel messages={STATUS_MESSAGES} />
             </Box>
         </motion.div>
     );

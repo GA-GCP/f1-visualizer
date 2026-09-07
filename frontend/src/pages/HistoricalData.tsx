@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { queries } from '../api/queries';
 import type { RaceSession } from '../api/referenceApi';
 import { buildDriverColorMap, buildDriverLabelMap } from '../utils/chartScales';
+import { PAPER_BG_RAISED } from '../theme/tokens';
 const HistoricalData: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const sessionKeyParam = searchParams.get('session');
@@ -109,7 +110,7 @@ const HistoricalData: React.FC = () => {
                                 label="Target Grand Prix"
                                 variant="outlined"
                                 size="small"
-                                sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#1a1a1a' } }}
+                                sx={{ '& .MuiOutlinedInput-root': { bgcolor: PAPER_BG_RAISED } }}
                             />
                         )}
                     />

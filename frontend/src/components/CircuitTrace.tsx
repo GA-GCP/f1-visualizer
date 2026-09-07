@@ -14,6 +14,7 @@ import {
 } from '../utils/circuitProjection';
 import { drawCarDot, strokeTrace, type DriverHistory } from '../utils/circuitRenderer';
 import { createLogger } from '../lib/logger';
+import { CANVAS_BG, FONT_FAMILY, PAPER_BG } from '../theme/tokens';
 
 const log = createLogger('trace');
 
@@ -397,7 +398,7 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
     }, [isSessionActive]);
 
     return (
-        <Paper sx={{ p: 2, bgcolor: '#1e1e1e', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Paper sx={{ p: 2, bgcolor: PAPER_BG, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2, mb: 1, alignSelf: 'flex-start' }}>
                 <Typography id="circuit-trace-title" variant="h6" component="h2" color="primary">
                     CIRCUIT TRACE
@@ -415,7 +416,7 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                                 variant="body2"
                                 sx={{
                                     color: 'rgba(255,255,255,0.4)',
-                                    fontFamily: '"Titillium Web", sans-serif',
+                                    fontFamily: FONT_FAMILY,
                                     letterSpacing: '0.1em',
                                 }}
                             >
@@ -425,7 +426,7 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                     )}
                 </AnimatePresence>
             </Box>
-            <Box ref={containerRef} sx={{ position: 'relative', border: '1px solid #333', borderRadius: 1, bgcolor: '#121212', width: '100%', overflow: 'hidden' }}>
+            <Box ref={containerRef} sx={{ position: 'relative', border: '1px solid #333', borderRadius: 1, bgcolor: CANVAS_BG, width: '100%', overflow: 'hidden' }}>
                 {/* Sized imperatively by the ResizeObserver, in device pixels
                     with a CSS-pixel transform, so no resize costs a render.
 

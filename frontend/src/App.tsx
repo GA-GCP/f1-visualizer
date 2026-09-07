@@ -11,6 +11,7 @@ import { isSplashSkipRemembered } from './components/splash/splashPreference';
 import RouteFallback from './components/ui/RouteFallback';
 import Landing from './pages/Landing';
 import { broadcastTheme } from './theme/theme';
+import { DUR, EASE } from './theme/motion';
 import { env } from './config/env';
 
 // --- DEFERRED AUTHENTICATED CODE ---
@@ -243,7 +244,7 @@ function App() {
             <CssBaseline />
             {/* Every framer animation in the tree respects prefers-reduced-motion:
                 transform and layout animations are dropped, opacity is kept. */}
-            <MotionConfig reducedMotion="user">
+            <MotionConfig reducedMotion="user" transition={{ duration: DUR.base, ease: EASE.out }}>
             <BrowserRouter>
                 <Auth0ProviderWithNavigate>
                     <AxiosAuthInterceptor />

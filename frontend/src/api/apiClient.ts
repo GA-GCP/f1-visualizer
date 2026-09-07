@@ -17,13 +17,70 @@ export const apiClient = axios.create({
     },
 });
 
+/**
+ * Raised when a request could not be authenticated and re-authentication is the
+ * only way forward.
+ *
+ * Callers should let this propagate rather than rendering it as a data error:
+ * an expired session and an outage are not the same failure, and the app used
+ * to present them identically.
+ */
+export class AuthExpiredError extends Error {
+    constructor(message = 'Session expired') {
+        super(message);
+        this.name = 'AuthExpiredError';
+    }
+}
+
+/** Fetches a token, bypassing the cache. Registered by AxiosAuthInterceptor. */
+let refreshAccessToken: (() => Promise<string>) | null = null;
+/** Starts an interactive login. Registered by AxiosAuthInterceptor. */
+let onAuthExpired: (() => void) | null = null;
+
+export function setAuthHandlers(handlers: {
+    refreshAccessToken: (() => Promise<string>) | null;
+    onAuthExpired: (() => void) | null;
+}): void {
+    refreshAccessToken = handlers.refreshAccessToken;
+    onAuthExpired = handlers.onAuthExpired;
+}
+
+/** Widened config: axios carries our retry bookkeeping on the request config. */
+interface RetryConfig {
+    _retryCount?: number;
+    _networkRetryCount?: number;
+    _authRetried?: boolean;
+    headers?: Record<string, string>;
+}
+
 apiClient.interceptors.response.use(
     (response) => response,
     async (error) => {
         const config = error.config;
 
-        if (error.response?.status === 401) {
-            console.warn('[API] Unauthorized. User session may have expired.');
+        // A 401 used to only produce a console warning: the request failed, the
+        // page showed a generic data error, and isAuthenticated stayed true, so
+        // the app carried on issuing credential-less requests with no way back
+        // except a manual reload.
+        //
+        // One retry with a freshly-minted token covers the ordinary case (the
+        // cached token expired mid-flight). If that fails, the session is gone:
+        // fail closed, hand control to the interactive login, and reject with a
+        // distinguishable error rather than a generic one.
+        if (error.response?.status === 401 && config) {
+            const retryConfig = config as RetryConfig;
+            if (!retryConfig._authRetried && refreshAccessToken) {
+                retryConfig._authRetried = true;
+                try {
+                    const token = await refreshAccessToken();
+                    config.headers = { ...config.headers, Authorization: `Bearer ${token}` };
+                    return await apiClient(config);
+                } catch {
+                    // fall through to re-authentication
+                }
+            }
+            onAuthExpired?.();
+            return Promise.reject(new AuthExpiredError());
         }
 
         // Retry with exponential backoff on 429 (Too Many Requests).

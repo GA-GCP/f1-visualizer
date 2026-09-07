@@ -204,9 +204,23 @@ const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ ch
         <Auth0Provider
             domain={domain}
             clientId={clientId}
+            // Silent renewal on the library defaults means a hidden-iframe
+            // /authorize?prompt=none against the shared *.auth0.com domain, which
+            // needs the Auth0 session cookie sent as a third-party cookie —
+            // refused by Safari's ITP, Firefox ETP strict, and Chrome with 3PC
+            // blocking. Rotating refresh tokens are the recommended SPA flow.
+            useRefreshTokens
+            // Never fall back to that iframe: falling back would reintroduce
+            // exactly the browser-dependent behaviour this removes.
+            useRefreshTokensFallback={false}
+            // Deliberately the default. Do NOT move tokens to localstorage —
+            // that makes them readable by any script injection.
+            cacheLocation="memory"
             authorizationParams={{
                 redirect_uri: window.location.origin,
-                audience: audience
+                audience: audience,
+                // offline_access is what makes a refresh token be issued at all.
+                scope: 'openid profile email offline_access',
             }}
             onRedirectCallback={onRedirectCallback}
         >

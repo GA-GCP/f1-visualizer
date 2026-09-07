@@ -45,8 +45,6 @@ interface LiveTelemetryPanelProps {
     resetKey: number;
     /** Fires once per session when the selected driver's first packet lands. */
     onFirstPacket: () => void;
-    /** Fires when STOMP telemetry connectivity changes. */
-    onConnectionChange: (connected: boolean) => void;
 }
 
 /**
@@ -64,7 +62,6 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
     sessionLaps,
     resetKey,
     onFirstPacket,
-    onConnectionChange,
 }) => {
     const [lastTelemetry, setLastTelemetry] = useState<TelemetryPacket | null>(null);
     const [currentLap, setCurrentLap] = useState<CurrentLap | null>(null);
@@ -107,7 +104,7 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
         setCurrentLap(null);
     }
 
-    const { isConnected } = useTelemetry((packet) => {
+    useTelemetry((packet) => {
         if (packet.driver_number !== driverIdRef.current) return;
         if (packet.session_key !== sessionKeyRef.current) return;
 
@@ -139,9 +136,6 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
         }
     });
 
-    useEffect(() => {
-        onConnectionChange(isConnected);
-    }, [isConnected, onConnectionChange]);
 
     return (
         <Paper sx={{

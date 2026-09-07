@@ -1,4 +1,7 @@
 import { apiClient } from './apiClient';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('ingestion');
 
 // These are POSTs and are deliberately excluded from the retry policy in
 // apiClient: replaying a playback command or an ingestion start is a real
@@ -19,7 +22,7 @@ export const sendIngestionCommand = async (command: IngestionCommandRequest): Pr
         const response = await apiClient.post('/ingestion/command', command);
         return response.data;
     } catch (error) {
-        console.error("Failed to send ingestion command", error);
+        log.error("Failed to send ingestion command", error);
         throw error;
     }
 };

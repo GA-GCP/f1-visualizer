@@ -86,4 +86,15 @@ describe('VersusMode Page', () => {
         expect(fetchDriverStats).toHaveBeenCalledWith(16, expect.any(AbortSignal));
         expect(fetchDriverStats).not.toHaveBeenCalledWith(1, expect.anything());
     });
+
+    it('offers a retry when the driver roster cannot be loaded', async () => {
+        // The loader rendered whenever either driver was missing, so a failure
+        // left the page on an infinite skeleton.
+        vi.mocked(fetchDrivers).mockRejectedValue(new Error('service unavailable'));
+
+        renderAt('/');
+
+        expect(await screen.findByText(/driver data unavailable/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+    });
 });

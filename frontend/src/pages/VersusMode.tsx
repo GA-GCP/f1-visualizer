@@ -6,8 +6,12 @@ import DriverSelector from '../components/selectors/DriverSelector';
 import RadarChart from '../components/versus/RadarChart';
 import StatComparisonBar from '../components/versus/StatComparisonBar';
 import HeadToHeadLoader from '../components/HeadToHeadLoader';
+import ErrorState from '../components/ui/ErrorState';
 import { fetchDrivers, fetchDriverStats, type DriverProfile } from '../api/referenceApi';
 import { isRequestCancelled } from '../api/apiClient';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('versus');
 
 /**
  * Resolves one slot's driver from the URL parameter.
@@ -35,19 +39,27 @@ const VersusMode: React.FC = () => {
     // instead of resetting it to the first two drivers.
     const [searchParams, setSearchParams] = useSearchParams();
 
+    const [rosterError, setRosterError] = useState(false);
+    const [reloadKey, setReloadKey] = useState(0);
+
     useEffect(() => {
         // Abort rather than only guarding setState: an abandoned request used to
         // keep running and, through the retry policy, keep retrying.
         const controller = new AbortController();
         fetchDrivers(controller.signal)
-            .then(setDrivers)
+            .then(data => {
+                setDrivers(data);
+                setRosterError(false);
+            })
             .catch(error => {
-                if (!isRequestCancelled(error)) {
-                    console.error('Failed to load master driver list', error);
-                }
+                if (isRequestCancelled(error)) return;
+                log.error('Failed to load master driver list', error);
+                // Without this the page sat on its skeleton forever, because the
+                // loader showed whenever either driver was missing.
+                setRosterError(true);
             });
         return () => controller.abort();
-    }, []);
+    }, [reloadKey]);
 
     const slotA = searchParams.get('a');
     const slotB = searchParams.get('b');
@@ -83,7 +95,7 @@ const VersusMode: React.FC = () => {
                     // Allow a retry if the driver is picked again.
                     requestedRef.current.delete(base.id);
                     if (!isRequestCancelled(error)) {
-                        console.error(`Failed to fetch stats for ${base.name}`, error);
+                        log.error(`Failed to fetch stats for ${base.name}`, error);
                     }
                 });
         }
@@ -101,6 +113,16 @@ const VersusMode: React.FC = () => {
         () => (baseB ? { ...baseB, stats: dynamicStats[baseB.id] ?? baseB.stats } : null),
         [baseB, dynamicStats],
     );
+
+    if (rosterError) {
+        return (
+            <ErrorState
+                title="Driver data unavailable"
+                message="The analysis service could not be reached, so the comparison cannot be built."
+                onRetry={() => setReloadKey(k => k + 1)}
+            />
+        );
+    }
 
     if (!driverA || !driverB) {
         return <HeadToHeadLoader />;

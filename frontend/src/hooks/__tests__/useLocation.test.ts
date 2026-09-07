@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { useLocation } from '../useLocation';
 import { stompClient } from '@/api/stompClient.ts';
+import { setConnectionStatus, resetConnectionStatus } from '@/realtime/connectionStatus';
 import type { LocationPacket } from '@/types/telemetry.ts';
 
 vi.mock('../../api/stompClient', () => ({
@@ -31,6 +32,10 @@ function makeQueueRef(): React.RefObject<LocationPacket[]> {
 describe('useLocation Hook', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        // Subscription is driven by the client's published state now, not by a
+        // 500 ms poller reading stompClient.connected.
+        resetConnectionStatus();
+        setConnectionStatus('connected');
     });
 
     it('subscribes to stompClient on /topic/race-location', async () => {

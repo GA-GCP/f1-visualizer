@@ -13,6 +13,9 @@ import {
     type Bounds,
 } from '../utils/circuitProjection';
 import { drawCarDot, strokeTrace, type DriverHistory } from '../utils/circuitRenderer';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('trace');
 
 interface CircuitTraceProps {
     /** Mutable queue of LocationPackets written by useLocation.  The animation
@@ -127,7 +130,7 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
         diagRef.current = { totalPackets: 0, driversSeenSet: new Set(), lastDrainSize: 0 };
         needsPaintRef.current = true;
         if (import.meta.env.DEV && sessionKey !== null) {
-            console.log(`[CircuitTrace] Reset (session=${sessionKey}, resetKey=${resetKey}) — cleared all history and bounds`);
+            log.debug(`[CircuitTrace] Reset (session=${sessionKey}, resetKey=${resetKey}) — cleared all history and bounds`);
         }
     }, [sessionKey, resetKey]);
 
@@ -296,7 +299,7 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                 // Log first drain and then periodically
                 if (import.meta.env.DEV && (diagRef.current.totalPackets <= drainSize || diagRef.current.totalPackets % 2000 < drainSize)) {
                     const b = boundsRef.current;
-                    console.log(
+                    log.debug(
                         `[CircuitTrace] Drained ${drainSize} packets | total=${diagRef.current.totalPackets} | ` +
                         `drivers=${diagRef.current.driversSeenSet.size} | ` +
                         `selected=${driver?.id ?? 'none'} | ` +

@@ -1,20 +1,60 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { Routes, Route, Outlet, BrowserRouter, useNavigate, Navigate } from 'react-router-dom';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
-import LayoutMain from './components/layout/LayoutMain';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AxiosAuthInterceptor } from './auth/AuthHandler';
-import { StompAuthHandler } from './auth/StompAuthHandler';
 import SplashScreen from './components/splash/SplashScreen';
-import Home from './pages/Home';
-import HistoricalData from './pages/HistoricalData';
-import VersusMode from './pages/VersusMode';
+import { useStartupPrefetch, type PrefetchTask } from './components/splash/useStartupPrefetch';
+import { isSplashSkipRemembered } from './components/splash/splashPreference';
+import RouteFallback from './components/ui/RouteFallback';
 import { UserProvider } from "@/context/UserContext.tsx";
 import { fetchDrivers, fetchSessions } from './api/referenceApi';
 import Landing from './pages/Landing';
 import { broadcastTheme } from './theme/theme';
+
+// --- DEFERRED AUTHENTICATED CODE ---
+// None of this can render before login, yet all of it used to ship in the one
+// chunk the public Landing page downloads: d3, the canvas trace, the lap and
+// radar charts, Autocomplete/Dialog/Slider/Snackbar, and the STOMP + SockJS
+// stack. Splitting it out is purely a matter of importing it dynamically —
+// Vite/rolldown already chunks on dynamic import().
+//
+// The factories are named so the same specifier is used for both lazy() and the
+// splash prefetch, and the browser reuses the one chunk.
+const importLayoutMain = () => import('./components/layout/LayoutMain');
+const importHome = () => import('./pages/Home');
+const importHistoricalData = () => import('./pages/HistoricalData');
+const importVersusMode = () => import('./pages/VersusMode');
+
+const LayoutMain = lazy(importLayoutMain);
+const Home = lazy(importHome);
+const HistoricalData = lazy(importHistoricalData);
+const VersusMode = lazy(importVersusMode);
+
+// Renders null, so it needs no fallback — but it must not be imported
+// statically or the whole WebSocket stack stays on the public route.
+const StompAuthHandler = lazy(() =>
+    import('./auth/StompAuthHandler').then(m => ({ default: m.StompAuthHandler })),
+);
+
+// --- STARTUP PREFETCH ---
+// Module-level so the array identity is stable across renders.
+//
+// The two API calls are staggered: on login they compete with GET /users/me and
+// the SockJS handshake for the same rate-limit budget, and a simultaneous
+// preflight burst trips the gateway's 429 limiter, which then cascades into
+// CORS failures. The chunk imports are same-origin static assets and need no
+// stagger, only an ordering that lets the shell and dashboard go first.
+const STARTUP_PREFETCH: PrefetchTask[] = [
+    { name: 'drivers', run: fetchDrivers },
+    { name: 'sessions', run: fetchSessions, delayMs: 400 },
+    { name: 'the app shell', run: importLayoutMain },
+    { name: 'the dashboard', run: importHome },
+    { name: 'the data vault', run: importHistoricalData, delayMs: 1000 },
+    { name: 'head to head', run: importVersusMode, delayMs: 1000 },
+];
 
 // --- AUTH GUARD COMPONENT ---
 const RequiredAuth: React.FC = () => {
@@ -27,31 +67,15 @@ const RequiredAuth: React.FC = () => {
     // when onRedirectCallback fires — it lives on /dashboard while the callback lands on /.)
     const [showSplash, setShowSplash] = useState(() => {
         const flag = sessionStorage.getItem('f1v:post-login');
-        if (flag) {
-            sessionStorage.removeItem('f1v:post-login');
-            return true;
-        }
-        return false;
+        if (!flag) return false;
+        sessionStorage.removeItem('f1v:post-login');
+        // A user who has skipped the intro once never sees it again.
+        return !isSplashSkipRemembered();
     });
 
-    // Prefetch reference data during the splash screen animation.
-    // The splash runs for ~7 seconds — plenty of time for these API calls
-    // to resolve and populate the in-memory cache in referenceApi.ts.
-    // When components mount after splash, they hit the cache instantly,
-    // eliminating the CircularProgress / Skeleton loading states.
-    // Note: AxiosAuthInterceptor is already mounted (sibling above this
-    // component), so these requests will have the Auth0 JWT attached.
-    //
-    // Calls are staggered by 400ms to avoid a simultaneous OPTIONS preflight
-    // burst that can trigger the API Gateway rate limiter (429), which then
-    // cascades into CORS failures and blocks the STOMP WebSocket handshake.
-    useEffect(() => {
-        if (showSplash && isAuthenticated) {
-            void fetchDrivers();
-            const tid = setTimeout(() => void fetchSessions(), 400);
-            return () => clearTimeout(tid);
-        }
-    }, [showSplash, isAuthenticated]);
+    // Runs whether or not the splash is showing: the work is worth doing either
+    // way, and the splash reads its progress rather than owning it.
+    const { readiness, failures } = useStartupPrefetch(STARTUP_PREFETCH, isAuthenticated);
 
     if (isLoading) {
         return null;
@@ -74,18 +98,43 @@ const RequiredAuth: React.FC = () => {
 
     return (
         <UserProvider>
-            <AnimatePresence mode="wait">
-                {showSplash ? (
-                    <SplashScreen key="splash" onComplete={() => setShowSplash(false)} />
-                ) : (
-                    <motion.div
-                        key="app-content"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.4 }}
-                    >
-                        <Outlet />
-                    </motion.div>
+            {/* Mounted here rather than at the app root: the WebSocket stack is
+                useless before login, and mounting it under the guard is what
+                keeps it out of the public route's chunk. */}
+            <Suspense fallback={null}>
+                <StompAuthHandler />
+            </Suspense>
+
+            {/* The app mounts immediately and the splash sits over it as a
+                fixed overlay, rather than the two being branches of a ternary.
+                That is the whole point: route chunks, the STOMP handshake, the
+                session cascade and the driver list all load *during* the intro
+                instead of starting cold once it ends. */}
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4 }}
+                // Mounting the app behind the overlay would otherwise put a
+                // whole dashboard in the accessibility tree and the tab order
+                // underneath a splash the user cannot see past. `inert` removes
+                // it from both until the splash is gone.
+                inert={showSplash}
+            >
+                {/* Covers the shell chunk itself; LayoutMain carries its
+                    own boundary for the page chunks under it. */}
+                <Suspense fallback={<RouteFallback />}>
+                    <Outlet />
+                </Suspense>
+            </motion.div>
+
+            <AnimatePresence>
+                {showSplash && (
+                    <SplashScreen
+                        key="splash"
+                        onComplete={() => setShowSplash(false)}
+                        readiness={readiness}
+                        failures={failures}
+                    />
                 )}
             </AnimatePresence>
         </UserProvider>
@@ -176,7 +225,6 @@ function App() {
             <BrowserRouter>
                 <Auth0ProviderWithNavigate>
                     <AxiosAuthInterceptor />
-                    <StompAuthHandler />
                     <ErrorBoundary>
                         <AppRoutes />
                     </ErrorBoundary>

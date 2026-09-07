@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SplashScreen from '../SplashScreen';
 
 // Mock sub-components to isolate SplashScreen logic
@@ -17,13 +17,24 @@ vi.mock('../SplashProgress', () => ({
     ),
 }));
 
+const sequenceOptions = vi.fn();
 vi.mock('../useSplashSequence', () => ({
-    useSplashSequence: () => ({ phase: 'circuit', progress: 0.5, elapsed: 2500 }),
+    useSplashSequence: (_onComplete: () => void, options: unknown) => {
+        sequenceOptions(options);
+        return { phase: 'circuit', progress: 0.5, elapsed: 2500 };
+    },
 }));
 
+import { forgetSplashSkip, isSplashSkipRemembered } from '../splashPreference';
+
 describe('SplashScreen', () => {
+    beforeEach(() => {
+        forgetSplashSkip();
+        sequenceOptions.mockClear();
+    });
+
     it('renders the F1 VISUALIZER title letters', () => {
-        render(<SplashScreen onComplete={vi.fn()} />);
+        render(<SplashScreen onComplete={vi.fn()} readiness={0.5} />);
 
         // Each letter is rendered individually — check for key letters
         expect(screen.getByText('F')).toBeInTheDocument();
@@ -32,13 +43,13 @@ describe('SplashScreen', () => {
     });
 
     it('renders SplashBackground sub-component', () => {
-        render(<SplashScreen onComplete={vi.fn()} />);
+        render(<SplashScreen onComplete={vi.fn()} readiness={0.5} />);
 
         expect(screen.getByTestId('splash-background')).toBeInTheDocument();
     });
 
     it('renders SplashCircuit with current phase', () => {
-        render(<SplashScreen onComplete={vi.fn()} />);
+        render(<SplashScreen onComplete={vi.fn()} readiness={0.5} />);
 
         const circuit = screen.getByTestId('splash-circuit');
         expect(circuit).toBeInTheDocument();
@@ -46,7 +57,7 @@ describe('SplashScreen', () => {
     });
 
     it('renders SplashProgress with current progress', () => {
-        render(<SplashScreen onComplete={vi.fn()} />);
+        render(<SplashScreen onComplete={vi.fn()} readiness={0.5} />);
 
         const progress = screen.getByTestId('splash-progress');
         expect(progress).toBeInTheDocument();
@@ -54,8 +65,46 @@ describe('SplashScreen', () => {
     });
 
     it('has role="status" for accessibility', () => {
-        render(<SplashScreen onComplete={vi.fn()} />);
+        render(<SplashScreen onComplete={vi.fn()} readiness={0.5} />);
 
         expect(screen.getByRole('status')).toBeInTheDocument();
+    });
+
+    it('passes readiness through to the sequence, so the bar tracks real work', () => {
+        render(<SplashScreen onComplete={vi.fn()} readiness={0.75} />);
+
+        expect(sequenceOptions).toHaveBeenCalledWith(
+            expect.objectContaining({ readiness: 0.75 }),
+        );
+    });
+
+    it('offers a skip control that ends the sequence and is remembered', () => {
+        render(<SplashScreen onComplete={vi.fn()} readiness={0} />);
+
+        expect(isSplashSkipRemembered()).toBe(false);
+        expect(sequenceOptions).toHaveBeenLastCalledWith(
+            expect.objectContaining({ skipped: false }),
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: /skip intro/i }));
+
+        expect(sequenceOptions).toHaveBeenLastCalledWith(
+            expect.objectContaining({ skipped: true }),
+        );
+        // Remembered, so the next login goes straight to the app.
+        expect(isSplashSkipRemembered()).toBe(true);
+    });
+
+    it('surfaces prefetch failures instead of swallowing them', () => {
+        render(<SplashScreen onComplete={vi.fn()} readiness={1} failures={['drivers']} />);
+
+        const alert = screen.getByRole('alert');
+        expect(alert).toHaveTextContent(/could not preload drivers/i);
+    });
+
+    it('shows no failure notice when startup is healthy', () => {
+        render(<SplashScreen onComplete={vi.fn()} readiness={1} />);
+
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 });

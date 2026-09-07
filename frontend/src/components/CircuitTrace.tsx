@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useLayoutEffect, useState } from 'react';
+import React, { memo, useRef, useEffect, useLayoutEffect, useState } from 'react';
 import * as d3 from 'd3';
 import { Box, Paper, Typography } from '@mui/material';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -320,4 +320,8 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
     );
 };
 
-export default CircuitTrace;
+// Memoised: RaceSimulator no longer re-renders per telemetry tick, but it does
+// re-render on session, driver and connection changes, and this subtree is
+// expensive — MUI Autocompletes re-run their renderInput/renderOption closures
+// and Emotion re-serialises every sx object.
+export default memo(CircuitTrace);

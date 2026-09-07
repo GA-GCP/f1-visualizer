@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -21,6 +21,9 @@ vi.mock('../components/layout/LayoutMain', async () => {
 vi.mock('../components/splash/SplashScreen', () => ({
     default: () => <div data-testid="splash" />,
 }));
+vi.mock('../auth/StompAuthHandler', () => ({
+    StompAuthHandler: () => <div data-testid="stomp-handler" />,
+}));
 vi.mock('../pages/Home', () => ({ default: () => <div data-testid="page-home" /> }));
 vi.mock('../pages/HistoricalData', () => ({ default: () => <div data-testid="page-historical" /> }));
 vi.mock('../pages/VersusMode', () => ({ default: () => <div data-testid="page-versus" /> }));
@@ -28,6 +31,7 @@ vi.mock('../pages/VersusMode', () => ({ default: () => <div data-testid="page-ve
 import { useAuth0 } from '@auth0/auth0-react';
 import { fetchDrivers, fetchSessions } from '../api/referenceApi';
 import { AppRoutes } from '../App';
+import { forgetSplashSkip, rememberSplashSkip } from '../components/splash/splashPreference';
 import { broadcastTheme } from '../theme/theme';
 
 type Auth0State = {
@@ -59,11 +63,14 @@ describe('AppRoutes', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         sessionStorage.clear();
+        forgetSplashSkip();
     });
 
     afterEach(() => {
         vi.useRealTimers();
     });
+
+
 
     describe('the public landing route', () => {
         it('paints the landing page without waiting for Auth0', () => {
@@ -77,12 +84,13 @@ describe('AppRoutes', () => {
             expect(screen.getByRole('button', { name: /login or sign up/i })).toBeInTheDocument();
         });
 
-        it('sends an already-authenticated visitor to the dashboard', () => {
+        it('sends an already-authenticated visitor to the dashboard', async () => {
             mockAuth0({ isAuthenticated: true });
 
             renderAt('/');
 
-            expect(screen.getByTestId('page-home')).toBeInTheDocument();
+            // The shell and the page are lazy chunks, so they resolve a tick later.
+            expect(await screen.findByTestId('page-home')).toBeInTheDocument();
         });
     });
 
@@ -117,12 +125,34 @@ describe('AppRoutes', () => {
             ['/dashboard', 'page-home'],
             ['/historical', 'page-historical'],
             ['/versus', 'page-versus'],
-        ])('renders %s for an authenticated user', (path, testId) => {
+        ])('renders %s for an authenticated user', async (path, testId) => {
             mockAuth0({ isAuthenticated: true });
 
             renderAt(path);
 
-            expect(screen.getByTestId(testId)).toBeInTheDocument();
+            expect(await screen.findByTestId(testId)).toBeInTheDocument();
+        });
+    });
+
+    describe('code splitting', () => {
+        it('keeps the WebSocket stack off the public route', async () => {
+            // StompAuthHandler is dynamically imported and mounted under the auth
+            // guard. Mounting it at the app root put the whole STOMP + SockJS
+            // stack in the chunk the landing page downloads before login.
+            mockAuth0({ isAuthenticated: false });
+
+            renderAt('/');
+
+            expect(screen.getByRole('button', { name: /login or sign up/i })).toBeInTheDocument();
+            expect(screen.queryByTestId('stomp-handler')).not.toBeInTheDocument();
+        });
+
+        it('mounts the WebSocket stack once past the guard', async () => {
+            mockAuth0({ isAuthenticated: true });
+
+            renderAt('/dashboard');
+
+            expect(await screen.findByTestId('stomp-handler')).toBeInTheDocument();
         });
     });
 
@@ -135,17 +165,51 @@ describe('AppRoutes', () => {
             renderAt('/dashboard');
 
             expect(screen.getByTestId('splash')).toBeInTheDocument();
-            expect(screen.queryByTestId('page-home')).not.toBeInTheDocument();
             // The flag is a one-shot: a later mount must not re-show the splash.
             expect(sessionStorage.getItem('f1v:post-login')).toBeNull();
 
-            // Prefetch is staggered so the two calls do not trip the gateway's
-            // rate limiter with a simultaneous preflight burst.
+            // Prefetch is staggered so the two API calls do not trip the
+            // gateway's rate limiter with a simultaneous preflight burst.
             expect(fetchDrivers).toHaveBeenCalledTimes(1);
             expect(fetchSessions).not.toHaveBeenCalled();
 
-            await vi.advanceTimersByTimeAsync(400);
+            await act(async () => { await vi.advanceTimersByTimeAsync(400); });
             expect(fetchSessions).toHaveBeenCalledTimes(1);
+        });
+
+        it('mounts the app underneath the splash rather than after it', async () => {
+            // The splash used to be the other branch of a ternary, so the
+            // dashboard, the route chunks and the STOMP handshake all started
+            // cold only once the 7 s timeline had finished.
+            vi.useFakeTimers();
+            sessionStorage.setItem('f1v:post-login', '1');
+            mockAuth0({ isAuthenticated: true });
+
+            renderAt('/dashboard');
+            await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+
+            expect(screen.getByTestId('splash')).toBeInTheDocument();
+            expect(screen.getByTestId('page-home')).toBeInTheDocument();
+            expect(screen.getByTestId('stomp-handler')).toBeInTheDocument();
+
+            // ...but it must not be reachable while the overlay covers it, or
+            // mounting early would put a whole dashboard in the tab order
+            // behind a splash the user cannot see past.
+            const appContent = screen.getByTestId('page-home').closest('[inert]');
+            expect(appContent).not.toBeNull();
+        });
+
+        it('does not show the splash when the user has skipped it before', async () => {
+            rememberSplashSkip();
+            sessionStorage.setItem('f1v:post-login', '1');
+            mockAuth0({ isAuthenticated: true });
+
+            renderAt('/dashboard');
+
+            expect(await screen.findByTestId('page-home')).toBeInTheDocument();
+            expect(screen.queryByTestId('splash')).not.toBeInTheDocument();
+            // The one-shot flag is still consumed, so nothing lingers.
+            expect(sessionStorage.getItem('f1v:post-login')).toBeNull();
         });
 
         it('goes straight to the page when the flag is absent', async () => {
@@ -155,7 +219,6 @@ describe('AppRoutes', () => {
 
             await waitFor(() => expect(screen.getByTestId('page-home')).toBeInTheDocument());
             expect(screen.queryByTestId('splash')).not.toBeInTheDocument();
-            expect(fetchDrivers).not.toHaveBeenCalled();
         });
     });
 });

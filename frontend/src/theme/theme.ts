@@ -28,6 +28,9 @@ export const broadcastTheme = createTheme({
     },
     typography: {
         fontFamily: '"Titillium Web", "Roboto", "Helvetica", "Arial", sans-serif',
+        // Titillium Web has proportional figures by default, so a changing
+        // telemetry value shifted everything after it sideways on every commit.
+        allVariants: { fontVariantNumeric: 'tabular-nums' },
         h1: { fontWeight: 700, fontStyle: 'italic', letterSpacing: '-0.02em' },
         h4: { fontWeight: 700, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '0.05em' },
         h6: { fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' },

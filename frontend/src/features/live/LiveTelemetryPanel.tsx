@@ -166,18 +166,18 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
                                 </Typography>
                                 {currentLap.isFormationLap && (
                                     <Chip label="FORMATION LAP" size="small"
-                                        sx={{ bgcolor: '#ff9800', color: 'black', fontWeight: 700, fontSize: '0.65rem' }} />
+                                        sx={{ bgcolor: '#ff9800', color: 'black', fontWeight: 700, fontSize: '0.75rem' }} />
                                 )}
                                 {currentLap.isPitOutLap && (
                                     <Chip label="PIT OUT" size="small"
-                                        sx={{ bgcolor: '#2196f3', color: 'white', fontWeight: 700, fontSize: '0.65rem' }} />
+                                        sx={{ bgcolor: '#2196f3', color: 'white', fontWeight: 700, fontSize: '0.75rem' }} />
                                 )}
                                 {currentLap.compound && currentLap.prevCompound &&
                                  currentLap.compound !== currentLap.prevCompound && (
                                     <Chip
                                         label={`${currentLap.prevCompound} → ${currentLap.compound}`}
                                         size="small"
-                                        sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'white', fontSize: '0.65rem' }}
+                                        sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'white', fontSize: '0.75rem' }}
                                     />
                                 )}
                                 {currentLap.compound && (
@@ -185,7 +185,7 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
                                         sx={{
                                             borderColor: COMPOUND_COLOURS[currentLap.compound] ?? '#2196f3',
                                             color: 'white',
-                                            fontSize: '0.65rem',
+                                            fontSize: '0.75rem',
                                         }}
                                     />
                                 )}

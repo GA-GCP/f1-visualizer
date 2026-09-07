@@ -11,5 +11,7 @@ declare module 'vitest' {
         T = unknown
     > {
         toMatchImageSnapshot(options?: MatchImageSnapshotOptions): R;
+        /** vitest-axe ships its matchers the same way; declare them here too. */
+        toHaveNoViolations(): R;
     }
 }

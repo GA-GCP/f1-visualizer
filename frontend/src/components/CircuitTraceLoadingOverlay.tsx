@@ -59,9 +59,9 @@ const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({
             <Typography
                 sx={{
                     fontFamily: '"Titillium Web", sans-serif',
-                    fontSize: '0.6rem',
+                    fontSize: '0.75rem',
                     letterSpacing: '0.3em',
-                    color: 'rgba(255,255,255,0.35)',
+                    color: 'rgba(255,255,255,0.6)',
                     textTransform: 'uppercase',
                     mb: 1,
                 }}
@@ -159,9 +159,9 @@ const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({
                     >
                         <Typography
                             sx={{
-                                fontSize: '0.55rem',
+                                fontSize: '0.75rem',
                                 letterSpacing: '0.15em',
-                                color: 'rgba(255,255,255,0.3)',
+                                color: 'rgba(255,255,255,0.6)',
                                 fontFamily: '"Titillium Web", sans-serif',
                                 textAlign: 'center',
                             }}

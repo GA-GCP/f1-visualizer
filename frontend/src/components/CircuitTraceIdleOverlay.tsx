@@ -40,7 +40,7 @@ const CircuitTraceIdleOverlay: React.FC = () => (
                 fontFamily: '"Titillium Web", sans-serif',
                 fontSize: '0.75rem',
                 letterSpacing: '0.2em',
-                color: 'rgba(255,255,255,0.3)',
+                color: 'rgba(255,255,255,0.6)',
                 textAlign: 'center',
                 textTransform: 'uppercase',
             }}
@@ -53,7 +53,7 @@ const CircuitTraceIdleOverlay: React.FC = () => (
             sx={{
                 mt: 0.5,
                 fontFamily: '"Titillium Web", sans-serif',
-                fontSize: '0.6rem',
+                fontSize: '0.75rem',
                 letterSpacing: '0.15em',
                 color: 'rgba(255,255,255,0.15)',
                 textAlign: 'center',

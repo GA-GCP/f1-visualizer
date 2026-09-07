@@ -114,9 +114,12 @@ const Landing: React.FC = () => {
                     <Typography
                         sx={{
                             fontFamily: '"Titillium Web", sans-serif',
-                            fontSize: 'clamp(0.55rem, 1.2vw, 0.9rem)',
+                            // The clamp minimum, not the preferred value, is what
+                            // renders on a phone: 1.2vw is 4.5px at 375px wide, so
+                            // this bottomed out at 8.8px.
+                            fontSize: 'clamp(0.75rem, 1.2vw, 0.9rem)',
                             letterSpacing: '0.3em',
-                            color: 'rgba(255,255,255,0.4)',
+                            color: 'rgba(255,255,255,0.6)',
                             textTransform: 'uppercase',
                             textAlign: 'center',
                         }}
@@ -209,9 +212,9 @@ const Landing: React.FC = () => {
                         variant="caption"
                         sx={{
                             letterSpacing: '0.15em',
-                            color: 'rgba(255,255,255,0.3)',
+                            color: 'rgba(255,255,255,0.6)',
                             fontFamily: '"Titillium Web", sans-serif',
-                            fontSize: '0.6rem',
+                            fontSize: '0.75rem',
                         }}
                     >
                         UNOFFICIAL TELEMETRY TOOL // F1 23-25

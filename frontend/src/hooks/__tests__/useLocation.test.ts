@@ -146,4 +146,56 @@ describe('useLocation Hook', () => {
 
         expect(mockUnsubscribe).toHaveBeenCalled();
     });
+
+    it('caps the queue so a hidden tab cannot grow it without bound', async () => {
+        let stompCallback: (message: { body: string }) => void = () => {};
+        vi.mocked(stompClient.subscribe).mockImplementation((_topic, cb) => {
+            stompCallback = cb as typeof stompCallback;
+            return { id: '1', unsubscribe: vi.fn() };
+        });
+
+        const queueRef = makeQueueRef();
+        renderHook(() => useLocation(queueRef));
+        await waitFor(() => expect(stompClient.subscribe).toHaveBeenCalled());
+
+        // rAF is paused in a background tab; the socket is not.
+        for (let i = 0; i < 6000; i++) {
+            stompCallback({ body: JSON.stringify({ driver_number: 1, x: i, y: i, z: 0 }) });
+        }
+
+        expect(queueRef.current.length).toBe(5000);
+        // The oldest points are the ones dropped — the newest must survive.
+        expect(queueRef.current[queueRef.current.length - 1]).toMatchObject({ x: 5999 });
+        expect(queueRef.current[0]).toMatchObject({ x: 1000 });
+    });
+
+    it('coalesces to the newest point per driver when the tab is hidden', async () => {
+        let stompCallback: (message: { body: string }) => void = () => {};
+        vi.mocked(stompClient.subscribe).mockImplementation((_topic, cb) => {
+            stompCallback = cb as typeof stompCallback;
+            return { id: '1', unsubscribe: vi.fn() };
+        });
+
+        const queueRef = makeQueueRef();
+        renderHook(() => useLocation(queueRef));
+        await waitFor(() => expect(stompClient.subscribe).toHaveBeenCalled());
+
+        for (let i = 0; i < 100; i++) {
+            stompCallback({ body: JSON.stringify({ driver_number: 1, x: i, y: i, z: 0 }) });
+            stompCallback({ body: JSON.stringify({ driver_number: 44, x: i * 2, y: i, z: 0 }) });
+        }
+        expect(queueRef.current.length).toBe(200);
+
+        Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+        document.dispatchEvent(new Event('visibilitychange'));
+
+        // One position per car, so the first frame back is O(drivers) not O(queue).
+        expect(queueRef.current).toHaveLength(2);
+        expect(queueRef.current).toEqual(expect.arrayContaining([
+            expect.objectContaining({ driver_number: 1, x: 99 }),
+            expect.objectContaining({ driver_number: 44, x: 198 }),
+        ]));
+
+        Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+    });
 });

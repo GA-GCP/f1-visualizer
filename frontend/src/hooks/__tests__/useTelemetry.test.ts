@@ -52,4 +52,57 @@ describe('useTelemetry Hook', () => {
             expect(mockCallback).toHaveBeenCalledWith(expect.objectContaining({ speed: 320 }));
         });
     });
+
+    it('keeps the latest packet for every driver in a burst, not just the last message', async () => {
+        // The replay engine publishes a whole window for all drivers back-to-back,
+        // so they land inside one rAF interval. Coalescing to the last *message*
+        // used to discard every driver but one.
+        const mockCallback = vi.fn();
+        let stompCallback: (message: { body: string }) => void = () => {};
+
+        vi.mocked(stompClient.subscribe).mockImplementation((_topic, cb) => {
+            stompCallback = cb as typeof stompCallback;
+            return { id: '1', unsubscribe: vi.fn() };
+        });
+
+        renderHook(() => useTelemetry(mockCallback));
+        await waitFor(() => expect(stompClient.subscribe).toHaveBeenCalled());
+
+        stompCallback({ body: JSON.stringify({ driver_number: 1, speed: 300 }) });
+        stompCallback({ body: JSON.stringify({ driver_number: 44, speed: 310 }) });
+        stompCallback({ body: JSON.stringify({ driver_number: 1, speed: 305 }) });
+        stompCallback({ body: JSON.stringify({ driver_number: 16, speed: 290 }) });
+
+        await waitFor(() => expect(mockCallback).toHaveBeenCalledTimes(3));
+
+        const delivered = mockCallback.mock.calls.map(([p]) => p);
+        expect(delivered).toEqual(expect.arrayContaining([
+            expect.objectContaining({ driver_number: 1, speed: 305 }),  // latest for #1
+            expect.objectContaining({ driver_number: 44, speed: 310 }),
+            expect.objectContaining({ driver_number: 16, speed: 290 }),
+        ]));
+        // ...and only the newest packet per driver: #1's 300 km/h reading is gone.
+        expect(delivered).not.toContainEqual(expect.objectContaining({ speed: 300 }));
+    });
+
+    it('bounds the buffer to one entry per driver regardless of packet volume', async () => {
+        const mockCallback = vi.fn();
+        let stompCallback: (message: { body: string }) => void = () => {};
+
+        vi.mocked(stompClient.subscribe).mockImplementation((_topic, cb) => {
+            stompCallback = cb as typeof stompCallback;
+            return { id: '1', unsubscribe: vi.fn() };
+        });
+
+        renderHook(() => useTelemetry(mockCallback));
+        await waitFor(() => expect(stompClient.subscribe).toHaveBeenCalled());
+
+        // 2000 packets across 20 drivers, as a hidden tab would accumulate.
+        for (let i = 0; i < 2000; i++) {
+            stompCallback({ body: JSON.stringify({ driver_number: i % 20, speed: i }) });
+        }
+
+        await waitFor(() => expect(mockCallback).toHaveBeenCalled());
+        expect(mockCallback.mock.calls.length).toBeLessThanOrEqual(20);
+    });
 });

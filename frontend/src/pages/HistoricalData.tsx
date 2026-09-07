@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Box, Typography, Container, Autocomplete, TextField } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
@@ -6,30 +6,20 @@ import LapTimeChart from '../components/LapTimeChart';
 import DataVaultLoader from '../components/DataVaultLoader';
 import ErrorState from '../components/ui/ErrorState';
 import EmptyState from '../components/ui/EmptyState';
-import type { LapDataRecord } from '../types/telemetry';
-import { fetchSessions, fetchSessionDrivers, fetchSessionLaps, type RaceSession } from '../api/referenceApi';
-import { isRequestCancelled } from '../api/apiClient';
+import { useQuery } from '@tanstack/react-query';
+import { queries } from '../api/queries';
+import type { RaceSession } from '../api/referenceApi';
 import { buildDriverColorMap, buildDriverLabelMap } from '../utils/chartScales';
-import { createLogger } from '../lib/logger';
-
-const log = createLogger('data-vault');
-
 const HistoricalData: React.FC = () => {
-    const [laps, setLaps] = useState<LapDataRecord[]>([]);
-    const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-    const [reloadKey, setReloadKey] = useState(0);
-    const [driverColorMap, setDriverColorMap] = useState<Record<number, string>>({});
-    const [driverLabelMap, setDriverLabelMap] = useState<Record<number, string>>({});
-
-    // Dynamic Session state.
-    //
-    // The selection lives in the URL rather than in component state: navigating
-    // away unmounts the page, so a plain useState was lost on every visit to
-    // another tab, and back/forward could not restore it either.
-    const [sessions, setSessions] = useState<RaceSession[]>([]);
     const [searchParams, setSearchParams] = useSearchParams();
     const sessionKeyParam = searchParams.get('session');
 
+    const sessionsQuery = useQuery(queries.sessions());
+    const sessions = useMemo(() => sessionsQuery.data ?? [], [sessionsQuery.data]);
+
+    // The selection lives in the URL rather than in component state: navigating
+    // away unmounts the page, so a plain useState was lost on every visit to
+    // another tab, and back/forward could not restore it either.
     const selectedSession = useMemo(() => {
         if (sessions.length === 0) return null;
         const fromUrl = sessionKeyParam !== null
@@ -52,52 +42,31 @@ const HistoricalData: React.FC = () => {
         );
     }, [setSearchParams]);
 
-    // Fetch available sessions on mount
-    useEffect(() => {
-        const controller = new AbortController();
-        fetchSessions(controller.signal)
-            .then(data => {
-                setSessions(data);
-                if (data.length === 0) setStatus('ready');
-            })
-            .catch(error => {
-                if (isRequestCancelled(error)) return;
-                log.error('Failed to load the session list', error);
-                setStatus('error');
-            });
-        return () => controller.abort();
-    }, [reloadKey]);
+    const sessionKey = selectedSession?.sessionKey;
+    // Two queries rather than one Promise.all, so each is cached and
+    // invalidated on its own key.
+    const lapsQuery = useQuery({ ...queries.sessionLaps(sessionKey!), enabled: sessionKey !== undefined });
+    const rosterQuery = useQuery({ ...queries.sessionDrivers(sessionKey!), enabled: sessionKey !== undefined });
 
-    // When session changes, fetch both laps and session-specific driver colors
-    useEffect(() => {
-        if (!selectedSession) return;
+    const laps = useMemo(() => lapsQuery.data ?? [], [lapsQuery.data]);
+    const driverColorMap = useMemo(
+        () => (rosterQuery.data ? buildDriverColorMap(rosterQuery.data.drivers) : {}),
+        [rosterQuery.data],
+    );
+    const driverLabelMap = useMemo(
+        () => (rosterQuery.data ? buildDriverLabelMap(rosterQuery.data.drivers) : {}),
+        [rosterQuery.data],
+    );
 
-        // Switching session mid-flight aborts the previous pair of requests
-        // instead of leaving them running to be discarded on arrival.
-        const controller = new AbortController();
+    const hasError = sessionsQuery.isError || lapsQuery.isError || rosterQuery.isError;
+    const isLoading = sessionsQuery.isPending
+        || (sessionKey !== undefined && (lapsQuery.isPending || rosterQuery.isPending));
 
-        const fetchData = async () => {
-            setStatus('loading');
-            try {
-                const [lapsData, roster] = await Promise.all([
-                    fetchSessionLaps(selectedSession.sessionKey, controller.signal),
-                    fetchSessionDrivers(selectedSession.sessionKey, controller.signal),
-                ]);
-                setLaps(lapsData);
-                setDriverColorMap(buildDriverColorMap(roster.drivers));
-                setDriverLabelMap(buildDriverLabelMap(roster.drivers));
-                setStatus('ready');
-            } catch (error) {
-                if (isRequestCancelled(error)) return; // a newer session is loading
-                log.error('Failed to fetch historical data', error);
-                // Previously this left the blank chart up with no explanation.
-                setStatus('error');
-            }
-        };
-
-        void fetchData();
-        return () => controller.abort();
-    }, [selectedSession, reloadKey]);
+    const retry = useCallback(() => {
+        void sessionsQuery.refetch();
+        void lapsQuery.refetch();
+        void rosterQuery.refetch();
+    }, [sessionsQuery, lapsQuery, rosterQuery]);
 
     return (
         <Container maxWidth="xl">
@@ -148,15 +117,15 @@ const HistoricalData: React.FC = () => {
             </Box>
 
             <AnimatePresence mode="wait">
-                {status === 'error' ? (
+                {hasError ? (
                     <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                         <ErrorState
                             title="Session data unavailable"
                             message="The analysis service could not be reached."
-                            onRetry={() => setReloadKey(k => k + 1)}
+                            onRetry={retry}
                         />
                     </motion.div>
-                ) : status === 'loading' ? (
+                ) : isLoading ? (
                     <motion.div
                         key="loader"
                         initial={{ opacity: 0 }}

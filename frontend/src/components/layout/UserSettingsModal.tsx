@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, CircularProgress, Alert , useMediaQuery, useTheme } from '@mui/material';
 import type { DialogProps } from '@mui/material';
 import { motion } from 'framer-motion';
 import DriverSelector from '../selectors/DriverSelector';
-import { fetchDrivers, type DriverProfile } from '../../api/referenceApi';
-import { isRequestCancelled } from '../../api/apiClient';
+import { useQuery } from '@tanstack/react-query';
+import { queries } from '../../api/queries';
+import type { DriverProfile } from '../../api/referenceApi';
 import { useUser } from '../../context/UserContext';
 import { createLogger } from '../../lib/logger';
 
@@ -19,43 +20,23 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
     const theme = useTheme();
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const { userProfile, updatePreferences } = useUser();
-    // `null` means "not fetched yet", so the absence of data *is* the loading
-    // state. That removes the need to synchronously flip a boolean inside the
-    // effect, which cascades renders.
-    const [drivers, setDrivers] = useState<DriverProfile[] | null>(null);
-    const [selectedDriver, setSelectedDriver] = useState<DriverProfile | null>(null);
+    /** Only what the user picked in this dialog; the default is derived below. */
+    const [chosenDriver, setChosenDriver] = useState<DriverProfile | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-    const isLoading = open && drivers === null;
+    // Cached across opens now: reopening the dialog no longer refetches, and the
+    // spinner only appears the first time.
+    const driversQuery = useQuery({ ...queries.drivers(), enabled: open });
+    const drivers = driversQuery.data ?? null;
+    const isLoading = open && driversQuery.isPending;
 
-    useEffect(() => {
-        if (!open) return;
-        const controller = new AbortController();
-
-        fetchDrivers(controller.signal)
-            .then(data => {
-                setDrivers(data);
-                const favourite = userProfile?.preferences?.favoriteDriver;
-                if (favourite) {
-                    const fav = data.find(d => d.code === favourite);
-                    if (fav) setSelectedDriver(fav);
-                }
-            })
-            .catch(error => {
-                if (isRequestCancelled(error)) return;
-                log.error('Failed to load drivers', error);
-                // Leaving `drivers` null would strand the spinner.
-                setDrivers([]);
-            });
-
-        // Discarding the data on close means reopening the dialog (or a profile
-        // change) shows the spinner again, as it did before.
-        return () => {
-            controller.abort();
-            setDrivers(null);
-        };
-    }, [userProfile, open]);
+    // Derived rather than seeded by an effect: the saved favourite is the
+    // default until the user picks something else in this dialog.
+    const savedFavourite = userProfile?.preferences?.favoriteDriver;
+    const selectedDriver = chosenDriver
+        ?? drivers?.find(d => d.code === savedFavourite)
+        ?? null;
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -110,7 +91,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
                             label="Select Driver"
                             options={drivers ?? []}
                             value={selectedDriver}
-                            onChange={setSelectedDriver}
+                            onChange={setChosenDriver}
                         />
                     </Box>
                 )}

@@ -1,20 +1,11 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { env } from '../config/env';
 import { createLogger } from '../lib/logger';
 
 const log = createLogger('api');
 
-let targetBaseUrl = '/api/v1'; // Default for local 'development' (uses Vite proxy)
-
-if (import.meta.env.MODE === 'prod') {
-    targetBaseUrl = 'https://api.f1visualizer.com/api/v1';
-} else if (import.meta.env.MODE === 'uat') {
-    targetBaseUrl = 'https://uat.api.f1visualizer.com/api/v1';
-} else if (import.meta.env.MODE === 'dev') {
-    targetBaseUrl = 'https://dev.api.f1visualizer.com/api/v1';
-}
-
 export const apiClient = axios.create({
-    baseURL: targetBaseUrl,
+    baseURL: env.apiBaseUrl,
     headers: {
         'Content-Type': 'application/json',
     },

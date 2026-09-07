@@ -1,6 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
+import { Box } from '@mui/material';
+import { visuallyHidden } from '@mui/utils';
 import type { DriverProfile } from '@/api/referenceApi.ts';
+
+/** The axes the radar plots, as the label a reader would expect. */
+const RADAR_ATTRIBUTES = [
+    { key: 'speed', label: 'Speed' },
+    { key: 'consistency', label: 'Consistency' },
+    { key: 'aggression', label: 'Aggression' },
+    { key: 'tireMgmt', label: 'Tyre management' },
+    { key: 'experience', label: 'Experience' },
+] as const;
 
 interface RadarChartProps {
     driverA: DriverProfile;
@@ -102,7 +113,33 @@ const RadarChart: React.FC<RadarChartProps> = ({ driverA, driverB }) => {
 
     }, [driverA, driverB]);
 
-    return <svg ref={svgRef} style={{ width: '100%', height: 'auto', maxHeight: '500px' }} />;
+    const titleId = 'radar-chart-title';
+
+    return (
+        <>
+            {/* The chart carried no name and no alternative, so the whole
+                comparison was unavailable to assistive technology. */}
+            <Box id={titleId} component="span" sx={visuallyHidden}>
+                Attribute comparison: {driverA.name} against {driverB.name}
+            </Box>
+            <svg
+                ref={svgRef}
+                role="img"
+                aria-labelledby={titleId}
+                style={{ width: '100%', height: 'auto', maxHeight: '500px' }}
+            />
+
+            {/* The same five attributes as text — the data is already to hand. */}
+            <Box component="dl" sx={visuallyHidden}>
+                {RADAR_ATTRIBUTES.map(({ key, label }) => (
+                    <React.Fragment key={key}>
+                        <dt>{label}</dt>
+                        <dd>{driverA.name} {driverA.stats[key]}, {driverB.name} {driverB.stats[key]}</dd>
+                    </React.Fragment>
+                ))}
+            </Box>
+        </>
+    );
 };
 
 export default RadarChart;

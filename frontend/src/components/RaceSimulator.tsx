@@ -162,9 +162,13 @@ const RaceSimulator: React.FC = () => {
             || connectionStatus === 'auth-rejected');
 
     return (
-        <Box sx={{ p: 4, bgcolor: '#121212', minHeight: '100vh', color: 'white' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
+        <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: '#121212', minHeight: '100vh', color: 'white' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
                 <Box>
+                    {/* React 19 hoists this into <head>: every route shared one
+                        static title before, so browser history and tab lists were
+                        indistinguishable. */}
+                    <title>Live Console · F1 Visualizer</title>
                     <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', letterSpacing: 1 }}>
                         <span aria-hidden="true">🏎️</span> RACE ENGINEER CONSOLE
                     </Typography>

@@ -101,18 +101,27 @@ const HistoricalData: React.FC = () => {
 
     return (
         <Container maxWidth="xl">
-            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
                 <Box>
+                    {/* React 19 hoists this into <head>: every route shared one
+                        static title before, so browser history and tab lists were
+                        indistinguishable. */}
+                    <title>Data Vault · F1 Visualizer</title>
                     <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: 'white', mb: 1 }}>
                         💾 DATA VAULT
                     </Typography>
-                    <Typography variant="subtitle1" color="text.secondary">
+                    {/* MUI renders subtitle1 as an h6, so this jumped the
+                        heading order straight from h1 to h6. It is a subtitle,
+                        not a section heading. */}
+                    <Typography variant="subtitle1" component="p" color="text.secondary">
                         Historical Analysis Engine
                     </Typography>
                 </Box>
 
                 {/* Dynamic Session Selector */}
-                <Box sx={{ width: 300 }}>
+                {/* A fixed 300px selector overflowed a 375px viewport once the
+                    heading was beside it. */}
+                <Box sx={{ width: { xs: '100%', sm: 300 } }}>
                     <Autocomplete
                         options={sessions}
                         getOptionLabel={(option) => `${option.year} ${option.meetingName} - ${option.sessionName}`}

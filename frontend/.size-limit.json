@@ -1,0 +1,8 @@
+[
+  {
+    "name": "app bundle (all JS chunks, gzipped)",
+    "path": "dist/assets/*.js",
+    "limit": "370 kB",
+    "gzip": true
+  }
+]

@@ -6,38 +6,29 @@ describe('apiClient', () => {
         vi.unstubAllEnvs();
     });
 
-    it('creates axios instance with correct default base URL in development', async () => {
-        // Default MODE in vitest is 'test', which maps to the development default path
-        vi.stubEnv('MODE', 'development');
+    it('falls back to the Vite proxy path when no API base URL is configured', async () => {
+        vi.stubEnv('VITE_API_BASE_URL', '');
 
         const { apiClient } = await import('../apiClient');
 
-        // In development mode (or any non-prod/uat/dev mode), the base URL defaults to '/api/v1'
         expect(apiClient.defaults.baseURL).toBe('/api/v1');
     });
 
-    it('creates axios instance with prod base URL when MODE is prod', async () => {
-        vi.stubEnv('MODE', 'prod');
+    it('takes its base URL from configuration, not from a MODE ladder', async () => {
+        // The origin used to be decided by an if-chain on MODE here, in
+        // stompClient, in three .env files and in the nginx CSP map — five
+        // sources for one fact.
+        vi.stubEnv('VITE_API_BASE_URL', 'https://staging.api.example.com/api/v1');
 
         const { apiClient } = await import('../apiClient');
 
-        expect(apiClient.defaults.baseURL).toBe('https://api.f1visualizer.com/api/v1');
+        expect(apiClient.defaults.baseURL).toBe('https://staging.api.example.com/api/v1');
     });
 
-    it('creates axios instance with uat base URL when MODE is uat', async () => {
-        vi.stubEnv('MODE', 'uat');
-
+    it('applies a request timeout', async () => {
         const { apiClient } = await import('../apiClient');
 
-        expect(apiClient.defaults.baseURL).toBe('https://uat.api.f1visualizer.com/api/v1');
-    });
-
-    it('creates axios instance with dev base URL when MODE is dev', async () => {
-        vi.stubEnv('MODE', 'dev');
-
-        const { apiClient } = await import('../apiClient');
-
-        expect(apiClient.defaults.baseURL).toBe('https://dev.api.f1visualizer.com/api/v1');
+        expect(apiClient.defaults.timeout).toBe(15_000);
     });
 
     describe('a 401 fails closed', () => {

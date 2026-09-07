@@ -19,6 +19,7 @@ vi.mock('../../api/referenceApi', () => ({
     fetchDriverStats: vi.fn().mockResolvedValue({}),
     fetchYears: vi.fn().mockResolvedValue([]),
     fetchSessionsByYear: vi.fn().mockResolvedValue([]),
+    searchSessions: vi.fn(),
 }));
 
 vi.mock('../../context/UserContext', () => ({
@@ -55,8 +56,18 @@ describe('accessibility', () => {
         expect(await axe(container)).toHaveNoViolations();
     });
 
-    it('the data vault has no violations', async () => {
+    it('the data vault has no violations while loading', async () => {
+        // Asserted separately from the settled state: whichever one the timing
+        // happened to catch used to decide what this test checked, which is how
+        // a heading-order violation in the loader went unnoticed.
         const { container } = renderWithTheme(<HistoricalData />, { route: '/historical' });
+
+        expect(await axe(container)).toHaveNoViolations();
+    });
+
+    it('the data vault has no violations once loaded', async () => {
+        const { container, findByText } = renderWithTheme(<HistoricalData />, { route: '/historical' });
+        await findByText(/no lap data for this session/i);
 
         expect(await axe(container)).toHaveNoViolations();
     });

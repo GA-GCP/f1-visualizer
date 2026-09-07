@@ -24,8 +24,6 @@ vi.mock('@stomp/stompjs', () => {
     };
 });
 
-vi.mock('sockjs-client', () => ({ default: vi.fn() }));
-
 /** Freshly import the client plus the status store it publishes into. */
 async function loadStomp() {
     const mod = await import('../stompClient');
@@ -46,6 +44,16 @@ describe('stompClient', () => {
     });
 
     describe('reconnection is delegated to the library', () => {
+        it('connects with a native WebSocket, not SockJS', async () => {
+            const { client } = await loadStomp();
+
+            // SockJS added an unmaintained dependency, a `global` shim, and a
+            // GET /ws/info handshake per attempt that bypassed the 429
+            // interceptor and burned rate-limit budget on every reconnect.
+            expect(client.brokerURL).toMatch(/^wss?:\/\/.*\/ws\/websocket$/);
+            expect(client.webSocketFactory).toBeUndefined();
+        });
+
         it('configures truncated exponential backoff rather than a hand-rolled ladder', async () => {
             const { client } = await loadStomp();
 

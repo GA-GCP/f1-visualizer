@@ -7,6 +7,12 @@ vi.mock('@auth0/auth0-react', () => ({ useAuth0: vi.fn() }));
 vi.mock('../api/referenceApi', () => ({
     fetchDrivers: vi.fn().mockResolvedValue([]),
     fetchSessions: vi.fn().mockResolvedValue([]),
+    fetchYears: vi.fn(),
+    fetchSessionsByYear: vi.fn(),
+    fetchSessionLaps: vi.fn(),
+    fetchSessionDrivers: vi.fn(),
+    fetchDriverStats: vi.fn(),
+    searchSessions: vi.fn(),
 }));
 // Stubbed so these tests are about the route tree and the auth guard, not about
 // what each page fetches on mount.
@@ -32,6 +38,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { fetchDrivers, fetchSessions } from '../api/referenceApi';
 import { AppRoutes } from '../App';
 import { forgetSplashSkip, rememberSplashSkip } from '../components/splash/splashPreference';
+import { queryClient } from '../api/queryClient';
 import { broadcastTheme } from '../theme/theme';
 
 type Auth0State = {
@@ -64,6 +71,9 @@ describe('AppRoutes', () => {
         vi.clearAllMocks();
         sessionStorage.clear();
         forgetSplashSkip();
+        // The prefetch warms the module-singleton client, and a cached entry is
+        // still fresh in the next test — so prefetchQuery would skip the fetch.
+        queryClient.clear();
     });
 
     afterEach(() => {
@@ -168,10 +178,15 @@ describe('AppRoutes', () => {
             // The flag is a one-shot: a later mount must not re-show the splash.
             expect(sessionStorage.getItem('f1v:post-login')).toBeNull();
 
-            // The analysis API is imported dynamically so it stays out of the
-            // chunk the public landing page downloads, so the call lands a
-            // microtask later than the render.
-            await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+            // The prefetch warms the query cache through a dynamically imported
+            // module, so neither the query client nor the analysis API reaches
+            // the chunk the public landing page downloads — which means the
+            // call lands a microtask later than the render.
+            // prefetchQuery adds its own microtask hops on top of the dynamic
+            // import, so flush a few rather than exactly one.
+            await act(async () => {
+                for (let i = 0; i < 5; i++) await vi.advanceTimersByTimeAsync(0);
+            });
 
             // Prefetch is staggered so the two API calls do not trip the
             // gateway's rate limiter with a simultaneous preflight burst.

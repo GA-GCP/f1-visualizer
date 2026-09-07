@@ -1,18 +1,9 @@
 import { Client, ReconnectionTimeMode, TickerStrategy } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
+import { env } from '../config/env';
 import { setConnectionStatus } from '../realtime/connectionStatus';
 import { createLogger } from '../lib/logger';
 
 const log = createLogger('stomp');
-
-let wsUrl = 'http://localhost:8080/ws';
-if (import.meta.env.MODE === 'prod') {
-    wsUrl = 'https://api.f1visualizer.com/ws';
-} else if (import.meta.env.MODE === 'uat') {
-    wsUrl = 'https://uat.api.f1visualizer.com/ws';
-} else if (import.meta.env.MODE === 'dev') {
-    wsUrl = 'https://dev.api.f1visualizer.com/ws';
-}
 
 // Reconnection budget.  The SockJS handshake (GET /ws/info) bypasses the Axios
 // 429 interceptor, so every attempt consumes rate-limit budget; without a cap a
@@ -46,7 +37,7 @@ export function setStompTokenProvider(provider: StompTokenProvider | null): void
 }
 
 const DEBUG_ENABLED =
-    import.meta.env.DEV || import.meta.env.VITE_STOMP_DEBUG === 'true';
+    import.meta.env.DEV || env.stompDebug;
 
 /**
  * Frame logger. `FrameImpl.toString()` serialises every header, so the CONNECT
@@ -63,7 +54,14 @@ function stompDebug(message: string): void {
 }
 
 export const stompClient = new Client({
-    webSocketFactory: () => new SockJS(wsUrl),
+    // A native WebSocket, not SockJS.
+    //
+    // Every supported browser has had WebSocket for a decade; SockJS was buying
+    // fallbacks nobody needs, at the cost of an unmaintained dependency, a
+    // `global` shim in the Vite config, and an extra GET /ws/info handshake per
+    // connection attempt that bypassed the Axios 429 interceptor and consumed
+    // rate-limit budget on every reconnect.
+    brokerURL: env.wsUrl,
     reconnectDelay: BASE_RECONNECT_DELAY,
     maxReconnectDelay: MAX_RECONNECT_DELAY,
     reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,

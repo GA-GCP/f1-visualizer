@@ -1,11 +1,12 @@
-import React, { memo, useState, useEffect } from 'react';
+import React, { memo, useEffect, useMemo, useState } from 'react';
 import { Box, Button, Typography, CircularProgress, Autocomplete, TextField } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
 import { sendIngestionCommand } from '@/api/ingestionApi.ts';
-import { fetchYears, fetchSessionsByYear, fetchSessionDrivers, type RaceSession, type RaceEntryRoster } from '@/api/referenceApi';
-import { isRequestCancelled } from '@/api/apiClient';
+import { useQuery } from '@tanstack/react-query';
+import { queries } from '@/api/queries';
+import type { RaceSession, RaceEntryRoster } from '@/api/referenceApi';
 import { createLogger } from '../../lib/logger';
 
 const log = createLogger('session-control');
@@ -19,79 +20,39 @@ interface SessionControlPanelProps {
 }
 
 const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStarted, onSessionSelected, onError, isSessionActive = false, onCancel }) => {
-    // Cascading state: Year → Sessions → Selected Session
-    const [years, setYears] = useState<number[]>([]);
-    const [selectedYear, setSelectedYear] = useState<number | null>(null);
+    // Years, sessions and the roster are three cached queries rather than three
+    // effects writing three pieces of mirrored state. The selections below store
+    // only what the user actually chose; the defaults are derived, so changing
+    // year cannot leave a stale session selected — the old key simply is not in
+    // the new year's list and the first session applies.
+    const yearsQuery = useQuery(queries.years());
+    const years = useMemo(() => yearsQuery.data ?? [], [yearsQuery.data]);
 
-    // Sessions and the current pick are both stored alongside the year they
-    // belong to. A year change therefore empties the list, clears the selection
-    // and re-enters the loading state by derivation — none of which the effect
-    // has to write synchronously.
-    const [sessionsForYear, setSessionsForYear] = useState<{ year: number; sessions: RaceSession[] } | null>(null);
-    const [sessionChoice, setSessionChoice] = useState<{ year: number; session: RaceSession | null } | null>(null);
+    const [chosenYear, setChosenYear] = useState<number | null>(null);
+    const selectedYear = chosenYear ?? years[0] ?? null;
 
-    const sessions = sessionsForYear?.year === selectedYear ? sessionsForYear.sessions : [];
-    const selectedSession = sessionChoice?.year === selectedYear ? sessionChoice.session : null;
-    const isLoadingSessions = selectedYear !== null && sessionsForYear?.year !== selectedYear;
+    const sessionsQuery = useQuery({
+        ...queries.sessionsByYear(selectedYear ?? 0),
+        enabled: selectedYear !== null,
+    });
+    const sessions = useMemo(() => sessionsQuery.data ?? [], [sessionsQuery.data]);
+
+    const [chosenSessionKey, setChosenSessionKey] = useState<number | null>(null);
+    const selectedSession = sessions.find(s => s.sessionKey === chosenSessionKey) ?? sessions[0] ?? null;
+
+    const rosterQuery = useQuery({
+        ...queries.sessionDrivers(selectedSession?.sessionKey ?? 0),
+        enabled: selectedSession !== null,
+    });
+
+    const roster = rosterQuery.data;
+    useEffect(() => {
+        if (roster) onSessionSelected?.(roster);
+    }, [roster, onSessionSelected]);
 
     const [isLoading, setIsLoading] = useState(false);
-    // The mount effect below always fetches, so years start out loading.
-    const [isLoadingYears, setIsLoadingYears] = useState(true);
-
-    // Step 1: Load available years on mount
-    useEffect(() => {
-        const controller = new AbortController();
-        fetchYears(controller.signal)
-            .then(data => {
-                setYears(data);
-                if (data.length > 0) {
-                    setSelectedYear(data[0]); // Most recent year first
-                }
-                setIsLoadingYears(false);
-            })
-            .catch(error => {
-                if (isRequestCancelled(error)) return;
-                log.error('Failed to load years', error);
-                setIsLoadingYears(false);
-            });
-        return () => controller.abort();
-    }, []);
-
-    // Step 2: When year changes, load sessions for that year
-    useEffect(() => {
-        if (selectedYear === null) return;
-
-        const controller = new AbortController();
-        fetchSessionsByYear(selectedYear, controller.signal)
-            .then(data => {
-                setSessionsForYear({ year: selectedYear, sessions: data });
-                if (data.length > 0) {
-                    setSessionChoice({ year: selectedYear, session: data[0] });
-                }
-            })
-            .catch(error => {
-                if (isRequestCancelled(error)) return;
-                log.error('Failed to load sessions for year', error);
-                // Recording an empty result clears the derived loading state.
-                setSessionsForYear({ year: selectedYear, sessions: [] });
-            });
-        return () => controller.abort();
-    }, [selectedYear]);
-
-    // Step 3: When session changes, fetch driver roster and notify parent
-    useEffect(() => {
-        if (!selectedSession) return;
-
-        const controller = new AbortController();
-        fetchSessionDrivers(selectedSession.sessionKey, controller.signal)
-            .then(roster => onSessionSelected?.(roster))
-            .catch(error => {
-                if (!isRequestCancelled(error)) {
-                    log.error('Failed to load session drivers', error);
-                }
-            });
-        return () => controller.abort();
-    }, [selectedSession, onSessionSelected]);
+    const isLoadingYears = yearsQuery.isPending;
+    const isLoadingSessions = selectedYear !== null && sessionsQuery.isPending;
 
     const handleStart = async () => {
         if (!selectedSession) return;
@@ -120,7 +81,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                 loading={isLoadingYears}
                 getOptionLabel={(option) => String(option)}
                 value={selectedYear}
-                onChange={(_, newValue) => setSelectedYear(newValue)}
+                onChange={(_, newValue) => setChosenYear(newValue)}
                 disableClearable={years.length > 0}
                 renderInput={(params) => (
                     <TextField
@@ -139,7 +100,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                 getOptionLabel={(option) => `${option.meetingName} - ${option.sessionName}`}
                 isOptionEqualToValue={(option, value) => option.sessionKey === value.sessionKey}
                 value={selectedSession}
-                onChange={(_, newValue) => { if (selectedYear !== null) setSessionChoice({ year: selectedYear, session: newValue }); }}
+                onChange={(_, newValue) => setChosenSessionKey(newValue?.sessionKey ?? null)}
                 disabled={sessions.length === 0}
                 renderOption={(props, option) => (
                     <Box component="li" {...props} key={option.sessionKey}>

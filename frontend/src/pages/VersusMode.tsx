@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Box, Chip, Container, Grid, Typography, Paper } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
@@ -7,11 +7,9 @@ import RadarChart from '../components/versus/RadarChart';
 import StatComparisonBar from '../components/versus/StatComparisonBar';
 import HeadToHeadLoader from '../components/HeadToHeadLoader';
 import ErrorState from '../components/ui/ErrorState';
-import { fetchDrivers, fetchDriverStats, type DriverProfile } from '../api/referenceApi';
-import { isRequestCancelled } from '../api/apiClient';
-import { createLogger } from '../lib/logger';
-
-const log = createLogger('versus');
+import { useQuery } from '@tanstack/react-query';
+import { queries } from '../api/queries';
+import type { DriverProfile } from '../api/referenceApi';
 
 /**
  * Resolves one slot's driver from the URL parameter.
@@ -30,46 +28,22 @@ function resolveSlot(
 }
 
 const VersusMode: React.FC = () => {
-    const [drivers, setDrivers] = useState<DriverProfile[]>([]);
-    /** Dynamic stats, cached by driver id and merged over the roster's static ones. */
-    const [dynamicStats, setDynamicStats] = useState<Record<number, DriverProfile['stats']>>({});
-
     // The pairing lives in the URL, so navigating to another tab and back — or
     // pressing the back button, or sharing the link — restores the comparison
     // instead of resetting it to the first two drivers.
     const [searchParams, setSearchParams] = useSearchParams();
 
-    const [rosterError, setRosterError] = useState(false);
-    const [reloadKey, setReloadKey] = useState(0);
+    const driversQuery = useQuery(queries.drivers());
+    const drivers = useMemo(() => driversQuery.data ?? [], [driversQuery.data]);
 
-    useEffect(() => {
-        // Abort rather than only guarding setState: an abandoned request used to
-        // keep running and, through the retry policy, keep retrying.
-        const controller = new AbortController();
-        fetchDrivers(controller.signal)
-            .then(data => {
-                setDrivers(data);
-                setRosterError(false);
-            })
-            .catch(error => {
-                if (isRequestCancelled(error)) return;
-                log.error('Failed to load master driver list', error);
-                // Without this the page sat on its skeleton forever, because the
-                // loader showed whenever either driver was missing.
-                setRosterError(true);
-            });
-        return () => controller.abort();
-    }, [reloadKey]);
+    const baseA = useMemo(() => resolveSlot(drivers, searchParams.get('a'), 0), [drivers, searchParams]);
+    const baseB = useMemo(() => resolveSlot(drivers, searchParams.get('b'), 1), [drivers, searchParams]);
 
-    const slotA = searchParams.get('a');
-    const slotB = searchParams.get('b');
-
-    /**
-     * An absent parameter means "not chosen yet", so the default pairing
-     * applies; an empty one means the user cleared that slot deliberately.
-     */
-    const baseA = useMemo(() => resolveSlot(drivers, slotA, 0), [drivers, slotA]);
-    const baseB = useMemo(() => resolveSlot(drivers, slotB, 1), [drivers, slotB]);
+    // Query caches per driver id, so re-selecting a driver is instant and the
+    // requests for the two slots run in parallel rather than the serial
+    // await-then-await the initial load used to do.
+    const statsA = useQuery({ ...queries.driverStats(baseA?.id ?? 0), enabled: baseA !== null });
+    const statsB = useQuery({ ...queries.driverStats(baseB?.id ?? 0), enabled: baseB !== null });
 
     const handleDriverSelect = useCallback((driver: DriverProfile | null, slot: 'A' | 'B') => {
         setSearchParams(previous => {
@@ -81,45 +55,26 @@ const VersusMode: React.FC = () => {
         }, { replace: true });
     }, [setSearchParams]);
 
-    // Fetched once per driver and cached. The two slots load in parallel rather
-    // than the serial await-then-await the initial load used to do.
-    const requestedRef = useRef(new Set<number>());
-    useEffect(() => {
-        const controller = new AbortController();
-        for (const base of [baseA, baseB]) {
-            if (!base || requestedRef.current.has(base.id)) continue;
-            requestedRef.current.add(base.id);
-            fetchDriverStats(base.id, controller.signal)
-                .then(stats => setDynamicStats(previous => ({ ...previous, [base.id]: stats })))
-                .catch(error => {
-                    // Allow a retry if the driver is picked again.
-                    requestedRef.current.delete(base.id);
-                    if (!isRequestCancelled(error)) {
-                        log.error(`Failed to fetch stats for ${base.name}`, error);
-                    }
-                });
-        }
-        return () => controller.abort();
-    }, [baseA, baseB]);
-
     // Derived, not stored: a selection shows immediately with the roster's
     // static stats and upgrades in place when the dynamic ones land, instead of
     // holding the whole page on a skeleton until both requests resolve.
     const driverA = useMemo(
-        () => (baseA ? { ...baseA, stats: dynamicStats[baseA.id] ?? baseA.stats } : null),
-        [baseA, dynamicStats],
+        () => (baseA ? { ...baseA, stats: statsA.data ?? baseA.stats } : null),
+        [baseA, statsA.data],
     );
     const driverB = useMemo(
-        () => (baseB ? { ...baseB, stats: dynamicStats[baseB.id] ?? baseB.stats } : null),
-        [baseB, dynamicStats],
+        () => (baseB ? { ...baseB, stats: statsB.data ?? baseB.stats } : null),
+        [baseB, statsB.data],
     );
+
+    const rosterError = driversQuery.isError;
 
     if (rosterError) {
         return (
             <ErrorState
                 title="Driver data unavailable"
                 message="The analysis service could not be reached, so the comparison cannot be built."
-                onRetry={() => setReloadKey(k => k + 1)}
+                onRetry={() => void driversQuery.refetch()}
             />
         );
     }

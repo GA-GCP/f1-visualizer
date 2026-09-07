@@ -48,7 +48,6 @@ const renderPanel = (over: Partial<React.ComponentProps<typeof LiveTelemetryPane
             sessionLaps={laps}
             resetKey={0}
             onFirstPacket={vi.fn()}
-            onConnectionChange={vi.fn()}
             {...over}
         />,
     );
@@ -176,7 +175,6 @@ describe('LiveTelemetryPanel', () => {
                 sessionLaps={laps}
                 resetKey={1}
                 onFirstPacket={vi.fn()}
-                onConnectionChange={vi.fn()}
             />,
         );
 
@@ -184,10 +182,4 @@ describe('LiveTelemetryPanel', () => {
         expect(screen.getByText(/waiting for data/i)).toBeInTheDocument();
     });
 
-    it('reports connectivity to its parent', () => {
-        const onConnectionChange = vi.fn();
-        renderPanel({ onConnectionChange });
-
-        expect(onConnectionChange).toHaveBeenCalledWith(true);
-    });
 });

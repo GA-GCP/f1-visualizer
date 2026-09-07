@@ -4,6 +4,9 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useLocation } from 'react-router-dom';
 import { apiClient, setAuthHandlers } from '../api/apiClient';
 import { claimLoginRedirect } from './loginRedirectGuard';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('auth');
 
 /**
  * Auth0 error codes that mean "silent renewal cannot work; the user has to log
@@ -55,7 +58,7 @@ export const AxiosAuthInterceptor: React.FC = () => {
                 if (code && INTERACTIVE_LOGIN_REQUIRED.has(code)) {
                     reauthenticate();
                 } else {
-                    console.error('Failed to acquire Auth0 access token', error);
+                    log.error('Failed to acquire Auth0 access token', error);
                 }
 
                 // Cancel rather than send: an authenticated endpoint should

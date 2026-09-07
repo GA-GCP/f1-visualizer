@@ -1,6 +1,9 @@
 import { Client, ReconnectionTimeMode, TickerStrategy } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { setConnectionStatus } from '../realtime/connectionStatus';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('stomp');
 
 let wsUrl = 'http://localhost:8080/ws';
 if (import.meta.env.MODE === 'prod') {
@@ -53,10 +56,10 @@ const DEBUG_ENABLED =
 function stompDebug(message: string): void {
     if (!DEBUG_ENABLED) return;
     if (message.startsWith('>>> CONNECT')) {
-        console.log('[STOMP]: >>> CONNECT (headers redacted)');
+        log.debug('>>> CONNECT (headers redacted)');
         return;
     }
-    console.log('[STOMP]:', message);
+    log.debug(message);
 }
 
 export const stompClient = new Client({
@@ -80,7 +83,7 @@ export const stompClient = new Client({
             client.connectHeaders = { Authorization: `Bearer ${token}` };
         } catch (error) {
             // Retrying with no (or a dead) token just repeats the rejection.
-            console.error('[STOMP] Could not acquire a token for CONNECT — stopping reconnection', error);
+            log.error('Could not acquire a token for CONNECT — stopping reconnection', error);
             setConnectionStatus('auth-rejected');
             void client.deactivate();
         }
@@ -92,8 +95,8 @@ export const stompClient = new Client({
     onWebSocketClose: () => {
         consecutiveFailures++;
         if (consecutiveFailures >= MAX_RECONNECT_ATTEMPTS) {
-            console.error(
-                `[STOMP] Circuit breaker open after ${MAX_RECONNECT_ATTEMPTS} consecutive failures — reconnection stopped.`,
+            log.error(
+                `Circuit breaker open after ${MAX_RECONNECT_ATTEMPTS} consecutive failures — reconnection stopped.`,
             );
             setConnectionStatus('circuit-open');
             // deactivate() is the documented way to stop reconnecting.
@@ -103,8 +106,8 @@ export const stompClient = new Client({
         setConnectionStatus('reconnecting');
     },
     onStompError: (frame) => {
-        console.error('[STOMP] Broker reported error:', frame.headers['message']);
-        if (DEBUG_ENABLED) console.error('[STOMP] Details:', frame.body);
+        log.error('Broker reported an error', frame.headers['message']);
+        if (DEBUG_ENABLED) log.error('Broker error details', frame.body);
     },
 });
 

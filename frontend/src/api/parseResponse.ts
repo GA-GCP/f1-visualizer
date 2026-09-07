@@ -1,4 +1,7 @@
 import * as z from 'zod/mini';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('api');
 
 /**
  * Raised when a response does not match the schema the client expects.
@@ -24,7 +27,7 @@ export class SchemaMismatchError extends Error {
 export function parseResponse<T>(schema: z.ZodMiniType<T>, data: unknown, context: string): T {
     const result = z.safeParse(schema, data);
     if (!result.success) {
-        console.error(`[API] ${context} — unexpected response shape`, result.error.issues);
+        log.error(`[API] ${context} — unexpected response shape`, result.error.issues);
         throw new SchemaMismatchError(context, result.error.issues);
     }
     return result.data;

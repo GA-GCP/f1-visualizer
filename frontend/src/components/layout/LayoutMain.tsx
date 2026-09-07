@@ -9,6 +9,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
 import UserSettingsModal from './UserSettingsModal';
 import RouteFallback from '../ui/RouteFallback';
+import ErrorBoundary from '../ErrorBoundary';
 import {useAuth0} from "@auth0/auth0-react";
 
 const LayoutMain: React.FC = () => {
@@ -100,10 +101,17 @@ const LayoutMain: React.FC = () => {
                         transition={{ duration: 0.25, ease: 'easeInOut' }}
                     >
                         {/* Page chunks load here, not above the AppBar, so the
-                            nav and footer stay put while one arrives. */}
-                        <Suspense fallback={<RouteFallback />}>
-                            {outlet}
-                        </Suspense>
+                            nav and footer stay put while one arrives.
+
+                            A second boundary, keyed on the route, so a page
+                            crash loses the page and not the whole shell — and
+                            navigating away clears it. The app-wide boundary
+                            above replaced everything with the error screen. */}
+                        <ErrorBoundary key={location.pathname}>
+                            <Suspense fallback={<RouteFallback />}>
+                                {outlet}
+                            </Suspense>
+                        </ErrorBoundary>
                     </motion.div>
                 </AnimatePresence>
             </Container>

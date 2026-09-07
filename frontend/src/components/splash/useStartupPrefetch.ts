@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('startup');
 
 export interface PrefetchTask {
     /** Stable identifier, shown to the user if this task is the one that fails. */
@@ -43,7 +46,7 @@ export function useStartupPrefetch(tasks: PrefetchTask[], enabled: boolean): Sta
         const settle = (task: PrefetchTask, ok: boolean, error?: unknown) => {
             if (cancelled) return;
             if (!ok) {
-                console.error(`[startup] Prefetch failed: ${task.name}`, error);
+                log.error(`[startup] Prefetch failed: ${task.name}`, error);
                 setFailures(prev => [...prev, task.name]);
             }
             setSettled(prev => prev + 1);

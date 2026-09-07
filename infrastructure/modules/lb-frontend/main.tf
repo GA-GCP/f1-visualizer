@@ -23,6 +23,12 @@ resource "google_compute_backend_service" "default" {
   load_balancing_scheme = "EXTERNAL_MANAGED"
   project               = var.project_id
 
+  # Negotiate brotli or gzip per request at the edge. Neither Cloud Run nor the
+  # LB compresses by default, so without this the browser downloads the full
+  # uncompressed bundle (~1.15 MB rather than ~358 kB gzip / ~300 kB brotli).
+  # nginx also gzips at the origin, which covers the raw run.app URL.
+  compression_mode = "AUTOMATIC"
+
   backend {
     group = google_compute_region_network_endpoint_group.serverless_neg.id
   }

@@ -6,7 +6,10 @@ import type { TelemetryPacket } from '../types/telemetry';
 export const useTelemetry = (onDataReceived: (data: TelemetryPacket) => void) => {
     const [isConnected, setIsConnected] = useState(false);
     const callbackRef = useRef(onDataReceived);
-    const bufferRef = useRef<TelemetryPacket[]>([]);
+    // Keyed by driver_number: 'latest frame' is a per-driver notion, and this
+    // also bounds the buffer to one entry per driver no matter how long the
+    // tab stays hidden with rAF paused and the socket still delivering.
+    const bufferRef = useRef<Map<number, TelemetryPacket>>(new Map());
 
     useEffect(() => {
         callbackRef.current = onDataReceived;
@@ -28,7 +31,7 @@ export const useTelemetry = (onDataReceived: (data: TelemetryPacket) => void) =>
                 subscription = stompClient.subscribe('/topic/race-data', (message: IMessage) => {
                     try {
                         const payload: TelemetryPacket = JSON.parse(message.body);
-                        bufferRef.current.push(payload);
+                        bufferRef.current.set(payload.driver_number, payload);
                     } catch (err) {
                         console.error('Failed to parse telemetry:', err);
                     }
@@ -43,11 +46,19 @@ export const useTelemetry = (onDataReceived: (data: TelemetryPacket) => void) =>
 
         // 60fps flush loop (safe to start immediately — buffer is just empty until data arrives)
         const flushBuffer = () => {
-            if (bufferRef.current.length > 0 && callbackRef.current) {
-                // For UI state, we only need the absolute latest frame from the buffer
-                const latestPacket = bufferRef.current[bufferRef.current.length - 1];
-                callbackRef.current(latestPacket);
-                bufferRef.current = []; // Clear buffer after flush
+            const buffer = bufferRef.current;
+            if (buffer.size > 0 && callbackRef.current) {
+                // /topic/race-data carries every driver, and the replay engine
+                // publishes a whole 250 ms window back-to-back — so all ~20
+                // drivers land inside a single rAF interval.  Taking only the
+                // last *message* therefore forwarded one arbitrary driver and
+                // discarded the rest, which is why the selected driver's readout
+                // stalled while the trace kept moving.  Forward the latest packet
+                // for each driver instead; the consumer filters to the one it wants.
+                for (const packet of buffer.values()) {
+                    callbackRef.current(packet);
+                }
+                buffer.clear();
             }
             animationFrameId = requestAnimationFrame(flushBuffer);
         };

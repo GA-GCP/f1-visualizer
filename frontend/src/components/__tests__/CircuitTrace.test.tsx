@@ -5,15 +5,7 @@ import CircuitTrace from '../CircuitTrace';
 import type { DriverProfile } from '@/api/referenceApi.ts';
 import type { LocationPacket } from '@/types/telemetry.ts';
 
-// Mock D3 to avoid complex SVG/scale issues in jsdom
-vi.mock('d3', () => ({
-    scaleLinear: () => {
-        const scale = (v: number) => v;
-        scale.domain = () => scale;
-        scale.range = () => scale;
-        return scale;
-    }
-}));
+// No d3 mock needed: projection is affine constants from utils/circuitProjection.
 
 // Mock overlay components to isolate CircuitTrace logic
 vi.mock('../CircuitTraceIdleOverlay', () => ({
@@ -73,6 +65,11 @@ describe('CircuitTrace', () => {
             arc: vi.fn(),
             fill: vi.fn(),
             clearRect: vi.fn(),
+            // The canvas is sized in device pixels and drawn in CSS pixels, and
+            // completed segments are cached on an offscreen layer that is
+            // blitted each frame.
+            setTransform: vi.fn(),
+            drawImage: vi.fn(),
             save: vi.fn(),
             restore: vi.fn(),
             fillText: vi.fn(),
@@ -80,6 +77,7 @@ describe('CircuitTrace', () => {
             fillStyle: '',
             lineWidth: 1,
             lineJoin: 'miter',
+            lineCap: 'butt',
             shadowBlur: 0,
             shadowColor: '',
             font: '',
@@ -243,5 +241,79 @@ describe('CircuitTrace', () => {
         );
 
         expect(screen.getByText('2024 | BAHRAIN GRAND PRIX')).toBeInTheDocument();
+    });
+
+    describe('render-loop economy', () => {
+        it('skips frames with no new packets instead of redrawing the world', async () => {
+            // The loop used to clearRect and re-stroke every point of every
+            // driver 60 times a second whether or not anything had changed.
+            const queueRef = makeQueueRef([mockLocation]);
+            render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} {...defaultOverlayProps} />);
+
+            await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+            const paintsAfterData = (mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls.length;
+            expect(paintsAfterData).toBeGreaterThan(0);
+
+            // Several more frames, queue empty.
+            await act(async () => { await new Promise(r => setTimeout(r, 100)); });
+
+            expect((mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls.length).toBe(paintsAfterData);
+        });
+
+        it('repaints once new packets arrive', async () => {
+            const queueRef = makeQueueRef([mockLocation]);
+            render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} {...defaultOverlayProps} />);
+
+            await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+            const before = (mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls.length;
+
+            queueRef.current.push({ ...mockLocation, x: 300, y: 400 });
+            await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+
+            expect((mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(before);
+        });
+
+        it('runs no animation loop while no session is active', async () => {
+            const queueRef = makeQueueRef([mockLocation]);
+            render(
+                <CircuitTrace
+                    locationQueueRef={queueRef}
+                    selectedDriver={mockDriver}
+                    sessionKey={SESSION_KEY}
+                    resetKey={0}
+                    {...defaultOverlayProps}
+                    isSessionActive={false}
+                />,
+            );
+
+            await act(async () => { await new Promise(r => setTimeout(r, 100)); });
+
+            // One clear to blank the canvas, and nothing drawn thereafter.
+            expect(mockCtx.stroke).not.toHaveBeenCalled();
+            expect((mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
+        });
+    });
+
+    describe('devicePixelRatio', () => {
+        it('sizes the backing store in device pixels and draws in CSS pixels', async () => {
+            // Without this the backing store matched the CSS width, so on a 2x
+            // display every canvas pixel was stretched over four device pixels.
+            vi.spyOn(window, 'devicePixelRatio', 'get').mockReturnValue(2);
+            vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+                width: 400, height: 250, top: 0, left: 0, right: 400, bottom: 250, x: 0, y: 0,
+                toJSON: () => ({}),
+            });
+
+            const queueRef = makeQueueRef();
+            const { container } = render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} {...defaultOverlayProps} />);
+
+            await act(async () => { await new Promise(r => setTimeout(r, 20)); });
+
+            const canvas = container.querySelector('canvas')!;
+            expect(canvas.width).toBe(800);          // 400 CSS px x dpr 2
+            expect(canvas.height).toBe(500);         // 400 / 1.6 = 250, x 2
+            expect(canvas.style.width).toBe('400px');
+            expect(mockCtx.setTransform).toHaveBeenCalledWith(2, 0, 0, 2, 0, 0);
+        });
     });
 });

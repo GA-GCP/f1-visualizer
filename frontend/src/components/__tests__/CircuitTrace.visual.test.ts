@@ -1,12 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { toMatchImageSnapshot } from 'jest-image-snapshot';
 import { createCanvas } from 'canvas';
-import {
-    computeBounds,
-    createScales,
-    projectPoint,
-    CIRCUIT_PADDING,
-} from '../../utils/circuitProjection';
+import { computeBounds } from '../../utils/circuitProjection';
+import { drawFullTrace, type TraceContext } from '../../utils/circuitRenderer';
 
 // Extend vitest matchers with jest-image-snapshot
 expect.extend({ toMatchImageSnapshot });
@@ -14,9 +10,10 @@ expect.extend({ toMatchImageSnapshot });
 /**
  * Visual regression tests for CircuitTrace rendering logic.
  *
- * These tests use node-canvas to render the same drawing operations
- * that CircuitTrace.tsx performs in the browser, then compare the
- * resulting PNG against a stored baseline snapshot.
+ * These call `drawFullTrace` — the same function CircuitTrace.tsx uses for its
+ * full redraws — against node-canvas, then compare the PNG to a stored
+ * baseline. The drawing code used to be duplicated here, so the suite verified
+ * a second implementation the application never executed.
  *
  * This catches visual regressions in:
  *   - Coordinate projection accuracy
@@ -70,39 +67,17 @@ function renderCircuitToCanvas(
     ctx.fillStyle = '#121212';
     ctx.fillRect(0, 0, width, height);
 
-    // Compute bounds from selected driver
     const bounds = computeBounds(history, selectedDriverId);
-    const scales = createScales(bounds, width, height, CIRCUIT_PADDING);
 
-    // Draw all driver traces (same logic as CircuitTrace.tsx render loop)
-    Object.entries(history).forEach(([driverIdStr, driverHistory]) => {
-        const driverId = parseInt(driverIdStr, 10);
-        if (driverHistory.length < 2) return;
-
-        const isSelected = driverId === selectedDriverId;
-
-        ctx.beginPath();
-        ctx.strokeStyle = isSelected ? selectedDriverColor : 'rgba(255, 255, 255, 0.1)';
-        ctx.lineWidth = isSelected ? 4 : 1.5;
-        ctx.lineJoin = 'round';
-
-        const first = projectPoint(driverHistory[0].x, driverHistory[0].y, scales);
-        ctx.moveTo(first.sx, first.sy);
-
-        for (let i = 1; i < driverHistory.length; i++) {
-            const pt = projectPoint(driverHistory[i].x, driverHistory[i].y, scales);
-            ctx.lineTo(pt.sx, pt.sy);
-        }
-        ctx.stroke();
-
-        // Draw the "car" dot at the latest position
-        const lastPoint = driverHistory[driverHistory.length - 1];
-        const lastPt = projectPoint(lastPoint.x, lastPoint.y, scales);
-        ctx.beginPath();
-        ctx.fillStyle = isSelected ? '#ffffff' : 'rgba(255,255,255,0.3)';
-        ctx.arc(lastPt.sx, lastPt.sy, isSelected ? 6 : 3, 0, 2 * Math.PI);
-        ctx.fill();
-    });
+    drawFullTrace(
+        ctx as unknown as TraceContext,
+        history,
+        bounds,
+        width,
+        height,
+        selectedDriverId,
+        selectedDriverColor,
+    );
 
     return canvas.toBuffer('image/png');
 }

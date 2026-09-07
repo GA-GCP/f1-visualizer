@@ -1,4 +1,4 @@
-import { abortable, apiClient } from './apiClient';
+import { apiClient } from './apiClient';
 import {
     driverProfileSchema,
     driverStatsSchema,
@@ -20,60 +20,33 @@ export type {
     RaceEntryRoster,
 } from './schemas';
 
-// ── Request deduplication + in-memory cache ──
-// Multiple components (RaceSimulator, VersusMode, HistoricalData, SessionControlPanel)
-// independently call fetchDrivers()/fetchSessions() on mount.  React StrictMode
-// doubles each call.  Without dedup, 6-8 concurrent requests fire on page load,
-// triggering the backend rate limiter (429) which cascades to block STOMP WebSocket
-// connections — killing the Circuit Trace live feed.
+// Plain fetchers. Caching, de-duplication, staleness and invalidation are
+// TanStack Query's job now (see queries.ts) — the module-level caches this
+// replaces never expired and could not be invalidated, and the failure cooldown
+// they used to share is covered by the query retry policy plus the jittered,
+// idempotent-only retry in apiClient.
 //
-// On failure the rejected promise is kept for a cooldown period so that concurrent
-// callers share the same rejection instead of each spawning a brand-new request,
-// which would compound the rate-limit pressure.  After the cooldown expires the
-// slot is cleared and the next caller may try a fresh request.
-const FAILURE_COOLDOWN_MS = 3_000;
-
-let driversCache: DriverProfile[] | null = null;
-let driversInflight: Promise<DriverProfile[]> | null = null;
-
-let sessionsCache: RaceSession[] | null = null;
-let sessionsInflight: Promise<RaceSession[]> | null = null;
+// De-duplication still matters for the same reason it did before: several
+// components request the driver list on mount and StrictMode doubles each call,
+// which without dedup fired six to eight concurrent requests on page load and
+// tripped the gateway's rate limiter. Query dedupes by key.
 
 export const fetchDrivers = async (signal?: AbortSignal): Promise<DriverProfile[]> => {
-    if (driversCache) return driversCache;
-    if (driversInflight) return abortable(driversInflight, signal);
-
-    driversInflight = apiClient.get('/analysis/drivers').then(res => {
-        const drivers = parseResponse(z.array(driverProfileSchema), res.data, 'GET /analysis/drivers');
-        driversCache = drivers;
-        driversInflight = null;
-        return drivers;
-    }).catch(err => {
-        setTimeout(() => { driversInflight = null; }, FAILURE_COOLDOWN_MS);
-        throw err;
-    });
-
-    return abortable(driversInflight, signal);
+    const res = await apiClient.get('/analysis/drivers', { signal });
+    return parseResponse(z.array(driverProfileSchema), res.data, 'GET /analysis/drivers');
 };
 
 export const fetchSessions = async (signal?: AbortSignal): Promise<RaceSession[]> => {
-    if (sessionsCache) return sessionsCache;
-    if (sessionsInflight) return abortable(sessionsInflight, signal);
+    const res = await apiClient.get('/analysis/sessions', { signal });
+    // v1.0: Only Race sessions have lap data in BigQuery.
+    // Practice/Qualifying/Sprint will be added in v1.1.
+    return parseResponse(z.array(raceSessionSchema), res.data, 'GET /analysis/sessions')
+        .filter(session => session.sessionName === 'Race');
+};
 
-    sessionsInflight = apiClient.get('/analysis/sessions').then(res => {
-        // v1.0: Only Race sessions have lap data in BigQuery.
-        // Practice/Qualifying/Sprint will be added in v1.1.
-        const raceOnly = parseResponse(z.array(raceSessionSchema), res.data, 'GET /analysis/sessions')
-            .filter(s => s.sessionName === 'Race');
-        sessionsCache = raceOnly;
-        sessionsInflight = null;
-        return raceOnly;
-    }).catch(err => {
-        setTimeout(() => { sessionsInflight = null; }, FAILURE_COOLDOWN_MS);
-        throw err;
-    });
-
-    return abortable(sessionsInflight, signal);
+export const fetchYears = async (signal?: AbortSignal): Promise<number[]> => {
+    const res = await apiClient.get('/analysis/years', { signal });
+    return parseResponse(z.array(z.number()), res.data, 'GET /analysis/years');
 };
 
 export const searchSessions = async (query: string, signal?: AbortSignal): Promise<RaceSession[]> => {
@@ -93,46 +66,12 @@ export const fetchSessionLaps = async (sessionKey: number, signal?: AbortSignal)
 
 // ── Season-aware API functions ──
 
-let yearsCache: number[] | null = null;
-let yearsInflight: Promise<number[]> | null = null;
-
-export const fetchYears = async (signal?: AbortSignal): Promise<number[]> => {
-    if (yearsCache) return yearsCache;
-    if (yearsInflight) return abortable(yearsInflight, signal);
-
-    yearsInflight = apiClient.get('/analysis/years').then(res => {
-        const years = parseResponse(z.array(z.number()), res.data, 'GET /analysis/years');
-        yearsCache = years;
-        yearsInflight = null;
-        return years;
-    }).catch(err => {
-        setTimeout(() => { yearsInflight = null; }, FAILURE_COOLDOWN_MS);
-        throw err;
-    });
-
-    return abortable(yearsInflight, signal);
-};
-
-const sessionsByYearCache = new Map<number, RaceSession[]>();
-
 export const fetchSessionsByYear = async (year: number, signal?: AbortSignal): Promise<RaceSession[]> => {
-    const cached = sessionsByYearCache.get(year);
-    if (cached) return cached;
-
     const res = await apiClient.get(`/analysis/sessions/year/${year}`, { signal });
-    const sessions = parseResponse(z.array(raceSessionSchema), res.data, 'GET /analysis/sessions/year/:year');
-    sessionsByYearCache.set(year, sessions);
-    return sessions;
+    return parseResponse(z.array(raceSessionSchema), res.data, 'GET /analysis/sessions/year/:year');
 };
-
-const sessionDriversCache = new Map<number, RaceEntryRoster>();
 
 export const fetchSessionDrivers = async (sessionKey: number, signal?: AbortSignal): Promise<RaceEntryRoster> => {
-    const cached = sessionDriversCache.get(sessionKey);
-    if (cached) return cached;
-
     const res = await apiClient.get(`/analysis/sessions/${sessionKey}/drivers`, { signal });
-    const roster = parseResponse(raceEntryRosterSchema, res.data, 'GET /analysis/sessions/:key/drivers');
-    sessionDriversCache.set(sessionKey, roster);
-    return roster;
+    return parseResponse(raceEntryRosterSchema, res.data, 'GET /analysis/sessions/:key/drivers');
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Box, Typography, Paper, Grid, Chip, Snackbar, Alert, Button, CircularProgress } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
@@ -12,7 +12,9 @@ import DriverSelector from './selectors/DriverSelector';
 import SessionControlPanel from './selectors/SessionControlPanel';
 import MediaController from './MediaController';
 import LiveTelemetryPanel from '../features/live/LiveTelemetryPanel';
-import { fetchDrivers, fetchSessionLaps, type DriverProfile, type RaceEntryRoster, type RaceSession } from '../api/referenceApi';
+import { useQuery } from '@tanstack/react-query';
+import { queries } from '../api/queries';
+import type { DriverProfile, RaceEntryRoster, RaceSession } from '../api/referenceApi';
 import { pauseSimulation } from '../api/ingestionApi';
 import type { LocationPacket, LapDataRecord } from '../types/telemetry';
 import { useUser } from '../context/UserContext';
@@ -22,21 +24,19 @@ import { createLogger } from '../lib/logger';
 const log = createLogger('race-console');
 
 const RaceSimulator: React.FC = () => {
-    const [drivers, setDrivers] = useState<DriverProfile[]>([]);
-    const [selectedDriver, setSelectedDriver] = useState<DriverProfile | null>(null);
+    /** Only what the user actually picked; the default is derived below. */
+    const [chosenDriver, setChosenDriver] = useState<DriverProfile | null>(null);
     const [activeSession, setActiveSession] = useState<{ key: number, mode: string } | null>(null);
     // Location data bypasses React state entirely to avoid React 18 batching
     // that would drop intermediate GPS points.  The ref acts as a lock-free
     // queue that useLocation writes to and CircuitTrace drains each frame.
     const locationQueueRef = useRef<LocationPacket[]>([]);
     const [traceResetKey, setTraceResetKey] = useState(0);
-    const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
     const [streamError, setStreamError] = useState<string | null>(null);
     const [sessionDrivers, setSessionDrivers] = useState<DriverProfile[]>([]);
     const [sessionMeta, setSessionMeta] = useState<{ year: number; meetingName: string } | null>(null);
     const [isInitializing, setIsInitializing] = useState(false);
     const isInitializingRef = useRef(false);
-    const [sessionLaps, setSessionLaps] = useState<LapDataRecord[]>([]);
     const sessionLapsRef = useRef<LapDataRecord[]>([]);
 
     const { userProfile } = useUser();
@@ -46,39 +46,28 @@ const RaceSimulator: React.FC = () => {
     // user — whenever anything else in the profile changed identity.
     const favouriteDriverCode = userProfile?.preferences?.favoriteDriver;
 
-    useEffect(() => {
-        const controller = new AbortController();
-        let isMounted = true;
+    const driversQuery = useQuery(queries.drivers());
+    const drivers = useMemo(() => driversQuery.data ?? [], [driversQuery.data]);
+    const isLoadingDrivers = driversQuery.isPending;
 
-        const initializeDrivers = async () => {
-            setIsLoadingDrivers(true);
-            try {
-                const data = await fetchDrivers(controller.signal);
-                if (isMounted) {
-                    setDrivers(data);
-                    if (data.length > 0) {
-                        const defaultDriver = data.find(d => d.code === favouriteDriverCode) || data[0];
-                        // Only seed the default; never clobber a driver the user
-                        // has already picked.
-                        setSelectedDriver(prev => prev ?? defaultDriver);
-                    }
-                }
-            } catch (err) {
-                log.error("Failed to fetch drivers for simulator", err);
-            } finally {
-                if (isMounted) {
-                    setIsLoadingDrivers(false);
-                }
-            }
-        };
+    // Use session-specific drivers when available, otherwise fall back to global drivers
+    const displayDrivers = sessionDrivers.length > 0 ? sessionDrivers : drivers;
 
-        void initializeDrivers();
+    // The default is derived, not seeded by an effect: storing it would mean a
+    // synchronous setState inside an effect, and a cascading render every time
+    // the roster or the favourite changed.
+    const defaultDriver = useMemo(
+        () => displayDrivers.find(d => d.code === favouriteDriverCode) ?? displayDrivers[0] ?? null,
+        [displayDrivers, favouriteDriverCode],
+    );
+    const selectedDriver = chosenDriver ?? defaultDriver;
 
-        return () => {
-            isMounted = false; // Cleanup to prevent state updates on unmounted components
-            controller.abort();
-        };
-    }, [favouriteDriverCode]);
+    const sessionKey = activeSession?.key;
+    const lapsQuery = useQuery({
+        ...queries.sessionLaps(sessionKey ?? 0),
+        enabled: sessionKey !== undefined,
+    });
+    const sessionLaps = useMemo(() => lapsQuery.data ?? [], [lapsQuery.data]);
 
     useEffect(() => { isInitializingRef.current = isInitializing; }, [isInitializing]);
     useEffect(() => { sessionLapsRef.current = sessionLaps; }, [sessionLaps]);
@@ -95,16 +84,13 @@ const RaceSimulator: React.FC = () => {
     const handleStreamStarted = useCallback((sessionKey: number, mode: 'LIVE' | 'SIMULATION', session: RaceSession) => {
         setSessionMeta({ year: session.year, meetingName: session.meetingName });
         setIsInitializing(true);
+        // Lap data loads through a query keyed on the session, so setting the
+        // active session is enough — no manual fetch, and switching back to a
+        // session already seen is served from cache.
         setActiveSession({ key: sessionKey, mode });
-        setSessionLaps([]);
         locationQueueRef.current = [];
         // Bumping this clears the trace and the telemetry panel together.
         setTraceResetKey(prev => prev + 1);
-
-        // Pre-load lap data for lap tracking correlation
-        fetchSessionLaps(sessionKey).then(laps => {
-            setSessionLaps(laps);
-        }).catch(err => log.error('Failed to pre-load lap data', err));
     }, []);
 
     // Stable so memo() on MediaController actually holds.
@@ -122,7 +108,6 @@ const RaceSimulator: React.FC = () => {
             log.error('Failed to pause simulation on cancel', err);
         }
         setActiveSession(null);
-        setSessionLaps([]);
         setSessionMeta(null);
         setIsInitializing(false);
         locationQueueRef.current = [];
@@ -140,16 +125,11 @@ const RaceSimulator: React.FC = () => {
             stats: { speed: 80, consistency: 80, aggression: 80, tireMgmt: 80, experience: 80, wins: 0, podiums: 0, totalPoints: 0, bestChampionshipFinish: 0, totalRaces: 0, teamsDrivenFor: [] },
         }));
 
+        // Only record the roster: the selection follows from it by derivation,
+        // so a session change cannot strand a driver who is not in the new one.
         setSessionDrivers(profiles);
-        if (profiles.length > 0) {
-            const favCode = userProfile?.preferences?.favoriteDriver;
-            const defaultDriver = profiles.find(d => d.code === favCode) || profiles[0];
-            setSelectedDriver(defaultDriver);
-        }
-    }, [userProfile]);
-
-    // Use session-specific drivers when available, otherwise fall back to global drivers
-    const displayDrivers = sessionDrivers.length > 0 ? sessionDrivers : drivers;
+        setChosenDriver(null);
+    }, []);
 
     const dismissStreamError = useCallback(() => setStreamError(null), []);
 
@@ -223,7 +203,7 @@ const RaceSimulator: React.FC = () => {
                                     label="SELECT DRIVER CHANNEL"
                                     options={displayDrivers}
                                     value={selectedDriver}
-                                    onChange={setSelectedDriver}
+                                    onChange={setChosenDriver}
                                 />
                             )}
                         </Paper>

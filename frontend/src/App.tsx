@@ -11,6 +11,7 @@ import { isSplashSkipRemembered } from './components/splash/splashPreference';
 import RouteFallback from './components/ui/RouteFallback';
 import Landing from './pages/Landing';
 import { broadcastTheme } from './theme/theme';
+import { env } from './config/env';
 
 // --- DEFERRED AUTHENTICATED CODE ---
 // None of this can render before login, yet all of it used to ship in the one
@@ -37,10 +38,10 @@ const StompAuthHandler = lazy(() =>
     import('./auth/StompAuthHandler').then(m => ({ default: m.StompAuthHandler })),
 );
 
-// Also deferred: it pulls in the user API, and with it the wire schemas and the
-// validator. None of that can be used before login.
-const UserProvider = lazy(() =>
-    import('./context/UserContext').then(m => ({ default: m.UserProvider })),
+// Also deferred: it pulls in the query client, the user API, and with them the
+// wire schemas and the validator. None of that can be used before login.
+const AppDataProvider = lazy(() =>
+    import('./app/AppDataProvider').then(m => ({ default: m.AppDataProvider })),
 );
 
 // --- STARTUP PREFETCH ---
@@ -55,8 +56,8 @@ const UserProvider = lazy(() =>
 // dynamically, not statically: it is unreachable before login, so a static
 // import would put all of it in the chunk the public landing page downloads.
 const STARTUP_PREFETCH: PrefetchTask[] = [
-    { name: 'drivers', run: () => import('./api/referenceApi').then(m => m.fetchDrivers()) },
-    { name: 'sessions', run: () => import('./api/referenceApi').then(m => m.fetchSessions()), delayMs: 400 },
+    { name: 'drivers', run: () => import('./api/prefetch').then(m => m.prefetchDrivers()) },
+    { name: 'sessions', run: () => import('./api/prefetch').then(m => m.prefetchSessions()), delayMs: 400 },
     { name: 'the app shell', run: importLayoutMain },
     { name: 'the dashboard', run: importHome },
     { name: 'the data vault', run: importHistoricalData, delayMs: 1000 },
@@ -108,7 +109,7 @@ const RequiredAuth: React.FC = () => {
         {/* The splash sits outside the UserProvider boundary so it paints
             immediately, without waiting on that chunk. */}
         <Suspense fallback={null}>
-        <UserProvider>
+        <AppDataProvider>
             {/* Mounted here rather than at the app root: the WebSocket stack is
                 useless before login, and mounting it under the guard is what
                 keeps it out of the public route's chunk. */}
@@ -138,7 +139,7 @@ const RequiredAuth: React.FC = () => {
                 </Suspense>
             </motion.div>
 
-        </UserProvider>
+        </AppDataProvider>
         </Suspense>
 
             <AnimatePresence>
@@ -196,9 +197,6 @@ export const AppRoutes: React.FC = () => (
 const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const navigate = useNavigate();
 
-    const domain = import.meta.env.VITE_AUTH0_DOMAIN;
-    const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
-    const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
     const onRedirectCallback = (appState?: { returnTo?: string }) => {
         // Signal to RequiredAuth that it should show the post-login splash.
@@ -210,14 +208,10 @@ const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ ch
         navigate(appState?.returnTo || '/dashboard');
     };
 
-    if (!(domain && clientId && audience)) {
-        return null;
-    }
-
     return (
         <Auth0Provider
-            domain={domain}
-            clientId={clientId}
+            domain={env.auth0.domain}
+            clientId={env.auth0.clientId}
             // Silent renewal on the library defaults means a hidden-iframe
             // /authorize?prompt=none against the shared *.auth0.com domain, which
             // needs the Auth0 session cookie sent as a third-party cookie —
@@ -232,7 +226,7 @@ const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ ch
             cacheLocation="memory"
             authorizationParams={{
                 redirect_uri: window.location.origin,
-                audience: audience,
+                audience: env.auth0.audience,
                 // offline_access is what makes a refresh token be issued at all.
                 scope: 'openid profile email offline_access',
             }}

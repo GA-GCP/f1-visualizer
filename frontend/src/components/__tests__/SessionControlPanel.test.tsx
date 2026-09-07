@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SessionControlPanel from '../selectors/SessionControlPanel';
 import { sendIngestionCommand } from '@/api/ingestionApi.ts';
@@ -13,6 +14,11 @@ vi.mock('../../api/referenceApi', () => ({
     fetchYears: vi.fn(),
     fetchSessionsByYear: vi.fn(),
     fetchSessionDrivers: vi.fn(),
+    fetchDrivers: vi.fn(),
+    fetchSessions: vi.fn(),
+    fetchSessionLaps: vi.fn(),
+    fetchDriverStats: vi.fn(),
+    searchSessions: vi.fn(),
 }));
 
 describe('SessionControlPanel', () => {
@@ -39,7 +45,7 @@ describe('SessionControlPanel', () => {
     });
 
     it('renders the control panel with simulation mode', async () => {
-        render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
+        renderWithProviders(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
 
         expect(screen.getByText('RACE INITIALIZATION')).toBeInTheDocument();
 
@@ -60,7 +66,7 @@ describe('SessionControlPanel', () => {
                 : new Promise<typeof mockSessions>(() => {})
         );
 
-        render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
+        renderWithProviders(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
 
         const grandPrix = screen.getByLabelText(/Select Grand Prix/i);
         await waitFor(() => expect(grandPrix).toHaveValue('Singapore Grand Prix - Race'));
@@ -78,7 +84,7 @@ describe('SessionControlPanel', () => {
         // Setup the mock to resolve successfully
         vi.mocked(sendIngestionCommand).mockResolvedValue('Simulation initiated');
 
-        render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
+        renderWithProviders(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
 
         // Wait for Start button to be enabled (data loaded)
         const startButton = await screen.findByRole('button', { name: /START SIMULATION/i });
@@ -109,7 +115,7 @@ describe('SessionControlPanel', () => {
         const mockOnError = vi.fn();
 
         // 2. Pass the mock into the component
-        render(<SessionControlPanel onStreamStarted={mockOnStreamStarted} onError={mockOnError} />);
+        renderWithProviders(<SessionControlPanel onStreamStarted={mockOnStreamStarted} onError={mockOnError} />);
 
         const startButton = await screen.findByRole('button', { name: /START SIMULATION/i });
         await waitFor(() => expect(startButton).toBeEnabled());

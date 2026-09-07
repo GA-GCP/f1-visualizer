@@ -237,7 +237,7 @@ const HeadToHeadLoader: React.FC = () => {
                                 animate={{ opacity: [0.3, 0.6, 0.3] }}
                                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                             >
-                                <Typography variant="h6" color="text.secondary" gutterBottom>
+                                <Typography variant="h6" component="h2" color="text.secondary" gutterBottom>
                                     ATTRIBUTE MAPPING
                                 </Typography>
                             </motion.div>
@@ -417,7 +417,7 @@ const HeadToHeadLoader: React.FC = () => {
                                 animate={{ opacity: [0.3, 0.6, 0.3] }}
                                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                             >
-                                <Typography variant="h6" color="text.secondary" gutterBottom sx={{ mb: 4 }}>
+                                <Typography variant="h6" component="h2" color="text.secondary" gutterBottom sx={{ mb: 4 }}>
                                     CAREER STATISTICS
                                 </Typography>
                             </motion.div>

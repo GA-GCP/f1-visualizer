@@ -1,5 +1,3 @@
-import * as d3 from 'd3';
-
 export interface Bounds {
     minX: number;
     maxX: number;
@@ -7,9 +5,21 @@ export interface Bounds {
     maxY: number;
 }
 
-export interface Scales {
-    xScale: d3.ScaleLinear<number, number>;
-    yScale: d3.ScaleLinear<number, number>;
+/**
+ * World-to-canvas mapping held as affine constants.
+ *
+ * The render loop used to build two `d3.scaleLinear` objects per frame and call
+ * them through a closure for every point of every driver. The maths is a
+ * multiply and an add, so it is computed once when the bounds change and the
+ * constants reused — the output is identical to the d3 scales it replaces.
+ */
+export interface Projection {
+    /** Multiply-add constants: canvasX = x * scaleX + offsetX. */
+    readonly scaleX: number;
+    readonly offsetX: number;
+    /** Negative scaleY, because canvas y grows downward and world y grows up. */
+    readonly scaleY: number;
+    readonly offsetY: number;
 }
 
 export const CIRCUIT_ASPECT_RATIO = 1.6;
@@ -45,43 +55,42 @@ export function computeBounds(
 }
 
 /**
- * Creates D3 linear scales that map world coordinates to canvas pixel space.
+ * Builds the world-to-canvas mapping for a set of bounds and a canvas size.
+ *
+ * Sizes are CSS pixels; the caller applies the devicePixelRatio transform.
  */
-export function createScales(
+export function createProjection(
     bounds: Bounds,
     canvasWidth: number,
     canvasHeight: number,
     padding: number = CIRCUIT_PADDING
-): Scales {
+): Projection {
     const { minX, minY } = bounds;
-    let { maxX, maxY } = bounds;
+    // A single recorded point gives a zero-width domain; nudge it so the
+    // division stays finite, matching the scales this replaced.
+    const spanX = bounds.maxX - minX || 0.001;
+    const spanY = bounds.maxY - minY || 0.001;
 
-    // Prevent zero-range domains
-    if (minX === maxX) maxX += 0.001;
-    if (minY === maxY) maxY += 0.001;
+    const scaleX = (canvasWidth - 2 * padding) / spanX;
+    const scaleY = -(canvasHeight - 2 * padding) / spanY;
 
-    const xScale = d3.scaleLinear()
-        .domain([minX, maxX])
-        .range([padding, canvasWidth - padding]);
-
-    const yScale = d3.scaleLinear()
-        .domain([minY, maxY])
-        .range([canvasHeight - padding, padding]);
-
-    return { xScale, yScale };
+    return {
+        scaleX,
+        offsetX: padding - minX * scaleX,
+        scaleY,
+        offsetY: canvasHeight - padding - minY * scaleY,
+    };
 }
 
-/**
- * Projects a world-space (x, y) point to canvas pixel coordinates.
- */
+/** Projects a world-space point to canvas pixels. */
 export function projectPoint(
     x: number,
     y: number,
-    scales: Scales
+    projection: Projection
 ): { sx: number; sy: number } {
     return {
-        sx: scales.xScale(x),
-        sy: scales.yScale(y),
+        sx: x * projection.scaleX + projection.offsetX,
+        sy: y * projection.scaleY + projection.offsetY,
     };
 }
 

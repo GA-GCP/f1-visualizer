@@ -1,62 +1,99 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Box, Chip, Container, Grid, Typography, Paper } from '@mui/material';
 import { motion } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
 import DriverSelector from '../components/selectors/DriverSelector';
 import RadarChart from '../components/versus/RadarChart';
 import StatComparisonBar from '../components/versus/StatComparisonBar';
 import HeadToHeadLoader from '../components/HeadToHeadLoader';
 import { fetchDrivers, fetchDriverStats, type DriverProfile } from '../api/referenceApi';
 
+/**
+ * Resolves one slot's driver from the URL parameter.
+ *
+ * `null` (absent) falls back to the default pairing; an empty string is a
+ * deliberate clear and resolves to nothing.
+ */
+function resolveSlot(
+    drivers: DriverProfile[],
+    param: string | null,
+    fallbackIndex: number,
+): DriverProfile | null {
+    if (drivers.length === 0) return null;
+    if (param === null) return drivers[fallbackIndex] ?? null;
+    return drivers.find(d => String(d.id) === param) ?? null;
+}
+
 const VersusMode: React.FC = () => {
     const [drivers, setDrivers] = useState<DriverProfile[]>([]);
-    const [driverA, setDriverA] = useState<DriverProfile | null>(null);
-    const [driverB, setDriverB] = useState<DriverProfile | null>(null);
+    /** Dynamic stats, cached by driver id and merged over the roster's static ones. */
+    const [dynamicStats, setDynamicStats] = useState<Record<number, DriverProfile['stats']>>({});
 
-    const handleDriverSelect = useCallback(async (driver: DriverProfile | null, slot: 'A' | 'B') => {
-        if (!driver) {
-            if (slot === 'A') setDriverA(null);
-            else setDriverB(null);
-            return;
-        }
-
-        try {
-            const dynamicStats = await fetchDriverStats(driver.id);
-            const updatedDriver = { ...driver, stats: dynamicStats };
-            if (slot === 'A') setDriverA(updatedDriver);
-            else setDriverB(updatedDriver);
-        } catch (error) {
-            console.error(`Failed to fetch stats for ${driver?.name}`, error);
-            // Fallback to the static stats on failure
-            if (slot === 'A') setDriverA(driver);
-            else setDriverB(driver);
-        }
-    }, []);
+    // The pairing lives in the URL, so navigating to another tab and back — or
+    // pressing the back button, or sharing the link — restores the comparison
+    // instead of resetting it to the first two drivers.
+    const [searchParams, setSearchParams] = useSearchParams();
 
     useEffect(() => {
         let isMounted = true;
+        fetchDrivers()
+            .then(data => { if (isMounted) setDrivers(data); })
+            .catch(err => console.error('Failed to load master driver list', err));
+        return () => { isMounted = false; };
+    }, []);
 
-        const initializeDrivers = async () => {
-            try {
-                const data = await fetchDrivers();
-                if (isMounted) {
-                    setDrivers(data);
-                    if (data.length > 1) {
-                        // Safely await the dynamic stat fetches
-                        await handleDriverSelect(data[0], 'A');
-                        await handleDriverSelect(data[1], 'B');
-                    }
-                }
-            } catch (err) {
-                console.error("Failed to load master driver list", err);
-            }
-        };
+    const slotA = searchParams.get('a');
+    const slotB = searchParams.get('b');
 
-        void initializeDrivers();
+    /**
+     * An absent parameter means "not chosen yet", so the default pairing
+     * applies; an empty one means the user cleared that slot deliberately.
+     */
+    const baseA = useMemo(() => resolveSlot(drivers, slotA, 0), [drivers, slotA]);
+    const baseB = useMemo(() => resolveSlot(drivers, slotB, 1), [drivers, slotB]);
 
-        return () => {
-            isMounted = false;
-        };
-    }, [handleDriverSelect]);
+    const handleDriverSelect = useCallback((driver: DriverProfile | null, slot: 'A' | 'B') => {
+        setSearchParams(previous => {
+            const next = new URLSearchParams(previous);
+            next.set(slot === 'A' ? 'a' : 'b', driver ? String(driver.id) : '');
+            return next;
+        // Picking a driver is not a navigation; it should not add a history
+        // entry the back button has to walk through.
+        }, { replace: true });
+    }, [setSearchParams]);
+
+    // Fetched once per driver and cached. The two slots load in parallel rather
+    // than the serial await-then-await the initial load used to do.
+    const requestedRef = useRef(new Set<number>());
+    useEffect(() => {
+        let cancelled = false;
+        for (const base of [baseA, baseB]) {
+            if (!base || requestedRef.current.has(base.id)) continue;
+            requestedRef.current.add(base.id);
+            fetchDriverStats(base.id)
+                .then(stats => {
+                    if (!cancelled) setDynamicStats(previous => ({ ...previous, [base.id]: stats }));
+                })
+                .catch(error => {
+                    console.error(`Failed to fetch stats for ${base.name}`, error);
+                    // Allow a retry if the driver is picked again.
+                    requestedRef.current.delete(base.id);
+                });
+        }
+        return () => { cancelled = true; };
+    }, [baseA, baseB]);
+
+    // Derived, not stored: a selection shows immediately with the roster's
+    // static stats and upgrades in place when the dynamic ones land, instead of
+    // holding the whole page on a skeleton until both requests resolve.
+    const driverA = useMemo(
+        () => (baseA ? { ...baseA, stats: dynamicStats[baseA.id] ?? baseA.stats } : null),
+        [baseA, dynamicStats],
+    );
+    const driverB = useMemo(
+        () => (baseB ? { ...baseB, stats: dynamicStats[baseB.id] ?? baseB.stats } : null),
+        [baseB, dynamicStats],
+    );
 
     if (!driverA || !driverB) {
         return <HeadToHeadLoader />;
@@ -85,7 +122,7 @@ const VersusMode: React.FC = () => {
                                 label="DRIVER A"
                                 options={drivers}
                                 value={driverA}
-                                onChange={(d) => { void handleDriverSelect(d, 'A'); }}
+                                onChange={(d) => handleDriverSelect(d, 'A')}
                             />
                         </Paper>
                     </motion.div>
@@ -101,7 +138,7 @@ const VersusMode: React.FC = () => {
                                 label="DRIVER B"
                                 options={drivers}
                                 value={driverB}
-                                onChange={(d) => { void handleDriverSelect(d, 'B'); }}
+                                onChange={(d) => handleDriverSelect(d, 'B')}
                             />
                         </Paper>
                     </motion.div>

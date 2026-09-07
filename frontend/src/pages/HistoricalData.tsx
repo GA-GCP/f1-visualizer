@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, Typography, Container, Autocomplete, TextField } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
 import LapTimeChart from '../components/LapTimeChart';
 import DataVaultLoader from '../components/DataVaultLoader';
 import type { LapDataRecord } from '../types/telemetry';
@@ -13,19 +14,42 @@ const HistoricalData: React.FC = () => {
     const [driverColorMap, setDriverColorMap] = useState<Record<number, string>>({});
     const [driverLabelMap, setDriverLabelMap] = useState<Record<number, string>>({});
 
-    // Dynamic Session state
+    // Dynamic Session state.
+    //
+    // The selection lives in the URL rather than in component state: navigating
+    // away unmounts the page, so a plain useState was lost on every visit to
+    // another tab, and back/forward could not restore it either.
     const [sessions, setSessions] = useState<RaceSession[]>([]);
-    const [selectedSession, setSelectedSession] = useState<RaceSession | null>(null);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const sessionKeyParam = searchParams.get('session');
+
+    const selectedSession = useMemo(() => {
+        if (sessions.length === 0) return null;
+        const fromUrl = sessionKeyParam !== null
+            ? sessions.find(s => String(s.sessionKey) === sessionKeyParam)
+            : undefined;
+        return fromUrl ?? sessions[0];
+    }, [sessions, sessionKeyParam]);
+
+    const setSelectedSession = useCallback((session: RaceSession | null) => {
+        setSearchParams(
+            previous => {
+                const next = new URLSearchParams(previous);
+                if (session) next.set('session', String(session.sessionKey));
+                else next.delete('session');
+                return next;
+            },
+            // Choosing a session is not a navigation: it should not add an entry
+            // the back button has to walk through.
+            { replace: true },
+        );
+    }, [setSearchParams]);
 
     // Fetch available sessions on mount
     useEffect(() => {
         fetchSessions().then(data => {
             setSessions(data);
-            if (data.length > 0) {
-                setSelectedSession(data[0]);
-            } else {
-                setLoading(false);
-            }
+            if (data.length === 0) setLoading(false);
         }).catch(() => setLoading(false));
     }, []);
 

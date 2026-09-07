@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import VersusMode from '../../pages/VersusMode';
 import { fetchDrivers, fetchDriverStats } from '@/api/referenceApi.ts';
@@ -14,6 +15,14 @@ vi.mock('../../components/versus/RadarChart', () => ({
     default: () => <div data-testid="mock-radar-chart">Radar Chart</div>
 }));
 
+/** The page stores its selection in the URL, so it needs router context. */
+const renderAt = (path: string) =>
+    render(
+        <MemoryRouter initialEntries={[path]}>
+            <VersusMode />
+        </MemoryRouter>,
+    );
+
 describe('VersusMode Page', () => {
     const mockDrivers = [
         {
@@ -23,6 +32,10 @@ describe('VersusMode Page', () => {
         {
             id: 16, code: "LEC", name: "Charles Leclerc", team: "Ferrari", teamColor: "#E80020",
             stats: { speed: 96, consistency: 88, aggression: 90, tireMgmt: 85, experience: 80, wins: 5, podiums: 30, totalPoints: 1200, bestChampionshipFinish: 2, totalRaces: 130, teamsDrivenFor: ['Ferrari', 'Sauber'] }
+        },
+        {
+            id: 44, code: "HAM", name: "Lewis Hamilton", team: "Ferrari", teamColor: "#E80020",
+            stats: { speed: 95, consistency: 94, aggression: 88, tireMgmt: 96, experience: 99, wins: 105, podiums: 202, totalPoints: 4800, bestChampionshipFinish: 1, totalRaces: 350, teamsDrivenFor: ['McLaren', 'Mercedes', 'Ferrari'] }
         }
     ];
 
@@ -38,7 +51,7 @@ describe('VersusMode Page', () => {
     });
 
     it('shows loading state initially, then renders comparison engine when data arrives', async () => {
-        render(<VersusMode />);
+        renderAt('/');
 
         // Verify the HeadToHeadLoader splash is rendered during loading
         expect(screen.getByText('INITIALIZING VERSUS MODE...')).toBeInTheDocument();
@@ -59,5 +72,18 @@ describe('VersusMode Page', () => {
         // Since the mock is now dynamic, there will only be exactly one "54" and one "5"
         expect(screen.getByText('54')).toBeInTheDocument(); // VER wins
         expect(screen.getByText('5')).toBeInTheDocument();  // LEC wins
+    });
+
+    it('honours a pairing chosen in the URL', async () => {
+        // Navigating away unmounts the page, so the comparison has to survive in
+        // the URL — which also makes it shareable and back/forward-restorable.
+        // Default pairing is the first two drivers; the URL names a different one.
+        renderAt('/?a=44&b=16');
+
+        await waitFor(() => {
+            expect(fetchDriverStats).toHaveBeenCalledWith(44);
+        });
+        expect(fetchDriverStats).toHaveBeenCalledWith(16);
+        expect(fetchDriverStats).not.toHaveBeenCalledWith(1);
     });
 });

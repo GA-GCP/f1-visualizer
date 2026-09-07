@@ -1,3 +1,4 @@
+import { BRAND_RED } from '../../theme/tokens';
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, useMotionValue, animate, useMotionValueEvent } from 'framer-motion';
 import { Box } from '@mui/material';
@@ -131,7 +132,7 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase, continuous }) => {
                         ref={pathRef}
                         d={CIRCUIT_PATH}
                         fill="none"
-                        stroke="#e10600"
+                        stroke={BRAND_RED}
                         strokeWidth={2.5}
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -158,7 +159,7 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase, continuous }) => {
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.3, delay: 2.0 }}
                         style={{
-                            filter: 'drop-shadow(0 0 6px #e10600) drop-shadow(0 0 12px rgba(225,6,0,0.4))',
+                            filter: `drop-shadow(0 0 6px ${BRAND_RED}) drop-shadow(0 0 12px rgba(225,6,0,0.4))`,
                         }}
                     />
                 )}

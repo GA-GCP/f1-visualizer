@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import React from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Box, Container, Grid, Paper, Typography } from '@mui/material';
+import { BORDER_SUBTLE, BRAND_RED, FONT_FAMILY, PAPER_BG } from '../theme/tokens';
+import CyclingStatusLabel from './ui/CyclingStatusLabel';
 
 /* ── Status messages that cycle during loading ── */
 const STATUS_MESSAGES = [
@@ -12,7 +14,7 @@ const STATUS_MESSAGES = [
 ];
 
 /* ── Ghost team colors for the two animated radar blobs ── */
-const GHOST_A = '#e10600';
+const GHOST_A = BRAND_RED;
 const GHOST_B = '#00D2BE';
 
 /* ── Radar chart geometry ── */
@@ -62,16 +64,6 @@ const GHOST_STATS = [
  */
 const HeadToHeadLoader: React.FC = () => {
     const reduceMotion = useReducedMotion();
-    const [msgIdx, setMsgIdx] = useState(0);
-
-    useEffect(() => {
-        const id = setInterval(
-            () => setMsgIdx((p) => (p + 1) % STATUS_MESSAGES.length),
-            2200,
-        );
-        return () => clearInterval(id);
-    }, []);
-
     /* Ghost blob radius fractions for Driver A and Driver B */
     const blobA = [0.78, 0.55, 0.85, 0.45, 0.7];
     const blobB = [0.6, 0.72, 0.42, 0.8, 0.55];
@@ -111,7 +103,7 @@ const HeadToHeadLoader: React.FC = () => {
                         <Paper
                             sx={{
                                 p: 3,
-                                bgcolor: '#1e1e1e',
+                                bgcolor: PAPER_BG,
                                 borderLeft: `4px solid ${GHOST_A}`,
                                 overflow: 'hidden',
                             }}
@@ -165,7 +157,7 @@ const HeadToHeadLoader: React.FC = () => {
                         <Paper
                             sx={{
                                 p: 3,
-                                bgcolor: '#1e1e1e',
+                                bgcolor: PAPER_BG,
                                 borderRight: `4px solid ${GHOST_B}`,
                                 overflow: 'hidden',
                             }}
@@ -224,7 +216,7 @@ const HeadToHeadLoader: React.FC = () => {
                         <Paper
                             sx={{
                                 p: 3,
-                                bgcolor: '#1e1e1e',
+                                bgcolor: PAPER_BG,
                                 height: '100%',
                                 display: 'flex',
                                 flexDirection: 'column',
@@ -292,7 +284,7 @@ const HeadToHeadLoader: React.FC = () => {
                                             dominantBaseline="central"
                                             fill="rgba(255,255,255,0.12)"
                                             fontSize={11}
-                                            fontFamily="Titillium Web, sans-serif"
+                                            fontFamily={FONT_FAMILY}
                                         >
                                             {label}
                                         </text>
@@ -407,7 +399,7 @@ const HeadToHeadLoader: React.FC = () => {
                         <Paper
                             sx={{
                                 p: 4,
-                                bgcolor: '#1e1e1e',
+                                bgcolor: PAPER_BG,
                                 height: '100%',
                                 position: 'relative',
                                 overflow: 'hidden',
@@ -482,7 +474,7 @@ const HeadToHeadLoader: React.FC = () => {
                                             height: 10,
                                             borderRadius: 1,
                                             overflow: 'hidden',
-                                            bgcolor: '#333',
+                                            bgcolor: BORDER_SUBTLE,
                                         }}
                                     >
                                         <motion.div
@@ -578,27 +570,7 @@ const HeadToHeadLoader: React.FC = () => {
                                         border: '1px solid rgba(225,6,0,0.12)',
                                     }}
                                 >
-                                    <AnimatePresence mode="wait">
-                                        <motion.div
-                                            key={msgIdx}
-                                            initial={{ opacity: 0, y: 6 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -6 }}
-                                            transition={{ duration: 0.25 }}
-                                        >
-                                            <Typography
-                                                sx={{
-                                                    fontSize: '0.7rem',
-                                                    letterSpacing: '0.25em',
-                                                    color: 'rgba(255,255,255,0.4)',
-                                                    fontFamily: '"Titillium Web", sans-serif',
-                                                    textAlign: 'center',
-                                                }}
-                                            >
-                                                {STATUS_MESSAGES[msgIdx]}
-                                            </Typography>
-                                        </motion.div>
-                                    </AnimatePresence>
+                                    <CyclingStatusLabel messages={STATUS_MESSAGES} />
                                 </Box>
                             </Box>
                         </Paper>

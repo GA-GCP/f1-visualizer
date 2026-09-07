@@ -1,6 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { Box, Paper, Typography } from '@mui/material';
+import { BRAND_RED, FONT_FAMILY, PAPER_BG } from '../theme/tokens';
+import CyclingStatusLabel from './ui/CyclingStatusLabel';
 
 /* ── Status messages that cycle during loading ── */
 const STATUS_MESSAGES = [
@@ -12,7 +14,7 @@ const STATUS_MESSAGES = [
 ];
 
 /* ── Ghost chart line colors (matches real team palette) ── */
-const GHOST_COLORS = ['#e10600', '#00D2BE', '#0600EF', '#FF8700', '#006F62'];
+const GHOST_COLORS = [BRAND_RED, '#00D2BE', '#0600EF', '#FF8700', '#006F62'];
 
 /* ── SVG layout matching the real chart proportions ── */
 const SVG_W = 800;
@@ -53,16 +55,6 @@ function generateGhostPath(index: number): string {
  * transition from loading → loaded feels seamless.
  */
 const DataVaultLoader: React.FC = () => {
-    const [msgIdx, setMsgIdx] = useState(0);
-
-    useEffect(() => {
-        const id = setInterval(
-            () => setMsgIdx((p) => (p + 1) % STATUS_MESSAGES.length),
-            2200,
-        );
-        return () => clearInterval(id);
-    }, []);
-
     const paths = useMemo(
         () => GHOST_COLORS.map((_, i) => generateGhostPath(i)),
         [],
@@ -72,7 +64,7 @@ const DataVaultLoader: React.FC = () => {
         <Paper
             sx={{
                 p: 3,
-                bgcolor: '#1e1e1e',
+                bgcolor: PAPER_BG,
                 color: 'white',
                 overflow: 'hidden',
             }}
@@ -134,7 +126,7 @@ const DataVaultLoader: React.FC = () => {
                         textAnchor="middle"
                         fill="rgba(255,255,255,0.08)"
                         fontSize={11}
-                        fontFamily="Titillium Web, sans-serif"
+                        fontFamily={FONT_FAMILY}
                     >
                         LAP NUMBER
                     </text>
@@ -145,7 +137,7 @@ const DataVaultLoader: React.FC = () => {
                         textAnchor="middle"
                         fill="rgba(255,255,255,0.08)"
                         fontSize={11}
-                        fontFamily="Titillium Web, sans-serif"
+                        fontFamily={FONT_FAMILY}
                     >
                         LAP DURATION (s)
                     </text>
@@ -272,28 +264,7 @@ const DataVaultLoader: React.FC = () => {
                             border: '1px solid rgba(225,6,0,0.12)',
                         }}
                     >
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={msgIdx}
-                                initial={{ opacity: 0, y: 6 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -6 }}
-                                transition={{ duration: 0.25 }}
-                            >
-                                <Typography
-                                    sx={{
-                                        fontSize: '0.7rem',
-                                        letterSpacing: '0.25em',
-                                        color: 'rgba(255,255,255,0.4)',
-                                        fontFamily:
-                                            '"Titillium Web", sans-serif',
-                                        textAlign: 'center',
-                                    }}
-                                >
-                                    {STATUS_MESSAGES[msgIdx]}
-                                </Typography>
-                            </motion.div>
-                        </AnimatePresence>
+                        <CyclingStatusLabel messages={STATUS_MESSAGES} />
                     </Box>
                 </Box>
             </Box>

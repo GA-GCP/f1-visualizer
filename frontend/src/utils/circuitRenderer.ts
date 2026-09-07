@@ -1,4 +1,5 @@
 import { createProjection, type Bounds, type Projection } from './circuitProjection';
+import { BRAND_RED } from '../theme/tokens';
 
 export type DriverHistory = Record<number, { x: number; y: number }[]>;
 
@@ -28,7 +29,7 @@ export interface TraceContext {
 
 export const GHOST_STROKE = 'rgba(255, 255, 255, 0.1)';
 export const GHOST_DOT = 'rgba(255,255,255,0.3)';
-export const DEFAULT_TEAM_COLOUR = '#e10600';
+export const DEFAULT_TEAM_COLOUR = BRAND_RED;
 export const SELECTED_LINE_WIDTH = 4;
 export const GHOST_LINE_WIDTH = 1.5;
 export const SELECTED_DOT_RADIUS = 6;

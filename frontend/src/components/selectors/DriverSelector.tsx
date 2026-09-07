@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Autocomplete, TextField, Box, Typography } from '@mui/material';
 import type { DriverProfile } from '@/api/referenceApi.ts';
+import { PAPER_BG } from '../../theme/tokens';
 
 interface DriverSelectorProps {
     label: string;
@@ -32,7 +33,7 @@ const DriverSelector: React.FC<DriverSelectorProps> = ({ label, options, value, 
                     variant="outlined"
                     sx={{
                         '& .MuiOutlinedInput-root': {
-                            bgcolor: '#1e1e1e',
+                            bgcolor: PAPER_BG,
                             '& fieldset': { borderColor: '#444' },
                         }
                     }}

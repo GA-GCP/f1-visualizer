@@ -8,6 +8,7 @@ import { queries } from '../../api/queries';
 import type { DriverProfile } from '../../api/referenceApi';
 import { useUser } from '../../context/UserContext';
 import { createLogger } from '../../lib/logger';
+import { PAPER_BG } from '../../theme/tokens';
 
 const log = createLogger('settings');
 
@@ -69,7 +70,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
                     animate: { opacity: 1, scale: 1 },
                     exit: { opacity: 0, scale: 0.95 },
                     transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] as const },
-                    sx: { bgcolor: '#1e1e1e', color: 'white', minWidth: { xs: 'auto', sm: 400 }, border: '1px solid #333' }
+                    sx: { bgcolor: PAPER_BG, color: 'white', minWidth: { xs: 'auto', sm: 400 }, border: '1px solid #333' }
                 } as NonNullable<DialogProps['slotProps']>['paper']
             }}
         >

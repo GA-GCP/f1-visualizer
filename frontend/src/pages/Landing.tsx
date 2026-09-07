@@ -4,6 +4,7 @@ import { Box, Typography, Button } from '@mui/material';
 import { useAuth0 } from '@auth0/auth0-react';
 import SplashBackground from '../components/splash/SplashBackground';
 import SplashCircuit from '../components/splash/SplashCircuit';
+import { BRAND_GRADIENT, FONT_FAMILY } from '../theme/tokens';
 
 // --- Per-letter stagger text reveal (adapted from SplashScreen) ---
 
@@ -89,7 +90,7 @@ const Landing: React.FC = () => {
                                 variants={letterVariants}
                                 style={{
                                     display: 'inline-block',
-                                    fontFamily: '"Titillium Web", sans-serif',
+                                    fontFamily: FONT_FAMILY,
                                     fontWeight: 900,
                                     fontStyle: 'italic',
                                     fontSize: 'clamp(2.5rem, 6vw, 5rem)',
@@ -113,7 +114,7 @@ const Landing: React.FC = () => {
                 >
                     <Typography
                         sx={{
-                            fontFamily: '"Titillium Web", sans-serif',
+                            fontFamily: FONT_FAMILY,
                             // The clamp minimum, not the preferred value, is what
                             // renders on a phone: 1.2vw is 4.5px at 375px wide, so
                             // this bottomed out at 8.8px.
@@ -171,10 +172,10 @@ const Landing: React.FC = () => {
                                 py: 1.8,
                                 fontSize: '1rem',
                                 fontWeight: 700,
-                                fontFamily: '"Titillium Web", sans-serif',
+                                fontFamily: FONT_FAMILY,
                                 letterSpacing: '0.1em',
                                 textTransform: 'uppercase',
-                                background: 'linear-gradient(135deg, #e10600 0%, #ff3030 100%)',
+                                background: BRAND_GRADIENT,
                                 color: '#fff',
                                 border: '1px solid rgba(255,255,255,0.15)',
                                 borderRadius: 1,
@@ -213,7 +214,7 @@ const Landing: React.FC = () => {
                         sx={{
                             letterSpacing: '0.15em',
                             color: 'rgba(255,255,255,0.6)',
-                            fontFamily: '"Titillium Web", sans-serif',
+                            fontFamily: FONT_FAMILY,
                             fontSize: '0.75rem',
                         }}
                     >

@@ -12,6 +12,7 @@ import RouteFallback from '../ui/RouteFallback';
 import ErrorBoundary from '../ErrorBoundary';
 import { queryClient } from '../../api/queryClient';
 import {useAuth0} from "@auth0/auth0-react";
+import { BRAND_RED } from '../../theme/tokens';
 
 const LayoutMain: React.FC = () => {
     const location = useLocation();
@@ -236,7 +237,7 @@ const NavButton = ({ to, label, icon, currentPath }: { to: string, label: string
                         left: 0,
                         right: 0,
                         height: 2,
-                        background: '#e10600',
+                        background: BRAND_RED,
                     }}
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />

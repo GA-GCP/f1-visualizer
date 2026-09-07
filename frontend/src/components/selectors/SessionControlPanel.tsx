@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { queries } from '@/api/queries';
 import type { RaceSession, RaceEntryRoster } from '@/api/referenceApi';
 import { createLogger } from '../../lib/logger';
+import { CANVAS_BG } from '../../theme/tokens';
 
 const log = createLogger('session-control');
 
@@ -88,7 +89,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                         {...params}
                         label="Select Season..."
                         variant="outlined"
-                        sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#121212' } }}
+                        sx={{ '& .MuiOutlinedInput-root': { bgcolor: CANVAS_BG } }}
                     />
                 )}
             />
@@ -113,7 +114,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                         {...params}
                         label="Select Grand Prix..."
                         variant="outlined"
-                        sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#121212' } }}
+                        sx={{ '& .MuiOutlinedInput-root': { bgcolor: CANVAS_BG } }}
                     />
                 )}
             />

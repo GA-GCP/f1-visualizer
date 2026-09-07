@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Box, Typography } from '@mui/material';
 import SpeedIcon from '@mui/icons-material/Speed';
+import { BRAND_RED, FONT_FAMILY } from '../theme/tokens';
 
 /**
  * Static overlay shown over the CircuitTrace canvas when no session is active.
@@ -30,14 +31,14 @@ const CircuitTraceIdleOverlay: React.FC = () => (
             animate={{ opacity: [0.15, 0.4, 0.15], scale: [1, 1.05, 1] }}
             transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
         >
-            <SpeedIcon sx={{ fontSize: 64, color: '#e10600' }} />
+            <SpeedIcon sx={{ fontSize: 64, color: BRAND_RED }} />
         </motion.div>
 
         {/* Primary instructional text */}
         <Typography
             sx={{
                 mt: 2,
-                fontFamily: '"Titillium Web", sans-serif',
+                fontFamily: FONT_FAMILY,
                 fontSize: '0.75rem',
                 letterSpacing: '0.2em',
                 color: 'rgba(255,255,255,0.6)',
@@ -52,7 +53,7 @@ const CircuitTraceIdleOverlay: React.FC = () => (
         <Typography
             sx={{
                 mt: 0.5,
-                fontFamily: '"Titillium Web", sans-serif',
+                fontFamily: FONT_FAMILY,
                 fontSize: '0.75rem',
                 letterSpacing: '0.15em',
                 color: 'rgba(255,255,255,0.15)',

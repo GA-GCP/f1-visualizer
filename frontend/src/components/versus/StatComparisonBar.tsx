@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { motion } from 'framer-motion';
 import type { DriverProfile } from '@/api/referenceApi.ts';
+import { BORDER_SUBTLE } from '../../theme/tokens';
 
 type NumericStatMetric = 'wins' | 'podiums' | 'totalPoints' | 'totalRaces' | 'bestChampionshipFinish';
 
@@ -57,7 +58,7 @@ const StatComparisonBar: React.FC<StatComparisonBarProps> = ({ label, driverA, d
                 other's geometry too. Inside a 10 px `overflow: hidden` track the
                 result is visually identical. `key` re-runs the reveal when the
                 pairing changes. */}
-            <Box sx={{ position: 'relative', height: 10, borderRadius: 1, overflow: 'hidden', bgcolor: '#333' }}>
+            <Box sx={{ position: 'relative', height: 10, borderRadius: 1, overflow: 'hidden', bgcolor: BORDER_SUBTLE }}>
                 <motion.div
                     key={`${driverA.id}-a`}
                     initial={{ scaleX: 0 }}

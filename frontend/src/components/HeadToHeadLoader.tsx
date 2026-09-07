@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Box, Container, Grid, Paper, Typography } from '@mui/material';
 
 /* ── Status messages that cycle during loading ── */
@@ -61,6 +61,7 @@ const GHOST_STATS = [
  * so the transition from loading → loaded feels seamless.
  */
 const HeadToHeadLoader: React.FC = () => {
+    const reduceMotion = useReducedMotion();
     const [msgIdx, setMsgIdx] = useState(0);
 
     useEffect(() => {
@@ -468,10 +469,16 @@ const HeadToHeadLoader: React.FC = () => {
                                         />
                                     </Box>
 
-                                    {/* Animated bar */}
+                                    {/* Animated bar.
+
+                                        Revealed with `scaleX` on absolutely-positioned
+                                        halves rather than by animating `width`: these ten
+                                        tweens repeat forever, and `width` is a layout
+                                        property framer must drive from JS, so the page was
+                                        in continuous layout for its whole loading state. */}
                                     <Box
                                         sx={{
-                                            display: 'flex',
+                                            position: 'relative',
                                             height: 10,
                                             borderRadius: 1,
                                             overflow: 'hidden',
@@ -479,30 +486,48 @@ const HeadToHeadLoader: React.FC = () => {
                                         }}
                                     >
                                         <motion.div
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${stat.splitA * 100}%` }}
+                                            initial={{ scaleX: 0 }}
+                                            animate={reduceMotion ? { scaleX: 1 } : { scaleX: [0, 1] }}
                                             transition={{
                                                 duration: 2,
                                                 delay: 0.5 + idx * 0.4,
                                                 ease: [0.25, 0.1, 0.25, 1],
-                                                repeat: Infinity,
+                                                repeat: reduceMotion ? 0 : Infinity,
                                                 repeatType: 'reverse',
                                                 repeatDelay: 2,
                                             }}
-                                            style={{ background: GHOST_A, opacity: 0.25 }}
+                                            style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                bottom: 0,
+                                                left: 0,
+                                                width: `${stat.splitA * 100}%`,
+                                                transformOrigin: 'left',
+                                                background: GHOST_A,
+                                                opacity: 0.25,
+                                            }}
                                         />
                                         <motion.div
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${stat.splitB * 100}%` }}
+                                            initial={{ scaleX: 0 }}
+                                            animate={reduceMotion ? { scaleX: 1 } : { scaleX: [0, 1] }}
                                             transition={{
                                                 duration: 2,
                                                 delay: 0.5 + idx * 0.4,
                                                 ease: [0.25, 0.1, 0.25, 1],
-                                                repeat: Infinity,
+                                                repeat: reduceMotion ? 0 : Infinity,
                                                 repeatType: 'reverse',
                                                 repeatDelay: 2,
                                             }}
-                                            style={{ background: GHOST_B, opacity: 0.25 }}
+                                            style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                bottom: 0,
+                                                left: `${stat.splitA * 100}%`,
+                                                width: `${stat.splitB * 100}%`,
+                                                transformOrigin: 'right',
+                                                background: GHOST_B,
+                                                opacity: 0.25,
+                                            }}
                                         />
                                     </Box>
                                 </Box>
@@ -545,8 +570,11 @@ const HeadToHeadLoader: React.FC = () => {
                                         px: 3,
                                         py: 1.5,
                                         borderRadius: 1,
-                                        bgcolor: 'rgba(0,0,0,0.55)',
-                                        backdropFilter: 'blur(4px)',
+                                        // Opaque rather than blurred: this chip sits
+                                        // over the ghost content's perpetual
+                                        // animations, so a backdrop-filter re-sampled
+                                        // and re-blurred them every frame.
+                                        bgcolor: 'rgba(0,0,0,0.85)',
                                         border: '1px solid rgba(225,6,0,0.12)',
                                     }}
                                 >

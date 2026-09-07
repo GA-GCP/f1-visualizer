@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Routes, Route, Outlet, BrowserRouter, useNavigate, Navigate } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 import LayoutMain from './components/layout/LayoutMain';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AxiosAuthInterceptor } from './auth/AuthHandler';
@@ -38,20 +38,38 @@ const broadcastTheme = createTheme({
         body1: { fontSize: '1.1rem' },
     },
     shape: { borderRadius: 4 },
+    // MUI's own transitions (Dialog Fade, Autocomplete Grow, Slider thumb,
+    // ripples) follow the OS preference. MUI's value is 'system'; framer's
+    // equivalent is <MotionConfig reducedMotion="user"> below.
+    motion: { reducedMotion: 'system' },
     components: {
         MuiCssBaseline: {
             styleOverrides: {
                 body: {
-                    background: 'radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000000 100%)',
-                    backgroundAttachment: 'fixed',
                     minHeight: '100vh',
+                    backgroundColor: '#000000',
+                    // The gradient lives on a fixed pseudo-element rather than on
+                    // the body with `background-attachment: fixed`, which is a
+                    // documented Chromium scroll-repaint trigger: it re-rasterised
+                    // a viewport-sized gradient on every scroll tick, and moved
+                    // every blurred surface relative to its backdrop as it did so.
+                    '&::before': {
+                        content: '""',
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: -1,
+                        pointerEvents: 'none',
+                        background: 'radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000000 100%)',
+                    },
                 },
             },
         },
         MuiPaper: {
             styleOverrides: {
                 root: {
-                    backdropFilter: 'blur(12px)',
+                    // No backdropFilter: every Paper in the app overrides this
+                    // colour with an opaque one, so the blurred backdrop was
+                    // computed on all 15 of them and then covered up entirely.
                     backgroundColor: 'rgba(30, 30, 30, 0.6)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
@@ -61,6 +79,10 @@ const broadcastTheme = createTheme({
         MuiAppBar: {
             styleOverrides: {
                 root: {
+                    // Kept deliberately: the bar is genuinely translucent, so this
+                    // is the only blur in the app the user can actually see. It is
+                    // also much cheaper now that the backdrop behind it no longer
+                    // re-rasterises on every scroll tick.
                     background: 'rgba(0, 0, 0, 0.8)',
                     backdropFilter: 'blur(20px)',
                     borderBottom: '2px solid #e10600',
@@ -170,12 +192,13 @@ const RequiredAuth: React.FC = () => {
 // --- LANDING GATE (public root route) ---
 // Shows the Landing page for unauthenticated visitors; redirects to /dashboard if already logged in.
 const LandingGate: React.FC = () => {
-    const { isAuthenticated, isLoading } = useAuth0();
+    const { isAuthenticated } = useAuth0();
 
-    if (isLoading) {
-        return null;
-    }
-
+    // Deliberately NOT gated on `isLoading`.  Auth0's loading flag exists to
+    // gate *protected* content; this page has none, so waiting for
+    // checkSession() to finish its iframe round-trip to the tenant just holds a
+    // blank screen on the only public page.  Render immediately and let the
+    // redirect happen underneath once the session resolves as authenticated.
     if (isAuthenticated) {
         return <Navigate to="/dashboard" replace />;
     }
@@ -225,6 +248,9 @@ function App() {
     return (
         <ThemeProvider theme={broadcastTheme}>
             <CssBaseline />
+            {/* Every framer animation in the tree respects prefers-reduced-motion:
+                transform and layout animations are dropped, opacity is kept. */}
+            <MotionConfig reducedMotion="user">
             <BrowserRouter>
                 <Auth0ProviderWithNavigate>
                     <AxiosAuthInterceptor />
@@ -246,6 +272,7 @@ function App() {
                     </ErrorBoundary>
                 </Auth0ProviderWithNavigate>
             </BrowserRouter>
+            </MotionConfig>
         </ThemeProvider>
     );
 }

@@ -1,6 +1,11 @@
 import '@testing-library/jest-dom/vitest';
+import * as axeMatchers from 'vitest-axe/matchers';
+import { expect } from 'vitest';
 import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+
+// axe assertions: `expect(await axe(container)).toHaveNoViolations()`
+expect.extend(axeMatchers);
 
 // ResizeObserver mock (jsdom doesn't support it)
 // Uses a real class so vi.clearAllMocks() in test files won't break construction

@@ -15,7 +15,13 @@ export const broadcastTheme = createTheme({
     focusVisible: { outlineColor: '#ffffff', outlineWidth: 2, outlineOffset: 2 },
     palette: {
         mode: 'dark',
-        primary: { main: '#e10600' },
+        primary: {
+            main: '#e10600',
+            // #e10600 is only 3.8:1 on the dark surfaces, which is fine for
+            // large headings but not for body-sized text. Use `primary.light`
+            // wherever brand red carries small copy.
+            light: '#ff3b36',
+        },
         secondary: { main: '#ffffff' },
         background: {
             default: '#101010',
@@ -24,6 +30,10 @@ export const broadcastTheme = createTheme({
         text: {
             primary: '#ffffff',
             secondary: 'rgba(255,255,255,0.7)',
+            // 4.6:1 on #121212 — the floor for anything that is real copy
+            // rather than decoration. Ad-hoc alphas around 0.35 were being used
+            // for readable text at roughly 3:1.
+            disabled: 'rgba(255,255,255,0.6)',
         },
     },
     typography: {

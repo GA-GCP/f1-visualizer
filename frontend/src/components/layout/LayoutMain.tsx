@@ -1,4 +1,4 @@
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, Container, Button, IconButton, Tooltip } from '@mui/material';
 import { Link as RouterLink, useLocation, useOutlet } from 'react-router-dom';
 import { AnimatePresence, motion, LayoutGroup } from 'framer-motion';
@@ -27,6 +27,20 @@ const LayoutMain: React.FC = () => {
     const { logout } = useAuth0();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+    // Navigation changed the content but left focus where it was — on a nav
+    // button — so a screen reader announced nothing and a keyboard user carried
+    // on tabbing through the header. Moving focus to the content landmark is
+    // what tells both that the page changed.
+    const mainRef = useRef<HTMLElement>(null);
+    const isFirstRender = useRef(true);
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false; // do not steal focus on initial load
+            return;
+        }
+        mainRef.current?.focus({ preventScroll: true });
+    }, [location.pathname]);
+
     const handleLogout = () => {
         // Log out and redirect back to the app root
         logout({ logoutParams: { returnTo: window.location.origin } });
@@ -34,6 +48,27 @@ const LayoutMain: React.FC = () => {
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+            {/* Keyboard users otherwise tab through the whole nav on every page.
+                Visually hidden until focused. */}
+            <Box
+                component="a"
+                href="#main"
+                sx={{
+                    position: 'absolute',
+                    left: -9999,
+                    top: 8,
+                    zIndex: 2000,
+                    px: 2,
+                    py: 1,
+                    bgcolor: 'background.paper',
+                    color: 'text.primary',
+                    borderRadius: 1,
+                    '&:focus': { left: 8 },
+                }}
+            >
+                Skip to content
+            </Box>
+
             {/* 1. The "Broadcast Ticker" (Header) */}
             <AppBar position="sticky">
                 <Container maxWidth="xl">
@@ -55,14 +90,23 @@ const LayoutMain: React.FC = () => {
                             F1 VISUALIZER
                         </Typography>
 
-                        <LayoutGroup>
-                            <NavButton to="/dashboard" label="Live Console" icon={<SpeedIcon />} currentPath={location.pathname} />
-                            <NavButton to="/historical" label="Data Vault" icon={<StorageIcon />} currentPath={location.pathname} />
-                            <NavButton to="/versus" label="Head-to-Head" icon={<CompareArrowsIcon />} currentPath={location.pathname} />
-                        </LayoutGroup>
+                        {/* The links lived in generic elements, so there was no
+                            navigation landmark to jump to and no indication of
+                            which one was current. */}
+                        <Box component="nav" aria-label="Primary" sx={{ display: 'flex' }}>
+                            <LayoutGroup>
+                                <NavButton to="/dashboard" label="Live Console" icon={<SpeedIcon />} currentPath={location.pathname} />
+                                <NavButton to="/historical" label="Data Vault" icon={<StorageIcon />} currentPath={location.pathname} />
+                                <NavButton to="/versus" label="Head-to-Head" icon={<CompareArrowsIcon />} currentPath={location.pathname} />
+                            </LayoutGroup>
+                        </Box>
 
                         <Tooltip title="User Preferences">
-                            <IconButton onClick={() => setIsSettingsOpen(true)} sx={{ ml: 2, color: 'text.secondary', '&:hover': { color: 'primary.main' } }}>
+                            <IconButton
+                                onClick={() => setIsSettingsOpen(true)}
+                                aria-label="User preferences"
+                                sx={{ ml: 2, color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
+                            >
                                 <SettingsIcon />
                             </IconButton>
                         </Tooltip>
@@ -70,6 +114,7 @@ const LayoutMain: React.FC = () => {
                         <Tooltip title="Secure Logout">
                             <IconButton
                                 onClick={handleLogout}
+                                aria-label="Log out"
                                 sx={{ ml: 2, color: 'text.secondary', '&:hover': { color: 'error.main' } }}
                             >
                                 <LogoutIcon />
@@ -82,7 +127,15 @@ const LayoutMain: React.FC = () => {
             <UserSettingsModal open={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
             {/* 2. Content Area */}
-            <Container maxWidth="xl" sx={{ flexGrow: 1, py: 4, position: 'relative', zIndex: 1 }}>
+            <Container
+                component="main"
+                id="main"
+                ref={mainRef}
+                // Programmatically focusable, but not a tab stop of its own.
+                tabIndex={-1}
+                maxWidth="xl"
+                sx={{ flexGrow: 1, py: 4, position: 'relative', zIndex: 1, outline: 'none' }}
+            >
                 {/* popLayout, not wait: with `wait` the incoming route could not
                     mount — and so could not begin fetching — until the 250 ms
                     exit had finished, leaving the container empty for a frame
@@ -117,8 +170,10 @@ const LayoutMain: React.FC = () => {
             </Container>
 
             {/* 3. Footer */}
-            <Box component="footer" sx={{ py: 3, textAlign: 'center', opacity: 0.5 }}>
-                <Typography variant="caption" sx={{ letterSpacing: '0.1em' }}>
+            <Box component="footer" sx={{ py: 3, textAlign: 'center' }}>
+                {/* The 0.5 opacity wrapper this replaces put the text below the
+                    4.5:1 contrast minimum. */}
+                <Typography variant="caption" color="text.disabled" sx={{ letterSpacing: '0.1em' }}>
                     UNOFFICIAL TELEMETRY TOOL // F1 23-25
                 </Typography>
             </Box>
@@ -133,9 +188,14 @@ const NavButton = ({ to, label, icon, currentPath }: { to: string, label: string
         <Button
             component={RouterLink}
             to={to}
+            // MUI's Button does not set this from RouterLink, so the current
+            // page was indicated by colour alone.
+            aria-current={isActive ? 'page' : undefined}
             startIcon={icon}
             sx={{
-                mx: 1,
+                mx: { xs: 0.25, md: 1 },
+                minWidth: { xs: 44, md: 64 },
+                '& .MuiButton-startIcon': { mr: { xs: 0, md: 1 }, ml: 0 },
                 color: isActive ? 'white' : 'text.secondary',
                 position: 'relative',
                 borderRadius: 0,
@@ -145,7 +205,25 @@ const NavButton = ({ to, label, icon, currentPath }: { to: string, label: string
                 }
             }}
         >
-            {label}
+            {/* Icon-only below md: three labelled buttons plus the brand and two
+                icon buttons overflowed a 375px bar.
+
+                One element, hidden visually rather than removed, so the button
+                keeps the same accessible name at every width — rendering the
+                label twice would have put two copies in the DOM. */}
+            <Box
+                component="span"
+                sx={{
+                    position: { xs: 'absolute', md: 'static' },
+                    width: { xs: '1px', md: 'auto' },
+                    height: { xs: '1px', md: 'auto' },
+                    overflow: { xs: 'hidden', md: 'visible' },
+                    clipPath: { xs: 'inset(50%)', md: 'none' },
+                    whiteSpace: { xs: 'nowrap', md: 'normal' },
+                }}
+            >
+                {label}
+            </Box>
             {isActive && (
                 <motion.div
                     layoutId="nav-underline"

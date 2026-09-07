@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, CircularProgress, Alert } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, CircularProgress, Alert , useMediaQuery, useTheme } from '@mui/material';
 import type { DialogProps } from '@mui/material';
 import { motion } from 'framer-motion';
 import DriverSelector from '../selectors/DriverSelector';
@@ -16,6 +16,8 @@ interface UserSettingsModalProps {
 }
 
 const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) => {
+    const theme = useTheme();
+    const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
     const { userProfile, updatePreferences } = useUser();
     // `null` means "not fetched yet", so the absence of data *is* the loading
     // state. That removes the need to synchronously flip a boolean inside the
@@ -76,6 +78,9 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
         <Dialog
             open={open}
             onClose={onClose}
+            // minWidth: 400 overflowed a 375px viewport horizontally. Full
+            // screen below `sm` is the standard answer and avoids the scroll.
+            fullScreen={isSmallScreen}
             slots={{ paper: motion.div }}
             slotProps={{
                 paper: {
@@ -83,11 +88,13 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
                     animate: { opacity: 1, scale: 1 },
                     exit: { opacity: 0, scale: 0.95 },
                     transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] as const },
-                    sx: { bgcolor: '#1e1e1e', color: 'white', minWidth: 400, border: '1px solid #333' }
+                    sx: { bgcolor: '#1e1e1e', color: 'white', minWidth: { xs: 'auto', sm: 400 }, border: '1px solid #333' }
                 } as NonNullable<DialogProps['slotProps']>['paper']
             }}
         >
-            <DialogTitle sx={{ borderBottom: '1px solid #333', pb: 2 }}>⚙️ USER PREFERENCES</DialogTitle>
+            <DialogTitle sx={{ borderBottom: '1px solid #333', pb: 2 }}>
+                <span aria-hidden="true">⚙️</span> USER PREFERENCES
+            </DialogTitle>
             <DialogContent sx={{ pt: 3 }}>
                 {errorMsg && (
                     <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert>

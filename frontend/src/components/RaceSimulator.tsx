@@ -50,6 +50,11 @@ const RaceSimulator: React.FC = () => {
     } | null>(null);
 
     const { userProfile } = useUser();
+    // Depend on the primitive, not the profile object: UserProvider hands back a
+    // new object on every render, so keying this effect on `userProfile` re-ran
+    // the whole driver bootstrap — and reset the selection out from under the
+    // user — whenever anything else in the profile changed identity.
+    const favouriteDriverCode = userProfile?.preferences?.favoriteDriver;
 
     useEffect(() => {
         let isMounted = true;
@@ -61,9 +66,10 @@ const RaceSimulator: React.FC = () => {
                 if (isMounted) {
                     setDrivers(data);
                     if (data.length > 0) {
-                        const favCode = userProfile?.preferences?.favoriteDriver;
-                        const defaultDriver = data.find(d => d.code === favCode) || data[0];
-                        setSelectedDriver(defaultDriver);
+                        const defaultDriver = data.find(d => d.code === favouriteDriverCode) || data[0];
+                        // Only seed the default; never clobber a driver the user
+                        // has already picked.
+                        setSelectedDriver(prev => prev ?? defaultDriver);
                     }
                 }
             } catch (err) {
@@ -80,7 +86,7 @@ const RaceSimulator: React.FC = () => {
         return () => {
             isMounted = false; // Cleanup to prevent state updates on unmounted components
         };
-    }, [userProfile]);
+    }, [favouriteDriverCode]);
 
     useEffect(() => { isInitializingRef.current = isInitializing; }, [isInitializing]);
     useEffect(() => { sessionLapsRef.current = sessionLaps; }, [sessionLaps]);
@@ -195,8 +201,8 @@ const RaceSimulator: React.FC = () => {
         <Box sx={{ p: 4, bgcolor: '#121212', minHeight: '100vh', color: 'white' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
                 <Box>
-                    <Typography variant="h4" sx={{ fontWeight: 'bold', letterSpacing: 1 }}>
-                        🏎️ RACE ENGINEER CONSOLE
+                    <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', letterSpacing: 1 }}>
+                        <span aria-hidden="true">🏎️</span> RACE ENGINEER CONSOLE
                     </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1 }}>
@@ -249,7 +255,7 @@ const RaceSimulator: React.FC = () => {
                                 minHeight: '200px',
                                 borderTop: `4px solid ${selectedDriver?.teamColor || '#333'}`,
                             }}>
-                                <Typography variant="h6" color="secondary" sx={{ mb: 2 }}>
+                                <Typography variant="h6" component="h2" color="secondary" sx={{ mb: 2 }}>
                                     LIVE TELEMETRY
                                 </Typography>
                                 {lastTelemetry ? (
@@ -257,7 +263,7 @@ const RaceSimulator: React.FC = () => {
                                         {currentLap && (
                                             <motion.div variants={itemVariants}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                                                    <Typography variant="h6" sx={{
+                                                    <Typography variant="h6" component="p" sx={{
                                                         fontFamily: '"Titillium Web", sans-serif',
                                                         fontWeight: 700,
                                                         letterSpacing: '0.05em',
@@ -300,33 +306,33 @@ const RaceSimulator: React.FC = () => {
                                             </motion.div>
                                         )}
                                         <motion.div variants={itemVariants}>
-                                            <Typography variant="h2" sx={{ fontWeight: 'bold', color: 'white' }}>
+                                            <Typography variant="h2" component="p" sx={{ fontWeight: 'bold', color: 'white' }}>
                                                 {lastTelemetry.speed} <span style={{ fontSize: '1.5rem', color: '#666' }}>KM/H</span>
                                             </Typography>
                                         </motion.div>
-                                        <Grid container spacing={2} sx={{ mt: 2 }}>
+                                        <Grid container component="dl" spacing={2} sx={{ mt: 2, mb: 0 }}>
                                             <Grid size={3}>
                                                 <motion.div variants={itemVariants}>
-                                                    <Typography variant="caption" color="text.secondary">RPM</Typography>
-                                                    <Typography variant="h6">{lastTelemetry.rpm}</Typography>
+                                                    <Typography variant="caption" component="dt" color="text.secondary">RPM</Typography>
+                                                    <Typography variant="h6" component="dd" sx={{ m: 0 }}>{lastTelemetry.rpm}</Typography>
                                                 </motion.div>
                                             </Grid>
                                             <Grid size={3}>
                                                 <motion.div variants={itemVariants}>
-                                                    <Typography variant="caption" color="text.secondary">GEAR</Typography>
-                                                    <Typography variant="h6">{lastTelemetry.gear}</Typography>
+                                                    <Typography variant="caption" component="dt" color="text.secondary">GEAR</Typography>
+                                                    <Typography variant="h6" component="dd" sx={{ m: 0 }}>{lastTelemetry.gear}</Typography>
                                                 </motion.div>
                                             </Grid>
                                             <Grid size={3}>
                                                 <motion.div variants={itemVariants}>
-                                                    <Typography variant="caption" color="text.secondary">THROTTLE</Typography>
-                                                    <Typography variant="h6">{lastTelemetry.throttle}%</Typography>
+                                                    <Typography variant="caption" component="dt" color="text.secondary">THROTTLE</Typography>
+                                                    <Typography variant="h6" component="dd" sx={{ m: 0 }}>{lastTelemetry.throttle}%</Typography>
                                                 </motion.div>
                                             </Grid>
                                             <Grid size={3}>
                                                 <motion.div variants={itemVariants}>
-                                                    <Typography variant="caption" color="text.secondary">BRAKE</Typography>
-                                                    <Typography variant="h6" sx={{ color: lastTelemetry.brake > 0 ? '#ff4444' : 'white' }}>
+                                                    <Typography variant="caption" component="dt" color="text.secondary">BRAKE</Typography>
+                                                    <Typography variant="h6" component="dd" sx={{ m: 0, color: lastTelemetry.brake > 0 ? '#ff4444' : 'white' }}>
                                                         {lastTelemetry.brake}%
                                                     </Typography>
                                                 </motion.div>

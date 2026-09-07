@@ -22,11 +22,13 @@ describe('MediaController', () => {
 
         // Since isPlaying defaults to true, the Pause icon (used to trigger a pause) should be in the DOM
         expect(screen.getByTestId('PauseIcon')).toBeInTheDocument();
+        // The accessible name is the contract, not the icon test id.
+        expect(screen.getByRole('button', { name: /pause simulation/i })).toBeInTheDocument();
     });
 
     it('toggles play/pause and calls the respective API endpoints', async () => {
         render(<MediaController />);
-        const toggleBtn = screen.getByRole('button');
+        const toggleBtn = screen.getByRole('button', { name: /pause simulation/i });
 
         // 1. Wrap the async interaction in act()
         await act(async () => {
@@ -40,6 +42,7 @@ describe('MediaController', () => {
         // The Pause icon should switch to the Play icon.
         await waitFor(() => {
             expect(screen.getByTestId('PlayArrowIcon')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /play simulation/i })).toBeInTheDocument();
         });
 
         // 3. Wrap the second async interaction in act()

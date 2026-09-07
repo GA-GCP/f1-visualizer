@@ -1,9 +1,14 @@
 import React from 'react';
 import { Box, Typography, Button, Stack } from '@mui/material';
 import { motion } from 'framer-motion';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('error-boundary');
 
 const MAX_AUTO_RETRIES = 3;
 const AUTO_RETRY_DELAY_MS = 2000;
+/** How long the tree must render cleanly before the retry budget is restored. */
+const STABLE_RENDER_MS = 30_000;
 
 interface ErrorBoundaryState {
     hasError: boolean;
@@ -23,6 +28,7 @@ interface ErrorBoundaryState {
  */
 class ErrorBoundary extends React.Component<React.PropsWithChildren, ErrorBoundaryState> {
     private autoRetryTimer: ReturnType<typeof setTimeout> | null = null;
+    private recoveryTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor(props: React.PropsWithChildren) {
         super(props);
@@ -34,7 +40,7 @@ class ErrorBoundary extends React.Component<React.PropsWithChildren, ErrorBounda
     }
 
     componentDidCatch(error: Error, info: React.ErrorInfo) {
-        console.error('[ErrorBoundary] Uncaught render error:', error, info.componentStack);
+        log.error('Uncaught render error', error, info.componentStack);
 
         // Auto-retry: clear the error state after a delay so React
         // re-renders the child tree.  This gives async resources
@@ -51,9 +57,25 @@ class ErrorBoundary extends React.Component<React.PropsWithChildren, ErrorBounda
         }
     }
 
+    componentDidUpdate(_: React.PropsWithChildren, previous: ErrorBoundaryState) {
+        // Forgive past errors once the tree has rendered cleanly again.
+        //
+        // retryCount only ever increased, so three transient errors spread over
+        // a long session permanently disabled auto-recovery — the fourth blip
+        // stranded the user on the error screen.
+        if (previous.hasError && !this.state.hasError && this.state.retryCount > 0) {
+            this.recoveryTimer = setTimeout(() => {
+                this.setState({ retryCount: 0 });
+            }, STABLE_RENDER_MS);
+        }
+    }
+
     componentWillUnmount() {
         if (this.autoRetryTimer) {
             clearTimeout(this.autoRetryTimer);
+        }
+        if (this.recoveryTimer) {
+            clearTimeout(this.recoveryTimer);
         }
     }
 

@@ -3,6 +3,9 @@ import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
 import { fetchCurrentUser, updateUserPreferences } from '../api/userApi';
 import type { UserProfile, UserPreferences } from '../types/user';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('user');
 
 interface UserContextType {
     userProfile: UserProfile | null;
@@ -34,22 +37,22 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     if (axios.isAxiosError(err)) {
                         const status = err.response?.status;
                         if (status === 404) {
-                            console.warn(
+                            log.warn(
                                 "[UserContext] User Service returned 404. " +
                                 "The service may not be running or the user may not exist yet."
                             );
                         } else if (status === 400) {
-                            console.error(
+                            log.error(
                                 "[UserContext] User Service returned 400. " +
                                 "JWT may be missing the 'email' claim. " +
                                 "Ensure the Auth0 Post-Login Action enriches the access token.",
                                 err.response?.data
                             );
                         } else {
-                            console.error("[UserContext] Failed to load user profile:", status, err.response?.data);
+                            log.error("[UserContext] Failed to load user profile:", status, err.response?.data);
                         }
                     } else {
-                        console.error("[UserContext] Failed to load user profile:", err);
+                        log.error("[UserContext] Failed to load user profile:", err);
                     }
                     if (isMounted) setError('service_unavailable');
                 }
@@ -71,7 +74,11 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const updatedProfile = await updateUserPreferences(newPrefs);
             setUserProfile(updatedProfile);
         } catch (err) {
-            console.error("Failed to update user preferences:", err);
+            log.error('Failed to update user preferences', err);
+            // Rethrow. Swallowing this made the settings modal's own failure
+            // alert unreachable: the dialog closed as though the save had
+            // succeeded, and the preference silently did not persist.
+            throw err;
         }
     };
 

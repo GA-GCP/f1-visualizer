@@ -6,6 +6,9 @@ import StopIcon from '@mui/icons-material/Stop';
 import { sendIngestionCommand } from '@/api/ingestionApi.ts';
 import { fetchYears, fetchSessionsByYear, fetchSessionDrivers, type RaceSession, type RaceEntryRoster } from '@/api/referenceApi';
 import { isRequestCancelled } from '@/api/apiClient';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('session-control');
 
 interface SessionControlPanelProps {
     onStreamStarted: (sessionKey: number, mode: 'LIVE' | 'SIMULATION', session: RaceSession) => void;
@@ -48,7 +51,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
             })
             .catch(error => {
                 if (isRequestCancelled(error)) return;
-                console.error('Failed to load years', error);
+                log.error('Failed to load years', error);
                 setIsLoadingYears(false);
             });
         return () => controller.abort();
@@ -68,7 +71,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
             })
             .catch(error => {
                 if (isRequestCancelled(error)) return;
-                console.error('Failed to load sessions for year', error);
+                log.error('Failed to load sessions for year', error);
                 // Recording an empty result clears the derived loading state.
                 setSessionsForYear({ year: selectedYear, sessions: [] });
             });
@@ -84,7 +87,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
             .then(roster => onSessionSelected?.(roster))
             .catch(error => {
                 if (!isRequestCancelled(error)) {
-                    console.error('Failed to load session drivers', error);
+                    log.error('Failed to load session drivers', error);
                 }
             });
         return () => controller.abort();
@@ -98,7 +101,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
             await sendIngestionCommand({ mode: 'SIMULATION', sessionKey: selectedSession.sessionKey });
             onStreamStarted(selectedSession.sessionKey, 'SIMULATION', selectedSession);
         } catch (error) {
-            console.error(error);
+            log.error('Failed to start the simulation', error);
             onError?.('SIMULATION FAILED: Could not start historical replay.');
         } finally {
             setIsLoading(false);

@@ -6,6 +6,9 @@ import DriverSelector from '../selectors/DriverSelector';
 import { fetchDrivers, type DriverProfile } from '../../api/referenceApi';
 import { isRequestCancelled } from '../../api/apiClient';
 import { useUser } from '../../context/UserContext';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('settings');
 
 interface UserSettingsModalProps {
     open: boolean;
@@ -39,7 +42,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
             })
             .catch(error => {
                 if (isRequestCancelled(error)) return;
-                console.error('Failed to load drivers', error);
+                log.error('Failed to load drivers', error);
                 // Leaving `drivers` null would strand the spinner.
                 setDrivers([]);
             });
@@ -62,7 +65,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
             });
             onClose();
         } catch (e) {
-            console.error(e);
+            log.error('Failed to save preferences', e);
             setErrorMsg('Failed to save preferences. Please try again.');
         } finally {
             setIsSaving(false);

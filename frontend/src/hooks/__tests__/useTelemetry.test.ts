@@ -2,6 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useTelemetry } from '../useTelemetry';
 import { stompClient } from '@/api/stompClient.ts';
+import { setConnectionStatus, resetConnectionStatus } from '@/realtime/connectionStatus';
 
 vi.mock('../../api/stompClient', () => ({
     stompClient: {
@@ -24,6 +25,10 @@ const packet = (over: Record<string, number> = {}) => ({
 describe('useTelemetry Hook', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        // Subscription is driven by the client's published state now, not by a
+        // 500 ms poller reading stompClient.connected.
+        resetConnectionStatus();
+        setConnectionStatus('connected');
 
         // Mock requestAnimationFrame to be asynchronous (approx 60fps)
         // This breaks the synchronous infinite loop that causes the call stack to overflow.

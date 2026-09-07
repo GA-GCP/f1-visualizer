@@ -23,8 +23,18 @@ function getPhase(elapsed: number): SplashPhase {
     return 'exit';
 }
 
-const TOTAL_DURATION = 7000;
-const PROGRESS_DURATION = 6000;
+/**
+ * The brand moment is worth protecting, so the splash never ends before this —
+ * otherwise a warm cache would flash it away in 200 ms.
+ */
+const BRAND_MINIMUM = 2000;
+
+/**
+ * Hard cap. Past this the splash ends whether the prefetch has settled or not:
+ * the app is mounted underneath and every page reports its own loading state,
+ * so a slow network should not also mean a longer gate.
+ */
+const MAX_DURATION = 7000;
 
 /**
  * Read at mount rather than at module evaluation.  As a module-level constant
@@ -40,19 +50,39 @@ function readPrefersReducedMotion(): boolean {
     );
 }
 
-export function useSplashSequence(onComplete: () => void): SplashSequenceState {
+export interface SplashSequenceOptions {
+    /** 0..1 — how much of the startup prefetch has settled. */
+    readiness: number;
+    /** Set when the user asks to skip; ends the sequence on the next frame. */
+    skipped?: boolean;
+}
+
+export function useSplashSequence(
+    onComplete: () => void,
+    { readiness, skipped = false }: SplashSequenceOptions,
+): SplashSequenceState {
     const [prefersReducedMotion] = useState(readPrefersReducedMotion);
 
     const [state, setState] = useState<SplashSequenceState>(() =>
         prefersReducedMotion
-            ? { phase: 'hold', progress: 1, elapsed: TOTAL_DURATION }
-            : { phase: 'background', progress: 0, elapsed: 0 },
+            ? { phase: 'hold', progress: readiness, elapsed: MAX_DURATION }
+            : { phase: 'background', progress: readiness, elapsed: 0 },
     );
 
     const onCompleteRef = useRef(onComplete);
     useEffect(() => {
         onCompleteRef.current = onComplete;
     });
+
+    // Read inside the rAF loop, which must not be restarted when these change.
+    // Written from an effect, not during render — mutating a ref while
+    // rendering is not allowed, and the one-frame lag is immaterial at 60 Hz.
+    const readinessRef = useRef(readiness);
+    const skippedRef = useRef(skipped);
+    useEffect(() => {
+        readinessRef.current = readiness;
+        skippedRef.current = skipped;
+    }, [readiness, skipped]);
 
     // Reduced motion: skip animations, fire onComplete after brief display
     useEffect(() => {
@@ -72,7 +102,10 @@ export function useSplashSequence(onComplete: () => void): SplashSequenceState {
 
         const tick = (now: number) => {
             const elapsed = now - start;
-            const progress = Math.min(elapsed / PROGRESS_DURATION, 1);
+            // The bar reports settled prefetch work, not time. A clock-driven bar
+            // claimed progress it had no knowledge of, then handed over to a
+            // dashboard still showing spinners.
+            const progress = readinessRef.current;
             const phase = getPhase(elapsed);
 
             if (phase !== prevPhase || Math.abs(progress - prevProgress) > 0.005) {
@@ -81,7 +114,9 @@ export function useSplashSequence(onComplete: () => void): SplashSequenceState {
                 setState({ phase, progress, elapsed });
             }
 
-            if (elapsed >= TOTAL_DURATION) {
+            const ready = elapsed >= BRAND_MINIMUM && readinessRef.current >= 1;
+            if (skippedRef.current || ready || elapsed >= MAX_DURATION) {
+                setState({ phase: 'exit', progress, elapsed });
                 onCompleteRef.current();
                 return;
             }

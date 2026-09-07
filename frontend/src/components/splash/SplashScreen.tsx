@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Box } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import SplashBackground from './SplashBackground';
 import SplashCircuit from './SplashCircuit';
 import SplashProgress from './SplashProgress';
 import { useSplashSequence } from './useSplashSequence';
+import { rememberSplashSkip } from './splashPreference';
 
 // --- Per-letter stagger text reveal ---
 
@@ -32,10 +33,21 @@ const letterVariants = {
 
 interface SplashScreenProps {
     onComplete: () => void;
+    /** 0..1 — how much of the startup prefetch has settled. */
+    readiness: number;
+    /** Names of prefetch tasks that failed, surfaced rather than swallowed. */
+    failures?: string[];
 }
 
-const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
-    const { phase, progress } = useSplashSequence(onComplete);
+const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, readiness, failures = [] }) => {
+    const [skipped, setSkipped] = useState(false);
+    const { phase, progress } = useSplashSequence(onComplete, { readiness, skipped });
+
+    const handleSkip = useCallback(() => {
+        // Remembered, so a user who has opted out once never sees it again.
+        rememberSplashSkip();
+        setSkipped(true);
+    }, []);
 
     return (
         <motion.div
@@ -116,6 +128,45 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
 
             {/* Pit-lane progress bar */}
             <SplashProgress progress={progress} />
+
+            {/* Prefetch failures are shown rather than swallowed. Startup does not
+                block on them — the page underneath fetches and reports for
+                itself — but silently arriving at an empty dashboard is worse
+                than a line of explanation. */}
+            {failures.length > 0 && (
+                <Typography
+                    role="alert"
+                    variant="caption"
+                    sx={{
+                        position: 'absolute',
+                        bottom: 136,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        color: 'warning.light',
+                        letterSpacing: '0.1em',
+                        textAlign: 'center',
+                        px: 2,
+                    }}
+                >
+                    Could not preload {failures.join(', ')} — the dashboard will retry.
+                </Typography>
+            )}
+
+            <Button
+                onClick={handleSkip}
+                size="small"
+                sx={{
+                    position: 'absolute',
+                    bottom: 32,
+                    right: 32,
+                    color: 'rgba(255,255,255,0.5)',
+                    letterSpacing: '0.2em',
+                    fontSize: '0.7rem',
+                    '&:hover': { color: '#fff' },
+                }}
+            >
+                Skip intro
+            </Button>
         </motion.div>
     );
 };

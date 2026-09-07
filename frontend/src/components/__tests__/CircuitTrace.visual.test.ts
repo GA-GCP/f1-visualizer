@@ -114,11 +114,12 @@ describe('CircuitTrace Visual Regression', () => {
 
         expect(image).toMatchImageSnapshot({
             customSnapshotIdentifier: 'circuit-trace-oval-selected',
-            // An absolute pixel budget, not a fraction: 'percent' 0.01 meant
-            // one percent of pixels (4000 px on the 800x500 case), which is
-            // enough to hide a real regression.
-            failureThreshold: 25,
-            failureThresholdType: 'pixel',
+            // 0.0001 is a fraction, i.e. 0.01% of pixels — the tolerance the
+            // README always claimed.  The previous 0.01 meant one *percent*
+            // (about 4000 px on the 800x500 case), enough to hide a real
+            // regression.
+            failureThreshold: 0.0001,
+            failureThresholdType: 'percent',
         });
     });
 
@@ -128,11 +129,12 @@ describe('CircuitTrace Visual Regression', () => {
 
         expect(image).toMatchImageSnapshot({
             customSnapshotIdentifier: 'circuit-trace-oval-small',
-            // An absolute pixel budget, not a fraction: 'percent' 0.01 meant
-            // one percent of pixels (4000 px on the 800x500 case), which is
-            // enough to hide a real regression.
-            failureThreshold: 25,
-            failureThresholdType: 'pixel',
+            // 0.0001 is a fraction, i.e. 0.01% of pixels — the tolerance the
+            // README always claimed.  The previous 0.01 meant one *percent*
+            // (about 4000 px on the 800x500 case), enough to hide a real
+            // regression.
+            failureThreshold: 0.0001,
+            failureThresholdType: 'percent',
         });
     });
 
@@ -142,11 +144,12 @@ describe('CircuitTrace Visual Regression', () => {
 
         expect(image).toMatchImageSnapshot({
             customSnapshotIdentifier: 'circuit-trace-ferrari-red',
-            // An absolute pixel budget, not a fraction: 'percent' 0.01 meant
-            // one percent of pixels (4000 px on the 800x500 case), which is
-            // enough to hide a real regression.
-            failureThreshold: 25,
-            failureThresholdType: 'pixel',
+            // 0.0001 is a fraction, i.e. 0.01% of pixels — the tolerance the
+            // README always claimed.  The previous 0.01 meant one *percent*
+            // (about 4000 px on the 800x500 case), enough to hide a real
+            // regression.
+            failureThreshold: 0.0001,
+            failureThresholdType: 'percent',
         });
     });
 
@@ -157,11 +160,12 @@ describe('CircuitTrace Visual Regression', () => {
 
         expect(image).toMatchImageSnapshot({
             customSnapshotIdentifier: 'circuit-trace-ghost-selected',
-            // An absolute pixel budget, not a fraction: 'percent' 0.01 meant
-            // one percent of pixels (4000 px on the 800x500 case), which is
-            // enough to hide a real regression.
-            failureThreshold: 25,
-            failureThresholdType: 'pixel',
+            // 0.0001 is a fraction, i.e. 0.01% of pixels — the tolerance the
+            // README always claimed.  The previous 0.01 meant one *percent*
+            // (about 4000 px on the 800x500 case), enough to hide a real
+            // regression.
+            failureThreshold: 0.0001,
+            failureThresholdType: 'percent',
         });
     });
 
@@ -173,11 +177,12 @@ describe('CircuitTrace Visual Regression', () => {
 
         expect(image).toMatchImageSnapshot({
             customSnapshotIdentifier: 'circuit-trace-single-driver',
-            // An absolute pixel budget, not a fraction: 'percent' 0.01 meant
-            // one percent of pixels (4000 px on the 800x500 case), which is
-            // enough to hide a real regression.
-            failureThreshold: 25,
-            failureThresholdType: 'pixel',
+            // 0.0001 is a fraction, i.e. 0.01% of pixels — the tolerance the
+            // README always claimed.  The previous 0.01 meant one *percent*
+            // (about 4000 px on the 800x500 case), enough to hide a real
+            // regression.
+            failureThreshold: 0.0001,
+            failureThresholdType: 'percent',
         });
     });
 });

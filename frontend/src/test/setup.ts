@@ -17,6 +17,8 @@ global.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
 // rendered under test at all.
 Object.defineProperty(window, 'matchMedia', {
     writable: true,
+    // configurable so a test can override it (e.g. to assert reduced motion).
+    configurable: true,
     value: vi.fn().mockImplementation((query: string) => ({
         matches: false,
         media: query,

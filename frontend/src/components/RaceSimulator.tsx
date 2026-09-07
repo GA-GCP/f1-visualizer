@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { Box, Typography, Paper, Grid, Chip, Snackbar, Alert, Button, CircularProgress } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
@@ -16,28 +16,27 @@ import { useQuery } from '@tanstack/react-query';
 import { queries } from '../api/queries';
 import type { DriverProfile, RaceEntryRoster, RaceSession } from '../api/referenceApi';
 import { pauseSimulation } from '../api/ingestionApi';
-import type { LocationPacket, LapDataRecord } from '../types/telemetry';
+import type { LocationPacket } from '../types/telemetry';
 import { useUser } from '../context/UserContext';
+import { useRaceSession } from '../features/live/useRaceSession';
+import { rosterToDriverProfiles } from '../api/mappers';
 import { useCallback } from 'react';
 import { createLogger } from '../lib/logger';
+import { CANVAS_BG, PAPER_BG } from '../theme/tokens';
 
 const log = createLogger('race-console');
 
 const RaceSimulator: React.FC = () => {
     /** Only what the user actually picked; the default is derived below. */
     const [chosenDriver, setChosenDriver] = useState<DriverProfile | null>(null);
-    const [activeSession, setActiveSession] = useState<{ key: number, mode: string } | null>(null);
     // Location data bypasses React state entirely to avoid React 18 batching
     // that would drop intermediate GPS points.  The ref acts as a lock-free
     // queue that useLocation writes to and CircuitTrace drains each frame.
     const locationQueueRef = useRef<LocationPacket[]>([]);
-    const [traceResetKey, setTraceResetKey] = useState(0);
     const [streamError, setStreamError] = useState<string | null>(null);
     const [sessionDrivers, setSessionDrivers] = useState<DriverProfile[]>([]);
-    const [sessionMeta, setSessionMeta] = useState<{ year: number; meetingName: string } | null>(null);
-    const [isInitializing, setIsInitializing] = useState(false);
-    const isInitializingRef = useRef(false);
-    const sessionLapsRef = useRef<LapDataRecord[]>([]);
+    // One state machine rather than four pieces of state kept in step by hand.
+    const session = useRaceSession();
 
     const { userProfile } = useUser();
     // Depend on the primitive, not the profile object: UserProvider hands back a
@@ -62,44 +61,33 @@ const RaceSimulator: React.FC = () => {
     );
     const selectedDriver = chosenDriver ?? defaultDriver;
 
-    const sessionKey = activeSession?.key;
+    const sessionKey = session.activeSession?.key;
     const lapsQuery = useQuery({
         ...queries.sessionLaps(sessionKey ?? 0),
         enabled: sessionKey !== undefined,
     });
     const sessionLaps = useMemo(() => lapsQuery.data ?? [], [lapsQuery.data]);
 
-    useEffect(() => { isInitializingRef.current = isInitializing; }, [isInitializing]);
-    useEffect(() => { sessionLapsRef.current = sessionLaps; }, [sessionLaps]);
-
-    const handleFirstPacket = useCallback(() => {
-        setIsInitializing(false);
-    }, []);
+    const handleFirstPacket = session.firstFrame;
 
     useLocation(locationQueueRef);
 
     // One status for the whole feed, published by the STOMP client itself.
     const connectionStatus = useConnectionStatus();
 
-    const handleStreamStarted = useCallback((sessionKey: number, mode: 'LIVE' | 'SIMULATION', session: RaceSession) => {
-        setSessionMeta({ year: session.year, meetingName: session.meetingName });
-        setIsInitializing(true);
-        // Lap data loads through a query keyed on the session, so setting the
-        // active session is enough — no manual fetch, and switching back to a
-        // session already seen is served from cache.
-        setActiveSession({ key: sessionKey, mode });
-        locationQueueRef.current = [];
-        // Bumping this clears the trace and the telemetry panel together.
-        setTraceResetKey(prev => prev + 1);
-    }, []);
+    const handleStreamStarted = useCallback(
+        (sessionKey: number, mode: 'LIVE' | 'SIMULATION', raceSession: RaceSession) => {
+            locationQueueRef.current = [];
+            session.start(sessionKey, mode, raceSession);
+        },
+        [session],
+    );
 
     // Stable so memo() on MediaController actually holds.
     const handleSeek = useCallback(() => {
         locationQueueRef.current = [];
-        // Clears the trace and the telemetry panel, so neither shows data from
-        // the wrong race position while the seek is in flight.
-        setTraceResetKey(prev => prev + 1);
-    }, []);
+        session.seek();
+    }, [session]);
 
     const handleCancelSimulation = useCallback(async () => {
         try {
@@ -107,27 +95,14 @@ const RaceSimulator: React.FC = () => {
         } catch (err) {
             log.error('Failed to pause simulation on cancel', err);
         }
-        setActiveSession(null);
-        setSessionMeta(null);
-        setIsInitializing(false);
         locationQueueRef.current = [];
-        setTraceResetKey(prev => prev + 1);
-    }, []);
+        session.cancel();
+    }, [session]);
 
-    // Convert a session's driver roster into DriverProfile[] for the DriverSelector
     const handleSessionSelected = useCallback((roster: RaceEntryRoster) => {
-        const profiles: DriverProfile[] = roster.drivers.map(entry => ({
-            id: entry.driverNumber,
-            code: entry.nameAcronym || (entry.broadcastName?.length >= 3 ? entry.broadcastName.substring(0, 3).toUpperCase() : String(entry.driverNumber)),
-            name: entry.broadcastName || 'Unknown',
-            team: entry.teamName || 'Unknown',
-            teamColor: '#' + (entry.teamColour || 'ffffff'),
-            stats: { speed: 80, consistency: 80, aggression: 80, tireMgmt: 80, experience: 80, wins: 0, podiums: 0, totalPoints: 0, bestChampionshipFinish: 0, totalRaces: 0, teamsDrivenFor: [] },
-        }));
-
         // Only record the roster: the selection follows from it by derivation,
         // so a session change cannot strand a driver who is not in the new one.
-        setSessionDrivers(profiles);
+        setSessionDrivers(rosterToDriverProfiles(roster));
         setChosenDriver(null);
     }, []);
 
@@ -135,14 +110,14 @@ const RaceSimulator: React.FC = () => {
 
     // Only complain once a session is running and the client has actually lost
     // the connection — 'idle' and 'connecting' are not failures.
-    const feedInterrupted = activeSession !== null
+    const feedInterrupted = session.isSessionActive
         && (connectionStatus === 'reconnecting'
             || connectionStatus === 'circuit-open'
             || connectionStatus === 'offline'
             || connectionStatus === 'auth-rejected');
 
     return (
-        <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: '#121212', minHeight: '100vh', color: 'white' }}>
+        <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: CANVAS_BG, minHeight: '100vh', color: 'white' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
                 <Box>
                     {/* React 19 hoists this into <head>: every route shared one
@@ -175,12 +150,12 @@ const RaceSimulator: React.FC = () => {
                 <Grid size={{ xs: 12, md: 4 }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 
-                        <Paper sx={{ bgcolor: '#1e1e1e', border: '1px solid #333' }}>
-                            <SessionControlPanel onStreamStarted={handleStreamStarted} onSessionSelected={handleSessionSelected} onError={setStreamError} isSessionActive={activeSession !== null} onCancel={handleCancelSimulation} />
+                        <Paper sx={{ bgcolor: PAPER_BG, border: '1px solid #333' }}>
+                            <SessionControlPanel onStreamStarted={handleStreamStarted} onSessionSelected={handleSessionSelected} onError={setStreamError} isSessionActive={session.isSessionActive} onCancel={handleCancelSimulation} />
                         </Paper>
 
                         <AnimatePresence>
-                            {activeSession?.mode === 'SIMULATION' && (
+                            {session.activeSession?.mode === 'SIMULATION' && (
                                 <motion.div
                                     key="media-controller"
                                     initial={{ opacity: 0, height: 0 }}
@@ -193,7 +168,7 @@ const RaceSimulator: React.FC = () => {
                             )}
                         </AnimatePresence>
 
-                        <Paper sx={{ p: 2, bgcolor: '#1e1e1e' }}>
+                        <Paper sx={{ p: 2, bgcolor: PAPER_BG }}>
                             {isLoadingDrivers ? (
                                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
                                     <CircularProgress size={28} />
@@ -210,9 +185,9 @@ const RaceSimulator: React.FC = () => {
 
                         <LiveTelemetryPanel
                             selectedDriver={selectedDriver}
-                            activeSession={activeSession}
+                            activeSession={session.activeSession}
                             sessionLaps={sessionLaps}
-                            resetKey={traceResetKey}
+                            resetKey={session.resetKey}
                             onFirstPacket={handleFirstPacket}
                         />
 
@@ -223,11 +198,11 @@ const RaceSimulator: React.FC = () => {
                     <CircuitTrace
                         locationQueueRef={locationQueueRef}
                         selectedDriver={selectedDriver}
-                        sessionKey={activeSession?.key ?? null}
-                        resetKey={traceResetKey}
-                        isSessionActive={activeSession !== null}
-                        isInitializing={isInitializing}
-                        sessionMeta={sessionMeta}
+                        sessionKey={session.activeSession?.key ?? null}
+                        resetKey={session.resetKey}
+                        isSessionActive={session.isSessionActive}
+                        isInitializing={session.isInitializing}
+                        sessionMeta={session.meta}
                         driverCode={selectedDriver?.code ?? null}
                     />
                 </Grid>

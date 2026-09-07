@@ -1,3 +1,4 @@
+import { PAPER_BG } from '../theme/tokens';
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
@@ -48,7 +49,7 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({ data, title, driverColorMap
         const svg = d3.select(svgRef.current)
             .attr("width", width)
             .attr("height", height)
-            .style("background", "#1e1e1e")
+            .style("background", PAPER_BG)
             .style("overflow", "visible")
             .append("g")
             .attr("transform", `translate(${LAP_CHART_MARGIN.left},${LAP_CHART_MARGIN.top})`);
@@ -170,7 +171,7 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({ data, title, driverColorMap
     const headingId = 'lap-time-chart-title';
 
     return (
-        <Paper sx={{ p: 3, bgcolor: '#1e1e1e', color: 'white' }}>
+        <Paper sx={{ p: 3, bgcolor: PAPER_BG, color: 'white' }}>
             <Typography id={headingId} variant="h6" component="h2" color="primary" gutterBottom>
                 {title ?? 'LAP TIME PROGRESSION'}
             </Typography>

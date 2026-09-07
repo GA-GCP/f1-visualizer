@@ -1,13 +1,16 @@
 import * as d3 from 'd3';
 import type { LapDataRecord } from '../types/telemetry';
 import type { SessionDriverEntry } from '../api/referenceApi';
+import { TEAM_FALLBACK_COLOURS } from '../theme/tokens';
 
 export const LAP_CHART_ASPECT_RATIO = 2;
 export const LAP_CHART_MARGIN = { top: 20, right: 120, bottom: 50, left: 60 };
-export const FALLBACK_COLORS = [
-    '#e10600', '#00D2BE', '#0600EF', '#FF8700', '#006F62',
-    '#2B4562', '#B6BABD', '#C92D4B', '#5E8FAA', '#27F4D2'
-];
+/**
+ * Kept as a named export because charts and tests already import it from here;
+ * the values live in theme/tokens.ts with every other colour, and the palette
+ * there is contrast-checked against the canvas background.
+ */
+export const FALLBACK_COLORS: readonly string[] = TEAM_FALLBACK_COLOURS;
 
 /**
  * Resolves the display color for a given driver number, using the

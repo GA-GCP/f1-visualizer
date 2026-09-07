@@ -10,6 +10,7 @@ import ErrorState from '../components/ui/ErrorState';
 import { useQuery } from '@tanstack/react-query';
 import { queries } from '../api/queries';
 import type { DriverProfile } from '../api/referenceApi';
+import { PAPER_BG } from '../theme/tokens';
 
 /**
  * Resolves one slot's driver from the URL parameter.
@@ -106,7 +107,7 @@ const VersusMode: React.FC = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.4, ease: 'easeOut' }}
                     >
-                        <Paper sx={{ p: 3, bgcolor: '#1e1e1e', borderLeft: `4px solid ${driverA.teamColor}` }}>
+                        <Paper sx={{ p: 3, bgcolor: PAPER_BG, borderLeft: `4px solid ${driverA.teamColor}` }}>
                             <DriverSelector
                                 label="DRIVER A"
                                 options={drivers}
@@ -122,7 +123,7 @@ const VersusMode: React.FC = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.4, ease: 'easeOut' }}
                     >
-                        <Paper sx={{ p: 3, bgcolor: '#1e1e1e', borderRight: `4px solid ${driverB.teamColor}` }}>
+                        <Paper sx={{ p: 3, bgcolor: PAPER_BG, borderRight: `4px solid ${driverB.teamColor}` }}>
                             <DriverSelector
                                 label="DRIVER B"
                                 options={drivers}
@@ -141,7 +142,7 @@ const VersusMode: React.FC = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.2 }}
                     >
-                        <Paper sx={{ p: 3, bgcolor: '#1e1e1e', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <Paper sx={{ p: 3, bgcolor: PAPER_BG, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                             <Typography variant="h6" component="h2" color="text.secondary" gutterBottom>
                                 ATTRIBUTE MAPPING
                             </Typography>
@@ -161,7 +162,7 @@ const VersusMode: React.FC = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.3 }}
                     >
-                        <Paper sx={{ p: 4, bgcolor: '#1e1e1e', height: '100%' }}>
+                        <Paper sx={{ p: 4, bgcolor: PAPER_BG, height: '100%' }}>
                             <Typography variant="h6" component="h2" color="text.secondary" gutterBottom sx={{ mb: 4 }}>
                                 CAREER STATISTICS
                             </Typography>

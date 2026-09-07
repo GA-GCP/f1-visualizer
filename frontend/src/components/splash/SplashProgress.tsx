@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Box, Typography } from '@mui/material';
+import { BRAND_RED, FONT_FAMILY, SHIMMER_GRADIENT } from '../../theme/tokens';
 
 const STATUS_MESSAGES: { max: number; label: string }[] = [
     { max: 0.25, label: 'INITIALIZING TELEMETRY...' },
@@ -46,7 +47,7 @@ const SplashProgress: React.FC<SplashProgressProps> = ({ progress }) => {
                     letterSpacing: '0.3em',
                     fontSize: '0.75rem',
                     textTransform: 'uppercase',
-                    fontFamily: '"Titillium Web", sans-serif',
+                    fontFamily: FONT_FAMILY,
                 }}
             >
                 SYSTEMS CHECK
@@ -69,7 +70,7 @@ const SplashProgress: React.FC<SplashProgressProps> = ({ progress }) => {
                         borderRadius: 2,
                         overflow: 'hidden',
                         position: 'relative',
-                        backgroundColor: '#e10600',
+                        backgroundColor: BRAND_RED,
                     }}
                 >
                     {/* Shimmer driven by a transform on an oversized child.
@@ -85,7 +86,7 @@ const SplashProgress: React.FC<SplashProgressProps> = ({ progress }) => {
                             width: '200%',
                             height: '100%',
                             background:
-                                'linear-gradient(90deg, #e10600 0%, #ff3030 25%, #e10600 50%, #ff3030 75%, #e10600 100%)',
+                                SHIMMER_GRADIENT,
                         }}
                         animate={reduceMotion ? undefined : { x: ['0%', '-50%'] }}
                         transition={{
@@ -116,7 +117,7 @@ const SplashProgress: React.FC<SplashProgressProps> = ({ progress }) => {
                                 color: 'rgba(255,255,255,0.3)',
                                 fontSize: '0.75rem',
                                 letterSpacing: '0.15em',
-                                fontFamily: '"Titillium Web", sans-serif',
+                                fontFamily: FONT_FAMILY,
                             }}
                         >
                             {statusMessage}

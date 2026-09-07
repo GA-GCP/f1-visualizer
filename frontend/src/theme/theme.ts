@@ -1,4 +1,12 @@
 import { createTheme } from '@mui/material';
+import {
+    APP_BG,
+    BRAND_RED,
+    BRAND_RED_LIGHT,
+    FONT_FAMILY,
+    TEXT_DISABLED,
+} from './tokens';
+import { cssEase, DUR, EASE } from './motion';
 
 /**
  * The broadcast theme.
@@ -16,15 +24,15 @@ export const broadcastTheme = createTheme({
     palette: {
         mode: 'dark',
         primary: {
-            main: '#e10600',
+            main: BRAND_RED,
             // #e10600 is only 3.8:1 on the dark surfaces, which is fine for
             // large headings but not for body-sized text. Use `primary.light`
             // wherever brand red carries small copy.
-            light: '#ff3b36',
+            light: BRAND_RED_LIGHT,
         },
         secondary: { main: '#ffffff' },
         background: {
-            default: '#101010',
+            default: APP_BG,
             paper: 'rgba(20, 20, 20, 0.6)'
         },
         text: {
@@ -33,11 +41,11 @@ export const broadcastTheme = createTheme({
             // 4.6:1 on #121212 — the floor for anything that is real copy
             // rather than decoration. Ad-hoc alphas around 0.35 were being used
             // for readable text at roughly 3:1.
-            disabled: 'rgba(255,255,255,0.6)',
+            disabled: TEXT_DISABLED,
         },
     },
     typography: {
-        fontFamily: '"Titillium Web", "Roboto", "Helvetica", "Arial", sans-serif',
+        fontFamily: FONT_FAMILY,
         // Titillium Web has proportional figures by default, so a changing
         // telemetry value shifted everything after it sideways on every commit.
         allVariants: { fontVariantNumeric: 'tabular-nums' },
@@ -47,6 +55,24 @@ export const broadcastTheme = createTheme({
         body1: { fontSize: '1.1rem' },
     },
     shape: { borderRadius: 4 },
+    // MUI's transitions ran on their own defaults, so its Dialog, Grow and
+    // ripple timings had no relationship to framer's. Both now come from
+    // theme/motion.ts; MUI wants milliseconds.
+    transitions: {
+        duration: {
+            shortest: DUR.fast * 1000,
+            shorter: DUR.base * 1000,
+            short: DUR.base * 1000,
+            standard: DUR.slow * 1000,
+            complex: DUR.reveal * 1000,
+        },
+        easing: {
+            easeOut: cssEase(EASE.out),
+            easeIn: cssEase(EASE.in),
+            easeInOut: cssEase(EASE.inOut),
+            sharp: cssEase(EASE.inOut),
+        },
+    },
     // MUI's own transitions (Dialog Fade, Autocomplete Grow, Slider thumb,
     // ripples) follow the OS preference. MUI's value is 'system'; framer's
     // equivalent is <MotionConfig reducedMotion="user"> below.
@@ -87,7 +113,7 @@ export const broadcastTheme = createTheme({
                     // colour with an opaque one, so the blurred backdrop was
                     // computed on all 15 of them and then covered up entirely.
                     backgroundColor: 'rgba(30, 30, 30, 0.6)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    border: `1px solid rgba(255, 255, 255, 0.1)`,
                     boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
                 },
             },
@@ -101,7 +127,7 @@ export const broadcastTheme = createTheme({
                     // re-rasterises on every scroll tick.
                     background: 'rgba(0, 0, 0, 0.8)',
                     backdropFilter: 'blur(20px)',
-                    borderBottom: '2px solid #e10600',
+                    borderBottom: `2px solid ${BRAND_RED}`,
                     boxShadow: 'none',
                 }
             }

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
-import { Box, Paper, Typography } from '@mui/material';
+import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import type { LapDataRecord } from '../types/telemetry';
 import {
     getDriverColor,
@@ -167,14 +167,49 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({ data, title, driverColorMap
 
     }, [data, driverColorMap, driverLabelMap, containerWidth]);
 
+    const headingId = 'lap-time-chart-title';
+
     return (
         <Paper sx={{ p: 3, bgcolor: '#1e1e1e', color: 'white' }}>
-            <Typography variant="h6" color="primary" gutterBottom>
+            <Typography id={headingId} variant="h6" component="h2" color="primary" gutterBottom>
                 {title ?? 'LAP TIME PROGRESSION'}
             </Typography>
             <Box ref={containerRef} sx={{ width: '100%', position: 'relative' }}>
-                <svg ref={svgRef} />
+                {/* The chart is mouse-only and carried no name, so it was
+                    invisible to assistive technology. */}
+                <svg ref={svgRef} role="img" aria-labelledby={headingId} />
             </Box>
+
+            {/* The same data as a table, so the chart is not the only way to
+                read it. Collapsed by default; still reachable by keyboard and
+                announced by a screen reader. */}
+            {data.length > 0 && (
+                <Box component="details" sx={{ mt: 2 }}>
+                    <Box component="summary" sx={{ cursor: 'pointer', color: 'text.secondary', fontSize: '0.75rem' }}>
+                        View lap times as a table
+                    </Box>
+                    <TableContainer sx={{ maxHeight: 320, mt: 1 }}>
+                        <Table size="small" stickyHeader aria-labelledby={headingId}>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>Driver</TableCell>
+                                    <TableCell align="right">Lap</TableCell>
+                                    <TableCell align="right">Time (s)</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {data.filter(lap => typeof lap.lapDuration === 'number').map(lap => (
+                                    <TableRow key={`${lap.driverNumber}-${lap.lapNumber}`}>
+                                        <TableCell>{driverLabelMap?.[lap.driverNumber] ?? lap.driverNumber}</TableCell>
+                                        <TableCell align="right">{lap.lapNumber}</TableCell>
+                                        <TableCell align="right">{lap.lapDuration!.toFixed(3)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </Box>
+            )}
         </Paper>
     );
 };

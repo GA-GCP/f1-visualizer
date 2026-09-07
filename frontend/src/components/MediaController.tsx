@@ -49,6 +49,7 @@ const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
     }, [isConnected]);
 
     const handleTogglePlay = async () => {
+        if (isPending) return; // the control stays focusable, so guard re-entry
         setIsPending(true);
         try {
             if (isPlaying) {
@@ -92,8 +93,16 @@ const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
                     aria-label={isPlaying ? 'Pause simulation' : 'Play simulation'}
                     aria-pressed={isPlaying}
                     aria-busy={isPending}
-                    disabled={isPending}
-                    sx={{ bgcolor: 'rgba(225, 6, 0, 0.1)', '&:hover': { bgcolor: 'rgba(225, 6, 0, 0.2)' } }}
+                    // aria-disabled, not disabled: a disabled element cannot hold
+                    // focus, so pressing this dropped the keyboard user back to
+                    // <body> for the length of every request. The handler guards
+                    // re-entry instead.
+                    aria-disabled={isPending}
+                    sx={{
+                        bgcolor: 'rgba(225, 6, 0, 0.1)',
+                        '&:hover': { bgcolor: 'rgba(225, 6, 0, 0.2)' },
+                        ...(isPending && { opacity: 0.6, cursor: 'progress' }),
+                    }}
                 >
                     {isPending ? <CircularProgress size={28} color="inherit" /> : isPlaying ? <PauseIcon fontSize="large" /> : <PlayArrowIcon fontSize="large" />}
                 </IconButton>
@@ -113,10 +122,15 @@ const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
                     sx={{
                         color: '#e10600',
                         height: 4,
-                        padding: 0,
+                        // No `padding: 0`: MUI's vertical padding is the thumb's
+                        // hit area, and removing it left a 16px target, below
+                        // the 24px minimum.
                         '& .MuiSlider-thumb': {
-                            width: 16,
-                            height: 16,
+                            width: 20,
+                            height: 20,
+                            // Enlarges the transparent hit area without changing
+                            // the visual size of the thumb.
+                            '&::after': { width: 32, height: 32 },
                             transition: '0.3s cubic-bezier(.47,1.64,.41,.8)',
                             '&::before': { boxShadow: '0 2px 12px 0 rgba(0,0,0,0.4)' },
                             '&:hover, &.Mui-focusVisible': { boxShadow: '0px 0px 0px 8px rgb(225 6 0 / 16%)' },

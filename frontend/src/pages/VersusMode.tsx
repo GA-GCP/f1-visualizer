@@ -131,10 +131,15 @@ const VersusMode: React.FC = () => {
     return (
         <Container maxWidth="xl" sx={{ mt: 4, pb: 8 }}>
             <Box sx={{ mb: 6, textAlign: 'center' }}>
+                {/* React 19 hoists this into <head>: every route shared one
+                    static title before, so browser history and tab lists were
+                    indistinguishable. */}
+                <title>Head-to-Head · F1 Visualizer</title>
                 <Typography variant="h3" component="h1" sx={{ fontWeight: 800, letterSpacing: -1, color: 'white' }}>
                     HEAD-TO-HEAD
                 </Typography>
-                <Typography variant="subtitle1" color="text.secondary" sx={{ letterSpacing: 2 }}>
+                {/* subtitle1 renders as an h6; this is a subtitle, not a heading. */}
+                <Typography variant="subtitle1" component="p" color="text.secondary" sx={{ letterSpacing: 2 }}>
                     COMPARISON ENGINE
                 </Typography>
             </Box>

@@ -44,7 +44,7 @@ const SplashProgress: React.FC<SplashProgressProps> = ({ progress }) => {
                     mb: 1,
                     color: 'rgba(255,255,255,0.4)',
                     letterSpacing: '0.3em',
-                    fontSize: '0.6rem',
+                    fontSize: '0.75rem',
                     textTransform: 'uppercase',
                     fontFamily: '"Titillium Web", sans-serif',
                 }}
@@ -114,7 +114,7 @@ const SplashProgress: React.FC<SplashProgressProps> = ({ progress }) => {
                                 display: 'block',
                                 textAlign: 'center',
                                 color: 'rgba(255,255,255,0.3)',
-                                fontSize: '0.55rem',
+                                fontSize: '0.75rem',
                                 letterSpacing: '0.15em',
                                 fontFamily: '"Titillium Web", sans-serif',
                             }}

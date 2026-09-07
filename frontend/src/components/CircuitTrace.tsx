@@ -399,7 +399,7 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
     return (
         <Paper sx={{ p: 2, bgcolor: '#1e1e1e', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2, mb: 1, alignSelf: 'flex-start' }}>
-                <Typography variant="h6" color="primary">
+                <Typography id="circuit-trace-title" variant="h6" component="h2" color="primary">
                     CIRCUIT TRACE
                 </Typography>
                 <AnimatePresence>
@@ -427,11 +427,21 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
             </Box>
             <Box ref={containerRef} sx={{ position: 'relative', border: '1px solid #333', borderRadius: 1, bgcolor: '#121212', width: '100%', overflow: 'hidden' }}>
                 {/* Sized imperatively by the ResizeObserver, in device pixels
-                    with a CSS-pixel transform, so no resize costs a render. */}
+                    with a CSS-pixel transform, so no resize costs a render.
+
+                    The canvas had no role, no name and no text alternative, so
+                    to assistive technology the main visualisation on the page
+                    simply did not exist. */}
                 <canvas
                     ref={canvasRef}
+                    role="img"
+                    aria-labelledby="circuit-trace-title"
+                    aria-describedby="circuit-trace-caption"
                     style={{ display: 'block', width: '100%', height: 'auto' }}
-                />
+                >
+                    Circuit trace{driverCode ? ` for ${driverCode}` : ''}: live car positions
+                    plotted from GPS telemetry.
+                </canvas>
                 <AnimatePresence mode="wait">
                     {!isSessionActive && (
                         <CircuitTraceIdleOverlay key="idle" />
@@ -446,7 +456,7 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                     )}
                 </AnimatePresence>
             </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+            <Typography id="circuit-trace-caption" variant="caption" color="text.secondary" sx={{ mt: 1 }}>
                 Live Plotting (Tracking Driver: {selectedDriver?.code || 'None'})
             </Typography>
             {isSessionActive && diagnostics && (

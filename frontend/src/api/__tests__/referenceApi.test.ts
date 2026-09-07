@@ -5,9 +5,32 @@ vi.mock('../apiClient', () => ({
     apiClient: {
         get: vi.fn(),
     },
+    // De-duplicated fetchers wrap their shared promise so one caller aborting
+    // does not cancel the request the others are waiting on.
+    abortable: <T,>(promise: Promise<T>) => promise,
+    isRequestCancelled: () => false,
 }));
 
 import { apiClient } from '../apiClient';
+
+/**
+ * Complete wire-shaped fixtures.
+ *
+ * Responses are validated against the schemas now, so a fixture that omits
+ * fields is rejected — which is the point: the partial objects these tests used
+ * to pass were not shapes the backend ever sends.
+ */
+const stats = {
+    speed: 90, consistency: 85, aggression: 70, tireMgmt: 80, experience: 95,
+    wins: 5, podiums: 12, totalPoints: 400, bestChampionshipFinish: 2,
+    totalRaces: 100, teamsDrivenFor: ['Red Bull'],
+};
+const driver = (over: Record<string, unknown> = {}) => ({
+    id: 1, code: 'VER', name: 'Max Verstappen', team: 'Red Bull', teamColor: '3671C6', stats, ...over,
+});
+const session = (over: Record<string, unknown> = {}) => ({
+    sessionKey: 1, sessionName: 'Race', meetingName: 'Bahrain GP', year: 2024, countryName: 'Bahrain', ...over,
+});
 
 describe('referenceApi', () => {
     beforeEach(() => {
@@ -18,7 +41,7 @@ describe('referenceApi', () => {
 
     describe('fetchDrivers', () => {
         it('fetches drivers from the API on first call', async () => {
-            const mockDrivers = [{ id: 1, code: 'VER', name: 'Max Verstappen', team: 'Red Bull', teamColor: '3671C6' }];
+            const mockDrivers = [driver()];
             vi.mocked(apiClient.get).mockResolvedValue({ data: mockDrivers });
 
             const { fetchDrivers } = await import('../referenceApi');
@@ -29,7 +52,7 @@ describe('referenceApi', () => {
         });
 
         it('returns cached drivers on subsequent calls without hitting API', async () => {
-            const mockDrivers = [{ id: 1, code: 'VER' }];
+            const mockDrivers = [driver()];
             vi.mocked(apiClient.get).mockResolvedValue({ data: mockDrivers });
 
             const { fetchDrivers } = await import('../referenceApi');
@@ -41,7 +64,7 @@ describe('referenceApi', () => {
         });
 
         it('deduplicates concurrent inflight requests', async () => {
-            const mockDrivers = [{ id: 1, code: 'VER' }];
+            const mockDrivers = [driver()];
             vi.mocked(apiClient.get).mockResolvedValue({ data: mockDrivers });
 
             const { fetchDrivers } = await import('../referenceApi');
@@ -72,7 +95,7 @@ describe('referenceApi', () => {
         });
 
         it('returns cached sessions on repeat calls', async () => {
-            vi.mocked(apiClient.get).mockResolvedValue({ data: [{ sessionKey: 1, sessionName: 'Race' }] });
+            vi.mocked(apiClient.get).mockResolvedValue({ data: [session()] });
 
             const { fetchSessions } = await import('../referenceApi');
             await fetchSessions();
@@ -84,26 +107,26 @@ describe('referenceApi', () => {
 
     describe('searchSessions', () => {
         it('calls the search endpoint with URL-encoded query', async () => {
-            const mockResults = [{ sessionKey: 1, sessionName: 'Race' }];
+            const mockResults = [session({ meetingName: 'Bahrain GP' })];
             vi.mocked(apiClient.get).mockResolvedValue({ data: mockResults });
 
             const { searchSessions } = await import('../referenceApi');
             const result = await searchSessions('Bahrain GP');
 
-            expect(apiClient.get).toHaveBeenCalledWith('/analysis/sessions/search?query=Bahrain%20GP');
+            expect(apiClient.get).toHaveBeenCalledWith('/analysis/sessions/search?query=Bahrain%20GP', { signal: undefined });
             expect(result).toEqual(mockResults);
         });
     });
 
     describe('fetchDriverStats', () => {
         it('fetches driver stats by ID', async () => {
-            const mockStats = { speed: 90, consistency: 85, aggression: 70, tireMgmt: 80, experience: 95 };
+            const mockStats = stats;
             vi.mocked(apiClient.get).mockResolvedValue({ data: mockStats });
 
             const { fetchDriverStats } = await import('../referenceApi');
             const result = await fetchDriverStats(1);
 
-            expect(apiClient.get).toHaveBeenCalledWith('/analysis/drivers/1/stats');
+            expect(apiClient.get).toHaveBeenCalledWith('/analysis/drivers/1/stats', { signal: undefined });
             expect(result).toEqual(mockStats);
         });
     });
@@ -116,7 +139,7 @@ describe('referenceApi', () => {
             const { fetchSessionLaps } = await import('../referenceApi');
             const result = await fetchSessionLaps(9165);
 
-            expect(apiClient.get).toHaveBeenCalledWith('/analysis/session/9165/laps');
+            expect(apiClient.get).toHaveBeenCalledWith('/analysis/session/9165/laps', { signal: undefined });
             expect(result).toEqual(mockLaps);
         });
     });
@@ -137,7 +160,7 @@ describe('referenceApi', () => {
 
     describe('fetchSessionsByYear', () => {
         it('fetches sessions for a specific year and caches per year', async () => {
-            const mockSessions = [{ sessionKey: 1, sessionName: 'Race', year: 2024 }];
+            const mockSessions = [session({ year: 2024 })];
             vi.mocked(apiClient.get).mockResolvedValue({ data: mockSessions });
 
             const { fetchSessionsByYear } = await import('../referenceApi');
@@ -145,7 +168,7 @@ describe('referenceApi', () => {
             const r2 = await fetchSessionsByYear(2024);
 
             expect(apiClient.get).toHaveBeenCalledTimes(1);
-            expect(apiClient.get).toHaveBeenCalledWith('/analysis/sessions/year/2024');
+            expect(apiClient.get).toHaveBeenCalledWith('/analysis/sessions/year/2024', { signal: undefined });
             expect(r1).toEqual(mockSessions);
             expect(r2).toEqual(mockSessions);
         });
@@ -153,7 +176,13 @@ describe('referenceApi', () => {
 
     describe('fetchSessionDrivers', () => {
         it('fetches session drivers and caches per session key', async () => {
-            const mockRoster = { sessionKey: 9165, year: 2024, drivers: [{ driverNumber: 1, broadcastName: 'M VERSTAPPEN' }] };
+            const mockRoster = {
+                sessionKey: 9165, year: 2024,
+                drivers: [{
+                    driverNumber: 1, broadcastName: 'M VERSTAPPEN', nameAcronym: 'VER',
+                    teamName: 'Red Bull', teamColour: '3671C6', countryCode: 'NED',
+                }],
+            };
             vi.mocked(apiClient.get).mockResolvedValue({ data: mockRoster });
 
             const { fetchSessionDrivers } = await import('../referenceApi');
@@ -161,7 +190,7 @@ describe('referenceApi', () => {
             const r2 = await fetchSessionDrivers(9165);
 
             expect(apiClient.get).toHaveBeenCalledTimes(1);
-            expect(apiClient.get).toHaveBeenCalledWith('/analysis/sessions/9165/drivers');
+            expect(apiClient.get).toHaveBeenCalledWith('/analysis/sessions/9165/drivers', { signal: undefined });
             expect(r1).toEqual(mockRoster);
             expect(r2).toEqual(mockRoster);
         });

@@ -9,8 +9,6 @@ import SplashScreen from './components/splash/SplashScreen';
 import { useStartupPrefetch, type PrefetchTask } from './components/splash/useStartupPrefetch';
 import { isSplashSkipRemembered } from './components/splash/splashPreference';
 import RouteFallback from './components/ui/RouteFallback';
-import { UserProvider } from "@/context/UserContext.tsx";
-import { fetchDrivers, fetchSessions } from './api/referenceApi';
 import Landing from './pages/Landing';
 import { broadcastTheme } from './theme/theme';
 
@@ -39,6 +37,12 @@ const StompAuthHandler = lazy(() =>
     import('./auth/StompAuthHandler').then(m => ({ default: m.StompAuthHandler })),
 );
 
+// Also deferred: it pulls in the user API, and with it the wire schemas and the
+// validator. None of that can be used before login.
+const UserProvider = lazy(() =>
+    import('./context/UserContext').then(m => ({ default: m.UserProvider })),
+);
+
 // --- STARTUP PREFETCH ---
 // Module-level so the array identity is stable across renders.
 //
@@ -47,9 +51,12 @@ const StompAuthHandler = lazy(() =>
 // preflight burst trips the gateway's 429 limiter, which then cascades into
 // CORS failures. The chunk imports are same-origin static assets and need no
 // stagger, only an ordering that lets the shell and dashboard go first.
+// The analysis API — and the schemas and validator behind it — is imported
+// dynamically, not statically: it is unreachable before login, so a static
+// import would put all of it in the chunk the public landing page downloads.
 const STARTUP_PREFETCH: PrefetchTask[] = [
-    { name: 'drivers', run: fetchDrivers },
-    { name: 'sessions', run: fetchSessions, delayMs: 400 },
+    { name: 'drivers', run: () => import('./api/referenceApi').then(m => m.fetchDrivers()) },
+    { name: 'sessions', run: () => import('./api/referenceApi').then(m => m.fetchSessions()), delayMs: 400 },
     { name: 'the app shell', run: importLayoutMain },
     { name: 'the dashboard', run: importHome },
     { name: 'the data vault', run: importHistoricalData, delayMs: 1000 },
@@ -97,6 +104,10 @@ const RequiredAuth: React.FC = () => {
     }
 
     return (
+        <>
+        {/* The splash sits outside the UserProvider boundary so it paints
+            immediately, without waiting on that chunk. */}
+        <Suspense fallback={null}>
         <UserProvider>
             {/* Mounted here rather than at the app root: the WebSocket stack is
                 useless before login, and mounting it under the guard is what
@@ -127,6 +138,9 @@ const RequiredAuth: React.FC = () => {
                 </Suspense>
             </motion.div>
 
+        </UserProvider>
+        </Suspense>
+
             <AnimatePresence>
                 {showSplash && (
                     <SplashScreen
@@ -137,7 +151,7 @@ const RequiredAuth: React.FC = () => {
                     />
                 )}
             </AnimatePresence>
-        </UserProvider>
+        </>
     );
 };
 
@@ -204,9 +218,23 @@ const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ ch
         <Auth0Provider
             domain={domain}
             clientId={clientId}
+            // Silent renewal on the library defaults means a hidden-iframe
+            // /authorize?prompt=none against the shared *.auth0.com domain, which
+            // needs the Auth0 session cookie sent as a third-party cookie —
+            // refused by Safari's ITP, Firefox ETP strict, and Chrome with 3PC
+            // blocking. Rotating refresh tokens are the recommended SPA flow.
+            useRefreshTokens
+            // Never fall back to that iframe: falling back would reintroduce
+            // exactly the browser-dependent behaviour this removes.
+            useRefreshTokensFallback={false}
+            // Deliberately the default. Do NOT move tokens to localstorage —
+            // that makes them readable by any script injection.
+            cacheLocation="memory"
             authorizationParams={{
                 redirect_uri: window.location.origin,
-                audience: audience
+                audience: audience,
+                // offline_access is what makes a refresh token be issued at all.
+                scope: 'openid profile email offline_access',
             }}
             onRedirectCallback={onRedirectCallback}
         >

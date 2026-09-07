@@ -168,6 +168,11 @@ describe('AppRoutes', () => {
             // The flag is a one-shot: a later mount must not re-show the splash.
             expect(sessionStorage.getItem('f1v:post-login')).toBeNull();
 
+            // The analysis API is imported dynamically so it stays out of the
+            // chunk the public landing page downloads, so the call lands a
+            // microtask later than the render.
+            await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
             // Prefetch is staggered so the two API calls do not trip the
             // gateway's rate limiter with a simultaneous preflight burst.
             expect(fetchDrivers).toHaveBeenCalledTimes(1);

@@ -20,11 +20,12 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [error, setError] = useState<'service_unavailable' | null>(null);
 
     useEffect(() => {
+        const controller = new AbortController();
         let isMounted = true;
         const loadUser = async () => {
             if (isAuthenticated) {
                 try {
-                    const profile = await fetchCurrentUser();
+                    const profile = await fetchCurrentUser(controller.signal);
                     if (isMounted) {
                         setUserProfile(profile);
                         setError(null);

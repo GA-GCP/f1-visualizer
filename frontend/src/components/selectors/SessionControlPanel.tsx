@@ -5,6 +5,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
 import { sendIngestionCommand } from '@/api/ingestionApi.ts';
 import { fetchYears, fetchSessionsByYear, fetchSessionDrivers, type RaceSession, type RaceEntryRoster } from '@/api/referenceApi';
+import { isRequestCancelled } from '@/api/apiClient';
 
 interface SessionControlPanelProps {
     onStreamStarted: (sessionKey: number, mode: 'LIVE' | 'SIMULATION', session: RaceSession) => void;
@@ -36,55 +37,57 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
 
     // Step 1: Load available years on mount
     useEffect(() => {
-        let isMounted = true;
-        fetchYears()
+        const controller = new AbortController();
+        fetchYears(controller.signal)
             .then(data => {
-                if (isMounted) {
-                    setYears(data);
-                    if (data.length > 0) {
-                        setSelectedYear(data[0]); // Most recent year first
-                    }
+                setYears(data);
+                if (data.length > 0) {
+                    setSelectedYear(data[0]); // Most recent year first
                 }
+                setIsLoadingYears(false);
             })
-            .catch(err => console.error('Failed to load years', err))
-            .finally(() => { if (isMounted) setIsLoadingYears(false); });
-        return () => { isMounted = false; };
+            .catch(error => {
+                if (isRequestCancelled(error)) return;
+                console.error('Failed to load years', error);
+                setIsLoadingYears(false);
+            });
+        return () => controller.abort();
     }, []);
 
     // Step 2: When year changes, load sessions for that year
     useEffect(() => {
         if (selectedYear === null) return;
 
-        let isMounted = true;
-        fetchSessionsByYear(selectedYear)
+        const controller = new AbortController();
+        fetchSessionsByYear(selectedYear, controller.signal)
             .then(data => {
-                if (!isMounted) return;
                 setSessionsForYear({ year: selectedYear, sessions: data });
                 if (data.length > 0) {
                     setSessionChoice({ year: selectedYear, session: data[0] });
                 }
             })
-            .catch(err => {
-                console.error('Failed to load sessions for year', err);
+            .catch(error => {
+                if (isRequestCancelled(error)) return;
+                console.error('Failed to load sessions for year', error);
                 // Recording an empty result clears the derived loading state.
-                if (isMounted) setSessionsForYear({ year: selectedYear, sessions: [] });
+                setSessionsForYear({ year: selectedYear, sessions: [] });
             });
-        return () => { isMounted = false; };
+        return () => controller.abort();
     }, [selectedYear]);
 
     // Step 3: When session changes, fetch driver roster and notify parent
     useEffect(() => {
         if (!selectedSession) return;
 
-        let isMounted = true;
-        fetchSessionDrivers(selectedSession.sessionKey)
-            .then(roster => {
-                if (isMounted) {
-                    onSessionSelected?.(roster);
+        const controller = new AbortController();
+        fetchSessionDrivers(selectedSession.sessionKey, controller.signal)
+            .then(roster => onSessionSelected?.(roster))
+            .catch(error => {
+                if (!isRequestCancelled(error)) {
+                    console.error('Failed to load session drivers', error);
                 }
-            })
-            .catch(err => console.error('Failed to load session drivers', err));
-        return () => { isMounted = false; };
+            });
+        return () => controller.abort();
     }, [selectedSession, onSessionSelected]);
 
     const handleStart = async () => {

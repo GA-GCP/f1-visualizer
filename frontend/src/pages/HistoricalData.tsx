@@ -6,6 +6,7 @@ import LapTimeChart from '../components/LapTimeChart';
 import DataVaultLoader from '../components/DataVaultLoader';
 import type { LapDataRecord } from '../types/telemetry';
 import { fetchSessions, fetchSessionDrivers, fetchSessionLaps, type RaceSession } from '../api/referenceApi';
+import { isRequestCancelled } from '../api/apiClient';
 import { buildDriverColorMap, buildDriverLabelMap } from '../utils/chartScales';
 
 const HistoricalData: React.FC = () => {
@@ -47,45 +48,46 @@ const HistoricalData: React.FC = () => {
 
     // Fetch available sessions on mount
     useEffect(() => {
-        fetchSessions().then(data => {
-            setSessions(data);
-            if (data.length === 0) setLoading(false);
-        }).catch(() => setLoading(false));
+        const controller = new AbortController();
+        fetchSessions(controller.signal)
+            .then(data => {
+                setSessions(data);
+                if (data.length === 0) setLoading(false);
+            })
+            .catch(error => {
+                if (!isRequestCancelled(error)) setLoading(false);
+            });
+        return () => controller.abort();
     }, []);
 
     // When session changes, fetch both laps and session-specific driver colors
     useEffect(() => {
         if (!selectedSession) return;
 
-        let isMounted = true;
+        // Switching session mid-flight aborts the previous pair of requests
+        // instead of leaving them running to be discarded on arrival.
+        const controller = new AbortController();
 
         const fetchData = async () => {
             setLoading(true);
             try {
                 const [lapsData, roster] = await Promise.all([
-                    fetchSessionLaps(selectedSession.sessionKey),
-                    fetchSessionDrivers(selectedSession.sessionKey),
+                    fetchSessionLaps(selectedSession.sessionKey, controller.signal),
+                    fetchSessionDrivers(selectedSession.sessionKey, controller.signal),
                 ]);
-                if (isMounted) {
-                    setLaps(lapsData);
-                    setDriverColorMap(buildDriverColorMap(roster.drivers));
-                    setDriverLabelMap(buildDriverLabelMap(roster.drivers));
-                }
-            } catch (err) {
-                if (isMounted) {
-                    console.error("Failed to fetch historical data", err);
-                }
-            } finally {
-                if (isMounted) {
-                    setLoading(false);
-                }
+                setLaps(lapsData);
+                setDriverColorMap(buildDriverColorMap(roster.drivers));
+                setDriverLabelMap(buildDriverLabelMap(roster.drivers));
+                setLoading(false);
+            } catch (error) {
+                if (isRequestCancelled(error)) return; // a newer session is loading
+                console.error('Failed to fetch historical data', error);
+                setLoading(false);
             }
         };
 
         void fetchData();
-        return () => {
-            isMounted = false;
-        };
+        return () => controller.abort();
     }, [selectedSession]);
 
     return (

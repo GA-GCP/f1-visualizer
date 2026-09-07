@@ -29,7 +29,7 @@ describe('userApi', () => {
 
             const result = await fetchCurrentUser();
 
-            expect(apiClient.get).toHaveBeenCalledWith('/users/me');
+            expect(apiClient.get).toHaveBeenCalledWith('/users/me', { signal: undefined });
             expect(result).toEqual(mockUser);
         });
     });

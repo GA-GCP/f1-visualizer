@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { type IMessage } from '@stomp/stompjs';
 import { stompClient } from '../api/stompClient';
+import * as z from 'zod/mini';
+import { telemetryPacketSchema } from '../api/schemas';
 import type { TelemetryPacket } from '../types/telemetry';
 
 export const useTelemetry = (onDataReceived: (data: TelemetryPacket) => void) => {
@@ -30,8 +32,14 @@ export const useTelemetry = (onDataReceived: (data: TelemetryPacket) => void) =>
 
                 subscription = stompClient.subscribe('/topic/race-data', (message: IMessage) => {
                     try {
-                        const payload: TelemetryPacket = JSON.parse(message.body);
-                        bufferRef.current.set(payload.driver_number, payload);
+                        // safeParse, not parse: one malformed packet must not
+                        // tear down the subscription for the rest of the feed.
+                        const result = z.safeParse(telemetryPacketSchema, JSON.parse(message.body));
+                        if (!result.success) {
+                            console.error('[Telemetry] Packet did not match the expected shape', result.error.issues);
+                            return;
+                        }
+                        bufferRef.current.set(result.data.driver_number, result.data);
                     } catch (err) {
                         console.error('Failed to parse telemetry:', err);
                     }

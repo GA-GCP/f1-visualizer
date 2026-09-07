@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import { Box, IconButton, Slider, Typography, Paper, CircularProgress, Tooltip } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
@@ -129,4 +129,8 @@ const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
     );
 };
 
-export default MediaController;
+// Memoised: RaceSimulator no longer re-renders per telemetry tick, but it does
+// re-render on session, driver and connection changes, and this subtree is
+// expensive — MUI Autocompletes re-run their renderInput/renderOption closures
+// and Emotion re-serialises every sx object.
+export default memo(MediaController);

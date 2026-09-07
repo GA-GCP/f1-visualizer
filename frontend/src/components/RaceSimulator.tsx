@@ -1,32 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Box, Typography, Paper, Grid, Chip, Snackbar, Alert, CircularProgress } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTelemetry } from '../hooks/useTelemetry';
 import { useLocation } from '../hooks/useLocation';
 import CircuitTrace from './CircuitTrace';
 import DriverSelector from './selectors/DriverSelector';
 import SessionControlPanel from './selectors/SessionControlPanel';
 import MediaController from './MediaController';
+import LiveTelemetryPanel from '../features/live/LiveTelemetryPanel';
 import { fetchDrivers, fetchSessionLaps, type DriverProfile, type RaceEntryRoster, type RaceSession } from '../api/referenceApi';
 import { pauseSimulation } from '../api/ingestionApi';
-import type { TelemetryPacket, LocationPacket, LapDataRecord } from '../types/telemetry';
+import type { LocationPacket, LapDataRecord } from '../types/telemetry';
 import { useUser } from '../context/UserContext';
 import { useCallback } from 'react';
-
-const containerVariants = {
-    hidden: {},
-    visible: { transition: { staggerChildren: 0.08 } }
-};
-const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
-};
 
 const RaceSimulator: React.FC = () => {
     const [drivers, setDrivers] = useState<DriverProfile[]>([]);
     const [selectedDriver, setSelectedDriver] = useState<DriverProfile | null>(null);
     const [activeSession, setActiveSession] = useState<{ key: number, mode: string } | null>(null);
-    const [lastTelemetry, setLastTelemetry] = useState<TelemetryPacket | null>(null);
     // Location data bypasses React state entirely to avoid React 18 batching
     // that would drop intermediate GPS points.  The ref acts as a lock-free
     // queue that useLocation writes to and CircuitTrace drains each frame.
@@ -40,14 +30,6 @@ const RaceSimulator: React.FC = () => {
     const isInitializingRef = useRef(false);
     const [sessionLaps, setSessionLaps] = useState<LapDataRecord[]>([]);
     const sessionLapsRef = useRef<LapDataRecord[]>([]);
-    const [currentLap, setCurrentLap] = useState<{
-        lapNumber: number;
-        totalLaps: number;
-        isPitOutLap: boolean;
-        compound: string | null;
-        prevCompound: string | null;
-        isFormationLap: boolean;
-    } | null>(null);
 
     const { userProfile } = useUser();
     // Depend on the primitive, not the profile object: UserProvider hands back a
@@ -91,71 +73,38 @@ const RaceSimulator: React.FC = () => {
     useEffect(() => { isInitializingRef.current = isInitializing; }, [isInitializing]);
     useEffect(() => { sessionLapsRef.current = sessionLaps; }, [sessionLaps]);
 
-    const { isConnected: isTelemetryConnected } = useTelemetry((data) => {
-        if (selectedDriver && data.driver_number === selectedDriver.id &&
-            activeSession && data.session_key === activeSession.key) {
-            setLastTelemetry(data);
-            if (isInitializingRef.current) setIsInitializing(false);
+    // Lifted out of LiveTelemetryPanel so the header chip and the lost-connection
+    // banner can read it. Both change rarely, so they cost no per-tick renders.
+    const [isTelemetryConnected, setIsTelemetryConnected] = useState(false);
 
-            // Lap correlation: find which lap corresponds to this telemetry timestamp
-            const driverLaps = sessionLapsRef.current
-                .filter(l => l.driverNumber === data.driver_number && l.dateStart)
-                .sort((a, b) => new Date(a.dateStart!).getTime() - new Date(b.dateStart!).getTime());
-
-            if (driverLaps.length > 0) {
-                const telemetryTime = new Date(data.date).getTime();
-                let matched: LapDataRecord | null = null;
-
-                for (let i = driverLaps.length - 1; i >= 0; i--) {
-                    if (new Date(driverLaps[i].dateStart!).getTime() <= telemetryTime) {
-                        matched = driverLaps[i];
-                        break;
-                    }
-                }
-
-                if (matched) {
-                    const totalLaps = Math.max(...driverLaps.map(l => l.lapNumber));
-                    const prevLap = driverLaps.find(l => l.lapNumber === matched!.lapNumber - 1);
-
-                    setCurrentLap({
-                        lapNumber: matched.lapNumber,
-                        totalLaps,
-                        isPitOutLap: matched.isPitOutLap ?? false,
-                        compound: matched.compound ?? null,
-                        prevCompound: prevLap?.compound ?? null,
-                        isFormationLap: matched.lapNumber === 0,
-                    });
-                }
-            }
-        }
-    });
+    const handleFirstPacket = useCallback(() => {
+        setIsInitializing(false);
+    }, []);
 
     const { isConnected: isLocationConnected } = useLocation(locationQueueRef);
 
-    const handleStreamStarted = (sessionKey: number, mode: 'LIVE' | 'SIMULATION', session: RaceSession) => {
+    const handleStreamStarted = useCallback((sessionKey: number, mode: 'LIVE' | 'SIMULATION', session: RaceSession) => {
         setSessionMeta({ year: session.year, meetingName: session.meetingName });
         setIsInitializing(true);
         setActiveSession({ key: sessionKey, mode });
-        setLastTelemetry(null);
-        setCurrentLap(null);
         setSessionLaps([]);
         locationQueueRef.current = [];
+        // Bumping this clears the trace and the telemetry panel together.
         setTraceResetKey(prev => prev + 1);
 
         // Pre-load lap data for lap tracking correlation
         fetchSessionLaps(sessionKey).then(laps => {
             setSessionLaps(laps);
         }).catch(err => console.error('Failed to pre-load lap data', err));
-    };
+    }, []);
 
-    const handleSeek = () => {
+    // Stable so memo() on MediaController actually holds.
+    const handleSeek = useCallback(() => {
         locationQueueRef.current = [];
+        // Clears the trace and the telemetry panel, so neither shows data from
+        // the wrong race position while the seek is in flight.
         setTraceResetKey(prev => prev + 1);
-        // Clear stale telemetry and lap state so the UI shows "waiting"
-        // instead of data from the wrong race position after a seek.
-        setLastTelemetry(null);
-        setCurrentLap(null);
-    };
+    }, []);
 
     const handleCancelSimulation = useCallback(async () => {
         try {
@@ -164,8 +113,6 @@ const RaceSimulator: React.FC = () => {
             console.error('Failed to pause simulation on cancel', err);
         }
         setActiveSession(null);
-        setLastTelemetry(null);
-        setCurrentLap(null);
         setSessionLaps([]);
         setSessionMeta(null);
         setIsInitializing(false);
@@ -194,6 +141,8 @@ const RaceSimulator: React.FC = () => {
 
     // Use session-specific drivers when available, otherwise fall back to global drivers
     const displayDrivers = sessionDrivers.length > 0 ? sessionDrivers : drivers;
+
+    const dismissStreamError = useCallback(() => setStreamError(null), []);
 
     const connectionLost = activeSession !== null && (!isTelemetryConnected || !isLocationConnected);
 
@@ -248,103 +197,14 @@ const RaceSimulator: React.FC = () => {
                             )}
                         </Paper>
 
-                            <Paper sx={{
-                                p: 3,
-                                bgcolor: '#1e1e1e',
-                                color: 'white',
-                                minHeight: '200px',
-                                borderTop: `4px solid ${selectedDriver?.teamColor || '#333'}`,
-                            }}>
-                                <Typography variant="h6" component="h2" color="secondary" sx={{ mb: 2 }}>
-                                    LIVE TELEMETRY
-                                </Typography>
-                                {lastTelemetry ? (
-                                    <motion.div variants={containerVariants} initial="hidden" animate="visible">
-                                        {currentLap && (
-                                            <motion.div variants={itemVariants}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                                                    <Typography variant="h6" component="p" sx={{
-                                                        fontFamily: '"Titillium Web", sans-serif',
-                                                        fontWeight: 700,
-                                                        letterSpacing: '0.05em',
-                                                    }}>
-                                                        LAP {currentLap.lapNumber}
-                                                        <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>
-                                                            /{currentLap.totalLaps}
-                                                        </span>
-                                                    </Typography>
-                                                    {currentLap.isFormationLap && (
-                                                        <Chip label="FORMATION LAP" size="small"
-                                                            sx={{ bgcolor: '#ff9800', color: 'black', fontWeight: 700, fontSize: '0.65rem' }} />
-                                                    )}
-                                                    {currentLap.isPitOutLap && (
-                                                        <Chip label="PIT OUT" size="small"
-                                                            sx={{ bgcolor: '#2196f3', color: 'white', fontWeight: 700, fontSize: '0.65rem' }} />
-                                                    )}
-                                                    {currentLap.compound && currentLap.prevCompound &&
-                                                     currentLap.compound !== currentLap.prevCompound && (
-                                                        <Chip
-                                                            label={`${currentLap.prevCompound} \u2192 ${currentLap.compound}`}
-                                                            size="small"
-                                                            sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'white', fontSize: '0.65rem' }}
-                                                        />
-                                                    )}
-                                                    {currentLap.compound && (
-                                                        <Chip label={currentLap.compound} size="small" variant="outlined"
-                                                            sx={{
-                                                                borderColor: currentLap.compound === 'SOFT' ? '#e10600'
-                                                                    : currentLap.compound === 'MEDIUM' ? '#ffd700'
-                                                                    : currentLap.compound === 'HARD' ? '#ffffff'
-                                                                    : currentLap.compound === 'INTERMEDIATE' ? '#43b02a'
-                                                                    : '#2196f3',
-                                                                color: 'white',
-                                                                fontSize: '0.65rem',
-                                                            }}
-                                                        />
-                                                    )}
-                                                </Box>
-                                            </motion.div>
-                                        )}
-                                        <motion.div variants={itemVariants}>
-                                            <Typography variant="h2" component="p" sx={{ fontWeight: 'bold', color: 'white' }}>
-                                                {lastTelemetry.speed} <span style={{ fontSize: '1.5rem', color: '#666' }}>KM/H</span>
-                                            </Typography>
-                                        </motion.div>
-                                        <Grid container component="dl" spacing={2} sx={{ mt: 2, mb: 0 }}>
-                                            <Grid size={3}>
-                                                <motion.div variants={itemVariants}>
-                                                    <Typography variant="caption" component="dt" color="text.secondary">RPM</Typography>
-                                                    <Typography variant="h6" component="dd" sx={{ m: 0 }}>{lastTelemetry.rpm}</Typography>
-                                                </motion.div>
-                                            </Grid>
-                                            <Grid size={3}>
-                                                <motion.div variants={itemVariants}>
-                                                    <Typography variant="caption" component="dt" color="text.secondary">GEAR</Typography>
-                                                    <Typography variant="h6" component="dd" sx={{ m: 0 }}>{lastTelemetry.gear}</Typography>
-                                                </motion.div>
-                                            </Grid>
-                                            <Grid size={3}>
-                                                <motion.div variants={itemVariants}>
-                                                    <Typography variant="caption" component="dt" color="text.secondary">THROTTLE</Typography>
-                                                    <Typography variant="h6" component="dd" sx={{ m: 0 }}>{lastTelemetry.throttle}%</Typography>
-                                                </motion.div>
-                                            </Grid>
-                                            <Grid size={3}>
-                                                <motion.div variants={itemVariants}>
-                                                    <Typography variant="caption" component="dt" color="text.secondary">BRAKE</Typography>
-                                                    <Typography variant="h6" component="dd" sx={{ m: 0, color: lastTelemetry.brake > 0 ? '#ff4444' : 'white' }}>
-                                                        {lastTelemetry.brake}%
-                                                    </Typography>
-                                                </motion.div>
-                                            </Grid>
-                                        </Grid>
-                                    </motion.div>
-                                ) : (
-                                    <Typography color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>
-                                        {activeSession ? `Waiting for data from ${selectedDriver?.code}...` : "Initialize a session to begin."}
-                                    </Typography>
-                                )}
-                            </Paper>
+                        <LiveTelemetryPanel
+                            selectedDriver={selectedDriver}
+                            activeSession={activeSession}
+                            sessionLaps={sessionLaps}
+                            resetKey={traceResetKey}
+                            onFirstPacket={handleFirstPacket}
+                            onConnectionChange={setIsTelemetryConnected}
+                        />
 
                     </Box>
                 </Grid>
@@ -369,8 +229,8 @@ const RaceSimulator: React.FC = () => {
                 </Alert>
             </Snackbar>
 
-            <Snackbar open={!!streamError} autoHideDuration={8000} onClose={() => setStreamError(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-                <Alert severity="error" variant="filled" onClose={() => setStreamError(null)} sx={{ width: '100%', fontWeight: 'bold' }}>
+            <Snackbar open={!!streamError} autoHideDuration={8000} onClose={dismissStreamError} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+                <Alert severity="error" variant="filled" onClose={dismissStreamError} sx={{ width: '100%', fontWeight: 'bold' }}>
                     {streamError}
                 </Alert>
             </Snackbar>

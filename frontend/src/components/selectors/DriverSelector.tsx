@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Autocomplete, TextField, Box, Typography } from '@mui/material';
 import type { DriverProfile } from '@/api/referenceApi.ts';
 
@@ -42,4 +42,8 @@ const DriverSelector: React.FC<DriverSelectorProps> = ({ label, options, value, 
     );
 };
 
-export default DriverSelector;
+// Memoised: RaceSimulator no longer re-renders per telemetry tick, but it does
+// re-render on session, driver and connection changes, and this subtree is
+// expensive — MUI Autocompletes re-run their renderInput/renderOption closures
+// and Emotion re-serialises every sx object.
+export default memo(DriverSelector);

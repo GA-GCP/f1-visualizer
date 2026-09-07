@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Box, Typography } from '@mui/material';
 
 const STATUS_MESSAGES: { max: number; label: string }[] = [
@@ -21,6 +21,7 @@ interface SplashProgressProps {
 }
 
 const SplashProgress: React.FC<SplashProgressProps> = ({ progress }) => {
+    const reduceMotion = useReducedMotion();
     const statusMessage = useMemo(() => getStatusMessage(progress), [progress]);
     const widthPercent = `${Math.min(progress * 100, 100)}%`;
 
@@ -60,23 +61,40 @@ const SplashProgress: React.FC<SplashProgressProps> = ({ progress }) => {
                     overflow: 'hidden',
                 }}
             >
-                {/* Fill with shimmer */}
+                {/* Fill (carries the progress width) */}
                 <motion.div
                     style={{
                         height: '100%',
                         width: widthPercent,
-                        background:
-                            'linear-gradient(90deg, #e10600 0%, #ff3030 50%, #e10600 100%)',
-                        backgroundSize: '200% 100%',
                         borderRadius: 2,
+                        overflow: 'hidden',
+                        position: 'relative',
+                        backgroundColor: '#e10600',
                     }}
-                    animate={{ backgroundPosition: ['0% 0%', '100% 0%'] }}
-                    transition={{
-                        duration: 1.2,
-                        repeat: Infinity,
-                        ease: 'linear',
-                    }}
-                />
+                >
+                    {/* Shimmer driven by a transform on an oversized child.
+                        `backgroundPosition` is not compositor-accelerated, so
+                        framer wrote the inline style from JS every frame. The
+                        gradient repeats once across the 200% width, so
+                        translating by -50% loops seamlessly. */}
+                    <motion.div
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '200%',
+                            height: '100%',
+                            background:
+                                'linear-gradient(90deg, #e10600 0%, #ff3030 25%, #e10600 50%, #ff3030 75%, #e10600 100%)',
+                        }}
+                        animate={reduceMotion ? undefined : { x: ['0%', '-50%'] }}
+                        transition={{
+                            duration: 1.2,
+                            repeat: Infinity,
+                            ease: 'linear',
+                        }}
+                    />
+                </motion.div>
             </Box>
 
             {/* Cycling status messages */}

@@ -50,18 +50,43 @@ const StatComparisonBar: React.FC<StatComparisonBarProps> = ({ label, driverA, d
                 </Typography>
             </Box>
 
-            <Box sx={{ display: 'flex', height: 10, borderRadius: 1, overflow: 'hidden', bgcolor: '#333' }}>
+            {/* The two halves are absolutely positioned at their final widths and
+                revealed with `scaleX`, which is WAAPI-accelerated. Animating
+                `width` instead drove ten simultaneous layout tweens from JS — and
+                because the bars were flex siblings, each write invalidated the
+                other's geometry too. Inside a 10 px `overflow: hidden` track the
+                result is visually identical. `key` re-runs the reveal when the
+                pairing changes. */}
+            <Box sx={{ position: 'relative', height: 10, borderRadius: 1, overflow: 'hidden', bgcolor: '#333' }}>
                 <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${percentageA}%` }}
+                    key={`${driverA.id}-a`}
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
                     transition={{ duration: 1.2, ease: "circOut" }}
-                    style={{ backgroundColor: driverA.teamColor }}
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        bottom: 0,
+                        left: 0,
+                        width: `${percentageA}%`,
+                        transformOrigin: 'left',
+                        backgroundColor: driverA.teamColor,
+                    }}
                 />
                 <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${percentageB}%` }}
+                    key={`${driverB.id}-b`}
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
                     transition={{ duration: 1.2, ease: "circOut" }}
-                    style={{ backgroundColor: driverB.teamColor }}
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        bottom: 0,
+                        left: `${percentageA}%`,
+                        width: `${percentageB}%`,
+                        transformOrigin: 'right',
+                        backgroundColor: driverB.teamColor,
+                    }}
                 />
             </Box>
         </Box>

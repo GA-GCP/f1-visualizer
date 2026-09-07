@@ -109,6 +109,25 @@ const LandingGate: React.FC = () => {
     return <Landing />;
 };
 
+// --- ROUTE TREE ---
+// Exported separately from <App /> so a test can mount it inside its own
+// router and auth mock without booting BrowserRouter or Auth0Provider.
+export const AppRoutes: React.FC = () => (
+    <Routes>
+        {/* Public landing page — outside the auth guard */}
+        <Route path="/" element={<LandingGate />} />
+
+        {/* Protected app routes */}
+        <Route element={<RequiredAuth />}>
+            <Route element={<LayoutMain />}>
+                <Route path="/dashboard" element={<Home />} />
+                <Route path="/historical" element={<HistoricalData />} />
+                <Route path="/versus" element={<VersusMode />} />
+            </Route>
+        </Route>
+    </Routes>
+);
+
 // --- AUTH0 PROVIDER WRAPPER ---
 // We wrap this inside BrowserRouter so we can use useNavigate for the Auth0 callback redirect
 const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -159,19 +178,7 @@ function App() {
                     <AxiosAuthInterceptor />
                     <StompAuthHandler />
                     <ErrorBoundary>
-                        <Routes>
-                            {/* Public landing page — outside the auth guard */}
-                            <Route path="/" element={<LandingGate />} />
-
-                            {/* Protected app routes */}
-                            <Route element={<RequiredAuth />}>
-                                <Route element={<LayoutMain />}>
-                                    <Route path="/dashboard" element={<Home />} />
-                                    <Route path="/historical" element={<HistoricalData />} />
-                                    <Route path="/versus" element={<VersusMode />} />
-                                </Route>
-                            </Route>
-                        </Routes>
+                        <AppRoutes />
                     </ErrorBoundary>
                 </Auth0ProviderWithNavigate>
             </BrowserRouter>

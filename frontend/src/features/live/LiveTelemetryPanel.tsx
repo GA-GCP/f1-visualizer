@@ -5,15 +5,8 @@ import { useTelemetry } from '../../hooks/useTelemetry';
 import { buildLapIndex, findCurrentLap, type CurrentLap } from './lapCorrelation';
 import type { DriverProfile } from '../../api/referenceApi';
 import type { LapDataRecord, TelemetryPacket } from '../../types/telemetry';
-
-const containerVariants = {
-    hidden: {},
-    visible: { transition: { staggerChildren: 0.08 } },
-};
-const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-};
+import { BORDER_SUBTLE, COMPOUND_COLOURS, COMPOUND_FALLBACK, FONT_FAMILY, PAPER_BG, type TyreCompound } from '../../theme/tokens';
+import { staggerContainer, staggerItem } from '../../theme/motion';
 
 /**
  * Minimum gap between committed readouts.
@@ -24,13 +17,6 @@ const itemVariants = {
  * because those are the transitions worth seeing without delay.
  */
 const COMMIT_INTERVAL_MS = 100;
-
-const COMPOUND_COLOURS: Record<string, string> = {
-    SOFT: '#e10600',
-    MEDIUM: '#ffd700',
-    HARD: '#ffffff',
-    INTERMEDIATE: '#43b02a',
-};
 
 /** Fixed-width numeric cell, so digits changing never move the unit label. */
 const numericSx = {
@@ -140,21 +126,21 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
     return (
         <Paper sx={{
             p: 3,
-            bgcolor: '#1e1e1e',
+            bgcolor: PAPER_BG,
             color: 'white',
             minHeight: '200px',
-            borderTop: `4px solid ${selectedDriver?.teamColor || '#333'}`,
+            borderTop: `4px solid ${selectedDriver?.teamColor || BORDER_SUBTLE}`,
         }}>
             <Typography variant="h6" component="h2" color="secondary" sx={{ mb: 2 }}>
                 LIVE TELEMETRY
             </Typography>
             {lastTelemetry ? (
-                <motion.div variants={containerVariants} initial="hidden" animate="visible">
+                <motion.div variants={staggerContainer} initial="hidden" animate="visible">
                     {currentLap && (
-                        <motion.div variants={itemVariants}>
+                        <motion.div variants={staggerItem}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
                                 <Typography variant="h6" component="p" sx={{
-                                    fontFamily: '"Titillium Web", sans-serif',
+                                    fontFamily: FONT_FAMILY,
                                     fontWeight: 700,
                                     letterSpacing: '0.05em',
                                     ...numericSx,
@@ -183,7 +169,7 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
                                 {currentLap.compound && (
                                     <Chip label={currentLap.compound} size="small" variant="outlined"
                                         sx={{
-                                            borderColor: COMPOUND_COLOURS[currentLap.compound] ?? '#2196f3',
+                                            borderColor: COMPOUND_COLOURS[currentLap.compound as TyreCompound] ?? COMPOUND_FALLBACK,
                                             color: 'white',
                                             fontSize: '0.75rem',
                                         }}
@@ -192,7 +178,7 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
                             </Box>
                         </motion.div>
                     )}
-                    <motion.div variants={itemVariants}>
+                    <motion.div variants={staggerItem}>
                         <Typography variant="h2" component="p" sx={{ fontWeight: 'bold', color: 'white' }}>
                             <Box component="span" sx={{
                                 ...numericSx,
@@ -208,25 +194,25 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
                     </motion.div>
                     <Grid container component="dl" spacing={2} sx={{ mt: 2, mb: 0 }}>
                         <Grid size={3}>
-                            <motion.div variants={itemVariants}>
+                            <motion.div variants={staggerItem}>
                                 <Typography variant="caption" component="dt" color="text.secondary">RPM</Typography>
                                 <Typography variant="h6" component="dd" sx={{ m: 0, ...numericSx }}>{lastTelemetry.rpm}</Typography>
                             </motion.div>
                         </Grid>
                         <Grid size={3}>
-                            <motion.div variants={itemVariants}>
+                            <motion.div variants={staggerItem}>
                                 <Typography variant="caption" component="dt" color="text.secondary">GEAR</Typography>
                                 <Typography variant="h6" component="dd" sx={{ m: 0, ...numericSx }}>{lastTelemetry.gear}</Typography>
                             </motion.div>
                         </Grid>
                         <Grid size={3}>
-                            <motion.div variants={itemVariants}>
+                            <motion.div variants={staggerItem}>
                                 <Typography variant="caption" component="dt" color="text.secondary">THROTTLE</Typography>
                                 <Typography variant="h6" component="dd" sx={{ m: 0, ...numericSx }}>{lastTelemetry.throttle}%</Typography>
                             </motion.div>
                         </Grid>
                         <Grid size={3}>
-                            <motion.div variants={itemVariants}>
+                            <motion.div variants={staggerItem}>
                                 <Typography variant="caption" component="dt" color="text.secondary">BRAKE</Typography>
                                 <Typography variant="h6" component="dd" sx={{ m: 0, ...numericSx, color: lastTelemetry.brake > 0 ? '#ff4444' : 'white' }}>
                                     {lastTelemetry.brake}%

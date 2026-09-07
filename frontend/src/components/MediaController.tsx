@@ -7,6 +7,7 @@ import PauseIcon from '@mui/icons-material/Pause';
 import { type StompSubscription } from '@stomp/stompjs';
 import { playSimulation, pauseSimulation, seekSimulation } from '../api/ingestionApi';
 import { stompClient } from '../api/stompClient';
+import { BRAND_RED, PAPER_BG_RAISED } from '../theme/tokens';
 
 interface MediaControllerProps {
     onSeek?: () => void;
@@ -83,7 +84,7 @@ const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
     };
 
     return (
-        <Paper sx={{ p: 2, bgcolor: '#1a1a1a', borderTop: '2px solid #e10600', display: 'flex', alignItems: 'center', gap: 3 }}>
+        <Paper sx={{ p: 2, bgcolor: PAPER_BG_RAISED, borderTop: `2px solid ${BRAND_RED}`, display: 'flex', alignItems: 'center', gap: 3 }}>
             <Tooltip title={isPlaying ? 'Pause simulation' : 'Play simulation'}>
                 <IconButton
                     onClick={handleTogglePlay}
@@ -120,7 +121,7 @@ const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
                     valueLabelDisplay="auto"
                     valueLabelFormat={(value) => `${value}%`}
                     sx={{
-                        color: '#e10600',
+                        color: BRAND_RED,
                         height: 4,
                         // No `padding: 0`: MUI's vertical padding is the thumb's
                         // hit area, and removing it left a 16px target, below

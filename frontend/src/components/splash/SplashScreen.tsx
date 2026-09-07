@@ -6,6 +6,7 @@ import SplashCircuit from './SplashCircuit';
 import SplashProgress from './SplashProgress';
 import { useSplashSequence } from './useSplashSequence';
 import { rememberSplashSkip } from './splashPreference';
+import { FONT_FAMILY } from '../../theme/tokens';
 
 // --- Per-letter stagger text reveal ---
 
@@ -106,7 +107,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, readiness, fail
                                 variants={letterVariants}
                                 style={{
                                     display: 'inline-block',
-                                    fontFamily: '"Titillium Web", sans-serif',
+                                    fontFamily: FONT_FAMILY,
                                     fontWeight: 900,
                                     fontStyle: 'italic',
                                     fontSize: 'clamp(2rem, 5vw, 4rem)',

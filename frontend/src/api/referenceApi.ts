@@ -1,41 +1,24 @@
-import { apiClient } from './apiClient';
-import type { LapDataRecord } from '../types/telemetry';
+import { abortable, apiClient } from './apiClient';
+import {
+    driverProfileSchema,
+    driverStatsSchema,
+    lapDataRecordSchema,
+    raceEntryRosterSchema,
+    raceSessionSchema,
+    type DriverProfile,
+    type LapDataRecord,
+    type RaceEntryRoster,
+    type RaceSession,
+} from './schemas';
+import { parseResponse } from './parseResponse';
+import * as z from 'zod/mini';
 
-export interface DriverProfile {
-    id: number;
-    code: string;
-    name: string;
-    team: string;
-    teamColor: string;
-    stats: {
-        speed: number; consistency: number; aggression: number; tireMgmt: number; experience: number;
-        wins: number; podiums: number;
-        totalPoints: number; bestChampionshipFinish: number; totalRaces: number; teamsDrivenFor: string[];
-    };
-}
-
-export interface RaceSession {
-    sessionKey: number; // Note the camelCase switch!
-    sessionName: string;
-    meetingName: string;
-    year: number;
-    countryName: string;
-}
-
-export interface SessionDriverEntry {
-    driverNumber: number;
-    broadcastName: string;
-    nameAcronym: string;
-    teamName: string;
-    teamColour: string; // hex without '#' prefix
-    countryCode: string;
-}
-
-export interface RaceEntryRoster {
-    sessionKey: number;
-    year: number;
-    drivers: SessionDriverEntry[];
-}
+export type {
+    DriverProfile,
+    RaceSession,
+    SessionDriverEntry,
+    RaceEntryRoster,
+} from './schemas';
 
 // ── Request deduplication + in-memory cache ──
 // Multiple components (RaceSimulator, VersusMode, HistoricalData, SessionControlPanel)
@@ -56,30 +39,32 @@ let driversInflight: Promise<DriverProfile[]> | null = null;
 let sessionsCache: RaceSession[] | null = null;
 let sessionsInflight: Promise<RaceSession[]> | null = null;
 
-export const fetchDrivers = async (): Promise<DriverProfile[]> => {
+export const fetchDrivers = async (signal?: AbortSignal): Promise<DriverProfile[]> => {
     if (driversCache) return driversCache;
-    if (driversInflight) return driversInflight;
+    if (driversInflight) return abortable(driversInflight, signal);
 
     driversInflight = apiClient.get('/analysis/drivers').then(res => {
-        driversCache = res.data;
+        const drivers = parseResponse(z.array(driverProfileSchema), res.data, 'GET /analysis/drivers');
+        driversCache = drivers;
         driversInflight = null;
-        return res.data as DriverProfile[];
+        return drivers;
     }).catch(err => {
         setTimeout(() => { driversInflight = null; }, FAILURE_COOLDOWN_MS);
         throw err;
     });
 
-    return driversInflight;
+    return abortable(driversInflight, signal);
 };
 
-export const fetchSessions = async (): Promise<RaceSession[]> => {
+export const fetchSessions = async (signal?: AbortSignal): Promise<RaceSession[]> => {
     if (sessionsCache) return sessionsCache;
-    if (sessionsInflight) return sessionsInflight;
+    if (sessionsInflight) return abortable(sessionsInflight, signal);
 
     sessionsInflight = apiClient.get('/analysis/sessions').then(res => {
         // v1.0: Only Race sessions have lap data in BigQuery.
         // Practice/Qualifying/Sprint will be added in v1.1.
-        const raceOnly = (res.data as RaceSession[]).filter(s => s.sessionName === 'Race');
+        const raceOnly = parseResponse(z.array(raceSessionSchema), res.data, 'GET /analysis/sessions')
+            .filter(s => s.sessionName === 'Race');
         sessionsCache = raceOnly;
         sessionsInflight = null;
         return raceOnly;
@@ -88,22 +73,22 @@ export const fetchSessions = async (): Promise<RaceSession[]> => {
         throw err;
     });
 
-    return sessionsInflight;
+    return abortable(sessionsInflight, signal);
 };
 
-export const searchSessions = async (query: string): Promise<RaceSession[]> => {
-    const res = await apiClient.get(`/analysis/sessions/search?query=${encodeURIComponent(query)}`);
-    return res.data;
+export const searchSessions = async (query: string, signal?: AbortSignal): Promise<RaceSession[]> => {
+    const res = await apiClient.get(`/analysis/sessions/search?query=${encodeURIComponent(query)}`, { signal });
+    return parseResponse(z.array(raceSessionSchema), res.data, 'GET /analysis/sessions/search');
 };
 
-export const fetchDriverStats = async (driverId: number): Promise<DriverProfile['stats']> => {
-    const res = await apiClient.get(`/analysis/drivers/${driverId}/stats`);
-    return res.data;
+export const fetchDriverStats = async (driverId: number, signal?: AbortSignal): Promise<DriverProfile['stats']> => {
+    const res = await apiClient.get(`/analysis/drivers/${driverId}/stats`, { signal });
+    return parseResponse(driverStatsSchema, res.data, 'GET /analysis/drivers/:id/stats');
 };
 
-export const fetchSessionLaps = async (sessionKey: number): Promise<LapDataRecord[]> => {
-    const res = await apiClient.get(`/analysis/session/${sessionKey}/laps`);
-    return res.data;
+export const fetchSessionLaps = async (sessionKey: number, signal?: AbortSignal): Promise<LapDataRecord[]> => {
+    const res = await apiClient.get(`/analysis/session/${sessionKey}/laps`, { signal });
+    return parseResponse(z.array(lapDataRecordSchema), res.data, 'GET /analysis/session/:key/laps');
 };
 
 // ── Season-aware API functions ──
@@ -111,42 +96,43 @@ export const fetchSessionLaps = async (sessionKey: number): Promise<LapDataRecor
 let yearsCache: number[] | null = null;
 let yearsInflight: Promise<number[]> | null = null;
 
-export const fetchYears = async (): Promise<number[]> => {
+export const fetchYears = async (signal?: AbortSignal): Promise<number[]> => {
     if (yearsCache) return yearsCache;
-    if (yearsInflight) return yearsInflight;
+    if (yearsInflight) return abortable(yearsInflight, signal);
 
     yearsInflight = apiClient.get('/analysis/years').then(res => {
-        yearsCache = res.data;
+        const years = parseResponse(z.array(z.number()), res.data, 'GET /analysis/years');
+        yearsCache = years;
         yearsInflight = null;
-        return res.data as number[];
+        return years;
     }).catch(err => {
         setTimeout(() => { yearsInflight = null; }, FAILURE_COOLDOWN_MS);
         throw err;
     });
 
-    return yearsInflight;
+    return abortable(yearsInflight, signal);
 };
 
 const sessionsByYearCache = new Map<number, RaceSession[]>();
 
-export const fetchSessionsByYear = async (year: number): Promise<RaceSession[]> => {
+export const fetchSessionsByYear = async (year: number, signal?: AbortSignal): Promise<RaceSession[]> => {
     const cached = sessionsByYearCache.get(year);
     if (cached) return cached;
 
-    const res = await apiClient.get(`/analysis/sessions/year/${year}`);
-    const sessions = res.data as RaceSession[];
+    const res = await apiClient.get(`/analysis/sessions/year/${year}`, { signal });
+    const sessions = parseResponse(z.array(raceSessionSchema), res.data, 'GET /analysis/sessions/year/:year');
     sessionsByYearCache.set(year, sessions);
     return sessions;
 };
 
 const sessionDriversCache = new Map<number, RaceEntryRoster>();
 
-export const fetchSessionDrivers = async (sessionKey: number): Promise<RaceEntryRoster> => {
+export const fetchSessionDrivers = async (sessionKey: number, signal?: AbortSignal): Promise<RaceEntryRoster> => {
     const cached = sessionDriversCache.get(sessionKey);
     if (cached) return cached;
 
-    const res = await apiClient.get(`/analysis/sessions/${sessionKey}/drivers`);
-    const roster = res.data as RaceEntryRoster;
+    const res = await apiClient.get(`/analysis/sessions/${sessionKey}/drivers`, { signal });
+    const roster = parseResponse(raceEntryRosterSchema, res.data, 'GET /analysis/sessions/:key/drivers');
     sessionDriversCache.set(sessionKey, roster);
     return roster;
 };

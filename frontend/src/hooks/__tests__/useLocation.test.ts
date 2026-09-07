@@ -13,6 +13,16 @@ vi.mock('../../api/stompClient', () => ({
     }
 }));
 
+/** A complete wire-shaped location packet; packets are schema-validated now. */
+const packet = (over: Partial<LocationPacket> = {}): LocationPacket => ({
+    session_key: 9165,
+    meeting_key: 1,
+    date: '2024-05-01T12:00:00Z',
+    driver_number: 1,
+    x: 0, y: 0, z: 0,
+    ...over,
+});
+
 /** Helper: creates a mutable ref acting as the location queue */
 function makeQueueRef(): React.RefObject<LocationPacket[]> {
     return { current: [] };
@@ -90,7 +100,7 @@ describe('useLocation Hook', () => {
         // Should not be added to the queue
         expect(queueRef.current).toHaveLength(0);
         expect(consoleSpy).toHaveBeenCalledWith(
-            expect.stringContaining('[GPS] Payload missing required fields'),
+            expect.stringContaining('did not match the expected shape'),
             expect.anything()
         );
 
@@ -120,8 +130,7 @@ describe('useLocation Hook', () => {
         // Should NOT be added to queue (it's a string, not an object)
         expect(queueRef.current).toHaveLength(0);
         expect(consoleSpy).toHaveBeenCalledWith(
-            expect.stringContaining('[GPS] Parsed payload is not an object'),
-            expect.anything(),
+            expect.stringContaining('did not match the expected shape'),
             expect.anything()
         );
 
@@ -160,7 +169,7 @@ describe('useLocation Hook', () => {
 
         // rAF is paused in a background tab; the socket is not.
         for (let i = 0; i < 6000; i++) {
-            stompCallback({ body: JSON.stringify({ driver_number: 1, x: i, y: i, z: 0 }) });
+            stompCallback({ body: JSON.stringify(packet({ driver_number: 1, x: i, y: i })) });
         }
 
         expect(queueRef.current.length).toBe(5000);
@@ -181,8 +190,8 @@ describe('useLocation Hook', () => {
         await waitFor(() => expect(stompClient.subscribe).toHaveBeenCalled());
 
         for (let i = 0; i < 100; i++) {
-            stompCallback({ body: JSON.stringify({ driver_number: 1, x: i, y: i, z: 0 }) });
-            stompCallback({ body: JSON.stringify({ driver_number: 44, x: i * 2, y: i, z: 0 }) });
+            stompCallback({ body: JSON.stringify(packet({ driver_number: 1, x: i, y: i })) });
+            stompCallback({ body: JSON.stringify(packet({ driver_number: 44, x: i * 2, y: i })) });
         }
         expect(queueRef.current.length).toBe(200);
 

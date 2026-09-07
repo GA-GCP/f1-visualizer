@@ -1,5 +1,14 @@
 import { apiClient } from './apiClient';
 
+// These are POSTs and are deliberately excluded from the retry policy in
+// apiClient: replaying a playback command or an ingestion start is a real
+// side effect, and the old network-error branch could do it three times.
+//
+// To make them retryable, the backend must first accept an Idempotency-Key
+// header; the client would then send a UUID per user action and pass
+// `{ idempotent: true }` on the request config. Until then, not retrying is
+// the correct behaviour.
+
 export interface IngestionCommandRequest {
     mode: 'LIVE' | 'SIMULATION';
     sessionKey: number;

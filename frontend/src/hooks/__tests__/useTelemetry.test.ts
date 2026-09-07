@@ -11,6 +11,16 @@ vi.mock('../../api/stompClient', () => ({
     }
 }));
 
+/** A complete wire-shaped telemetry packet; packets are schema-validated now. */
+const packet = (over: Record<string, number> = {}) => ({
+    session_key: 9165,
+    meeting_key: 1,
+    date: '2024-05-01T12:00:00Z',
+    driver_number: 1,
+    speed: 300, rpm: 11000, gear: 7, throttle: 100, brake: 0, drs: 0,
+    ...over,
+});
+
 describe('useTelemetry Hook', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -45,7 +55,7 @@ describe('useTelemetry Hook', () => {
         });
 
         // Simulate incoming STOMP message
-        stompCallback({ body: JSON.stringify({ driver_number: 1, speed: 320 }) });
+        stompCallback({ body: JSON.stringify(packet({ driver_number: 1, speed: 320 })) });
 
         // Assert callback received the data after the RAF flush
         await waitFor(() => {
@@ -68,10 +78,10 @@ describe('useTelemetry Hook', () => {
         renderHook(() => useTelemetry(mockCallback));
         await waitFor(() => expect(stompClient.subscribe).toHaveBeenCalled());
 
-        stompCallback({ body: JSON.stringify({ driver_number: 1, speed: 300 }) });
-        stompCallback({ body: JSON.stringify({ driver_number: 44, speed: 310 }) });
-        stompCallback({ body: JSON.stringify({ driver_number: 1, speed: 305 }) });
-        stompCallback({ body: JSON.stringify({ driver_number: 16, speed: 290 }) });
+        stompCallback({ body: JSON.stringify(packet({ driver_number: 1, speed: 300 })) });
+        stompCallback({ body: JSON.stringify(packet({ driver_number: 44, speed: 310 })) });
+        stompCallback({ body: JSON.stringify(packet({ driver_number: 1, speed: 305 })) });
+        stompCallback({ body: JSON.stringify(packet({ driver_number: 16, speed: 290 })) });
 
         await waitFor(() => expect(mockCallback).toHaveBeenCalledTimes(3));
 
@@ -99,7 +109,7 @@ describe('useTelemetry Hook', () => {
 
         // 2000 packets across 20 drivers, as a hidden tab would accumulate.
         for (let i = 0; i < 2000; i++) {
-            stompCallback({ body: JSON.stringify({ driver_number: i % 20, speed: i }) });
+            stompCallback({ body: JSON.stringify(packet({ driver_number: i % 20, speed: i })) });
         }
 
         await waitFor(() => expect(mockCallback).toHaveBeenCalled());

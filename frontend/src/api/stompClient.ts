@@ -1,5 +1,6 @@
-import { Client } from '@stomp/stompjs';
+import { Client, ReconnectionTimeMode, TickerStrategy } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
+import { setConnectionStatus } from '../realtime/connectionStatus';
 
 let wsUrl = 'http://localhost:8080/ws';
 if (import.meta.env.MODE === 'prod') {
@@ -10,66 +11,118 @@ if (import.meta.env.MODE === 'prod') {
     wsUrl = 'https://dev.api.f1visualizer.com/ws';
 }
 
-// Exponential backoff + circuit breaker for STOMP reconnection.
-// The SockJS handshake (GET /ws/info) bypasses the Axios 429 interceptor,
-// so each reconnection attempt consumes rate-limit budget.  Without a hard
-// stop the client perpetuates its own 429 cycle indefinitely.
+// Reconnection budget.  The SockJS handshake (GET /ws/info) bypasses the Axios
+// 429 interceptor, so every attempt consumes rate-limit budget; without a cap a
+// client that can never connect hammers the gateway forever.
+//
+// Backoff is delegated to the library: `reconnectTimeMode: EXPONENTIAL` doubles
+// the delay from `reconnectDelay` up to `maxReconnectDelay`.  Assigning to
+// `stompClient.reconnectDelay` from a callback does NOT work — the library
+// snapshots it into a private field in activate() and after CONNECT only.
 const BASE_RECONNECT_DELAY = 5000;
 const MAX_RECONNECT_DELAY = 60000;
-const MAX_RECONNECT_ATTEMPTS = 6; // 5s+10s+20s+40s+60s+60s ≈ 3 min then stop
-let reconnectAttempts = 0;
+// 5s+10s+20s+40s+60s ≈ 2 min of retrying before the breaker opens.
+const MAX_RECONNECT_ATTEMPTS = 6;
 
-/** Add ±25 % jitter so concurrent tabs / clients don't synchronise retries. */
-function jitter(delay: number): number {
-    return Math.round(delay * (0.75 + Math.random() * 0.5));
+let consecutiveFailures = 0;
+
+/** Resolves a currently-valid access token. Registered by StompAuthHandler. */
+export type StompTokenProvider = () => Promise<string>;
+let tokenProvider: StompTokenProvider | null = null;
+
+/**
+ * Registers (or clears, with `null`) the provider consulted before every CONNECT.
+ *
+ * The broker validates `exp` on each CONNECT and Cloud Run recycles WebSockets at
+ * its request timeout, so reconnects are routine.  Re-reading the token here — via
+ * `getAccessTokenSilently`, which serves a refreshed token from the Auth0 cache —
+ * is what stops a routine reconnect from becoming a permanent auth failure loop.
+ */
+export function setStompTokenProvider(provider: StompTokenProvider | null): void {
+    tokenProvider = provider;
+}
+
+const DEBUG_ENABLED =
+    import.meta.env.DEV || import.meta.env.VITE_STOMP_DEBUG === 'true';
+
+/**
+ * Frame logger. `FrameImpl.toString()` serialises every header, so the CONNECT
+ * frame carries the bearer token — it is redacted here and the whole hook is a
+ * no-op outside DEV, which Vite tree-shakes out of production builds.
+ */
+function stompDebug(message: string): void {
+    if (!DEBUG_ENABLED) return;
+    if (message.startsWith('>>> CONNECT')) {
+        console.log('[STOMP]: >>> CONNECT (headers redacted)');
+        return;
+    }
+    console.log('[STOMP]:', message);
 }
 
 export const stompClient = new Client({
     webSocketFactory: () => new SockJS(wsUrl),
     reconnectDelay: BASE_RECONNECT_DELAY,
-    heartbeatIncoming: 10000, // Wait for heartbeat every 10s
-    heartbeatOutgoing: 10000, // Send heartbeat every 10s
-    debug: (str) => console.log('[STOMP]:', str),
+    maxReconnectDelay: MAX_RECONNECT_DELAY,
+    reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,
+    // setInterval heartbeats are throttled to ~1/min in hidden tabs, which trips
+    // the broker's 10 s watchdog; a Worker ticker keeps running while backgrounded.
+    heartbeatStrategy: TickerStrategy.Worker,
+    // Outgoing matches the server's 10 s (WebSocketConfig.java:36); incoming is
+    // given headroom so one delayed frame does not tear down a healthy socket.
+    heartbeatIncoming: 15000,
+    heartbeatOutgoing: 10000,
+    debug: stompDebug,
+    beforeConnect: async (client) => {
+        setConnectionStatus(consecutiveFailures > 0 ? 'reconnecting' : 'connecting');
+        if (!tokenProvider) return;
+        try {
+            const token = await tokenProvider();
+            client.connectHeaders = { Authorization: `Bearer ${token}` };
+        } catch (error) {
+            // Retrying with no (or a dead) token just repeats the rejection.
+            console.error('[STOMP] Could not acquire a token for CONNECT — stopping reconnection', error);
+            setConnectionStatus('auth-rejected');
+            void client.deactivate();
+        }
+    },
     onConnect: () => {
-        reconnectAttempts = 0;
-        stompClient.reconnectDelay = BASE_RECONNECT_DELAY;
-        console.log('[STOMP]: Connected, backoff reset');
+        consecutiveFailures = 0;
+        setConnectionStatus('connected');
     },
     onWebSocketClose: () => {
-        reconnectAttempts++;
-
-        // Circuit breaker — stop hammering the server after repeated failures.
-        if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
-            stompClient.reconnectDelay = 0; // 0 disables auto-reconnect in @stomp/stompjs
+        consecutiveFailures++;
+        if (consecutiveFailures >= MAX_RECONNECT_ATTEMPTS) {
             console.error(
-                `[STOMP]: Circuit breaker open after ${MAX_RECONNECT_ATTEMPTS} consecutive failures — stopping reconnection. ` +
-                'Reload the page to retry.',
+                `[STOMP] Circuit breaker open after ${MAX_RECONNECT_ATTEMPTS} consecutive failures — reconnection stopped.`,
             );
+            setConnectionStatus('circuit-open');
+            // deactivate() is the documented way to stop reconnecting.
+            void stompClient.deactivate();
             return;
         }
-
-        const baseDelay = Math.min(
-            BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts - 1),
-            MAX_RECONNECT_DELAY,
-        );
-        const delay = jitter(baseDelay);
-        stompClient.reconnectDelay = delay;
-        console.warn(
-            `[STOMP]: WebSocket closed, next reconnect in ${(delay / 1000).toFixed(1)}s (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`,
-        );
+        setConnectionStatus('reconnecting');
     },
     onStompError: (frame) => {
-        console.error('Broker reported error: ' + frame.headers['message']);
-        console.error('Additional details: ' + frame.body);
+        console.error('[STOMP] Broker reported error:', frame.headers['message']);
+        if (DEBUG_ENABLED) console.error('[STOMP] Details:', frame.body);
     },
 });
 
 /**
- * Activates the STOMP client with an Auth0 JWT token.
- * Called by StompAuthHandler once the user is authenticated.
+ * Activates the client if it is not already running. The token is fetched by
+ * `beforeConnect`, so no token is passed in here.
  */
-export function activateWithToken(token: string): void {
-    stompClient.connectHeaders = { Authorization: `Bearer ${token}` };
+export function activateStomp(): void {
+    if (!stompClient.active) {
+        consecutiveFailures = 0;
+        stompClient.activate();
+    }
+}
+
+/** Clears the breaker and reconnects. Wired to the UI's retry affordance. */
+export function retryStompConnection(): void {
+    consecutiveFailures = 0;
+    setConnectionStatus('idle');
     if (!stompClient.active) {
         stompClient.activate();
     }

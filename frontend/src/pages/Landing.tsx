@@ -128,11 +128,16 @@ const Landing: React.FC = () => {
                 {/* Circuit animation (continuous, perpetual) */}
                 <SplashCircuit continuous />
 
-                {/* Login button with pulsing glow */}
+                {/* Login button with pulsing glow.
+
+                    This is the only interactive element on the page, so it is in
+                    within ~550 ms rather than the 2.2 s it used to wait; the title
+                    reveal and the rest of the decoration keep their own timing and
+                    continue around it. */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 2.2, ease: 'easeOut' }}
+                    transition={{ duration: 0.4, delay: 0.15, ease: 'easeOut' }}
                     style={{ position: 'relative', marginTop: 16 }}
                 >
                     {/* Pulsing glow ring behind the button */}

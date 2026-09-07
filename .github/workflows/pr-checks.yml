@@ -62,8 +62,22 @@ jobs:
       - name: Lint
         run: yarn lint
 
+      # A type error used to merge green and only fail later in the deploy
+      # pipeline, because `yarn lint` does not typecheck and nothing built.
+      - name: Typecheck
+        run: yarn typecheck
+
       - name: Test
         run: yarn test:ci
+
+      # Catches Vite/rolldown regressions that neither lint nor tests see.
+      - name: Build
+        run: yarn build --mode dev
+
+      # Bundle budget: fails the PR if the gzipped output grows past the limit
+      # in frontend/.size-limit.json.
+      - name: Bundle size budget
+        run: yarn size
 
   # -----------------------------------------
   # Infrastructure: Security Scan + Plan

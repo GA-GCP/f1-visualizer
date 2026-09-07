@@ -29,6 +29,7 @@ const LayoutMain: React.FC = () => {
                         <SpeedIcon sx={{ mr: 1, color: 'primary.main', fontSize: 32 }} />
                         <Typography
                             variant="h5"
+                            component="div"
                             sx={{
                                 flexGrow: 1,
                                 fontWeight: 900,

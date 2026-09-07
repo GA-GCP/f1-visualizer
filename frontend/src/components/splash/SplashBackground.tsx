@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Box } from '@mui/material';
 
 const GRID_SVG = encodeURIComponent(
@@ -9,61 +9,85 @@ const GRID_SVG = encodeURIComponent(
     '</svg>'
 );
 
-const SplashBackground: React.FC = () => (
-    <Box sx={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-        {/* Base */}
-        <motion.div
-            style={{
-                position: 'absolute',
-                inset: 0,
-                background: '#101010',
-            }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-        />
+// The sweep gradient is drawn at twice the viewport in both axes and repeated
+// once per axis, so translating it by exactly -50% loops seamlessly.
+const SWEEP_GRADIENT =
+    'linear-gradient(135deg, ' +
+    'transparent 0%, transparent 20%, rgba(225,6,0,0.06) 25%, transparent 30%, ' +
+    'transparent 70%, rgba(225,6,0,0.06) 75%, transparent 80%, transparent 100%)';
 
-        {/* Diagonal gradient sweep */}
-        <motion.div
-            style={{
-                position: 'absolute',
-                inset: 0,
-                background:
-                    'linear-gradient(135deg, transparent 0%, transparent 40%, rgba(225,6,0,0.06) 50%, transparent 60%, transparent 100%)',
-                backgroundSize: '200% 200%',
-            }}
-            animate={{ backgroundPosition: ['0% 0%', '100% 100%'] }}
-            transition={{
-                duration: 2.5,
-                ease: 'easeInOut',
-                repeat: Infinity,
-                repeatType: 'reverse',
-            }}
-        />
+const SplashBackground: React.FC = () => {
+    const reduceMotion = useReducedMotion();
 
-        {/* Telemetry grid */}
-        <Box
-            sx={{
-                position: 'absolute',
-                inset: 0,
-                opacity: 0.04,
-                backgroundImage: `url("data:image/svg+xml,${GRID_SVG}")`,
-                backgroundRepeat: 'repeat',
-            }}
-        />
+    return (
+        <Box sx={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+            {/* Base */}
+            <motion.div
+                style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: '#101010',
+                }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+            />
 
-        {/* Pulsing radial glow */}
-        <motion.div
-            style={{
-                position: 'absolute',
-                inset: 0,
-                background:
-                    'radial-gradient(circle at 50% 45%, rgba(225,6,0,0.05) 0%, transparent 60%)',
-            }}
-            animate={{ opacity: [0.3, 0.7, 0.3] }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-        />
-    </Box>
-);
+            {/* Diagonal gradient sweep.
+
+                Driven by `x`/`y` on an oversized child rather than by
+                `backgroundPosition`, which is not compositor-accelerated: framer
+                had to write the inline style from JS every frame, re-rasterising
+                a viewport-sized gradient at 60 fps for as long as the page was
+                open — on the Landing page, indefinitely. */}
+            <Box sx={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+                <motion.div
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '200%',
+                        height: '200%',
+                        background: SWEEP_GRADIENT,
+                        willChange: reduceMotion ? undefined : 'transform',
+                    }}
+                    animate={reduceMotion ? undefined : { x: ['0%', '-50%'], y: ['0%', '-50%'] }}
+                    transition={{
+                        duration: 2.5,
+                        ease: 'easeInOut',
+                        repeat: Infinity,
+                        repeatType: 'reverse',
+                    }}
+                />
+            </Box>
+
+            {/* Telemetry grid */}
+            <Box
+                sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    opacity: 0.04,
+                    backgroundImage: `url("data:image/svg+xml,${GRID_SVG}")`,
+                    backgroundRepeat: 'repeat',
+                }}
+            />
+
+            {/* Pulsing radial glow — opacity only, so it stays on the compositor,
+                but it is still an infinite loop and is dropped under
+                prefers-reduced-motion. */}
+            <motion.div
+                style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background:
+                        'radial-gradient(circle at 50% 45%, rgba(225,6,0,0.05) 0%, transparent 60%)',
+                    opacity: reduceMotion ? 0.5 : undefined,
+                }}
+                animate={reduceMotion ? undefined : { opacity: [0.3, 0.7, 0.3] }}
+                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            />
+        </Box>
+    );
+};
 
 export default SplashBackground;

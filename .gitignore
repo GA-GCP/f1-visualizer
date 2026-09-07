@@ -17,6 +17,8 @@
 !frontend/.env.dev
 !frontend/.env.uat
 !frontend/.env.prod
+# The contract itself, with placeholder values only.
+!frontend/.env.example
 *.pem
 *.key
 secrets.json

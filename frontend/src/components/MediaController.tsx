@@ -1,5 +1,7 @@
 import React, { memo, useState, useEffect } from 'react';
 import { Box, IconButton, Slider, Typography, Paper, CircularProgress, Tooltip } from '@mui/material';
+import { useConnectionStatus } from '../realtime/useConnectionStatus';
+import { createLogger } from '../lib/logger';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import { type StompSubscription } from '@stomp/stompjs';
@@ -10,42 +12,41 @@ interface MediaControllerProps {
     onSeek?: () => void;
 }
 
+const log = createLogger('playback');
+
 const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
     const [isPlaying, setIsPlaying] = useState(true);
     const [progress, setProgress] = useState(0);
     const [isPending, setIsPending] = useState(false);
 
     // Listen to the backend's Virtual Clock playback status.
-    // The interval is NOT cleared after the first connection so that
-    // after a disconnect/reconnect we re-subscribe automatically.
+    //
+    // Driven by the client's published connection state rather than a 500 ms
+    // poller: a reconnect re-runs this effect, so the subscription is restored
+    // without a timer running for the lifetime of the page.
+    const isConnected = useConnectionStatus() === 'connected';
+
     useEffect(() => {
-        let subscription: StompSubscription | null = null;
+        if (!isConnected) return;
 
-        const checkConnection = setInterval(() => {
-            if (stompClient.connected && !subscription) {
-                subscription = stompClient.subscribe('/topic/playback-status', (message) => {
-                    try {
-                        const data = JSON.parse(message.body);
-                        if (typeof data.progress === 'number') {
-                            setProgress(data.progress);
-                            if (data.progress >= 100) {
-                                setIsPlaying(false);
-                            }
-                        }
-                    } catch (err) {
-                        console.error('Failed to parse playback status:', err);
+        const subscription: StompSubscription = stompClient.subscribe(
+            '/topic/playback-status',
+            (message) => {
+                try {
+                    const data: unknown = JSON.parse(message.body);
+                    const progressValue = (data as { progress?: unknown }).progress;
+                    if (typeof progressValue === 'number') {
+                        setProgress(progressValue);
+                        if (progressValue >= 100) setIsPlaying(false);
                     }
-                });
-            } else if (!stompClient.connected && subscription) {
-                subscription = null;
-            }
-        }, 500);
+                } catch (err) {
+                    log.error('Failed to parse playback status', err);
+                }
+            },
+        );
 
-        return () => {
-            clearInterval(checkConnection);
-            if (subscription) subscription.unsubscribe();
-        };
-    }, []);
+        return () => subscription.unsubscribe();
+    }, [isConnected]);
 
     const handleTogglePlay = async () => {
         setIsPending(true);
@@ -57,7 +58,7 @@ const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
             }
             setIsPlaying(!isPlaying);
         } catch {
-            console.error('Playback command failed');
+            log.error('Playback command failed');
         } finally {
             setIsPending(false);
         }

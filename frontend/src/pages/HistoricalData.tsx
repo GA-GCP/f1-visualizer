@@ -4,14 +4,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 import LapTimeChart from '../components/LapTimeChart';
 import DataVaultLoader from '../components/DataVaultLoader';
+import ErrorState from '../components/ui/ErrorState';
+import EmptyState from '../components/ui/EmptyState';
 import type { LapDataRecord } from '../types/telemetry';
 import { fetchSessions, fetchSessionDrivers, fetchSessionLaps, type RaceSession } from '../api/referenceApi';
 import { isRequestCancelled } from '../api/apiClient';
 import { buildDriverColorMap, buildDriverLabelMap } from '../utils/chartScales';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('data-vault');
 
 const HistoricalData: React.FC = () => {
     const [laps, setLaps] = useState<LapDataRecord[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+    const [reloadKey, setReloadKey] = useState(0);
     const [driverColorMap, setDriverColorMap] = useState<Record<number, string>>({});
     const [driverLabelMap, setDriverLabelMap] = useState<Record<number, string>>({});
 
@@ -52,13 +58,15 @@ const HistoricalData: React.FC = () => {
         fetchSessions(controller.signal)
             .then(data => {
                 setSessions(data);
-                if (data.length === 0) setLoading(false);
+                if (data.length === 0) setStatus('ready');
             })
             .catch(error => {
-                if (!isRequestCancelled(error)) setLoading(false);
+                if (isRequestCancelled(error)) return;
+                log.error('Failed to load the session list', error);
+                setStatus('error');
             });
         return () => controller.abort();
-    }, []);
+    }, [reloadKey]);
 
     // When session changes, fetch both laps and session-specific driver colors
     useEffect(() => {
@@ -69,7 +77,7 @@ const HistoricalData: React.FC = () => {
         const controller = new AbortController();
 
         const fetchData = async () => {
-            setLoading(true);
+            setStatus('loading');
             try {
                 const [lapsData, roster] = await Promise.all([
                     fetchSessionLaps(selectedSession.sessionKey, controller.signal),
@@ -78,17 +86,18 @@ const HistoricalData: React.FC = () => {
                 setLaps(lapsData);
                 setDriverColorMap(buildDriverColorMap(roster.drivers));
                 setDriverLabelMap(buildDriverLabelMap(roster.drivers));
-                setLoading(false);
+                setStatus('ready');
             } catch (error) {
                 if (isRequestCancelled(error)) return; // a newer session is loading
-                console.error('Failed to fetch historical data', error);
-                setLoading(false);
+                log.error('Failed to fetch historical data', error);
+                // Previously this left the blank chart up with no explanation.
+                setStatus('error');
             }
         };
 
         void fetchData();
         return () => controller.abort();
-    }, [selectedSession]);
+    }, [selectedSession, reloadKey]);
 
     return (
         <Container maxWidth="xl">
@@ -130,7 +139,15 @@ const HistoricalData: React.FC = () => {
             </Box>
 
             <AnimatePresence mode="wait">
-                {loading ? (
+                {status === 'error' ? (
+                    <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                        <ErrorState
+                            title="Session data unavailable"
+                            message="The analysis service could not be reached."
+                            onRetry={() => setReloadKey(k => k + 1)}
+                        />
+                    </motion.div>
+                ) : status === 'loading' ? (
                     <motion.div
                         key="loader"
                         initial={{ opacity: 0 }}
@@ -148,12 +165,19 @@ const HistoricalData: React.FC = () => {
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.3 }}
                     >
+                        {laps.length === 0 ? (
+                            <EmptyState
+                                title="No lap data for this session"
+                                message="Lap timings are only recorded for race sessions that have been ingested."
+                            />
+                        ) : (
                         <LapTimeChart
                             data={laps}
                             title={selectedSession ? `LAP TIMES // ${selectedSession.year} ${selectedSession.meetingName}` : undefined}
                             driverColorMap={driverColorMap}
                             driverLabelMap={driverLabelMap}
                         />
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>

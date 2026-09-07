@@ -6,6 +6,7 @@ import { useLocation } from '@/hooks/useLocation.ts';
 import { useUser } from '../../context/UserContext';
 import { fetchDrivers, fetchSessionLaps } from '@/api/referenceApi.ts';
 import type { TelemetryPacket } from '@/types/telemetry.ts';
+import { setConnectionStatus, resetConnectionStatus } from '@/realtime/connectionStatus';
 
 const mockRaceSession = {
     sessionKey: 9165,
@@ -40,23 +41,42 @@ vi.mock('../../api/referenceApi');
 describe('RaceSimulator', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        resetConnectionStatus();
         vi.mocked(useUser).mockReturnValue({ userProfile: null, isLoading: false, updatePreferences: vi.fn(), error: null });
         vi.mocked(fetchDrivers).mockResolvedValue([]);
         vi.mocked(fetchSessionLaps).mockResolvedValue([]);
     });
 
-    it('displays CONNECTION LOST alert if stream is active but sockets disconnect', async () => {
-        // Arrange: Sockets are disconnected
-        vi.mocked(useTelemetry).mockReturnValue({ isConnected: false });
-        vi.mocked(useLocation).mockReturnValue({ isConnected: false });
+    it('says the feed is reconnecting, not that it is simply lost', async () => {
+        // The banner used to claim a reconnect was under way regardless of what
+        // the client was actually doing, and appeared for 'idle' too.
+        setConnectionStatus('reconnecting');
 
         render(<RaceSimulator />);
-
-        // Act: Start a session
         screen.getByText('Start Mock Stream').click();
 
-        // Assert: The global error banner should appear because we have an active session but no socket connection
-        expect(await screen.findByText(/CRITICAL: LIVE FEED CONNECTION LOST/i)).toBeInTheDocument();
+        expect(await screen.findByText(/RECONNECTING/i)).toBeInTheDocument();
+    });
+
+    it('offers a retry once the breaker has opened', async () => {
+        setConnectionStatus('circuit-open');
+
+        render(<RaceSimulator />);
+        screen.getByText('Start Mock Stream').click();
+
+        expect(await screen.findByText(/FEED UNAVAILABLE AFTER REPEATED FAILURES/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+    });
+
+    it('shows no failure banner while the feed is merely connecting', async () => {
+        // Both chips used to show a red OFF for the first seconds of every load,
+        // before any attempt had had the chance to fail.
+        setConnectionStatus('connecting');
+
+        render(<RaceSimulator />);
+        screen.getByText('Start Mock Stream').click();
+
+        await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
     });
 
     it('renders BRAKE value when telemetry is active', async () => {

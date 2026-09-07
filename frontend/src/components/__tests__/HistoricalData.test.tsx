@@ -30,6 +30,11 @@ describe('HistoricalData Page', () => {
         { sessionKey: 9222, sessionName: "Race", meetingName: "Suzuka Grand Prix", year: 2023, countryName: "Japan" },
     ];
 
+    const mockLaps = [
+        { driverNumber: 44, lapNumber: 1, lapDuration: 92.4, dateStart: '2024-05-01T12:00:00Z' },
+        { driverNumber: 63, lapNumber: 1, lapDuration: 93.1, dateStart: '2024-05-01T12:00:01Z' },
+    ];
+
     const mockRoster = {
         sessionKey: 9165,
         year: 2023,
@@ -43,7 +48,7 @@ describe('HistoricalData Page', () => {
         vi.clearAllMocks();
         vi.mocked(fetchSessions).mockResolvedValue(mockSessions);
         vi.mocked(fetchSessionDrivers).mockResolvedValue(mockRoster);
-        vi.mocked(fetchSessionLaps).mockResolvedValue([]);
+        vi.mocked(fetchSessionLaps).mockResolvedValue(mockLaps);
     });
 
     it('fetches sessions on mount and requests lap data for the default session', async () => {
@@ -81,5 +86,25 @@ describe('HistoricalData Page', () => {
             expect(fetchSessionLaps).toHaveBeenCalledWith(9222, expect.any(AbortSignal));
         });
         expect(fetchSessionLaps).not.toHaveBeenCalledWith(9165, expect.anything());
+    });
+
+    it('says so when a session has no lap data, instead of showing a blank chart', async () => {
+        vi.mocked(fetchSessionLaps).mockResolvedValue([]);
+
+        renderAt('/');
+
+        expect(await screen.findByText(/no lap data for this session/i)).toBeInTheDocument();
+        expect(screen.queryByTestId('mock-lap-chart')).not.toBeInTheDocument();
+    });
+
+    it('offers a retry when the analysis service cannot be reached', async () => {
+        // The page had no error branch at all: a failure left the chart blank
+        // with the reason visible only in the console.
+        vi.mocked(fetchSessionLaps).mockRejectedValue(new Error('service unavailable'));
+
+        renderAt('/');
+
+        expect(await screen.findByText(/session data unavailable/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
     });
 });

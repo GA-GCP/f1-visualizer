@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Typography, Paper, Grid, Chip, Snackbar, Alert, CircularProgress } from '@mui/material';
+import { Box, Typography, Paper, Grid, Chip, Snackbar, Alert, Button, CircularProgress } from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
+import { useConnectionStatus } from '../realtime/useConnectionStatus';
+import { describeConnectionStatus } from '../realtime/connectionStatus';
+import { retryStompConnection } from '../api/stompClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from '../hooks/useLocation';
 import CircuitTrace from './CircuitTrace';
@@ -12,6 +17,9 @@ import { pauseSimulation } from '../api/ingestionApi';
 import type { LocationPacket, LapDataRecord } from '../types/telemetry';
 import { useUser } from '../context/UserContext';
 import { useCallback } from 'react';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('race-console');
 
 const RaceSimulator: React.FC = () => {
     const [drivers, setDrivers] = useState<DriverProfile[]>([]);
@@ -56,7 +64,7 @@ const RaceSimulator: React.FC = () => {
                     }
                 }
             } catch (err) {
-                console.error("Failed to fetch drivers for simulator", err);
+                log.error("Failed to fetch drivers for simulator", err);
             } finally {
                 if (isMounted) {
                     setIsLoadingDrivers(false);
@@ -75,15 +83,14 @@ const RaceSimulator: React.FC = () => {
     useEffect(() => { isInitializingRef.current = isInitializing; }, [isInitializing]);
     useEffect(() => { sessionLapsRef.current = sessionLaps; }, [sessionLaps]);
 
-    // Lifted out of LiveTelemetryPanel so the header chip and the lost-connection
-    // banner can read it. Both change rarely, so they cost no per-tick renders.
-    const [isTelemetryConnected, setIsTelemetryConnected] = useState(false);
-
     const handleFirstPacket = useCallback(() => {
         setIsInitializing(false);
     }, []);
 
-    const { isConnected: isLocationConnected } = useLocation(locationQueueRef);
+    useLocation(locationQueueRef);
+
+    // One status for the whole feed, published by the STOMP client itself.
+    const connectionStatus = useConnectionStatus();
 
     const handleStreamStarted = useCallback((sessionKey: number, mode: 'LIVE' | 'SIMULATION', session: RaceSession) => {
         setSessionMeta({ year: session.year, meetingName: session.meetingName });
@@ -97,7 +104,7 @@ const RaceSimulator: React.FC = () => {
         // Pre-load lap data for lap tracking correlation
         fetchSessionLaps(sessionKey).then(laps => {
             setSessionLaps(laps);
-        }).catch(err => console.error('Failed to pre-load lap data', err));
+        }).catch(err => log.error('Failed to pre-load lap data', err));
     }, []);
 
     // Stable so memo() on MediaController actually holds.
@@ -112,7 +119,7 @@ const RaceSimulator: React.FC = () => {
         try {
             await pauseSimulation();
         } catch (err) {
-            console.error('Failed to pause simulation on cancel', err);
+            log.error('Failed to pause simulation on cancel', err);
         }
         setActiveSession(null);
         setSessionLaps([]);
@@ -146,7 +153,13 @@ const RaceSimulator: React.FC = () => {
 
     const dismissStreamError = useCallback(() => setStreamError(null), []);
 
-    const connectionLost = activeSession !== null && (!isTelemetryConnected || !isLocationConnected);
+    // Only complain once a session is running and the client has actually lost
+    // the connection — 'idle' and 'connecting' are not failures.
+    const feedInterrupted = activeSession !== null
+        && (connectionStatus === 'reconnecting'
+            || connectionStatus === 'circuit-open'
+            || connectionStatus === 'offline'
+            || connectionStatus === 'auth-rejected');
 
     return (
         <Box sx={{ p: 4, bgcolor: '#121212', minHeight: '100vh', color: 'white' }}>
@@ -156,9 +169,21 @@ const RaceSimulator: React.FC = () => {
                         <span aria-hidden="true">🏎️</span> RACE ENGINEER CONSOLE
                     </Typography>
                 </Box>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Chip label={isTelemetryConnected ? "TELEMETRY: ON" : "OFF"} color={isTelemetryConnected ? "success" : "error"} variant="filled" />
-                    <Chip label={isLocationConnected ? "GPS: ON" : "OFF"} color={isLocationConnected ? "success" : "error"} variant="filled" />
+                {/* One chip, and it says what is actually happening. Two chips
+                    driven by independent pollers both showed a red "OFF" for the
+                    first seconds of every load — before any attempt had had the
+                    chance to fail — and neither could tell "connecting" from
+                    "the breaker is open". `role="status"` so a change is
+                    announced once, not once per chip. */}
+                <Box role="status" aria-live="polite" sx={{ display: 'flex', gap: 1 }}>
+                    <Chip
+                        label={`LIVE FEED: ${describeConnectionStatus(connectionStatus).toUpperCase()}`}
+                        color={connectionStatus === 'connected' ? 'success'
+                            : connectionStatus === 'connecting' || connectionStatus === 'reconnecting' ? 'warning'
+                            : connectionStatus === 'idle' ? 'default' : 'error'}
+                        icon={connectionStatus === 'connected' ? <CheckCircleIcon /> : <ErrorOutlineIcon />}
+                        variant="filled"
+                    />
                 </Box>
             </Box>
 
@@ -205,7 +230,6 @@ const RaceSimulator: React.FC = () => {
                             sessionLaps={sessionLaps}
                             resetKey={traceResetKey}
                             onFirstPacket={handleFirstPacket}
-                            onConnectionChange={setIsTelemetryConnected}
                         />
 
                     </Box>
@@ -225,9 +249,23 @@ const RaceSimulator: React.FC = () => {
                 </Grid>
             </Grid>
 
-            <Snackbar open={connectionLost} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-                <Alert severity="error" variant="filled" sx={{ width: '100%', fontWeight: 'bold', fontSize: '1.1rem' }}>
-                    CRITICAL: LIVE FEED CONNECTION LOST. ATTEMPTING RECONNECT...
+            {/* The message used to claim a reconnect was in progress regardless
+                of whether the client was still trying. */}
+            <Snackbar open={feedInterrupted} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+                <Alert
+                    severity={connectionStatus === 'reconnecting' ? 'warning' : 'error'}
+                    variant="filled"
+                    sx={{ width: '100%', fontWeight: 'bold', fontSize: '1.1rem' }}
+                    action={connectionStatus === 'circuit-open' || connectionStatus === 'offline' ? (
+                        <Button color="inherit" size="small" onClick={retryStompConnection}>
+                            RETRY
+                        </Button>
+                    ) : undefined}
+                >
+                    {connectionStatus === 'reconnecting' && 'LIVE FEED INTERRUPTED — RECONNECTING...'}
+                    {connectionStatus === 'circuit-open' && 'LIVE FEED UNAVAILABLE AFTER REPEATED FAILURES.'}
+                    {connectionStatus === 'offline' && 'YOU ARE OFFLINE. THE FEED WILL RESUME WHEN THE NETWORK RETURNS.'}
+                    {connectionStatus === 'auth-rejected' && 'SESSION EXPIRED. SIGN IN AGAIN TO RESUME THE FEED.'}
                 </Alert>
             </Snackbar>
 

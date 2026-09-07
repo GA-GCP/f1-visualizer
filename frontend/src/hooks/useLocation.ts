@@ -1,9 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { type IMessage } from '@stomp/stompjs';
-import { stompClient } from '../api/stompClient';
 import * as z from 'zod/mini';
+import { stompClient } from '../api/stompClient';
 import { locationPacketSchema } from '../api/schemas';
+import { useConnectionStatus } from '../realtime/useConnectionStatus';
+import { createLogger } from '../lib/logger';
 import type { LocationPacket } from '../types/telemetry';
+
+const log = createLogger('gps');
 
 /**
  * Subscribes to the `/topic/race-location` STOMP topic and pushes every
@@ -22,62 +26,51 @@ import type { LocationPacket } from '../types/telemetry';
 const MAX_QUEUED_POINTS = 5000;
 
 export const useLocation = (locationQueueRef: React.RefObject<LocationPacket[]>) => {
-    const [isConnected, setIsConnected] = useState(false);
+    const status = useConnectionStatus();
+    const isConnected = status === 'connected';
     const packetCountRef = useRef(0);
 
+    // Driven by the client's own connection state rather than a 500 ms poller.
     useEffect(() => {
-        let subscription: { unsubscribe: () => void } | null = null;
+        if (!isConnected) return;
 
-        // Poll for STOMP connectivity and (re-)subscribe when the connection
-        // comes back up.  The interval is NOT cleared after the first
-        // subscription so that after a disconnect/reconnect cycle (e.g. LB
-        // timeout, Cloud Run cold-start) we detect the restored connection
-        // and re-create the subscription that was lost with the old socket.
-        const checkConnection = setInterval(() => {
-            if (stompClient.connected && !subscription) {
-                setIsConnected(true);
+        const subscription = stompClient.subscribe('/topic/race-location', (message: IMessage) => {
+            try {
+                // Replaces a hand-rolled three-field check that never verified
+                // the types — a string x would sail through it and land as NaN
+                // on the canvas.
+                const result = z.safeParse(locationPacketSchema, JSON.parse(message.body));
+                if (!result.success) {
+                    log.error('Packet did not match the expected shape', result.error.issues);
+                    return;
+                }
 
-                subscription = stompClient.subscribe('/topic/race-location', (message: IMessage) => {
-                    try {
-                        // Replaces a hand-rolled three-field check that never
-                        // verified the types — a string x would sail through it
-                        // and land as NaN on the canvas.
-                        const result = z.safeParse(locationPacketSchema, JSON.parse(message.body));
-                        if (!result.success) {
-                            console.error('[GPS] Packet did not match the expected shape', result.error.issues);
-                            return;
-                        }
-                        const payload = result.data;
+                const queue = locationQueueRef.current;
+                queue.push(result.data);
+                if (queue.length > MAX_QUEUED_POINTS) {
+                    queue.splice(0, queue.length - MAX_QUEUED_POINTS);
+                }
 
-                        const queue = locationQueueRef.current;
-                        queue.push(payload);
-                        if (queue.length > MAX_QUEUED_POINTS) {
-                            queue.splice(0, queue.length - MAX_QUEUED_POINTS);
-                        }
-
-                        // Log first packet and then every 500th packet
-                        packetCountRef.current++;
-                        if (import.meta.env.DEV && (packetCountRef.current === 1 || packetCountRef.current % 500 === 0)) {
-                            console.log(`[GPS] Packet #${packetCountRef.current} | driver=${payload.driver_number} x=${payload.x} y=${payload.y} | queue=${locationQueueRef.current.length}`);
-                        }
-                    } catch (err) {
-                        console.error('[GPS] Failed to parse location packet:', err, 'raw body:', message.body?.substring(0, 200));
-                    }
-                });
-
-                if (import.meta.env.DEV) console.log('[GPS] Subscribed to /topic/race-location');
-            } else if (!stompClient.connected && subscription) {
-                // Connection dropped — clear the stale reference so we
-                // re-subscribe on the next successful connection.
-                subscription = null;
-                setIsConnected(false);
-                console.warn('[GPS] STOMP connection lost, will resubscribe on reconnect');
+                packetCountRef.current++;
+                if (packetCountRef.current === 1 || packetCountRef.current % 500 === 0) {
+                    log.debug(
+                        `Packet #${packetCountRef.current} | driver=${result.data.driver_number} `
+                        + `x=${result.data.x} y=${result.data.y} | queue=${queue.length}`,
+                    );
+                }
+            } catch (err) {
+                log.error('Failed to parse location packet', err, message.body?.substring(0, 200));
             }
-        }, 500);
+        });
 
-        // Nothing is drawn while the tab is hidden, so keep only the newest point
-        // per driver: the queue stays O(drivers) and the first frame back costs
-        // one position update per car instead of draining a full cap's worth.
+        log.debug('Subscribed to /topic/race-location');
+        return () => subscription.unsubscribe();
+    }, [isConnected, locationQueueRef]);
+
+    // Nothing is drawn while the tab is hidden, so keep only the newest point
+    // per driver: the queue stays O(drivers) and the first frame back costs
+    // one position update per car instead of draining a full cap's worth.
+    useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState !== 'hidden') return;
             const queue = locationQueueRef.current;
@@ -87,12 +80,7 @@ export const useLocation = (locationQueueRef: React.RefObject<LocationPacket[]>)
             queue.push(...latestPerDriver.values());
         };
         document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        return () => {
-            clearInterval(checkConnection);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            if (subscription) subscription.unsubscribe();
-        };
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, [locationQueueRef]);
 
     return { isConnected };

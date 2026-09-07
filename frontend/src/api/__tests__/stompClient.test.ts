@@ -157,22 +157,22 @@ describe('stompClient', () => {
 
     describe('debug logging', () => {
         it('redacts the CONNECT frame, which carries the bearer token', async () => {
-            const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+            const log = vi.spyOn(console, 'debug').mockImplementation(() => {});
             const { client } = await loadStomp();
 
             client.debug?.('>>> CONNECT\nAuthorization:Bearer super-secret-jwt');
 
-            expect(log).toHaveBeenCalledWith('[STOMP]: >>> CONNECT (headers redacted)');
+            expect(log).toHaveBeenCalledWith('[stomp] >>> CONNECT (headers redacted)');
             expect(log.mock.calls.flat().join(' ')).not.toContain('super-secret-jwt');
         });
 
         it('passes other frames through', async () => {
-            const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+            const log = vi.spyOn(console, 'debug').mockImplementation(() => {});
             const { client } = await loadStomp();
 
             client.debug?.('<<< CONNECTED');
 
-            expect(log).toHaveBeenCalledWith('[STOMP]:', '<<< CONNECTED');
+            expect(log).toHaveBeenCalledWith('[stomp] <<< CONNECTED');
         });
     });
 });

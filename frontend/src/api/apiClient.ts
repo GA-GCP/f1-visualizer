@@ -1,4 +1,7 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('api');
 
 let targetBaseUrl = '/api/v1'; // Default for local 'development' (uses Vite proxy)
 
@@ -158,7 +161,7 @@ apiClient.interceptors.response.use(
         // together and rebuilds the burst that caused the failure.
         const delayMs = Math.round(backoff * (0.5 + Math.random()));
 
-        console.warn(
+        log.warn(
             `[API] ${status ?? code} on ${method.toUpperCase()} ${retryConfig.url ?? ''} — `
             + `retrying in ${delayMs}ms (attempt ${retryConfig._attempt}/${MAX_ATTEMPTS})`,
         );

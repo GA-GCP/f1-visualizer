@@ -1,11 +1,18 @@
 import React, { memo, useRef, useEffect, useLayoutEffect, useState } from 'react';
-import * as d3 from 'd3';
 import { Box, Paper, Typography } from '@mui/material';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { LocationPacket } from '../types/telemetry';
 import type { DriverProfile } from '../api/referenceApi';
 import CircuitTraceIdleOverlay from './CircuitTraceIdleOverlay';
 import CircuitTraceLoadingOverlay from './CircuitTraceLoadingOverlay';
+import {
+    areBoundsValid,
+    computeBounds,
+    createProjection,
+    CIRCUIT_ASPECT_RATIO,
+    type Bounds,
+} from '../utils/circuitProjection';
+import { drawCarDot, strokeTrace, type DriverHistory } from '../utils/circuitRenderer';
 
 interface CircuitTraceProps {
     /** Mutable queue of LocationPackets written by useLocation.  The animation
@@ -28,20 +35,63 @@ interface CircuitTraceProps {
     driverCode: string | null;
 }
 
-const ASPECT_RATIO = 1.6; // width:height = 1.6:1
+const ASPECT_RATIO = CIRCUIT_ASPECT_RATIO;
+
+/**
+ * Points kept per driver — roughly one lap at the feed's sample rate.
+ *
+ * History used to grow by one heap-allocated point per packet per driver for a
+ * whole replay, and every frame re-stroked all of it.
+ */
+const HISTORY_CAP = 1200;
+
+/**
+ * Trimming is done in blocks rather than one point at a time: a splice from the
+ * front is O(n), and each trim also invalidates the cached layer, so doing it
+ * per packet would force a full redraw every frame once the cap is reached.
+ */
+const HISTORY_TRIM_SLACK = 512;
+
+/** Capped: past 2x the fill cost stops buying visible sharpness. */
+const MAX_DPR = 2;
+
+const emptyBounds = (): Bounds => ({
+    minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity,
+});
 
 const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedDriver, sessionKey, resetKey, isSessionActive, isInitializing, sessionMeta, driverCode }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [canvasSize, setCanvasSize] = useState({ width: 800, height: 500 });
+
+    // CSS-pixel canvas size. Kept in a ref, not state: the ResizeObserver sizes
+    // the canvas imperatively, so a resize costs no React render (and cannot
+    // reset the 2D context transform mid-frame).
+    const sizeRef = useRef({ width: 800, height: 500 });
 
     // Map to store position history for ALL drivers
-    const historyRef = useRef<Record<number, { x: number; y: number }[]>>({});
+    const historyRef = useRef<DriverHistory>({});
 
-    const boundsRef = useRef({
-        minX: Infinity, maxX: -Infinity,
-        minY: Infinity, maxY: -Infinity
-    });
+    const boundsRef = useRef<Bounds>(emptyBounds());
+
+    /**
+     * Offscreen layer holding the polylines already drawn.
+     *
+     * Each frame blits this and then draws only the car dots, so a settled
+     * camera costs one drawImage plus twenty arcs instead of re-stroking every
+     * point of every driver. `key` identifies the projection and selection the
+     * layer was drawn under; when it changes the layer is rebuilt from scratch.
+     */
+    const layerRef = useRef<{
+        canvas: HTMLCanvasElement;
+        ctx: CanvasRenderingContext2D;
+        drawn: Record<number, number>;
+        key: string;
+    } | null>(null);
+
+    /** Set whenever something that affects the picture changes. */
+    const needsPaintRef = useRef(true);
+    /** Bumped on every history trim, to invalidate the cached layer. */
+    const trimGenerationRef = useRef(0);
 
     // Diagnostic counters (visible in the canvas overlay)
     const diagRef = useRef({ totalPackets: 0, driversSeenSet: new Set<number>(), lastDrainSize: 0 });
@@ -73,34 +123,71 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
     // ── Clear ALL accumulated state when the session or resetKey changes ──
     useEffect(() => {
         historyRef.current = {};
-        boundsRef.current = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+        boundsRef.current = emptyBounds();
         diagRef.current = { totalPackets: 0, driversSeenSet: new Set(), lastDrainSize: 0 };
+        needsPaintRef.current = true;
         if (import.meta.env.DEV && sessionKey !== null) {
             console.log(`[CircuitTrace] Reset (session=${sessionKey}, resetKey=${resetKey}) — cleared all history and bounds`);
         }
     }, [sessionKey, resetKey]);
 
-    // Reset the camera bounds when the selected driver changes
+    // Recompute the camera from what has already been recorded for the newly
+    // selected driver.  Resetting to an empty box instead meant the projection
+    // domain was a tiny, expanding rectangle for the next full lap, so the whole
+    // circuit was drawn far outside the canvas and visibly 'zoomed out' as the
+    // driver went round.  computeBounds does it in one pass over existing data.
     useEffect(() => {
-        boundsRef.current = {
-            minX: Infinity, maxX: -Infinity,
-            minY: Infinity, maxY: -Infinity
-        };
+        boundsRef.current = computeBounds(historyRef.current, selectedDriver?.id);
+        needsPaintRef.current = true;
     }, [selectedDriver?.id]);
 
-    // Observe container resize for responsive canvas
+    // Size the backing store in device pixels and draw in CSS pixels.
+    //
+    // width/height used to equal the CSS width, so on a 2x display every canvas
+    // pixel was stretched over four device pixels and the compositor resampled
+    // the 1.5px ghost lines, the glow and the overlay text.
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
 
+        const applySize = (cssWidth: number) => {
+            const canvas = canvasRef.current;
+            if (!canvas || cssWidth <= 0) return;
+
+            const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+            const width = Math.round(cssWidth);
+            const height = Math.round(width / ASPECT_RATIO);
+
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+            // Setting width/height resets the context, so the transform is
+            // (re-)applied here rather than once at setup.
+            canvas.getContext('2d')?.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            sizeRef.current = { width, height };
+            layerRef.current = null; // the cached layer is the wrong size now
+            needsPaintRef.current = true;
+        };
+
+        applySize(container.getBoundingClientRect().width);
+
         const observer = new ResizeObserver((entries) => {
-            const { width } = entries[0].contentRect;
-            if (width > 0) {
-                setCanvasSize({ width: Math.round(width), height: Math.round(width / ASPECT_RATIO) });
-            }
+            applySize(entries[0].contentRect.width);
         });
         observer.observe(container);
-        return () => observer.disconnect();
+
+        // Dragging the window to a display with a different pixel ratio does
+        // not fire a resize, so watch the ratio itself.
+        const dprQuery = window.matchMedia?.(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
+        const onDprChange = () => applySize(container.getBoundingClientRect().width);
+        dprQuery?.addEventListener?.('change', onDprChange);
+
+        return () => {
+            observer.disconnect();
+            dprQuery?.removeEventListener?.('change', onDprChange);
+        };
     }, []);
 
     // Single animation loop: drain the queue → ingest data → render canvas
@@ -110,7 +197,33 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
+        // Nothing to plot and nothing to clear away: do not hold a 60 fps loop
+        // open behind the idle overlay.
+        if (!isSessionActive) {
+            const { width, height } = sizeRef.current;
+            ctx.clearRect(0, 0, width, height);
+            layerRef.current = null;
+            needsPaintRef.current = true;
+            return;
+        }
+
         let animationFrameId: number;
+
+        /** Cached-layer canvas, created lazily and resized with the main one. */
+        const ensureLayer = (width: number, height: number, dpr: number) => {
+            let layer = layerRef.current;
+            if (!layer || layer.canvas.width !== width * dpr || layer.canvas.height !== height * dpr) {
+                const offscreen = document.createElement('canvas');
+                offscreen.width = width * dpr;
+                offscreen.height = height * dpr;
+                const offscreenCtx = offscreen.getContext('2d');
+                if (!offscreenCtx) return null;
+                offscreenCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                layer = { canvas: offscreen, ctx: offscreenCtx, drawn: {}, key: '' };
+                layerRef.current = layer;
+            }
+            return layer;
+        };
 
         const render = () => {
             const driver = selectedDriverRef.current;
@@ -124,10 +237,11 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
             // packets, closing the race window entirely.
             if (resetKeyRef.current !== lastProcessedResetKeyRef.current) {
                 historyRef.current = {};
-                boundsRef.current = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+                boundsRef.current = emptyBounds();
                 diagRef.current = { totalPackets: 0, driversSeenSet: new Set(), lastDrainSize: 0 };
                 locationQueueRef.current.length = 0;
                 lastProcessedResetKeyRef.current = resetKeyRef.current;
+                needsPaintRef.current = true;
             }
 
             // ── 1. Drain the location queue (written by useLocation) ──
@@ -150,10 +264,19 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                         continue;
                     }
 
-                    if (!historyRef.current[driver_number]) {
-                        historyRef.current[driver_number] = [];
+                    let points = historyRef.current[driver_number];
+                    if (!points) {
+                        points = [];
+                        historyRef.current[driver_number] = points;
                     }
-                    historyRef.current[driver_number].push({ x, y });
+                    points.push({ x, y });
+
+                    // Ring-buffer the history, trimming in blocks.
+                    if (points.length > HISTORY_CAP + HISTORY_TRIM_SLACK) {
+                        points.splice(0, points.length - HISTORY_CAP);
+                        trimGenerationRef.current++;
+                    }
+
                     diagRef.current.totalPackets++;
                     diagRef.current.driversSeenSet.add(driver_number);
 
@@ -165,6 +288,7 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                         b.minY = Math.min(b.minY, y);
                         b.maxY = Math.max(b.maxY, y);
                     }
+                    needsPaintRef.current = true;
                 }
                 // Clear the queue in-place so the ref stays the same object
                 queue.length = 0;
@@ -172,88 +296,78 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                 // Log first drain and then periodically
                 if (import.meta.env.DEV && (diagRef.current.totalPackets <= drainSize || diagRef.current.totalPackets % 2000 < drainSize)) {
                     const b = boundsRef.current;
-                    const boundsValid = b.minX !== Infinity;
                     console.log(
                         `[CircuitTrace] Drained ${drainSize} packets | total=${diagRef.current.totalPackets} | ` +
                         `drivers=${diagRef.current.driversSeenSet.size} | ` +
                         `selected=${driver?.id ?? 'none'} | ` +
-                        `boundsValid=${boundsValid} (${boundsValid ? `${b.minX.toFixed(0)}..${b.maxX.toFixed(0)}, ${b.minY.toFixed(0)}..${b.maxY.toFixed(0)}` : 'Infinity'})`
+                        `boundsValid=${areBoundsValid(b)} (${areBoundsValid(b) ? `${b.minX.toFixed(0)}..${b.maxX.toFixed(0)}, ${b.minY.toFixed(0)}..${b.maxY.toFixed(0)}` : 'Infinity'})`
                     );
                 }
             }
 
             // ── 2. Render the canvas ──
-            const width = canvas.width;
-            const height = canvas.height;
+            // Frames with nothing new used to clear and re-stroke the entire
+            // history anyway, 60 times a second, over a page already running a
+            // compositor-heavy layout.
+            if (!needsPaintRef.current) {
+                animationFrameId = requestAnimationFrame(render);
+                return;
+            }
+            needsPaintRef.current = false;
+
+            const { width, height } = sizeRef.current;
             const b = boundsRef.current;
             const historyMap = historyRef.current;
 
             ctx.clearRect(0, 0, width, height);
 
-            if (b.minX !== Infinity && b.maxX !== -Infinity) {
-                const padding = 40;
-                const minX = b.minX;
-                let maxX = b.maxX;
-                const minY = b.minY;
-                let maxY = b.maxY;
+            if (areBoundsValid(b)) {
+                const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+                const projection = createProjection(b, width, height);
+                const layer = ensureLayer(width, height, dpr);
 
-                if (minX === maxX) maxX += 0.001;
-                if (minY === maxY) maxY += 0.001;
+                // Identity of everything the cached polylines depend on. The
+                // bounds stop growing once the selected driver has completed a
+                // lap, at which point the layer becomes purely incremental.
+                const key = `${width}x${height}|${b.minX},${b.maxX},${b.minY},${b.maxY}`
+                    + `|${driver?.id ?? 'none'}|${driver?.teamColor ?? ''}|${trimGenerationRef.current}`;
 
-                const xScale = d3.scaleLinear().domain([minX, maxX]).range([padding, width - padding]);
-                const yScale = d3.scaleLinear().domain([minY, maxY]).range([height - padding, padding]);
+                if (layer && layer.key !== key) {
+                    layer.ctx.clearRect(0, 0, width, height);
+                    layer.drawn = {};
+                    layer.key = key;
+                }
 
-                // Draw all driver traces
-                Object.entries(historyMap).forEach(([driverIdStr, history]) => {
-                    const driverId = parseInt(driverIdStr, 10);
-                    if (history.length < 2) return;
-
+                for (const [key, points] of Object.entries(historyMap)) {
+                    const driverId = Number(key);
                     const isSelected = driver?.id === driverId;
 
-                    // Reset shadow state BEFORE drawing to prevent leaking
-                    // from a previous iteration's glow settings.
-                    ctx.shadowBlur = 0;
-                    ctx.shadowColor = 'transparent';
-
-                    ctx.beginPath();
-                    ctx.strokeStyle = isSelected ? (driver?.teamColor || '#e10600') : 'rgba(255, 255, 255, 0.1)';
-                    ctx.lineWidth = isSelected ? 4 : 1.5;
-                    ctx.lineJoin = 'round';
-
-                    ctx.moveTo(xScale(history[0].x), yScale(history[0].y));
-                    for (let i = 1; i < history.length; i++) {
-                        ctx.lineTo(xScale(history[i].x), yScale(history[i].y));
+                    if (layer) {
+                        layer.drawn[driverId] = strokeTrace(
+                            layer.ctx, points, projection, isSelected, driver?.teamColor,
+                            { from: layer.drawn[driverId] ?? 0 },
+                        );
+                    } else {
+                        strokeTrace(ctx, points, projection, isSelected, driver?.teamColor);
                     }
-                    ctx.stroke();
+                }
 
-                    // Draw the "car" dot with glow for the selected driver
-                    const lastPoint = history[history.length - 1];
+                if (layer) {
+                    // drawImage takes device pixels; the context transform is
+                    // in CSS pixels, so pass the CSS size.
+                    ctx.drawImage(layer.canvas, 0, 0, width, height);
+                }
 
-                    if (isSelected) {
-                        ctx.shadowBlur = 15;
-                        ctx.shadowColor = driver?.teamColor || '#e10600';
-                    }
-
-                    ctx.beginPath();
-                    ctx.fillStyle = isSelected ? '#ffffff' : 'rgba(255,255,255,0.3)';
-                    ctx.arc(xScale(lastPoint.x), yScale(lastPoint.y), isSelected ? 6 : 3, 0, 2 * Math.PI);
-                    ctx.fill();
-
-                    // Reset after drawing so the glow doesn't bleed
-                    ctx.shadowBlur = 0;
-                    ctx.shadowColor = 'transparent';
-                });
+                // Dots are drawn on the main canvas every frame: they move, and
+                // their glow must not accumulate in the cached layer.
+                for (const [key, points] of Object.entries(historyMap)) {
+                    if (points.length === 0) continue;
+                    drawCarDot(
+                        ctx, points[points.length - 1], projection,
+                        driver?.id === Number(key), driver?.teamColor,
+                    );
+                }
             }
-
-            // ── 3. Draw diagnostic overlay (bottom-left) ──
-            const diag = diagRef.current;
-            ctx.save();
-            ctx.font = '11px monospace';
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-            ctx.textBaseline = 'bottom';
-            const boundsValid = b.minX !== Infinity;
-            ctx.fillText(`PKT: ${diag.totalPackets}  DRV: ${diag.driversSeenSet.size}  BOUNDS: ${boundsValid ? 'OK' : 'WAITING'}`, 8, height - 6);
-            ctx.restore();
 
             animationFrameId = requestAnimationFrame(render);
         };
@@ -261,7 +375,23 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
         render();
 
         return () => cancelAnimationFrame(animationFrameId);
-    }, [locationQueueRef]);
+    }, [locationQueueRef, isSessionActive]);
+
+    // Diagnostics, out of the canvas and off the render loop.  Painting them
+    // into pixels put them beyond reach of assistive technology and forced a
+    // text repaint every frame; at 1 Hz they are still perfectly readable.
+    const [diagnostics, setDiagnostics] = useState('');
+    useEffect(() => {
+        if (!isSessionActive) return;
+        const id = setInterval(() => {
+            const diag = diagRef.current;
+            setDiagnostics(
+                `PKT: ${diag.totalPackets}  DRV: ${diag.driversSeenSet.size}  `
+                + `BOUNDS: ${areBoundsValid(boundsRef.current) ? 'OK' : 'WAITING'}`,
+            );
+        }, 1000);
+        return () => clearInterval(id);
+    }, [isSessionActive]);
 
     return (
         <Paper sx={{ p: 2, bgcolor: '#1e1e1e', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -293,10 +423,10 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                 </AnimatePresence>
             </Box>
             <Box ref={containerRef} sx={{ position: 'relative', border: '1px solid #333', borderRadius: 1, bgcolor: '#121212', width: '100%', overflow: 'hidden' }}>
+                {/* Sized imperatively by the ResizeObserver, in device pixels
+                    with a CSS-pixel transform, so no resize costs a render. */}
                 <canvas
                     ref={canvasRef}
-                    width={canvasSize.width}
-                    height={canvasSize.height}
                     style={{ display: 'block', width: '100%', height: 'auto' }}
                 />
                 <AnimatePresence mode="wait">
@@ -316,6 +446,21 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
                 Live Plotting (Tracking Driver: {selectedDriver?.code || 'None'})
             </Typography>
+            {isSessionActive && diagnostics && (
+                <Typography
+                    component="p"
+                    variant="caption"
+                    aria-live="polite"
+                    sx={{
+                        alignSelf: 'flex-start',
+                        mt: 0.5,
+                        fontFamily: 'monospace',
+                        color: 'text.disabled',
+                    }}
+                >
+                    {diagnostics}
+                </Typography>
+            )}
         </Paper>
     );
 };

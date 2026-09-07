@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     computeBounds,
-    createScales,
+    createProjection,
     projectPoint,
     areBoundsValid,
     CIRCUIT_PADDING,
@@ -68,75 +68,86 @@ describe('computeBounds', () => {
     });
 });
 
-describe('createScales', () => {
-    it('maps domain boundaries to the correct range', () => {
-        const bounds: Bounds = { minX: 0, maxX: 100, minY: 0, maxY: 200 };
-        const canvasWidth = 800;
-        const canvasHeight = 600;
-        const padding = CIRCUIT_PADDING;
+describe('createProjection', () => {
+    it('maps domain boundaries to the padded canvas edges', () => {
+        const bounds = { minX: 0, maxX: 100, minY: 0, maxY: 50 };
+        const canvasWidth = 400;
+        const canvasHeight = 300;
 
-        const { xScale, yScale } = createScales(bounds, canvasWidth, canvasHeight);
+        const projection = createProjection(bounds, canvasWidth, canvasHeight);
 
-        // minX -> padding, maxX -> canvasWidth - padding
-        expect(xScale(0)).toBeCloseTo(padding);
-        expect(xScale(100)).toBeCloseTo(canvasWidth - padding);
-
-        // yScale is inverted: minY -> canvasHeight - padding, maxY -> padding
-        expect(yScale(0)).toBeCloseTo(canvasHeight - padding);
-        expect(yScale(200)).toBeCloseTo(padding);
+        // x: [minX, maxX] -> [padding, width - padding]
+        expect(projectPoint(0, 0, projection).sx).toBeCloseTo(CIRCUIT_PADDING);
+        expect(projectPoint(100, 0, projection).sx).toBeCloseTo(canvasWidth - CIRCUIT_PADDING);
+        // y is flipped: the domain minimum sits at the bottom of the canvas.
+        expect(projectPoint(0, 0, projection).sy).toBeCloseTo(canvasHeight - CIRCUIT_PADDING);
+        expect(projectPoint(0, 50, projection).sy).toBeCloseTo(CIRCUIT_PADDING);
     });
 
-    it('handles zero-range domain for x (minX === maxX)', () => {
-        const bounds: Bounds = { minX: 50, maxX: 50, minY: 0, maxY: 100 };
-        const { xScale } = createScales(bounds, 400, 300);
+    it('stays finite when a single point gives a zero-width domain', () => {
+        const bounds = { minX: 10, maxX: 10, minY: 0, maxY: 100 };
 
-        // After adjustment maxX becomes 50.001, scale should still be valid
-        const result = xScale(50);
-        expect(result).toBeCloseTo(CIRCUIT_PADDING);
+        const projection = createProjection(bounds, 400, 300);
+
+        expect(Number.isFinite(projectPoint(10, 0, projection).sx)).toBe(true);
     });
 
-    it('handles zero-range domain for y (minY === maxY)', () => {
-        const bounds: Bounds = { minX: 0, maxX: 100, minY: 50, maxY: 50 };
-        const { yScale } = createScales(bounds, 400, 300);
+    it('stays finite when a single point gives a zero-height domain', () => {
+        const bounds = { minX: 0, maxX: 100, minY: 5, maxY: 5 };
 
-        const result = yScale(50);
-        expect(result).toBeCloseTo(300 - CIRCUIT_PADDING);
+        const projection = createProjection(bounds, 400, 300);
+
+        expect(Number.isFinite(projectPoint(0, 5, projection).sy)).toBe(true);
     });
 
     it('respects a custom padding value', () => {
-        const bounds: Bounds = { minX: 0, maxX: 10, minY: 0, maxY: 10 };
-        const customPadding = 20;
-        const { xScale } = createScales(bounds, 200, 200, customPadding);
+        const bounds = { minX: 0, maxX: 10, minY: 0, maxY: 10 };
+        const customPadding = 10;
 
-        expect(xScale(0)).toBeCloseTo(customPadding);
-        expect(xScale(10)).toBeCloseTo(200 - customPadding);
+        const projection = createProjection(bounds, 200, 200, customPadding);
+
+        expect(projectPoint(0, 0, projection).sx).toBeCloseTo(customPadding);
+        expect(projectPoint(10, 0, projection).sx).toBeCloseTo(200 - customPadding);
+    });
+
+    it('is a pure affine mapping, so it can be reused across frames', () => {
+        // The point of replacing the d3 scales: no per-frame allocation, and the
+        // same constants give the same answer every time.
+        const bounds = { minX: 0, maxX: 100, minY: 0, maxY: 100 };
+        const projection = createProjection(bounds, 500, 500, 0);
+
+        const midpoint = projectPoint(50, 50, projection);
+        expect(projectPoint(50, 50, projection)).toEqual(midpoint);
+        // Linear: doubling the distance from the origin doubles the offset.
+        expect(projectPoint(100, 0, projection).sx - projectPoint(0, 0, projection).sx)
+            .toBeCloseTo(2 * (projectPoint(50, 0, projection).sx - projectPoint(0, 0, projection).sx));
     });
 });
 
 describe('projectPoint', () => {
     it('maps a world-space point to pixel coordinates', () => {
         const bounds: Bounds = { minX: 0, maxX: 100, minY: 0, maxY: 100 };
-        const scales = createScales(bounds, 500, 500, 0);
+        const projection = createProjection(bounds, 500, 500, 0);
 
-        const { sx, sy } = projectPoint(50, 50, scales);
+        const { sx, sy } = projectPoint(50, 50, projection);
         expect(sx).toBeCloseTo(250);
         expect(sy).toBeCloseTo(250);
     });
 
     it('maps the domain origin to the range start', () => {
         const bounds: Bounds = { minX: 0, maxX: 100, minY: 0, maxY: 100 };
-        const scales = createScales(bounds, 500, 500, 0);
+        const projection = createProjection(bounds, 500, 500, 0);
 
-        const { sx, sy } = projectPoint(0, 0, scales);
+        const { sx, sy } = projectPoint(0, 0, projection);
         expect(sx).toBeCloseTo(0);
         expect(sy).toBeCloseTo(500); // y is inverted
     });
 
     it('maps the domain maximum to the range end', () => {
         const bounds: Bounds = { minX: 0, maxX: 100, minY: 0, maxY: 100 };
-        const scales = createScales(bounds, 500, 500, 0);
+        const projection = createProjection(bounds, 500, 500, 0);
 
-        const { sx, sy } = projectPoint(100, 100, scales);
+        const { sx, sy } = projectPoint(100, 100, projection);
         expect(sx).toBeCloseTo(500);
         expect(sy).toBeCloseTo(0); // y is inverted
     });

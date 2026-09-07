@@ -21,6 +21,9 @@ vi.mock('../components/layout/LayoutMain', async () => {
 vi.mock('../components/splash/SplashScreen', () => ({
     default: () => <div data-testid="splash" />,
 }));
+vi.mock('../auth/StompAuthHandler', () => ({
+    StompAuthHandler: () => <div data-testid="stomp-handler" />,
+}));
 vi.mock('../pages/Home', () => ({ default: () => <div data-testid="page-home" /> }));
 vi.mock('../pages/HistoricalData', () => ({ default: () => <div data-testid="page-historical" /> }));
 vi.mock('../pages/VersusMode', () => ({ default: () => <div data-testid="page-versus" /> }));
@@ -77,12 +80,13 @@ describe('AppRoutes', () => {
             expect(screen.getByRole('button', { name: /login or sign up/i })).toBeInTheDocument();
         });
 
-        it('sends an already-authenticated visitor to the dashboard', () => {
+        it('sends an already-authenticated visitor to the dashboard', async () => {
             mockAuth0({ isAuthenticated: true });
 
             renderAt('/');
 
-            expect(screen.getByTestId('page-home')).toBeInTheDocument();
+            // The shell and the page are lazy chunks, so they resolve a tick later.
+            expect(await screen.findByTestId('page-home')).toBeInTheDocument();
         });
     });
 
@@ -117,12 +121,34 @@ describe('AppRoutes', () => {
             ['/dashboard', 'page-home'],
             ['/historical', 'page-historical'],
             ['/versus', 'page-versus'],
-        ])('renders %s for an authenticated user', (path, testId) => {
+        ])('renders %s for an authenticated user', async (path, testId) => {
             mockAuth0({ isAuthenticated: true });
 
             renderAt(path);
 
-            expect(screen.getByTestId(testId)).toBeInTheDocument();
+            expect(await screen.findByTestId(testId)).toBeInTheDocument();
+        });
+    });
+
+    describe('code splitting', () => {
+        it('keeps the WebSocket stack off the public route', async () => {
+            // StompAuthHandler is dynamically imported and mounted under the auth
+            // guard. Mounting it at the app root put the whole STOMP + SockJS
+            // stack in the chunk the landing page downloads before login.
+            mockAuth0({ isAuthenticated: false });
+
+            renderAt('/');
+
+            expect(screen.getByRole('button', { name: /login or sign up/i })).toBeInTheDocument();
+            expect(screen.queryByTestId('stomp-handler')).not.toBeInTheDocument();
+        });
+
+        it('mounts the WebSocket stack once past the guard', async () => {
+            mockAuth0({ isAuthenticated: true });
+
+            renderAt('/dashboard');
+
+            expect(await screen.findByTestId('stomp-handler')).toBeInTheDocument();
         });
     });
 
@@ -136,6 +162,7 @@ describe('AppRoutes', () => {
 
             expect(screen.getByTestId('splash')).toBeInTheDocument();
             expect(screen.queryByTestId('page-home')).not.toBeInTheDocument();
+            expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument();
             // The flag is a one-shot: a later mount must not re-show the splash.
             expect(sessionStorage.getItem('f1v:post-login')).toBeNull();
 

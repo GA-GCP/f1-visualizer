@@ -1,20 +1,41 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { Routes, Route, Outlet, BrowserRouter, useNavigate, Navigate } from 'react-router-dom';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
-import LayoutMain from './components/layout/LayoutMain';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AxiosAuthInterceptor } from './auth/AuthHandler';
-import { StompAuthHandler } from './auth/StompAuthHandler';
 import SplashScreen from './components/splash/SplashScreen';
-import Home from './pages/Home';
-import HistoricalData from './pages/HistoricalData';
-import VersusMode from './pages/VersusMode';
+import RouteFallback from './components/ui/RouteFallback';
 import { UserProvider } from "@/context/UserContext.tsx";
 import { fetchDrivers, fetchSessions } from './api/referenceApi';
 import Landing from './pages/Landing';
 import { broadcastTheme } from './theme/theme';
+
+// --- DEFERRED AUTHENTICATED CODE ---
+// None of this can render before login, yet all of it used to ship in the one
+// chunk the public Landing page downloads: d3, the canvas trace, the lap and
+// radar charts, Autocomplete/Dialog/Slider/Snackbar, and the STOMP + SockJS
+// stack. Splitting it out is purely a matter of importing it dynamically —
+// Vite/rolldown already chunks on dynamic import().
+//
+// The factories are named so the same specifier is used for both lazy() and the
+// splash prefetch, and the browser reuses the one chunk.
+const importLayoutMain = () => import('./components/layout/LayoutMain');
+const importHome = () => import('./pages/Home');
+const importHistoricalData = () => import('./pages/HistoricalData');
+const importVersusMode = () => import('./pages/VersusMode');
+
+const LayoutMain = lazy(importLayoutMain);
+const Home = lazy(importHome);
+const HistoricalData = lazy(importHistoricalData);
+const VersusMode = lazy(importVersusMode);
+
+// Renders null, so it needs no fallback — but it must not be imported
+// statically or the whole WebSocket stack stays on the public route.
+const StompAuthHandler = lazy(() =>
+    import('./auth/StompAuthHandler').then(m => ({ default: m.StompAuthHandler })),
+);
 
 // --- AUTH GUARD COMPONENT ---
 const RequiredAuth: React.FC = () => {
@@ -49,7 +70,22 @@ const RequiredAuth: React.FC = () => {
         if (showSplash && isAuthenticated) {
             void fetchDrivers();
             const tid = setTimeout(() => void fetchSessions(), 400);
-            return () => clearTimeout(tid);
+
+            // Warm the route chunks behind the splash so the split costs no
+            // visible time. These are same-origin static assets, not API calls,
+            // so they need no stagger — only an ordering, so the shell and the
+            // landing route win the race for bandwidth.
+            void importLayoutMain();
+            void importHome();
+            const chunkTid = setTimeout(() => {
+                void importHistoricalData();
+                void importVersusMode();
+            }, 1000);
+
+            return () => {
+                clearTimeout(tid);
+                clearTimeout(chunkTid);
+            };
         }
     }, [showSplash, isAuthenticated]);
 
@@ -74,6 +110,13 @@ const RequiredAuth: React.FC = () => {
 
     return (
         <UserProvider>
+            {/* Mounted here rather than at the app root: the WebSocket stack is
+                useless before login, and mounting it under the guard is what
+                keeps it out of the public route's chunk. */}
+            <Suspense fallback={null}>
+                <StompAuthHandler />
+            </Suspense>
+
             <AnimatePresence mode="wait">
                 {showSplash ? (
                     <SplashScreen key="splash" onComplete={() => setShowSplash(false)} />
@@ -84,7 +127,11 @@ const RequiredAuth: React.FC = () => {
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.4 }}
                     >
-                        <Outlet />
+                        {/* Covers the shell chunk itself; LayoutMain carries its
+                            own boundary for the page chunks under it. */}
+                        <Suspense fallback={<RouteFallback />}>
+                            <Outlet />
+                        </Suspense>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -176,7 +223,6 @@ function App() {
             <BrowserRouter>
                 <Auth0ProviderWithNavigate>
                     <AxiosAuthInterceptor />
-                    <StompAuthHandler />
                     <ErrorBoundary>
                         <AppRoutes />
                     </ErrorBoundary>

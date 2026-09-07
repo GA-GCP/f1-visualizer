@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, Container, Button, IconButton, Tooltip } from '@mui/material';
 import { Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, LayoutGroup } from 'framer-motion';
@@ -8,6 +8,7 @@ import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
 import UserSettingsModal from './UserSettingsModal';
+import RouteFallback from '../ui/RouteFallback';
 import {useAuth0} from "@auth0/auth0-react";
 
 const LayoutMain: React.FC = () => {
@@ -79,7 +80,11 @@ const LayoutMain: React.FC = () => {
                         exit={{ opacity: 0, y: -12 }}
                         transition={{ duration: 0.25, ease: 'easeInOut' }}
                     >
-                        <Outlet />
+                        {/* Page chunks load here, not above the AppBar, so the
+                            nav and footer stay put while one arrives. */}
+                        <Suspense fallback={<RouteFallback />}>
+                            <Outlet />
+                        </Suspense>
                     </motion.div>
                 </AnimatePresence>
             </Container>

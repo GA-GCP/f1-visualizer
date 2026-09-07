@@ -1,5 +1,4 @@
 import { Client, ReconnectionTimeMode, TickerStrategy } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 import { env } from '../config/env';
 import { setConnectionStatus } from '../realtime/connectionStatus';
 import { createLogger } from '../lib/logger';
@@ -55,7 +54,14 @@ function stompDebug(message: string): void {
 }
 
 export const stompClient = new Client({
-    webSocketFactory: () => new SockJS(env.wsUrl),
+    // A native WebSocket, not SockJS.
+    //
+    // Every supported browser has had WebSocket for a decade; SockJS was buying
+    // fallbacks nobody needs, at the cost of an unmaintained dependency, a
+    // `global` shim in the Vite config, and an extra GET /ws/info handshake per
+    // connection attempt that bypassed the Axios 429 interceptor and consumed
+    // rate-limit budget on every reconnect.
+    brokerURL: env.wsUrl,
     reconnectDelay: BASE_RECONNECT_DELAY,
     maxReconnectDelay: MAX_RECONNECT_DELAY,
     reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,

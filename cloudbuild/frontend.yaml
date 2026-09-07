@@ -49,6 +49,9 @@ steps:
         apk add --no-cache cairo pango libjpeg-turbo giflib librsvg \
         && yarn test:ci
     dir: 'frontend'
+    # Without CI set, jest-image-snapshot silently WRITES a missing baseline
+    # and passes, so a visual regression could never fail this pipeline.
+    env: ['CI=true']
 
   # 4. Production Build (produces dist/)
   - name: 'node:26-alpine'

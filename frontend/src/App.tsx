@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Outlet, BrowserRouter, useNavigate, Navigate } from 'react-router-dom';
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import { CssBaseline, ThemeProvider } from '@mui/material';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 import LayoutMain from './components/layout/LayoutMain';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AxiosAuthInterceptor } from './auth/AuthHandler';
@@ -14,82 +14,7 @@ import VersusMode from './pages/VersusMode';
 import { UserProvider } from "@/context/UserContext.tsx";
 import { fetchDrivers, fetchSessions } from './api/referenceApi';
 import Landing from './pages/Landing';
-
-// --- THE BROADCAST THEME ---
-const broadcastTheme = createTheme({
-    palette: {
-        mode: 'dark',
-        primary: { main: '#e10600' },
-        secondary: { main: '#ffffff' },
-        background: {
-            default: '#101010',
-            paper: 'rgba(20, 20, 20, 0.6)'
-        },
-        text: {
-            primary: '#ffffff',
-            secondary: 'rgba(255,255,255,0.7)',
-        },
-    },
-    typography: {
-        fontFamily: '"Titillium Web", "Roboto", "Helvetica", "Arial", sans-serif',
-        h1: { fontWeight: 700, fontStyle: 'italic', letterSpacing: '-0.02em' },
-        h4: { fontWeight: 700, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '0.05em' },
-        h6: { fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' },
-        body1: { fontSize: '1.1rem' },
-    },
-    shape: { borderRadius: 4 },
-    components: {
-        MuiCssBaseline: {
-            styleOverrides: {
-                body: {
-                    background: 'radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000000 100%)',
-                    backgroundAttachment: 'fixed',
-                    minHeight: '100vh',
-                },
-            },
-        },
-        MuiPaper: {
-            styleOverrides: {
-                root: {
-                    backdropFilter: 'blur(12px)',
-                    backgroundColor: 'rgba(30, 30, 30, 0.6)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-                },
-            },
-        },
-        MuiAppBar: {
-            styleOverrides: {
-                root: {
-                    background: 'rgba(0, 0, 0, 0.8)',
-                    backdropFilter: 'blur(20px)',
-                    borderBottom: '2px solid #e10600',
-                    boxShadow: 'none',
-                }
-            }
-        },
-        MuiChip: {
-            styleOverrides: {
-                root: {
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                }
-            },
-            variants: [
-                {
-                    props: { variant: 'filled', color: 'success' },
-                    style: {
-                        backgroundColor: 'rgba(0, 255, 0, 0.1)',
-                        color: '#00ff00',
-                        border: '1px solid #00ff00',
-                        boxShadow: '0 0 10px rgba(0, 255, 0, 0.2)',
-                    }
-                }
-            ]
-        }
-    }
-});
+import { broadcastTheme } from './theme/theme';
 
 // --- AUTH GUARD COMPONENT ---
 const RequiredAuth: React.FC = () => {
@@ -170,18 +95,38 @@ const RequiredAuth: React.FC = () => {
 // --- LANDING GATE (public root route) ---
 // Shows the Landing page for unauthenticated visitors; redirects to /dashboard if already logged in.
 const LandingGate: React.FC = () => {
-    const { isAuthenticated, isLoading } = useAuth0();
+    const { isAuthenticated } = useAuth0();
 
-    if (isLoading) {
-        return null;
-    }
-
+    // Deliberately NOT gated on `isLoading`.  Auth0's loading flag exists to
+    // gate *protected* content; this page has none, so waiting for
+    // checkSession() to finish its iframe round-trip to the tenant just holds a
+    // blank screen on the only public page.  Render immediately and let the
+    // redirect happen underneath once the session resolves as authenticated.
     if (isAuthenticated) {
         return <Navigate to="/dashboard" replace />;
     }
 
     return <Landing />;
 };
+
+// --- ROUTE TREE ---
+// Exported separately from <App /> so a test can mount it inside its own
+// router and auth mock without booting BrowserRouter or Auth0Provider.
+export const AppRoutes: React.FC = () => (
+    <Routes>
+        {/* Public landing page — outside the auth guard */}
+        <Route path="/" element={<LandingGate />} />
+
+        {/* Protected app routes */}
+        <Route element={<RequiredAuth />}>
+            <Route element={<LayoutMain />}>
+                <Route path="/dashboard" element={<Home />} />
+                <Route path="/historical" element={<HistoricalData />} />
+                <Route path="/versus" element={<VersusMode />} />
+            </Route>
+        </Route>
+    </Routes>
+);
 
 // --- AUTH0 PROVIDER WRAPPER ---
 // We wrap this inside BrowserRouter so we can use useNavigate for the Auth0 callback redirect
@@ -225,27 +170,19 @@ function App() {
     return (
         <ThemeProvider theme={broadcastTheme}>
             <CssBaseline />
+            {/* Every framer animation in the tree respects prefers-reduced-motion:
+                transform and layout animations are dropped, opacity is kept. */}
+            <MotionConfig reducedMotion="user">
             <BrowserRouter>
                 <Auth0ProviderWithNavigate>
                     <AxiosAuthInterceptor />
                     <StompAuthHandler />
                     <ErrorBoundary>
-                        <Routes>
-                            {/* Public landing page — outside the auth guard */}
-                            <Route path="/" element={<LandingGate />} />
-
-                            {/* Protected app routes */}
-                            <Route element={<RequiredAuth />}>
-                                <Route element={<LayoutMain />}>
-                                    <Route path="/dashboard" element={<Home />} />
-                                    <Route path="/historical" element={<HistoricalData />} />
-                                    <Route path="/versus" element={<VersusMode />} />
-                                </Route>
-                            </Route>
-                        </Routes>
+                        <AppRoutes />
                     </ErrorBoundary>
                 </Auth0ProviderWithNavigate>
             </BrowserRouter>
+            </MotionConfig>
         </ThemeProvider>
     );
 }

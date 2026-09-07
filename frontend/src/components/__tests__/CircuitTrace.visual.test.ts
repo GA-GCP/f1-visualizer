@@ -114,7 +114,11 @@ describe('CircuitTrace Visual Regression', () => {
 
         expect(image).toMatchImageSnapshot({
             customSnapshotIdentifier: 'circuit-trace-oval-selected',
-            failureThreshold: 0.01,
+            // 0.0001 is a fraction, i.e. 0.01% of pixels — the tolerance the
+            // README always claimed.  The previous 0.01 meant one *percent*
+            // (about 4000 px on the 800x500 case), enough to hide a real
+            // regression.
+            failureThreshold: 0.0001,
             failureThresholdType: 'percent',
         });
     });
@@ -125,7 +129,11 @@ describe('CircuitTrace Visual Regression', () => {
 
         expect(image).toMatchImageSnapshot({
             customSnapshotIdentifier: 'circuit-trace-oval-small',
-            failureThreshold: 0.01,
+            // 0.0001 is a fraction, i.e. 0.01% of pixels — the tolerance the
+            // README always claimed.  The previous 0.01 meant one *percent*
+            // (about 4000 px on the 800x500 case), enough to hide a real
+            // regression.
+            failureThreshold: 0.0001,
             failureThresholdType: 'percent',
         });
     });
@@ -136,7 +144,11 @@ describe('CircuitTrace Visual Regression', () => {
 
         expect(image).toMatchImageSnapshot({
             customSnapshotIdentifier: 'circuit-trace-ferrari-red',
-            failureThreshold: 0.01,
+            // 0.0001 is a fraction, i.e. 0.01% of pixels — the tolerance the
+            // README always claimed.  The previous 0.01 meant one *percent*
+            // (about 4000 px on the 800x500 case), enough to hide a real
+            // regression.
+            failureThreshold: 0.0001,
             failureThresholdType: 'percent',
         });
     });
@@ -148,7 +160,11 @@ describe('CircuitTrace Visual Regression', () => {
 
         expect(image).toMatchImageSnapshot({
             customSnapshotIdentifier: 'circuit-trace-ghost-selected',
-            failureThreshold: 0.01,
+            // 0.0001 is a fraction, i.e. 0.01% of pixels — the tolerance the
+            // README always claimed.  The previous 0.01 meant one *percent*
+            // (about 4000 px on the 800x500 case), enough to hide a real
+            // regression.
+            failureThreshold: 0.0001,
             failureThresholdType: 'percent',
         });
     });
@@ -161,7 +177,11 @@ describe('CircuitTrace Visual Regression', () => {
 
         expect(image).toMatchImageSnapshot({
             customSnapshotIdentifier: 'circuit-trace-single-driver',
-            failureThreshold: 0.01,
+            // 0.0001 is a fraction, i.e. 0.01% of pixels — the tolerance the
+            // README always claimed.  The previous 0.01 meant one *percent*
+            // (about 4000 px on the 800x500 case), enough to hide a real
+            // regression.
+            failureThreshold: 0.0001,
             failureThresholdType: 'percent',
         });
     });

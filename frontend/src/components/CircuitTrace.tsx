@@ -75,7 +75,7 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
         historyRef.current = {};
         boundsRef.current = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
         diagRef.current = { totalPackets: 0, driversSeenSet: new Set(), lastDrainSize: 0 };
-        if (sessionKey !== null) {
+        if (import.meta.env.DEV && sessionKey !== null) {
             console.log(`[CircuitTrace] Reset (session=${sessionKey}, resetKey=${resetKey}) — cleared all history and bounds`);
         }
     }, [sessionKey, resetKey]);
@@ -170,7 +170,7 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                 queue.length = 0;
 
                 // Log first drain and then periodically
-                if (diagRef.current.totalPackets <= drainSize || diagRef.current.totalPackets % 2000 < drainSize) {
+                if (import.meta.env.DEV && (diagRef.current.totalPackets <= drainSize || diagRef.current.totalPackets % 2000 < drainSize)) {
                     const b = boundsRef.current;
                     const boundsValid = b.minX !== Infinity;
                     console.log(

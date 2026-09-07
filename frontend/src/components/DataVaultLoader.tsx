@@ -265,8 +265,10 @@ const DataVaultLoader: React.FC = () => {
                             px: 3,
                             py: 1.5,
                             borderRadius: 1,
-                            bgcolor: 'rgba(0,0,0,0.55)',
-                            backdropFilter: 'blur(4px)',
+                            // Opaque rather than blurred: this chip sits over the
+                            // ghost content's perpetual animations, so a
+                            // backdrop-filter re-sampled and re-blurred them every frame.
+                            bgcolor: 'rgba(0,0,0,0.85)',
                             border: '1px solid rgba(225,6,0,0.12)',
                         }}
                     >

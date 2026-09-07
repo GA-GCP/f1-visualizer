@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Box, Typography } from '@mui/material';
 
 const STATUS_MESSAGES = [
@@ -24,6 +24,7 @@ interface CircuitTraceLoadingOverlayProps {
  * Pattern follows SplashProgress and HeadToHeadLoader cycling message approach.
  */
 const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({ year, meetingName, driverCode }) => {
+    const reduceMotion = useReducedMotion();
     const [msgIdx, setMsgIdx] = useState(0);
 
     useEffect(() => {
@@ -48,8 +49,10 @@ const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 zIndex: 2,
-                background: 'rgba(0,0,0,0.7)',
-                backdropFilter: 'blur(4px)',
+                // Opaque rather than blurred: this overlay sits directly on
+                // top of a 60 fps canvas, so a backdrop-filter made the browser
+                // re-snapshot and re-blur that canvas every frame.
+                background: 'rgba(0,0,0,0.85)',
             }}
         >
             {/* Race info block */}
@@ -119,17 +122,25 @@ const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({
                         bgcolor: 'rgba(255,255,255,0.08)',
                         borderRadius: 2,
                         overflow: 'hidden',
+                        position: 'relative',
                     }}
                 >
+                    {/* Shimmer driven by a transform on an oversized child.
+                        `backgroundPosition` is not compositor-accelerated, so
+                        framer wrote the inline style from JS every frame. The
+                        gradient repeats once across the 200% width, so
+                        translating by -50% loops seamlessly. */}
                     <motion.div
                         style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
                             height: '100%',
-                            width: '100%',
-                            background: 'linear-gradient(90deg, #e10600 0%, #ff3030 50%, #e10600 100%)',
-                            backgroundSize: '200% 100%',
-                            borderRadius: 2,
+                            width: '200%',
+                            background:
+                                'linear-gradient(90deg, #e10600 0%, #ff3030 25%, #e10600 50%, #ff3030 75%, #e10600 100%)',
                         }}
-                        animate={{ backgroundPosition: ['0% 0%', '100% 0%'] }}
+                        animate={reduceMotion ? undefined : { x: ['0%', '-50%'] }}
                         transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
                     />
                 </Box>

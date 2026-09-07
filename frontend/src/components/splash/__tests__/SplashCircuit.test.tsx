@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import SplashCircuit from '../SplashCircuit';
 
 // Mock framer-motion's animate function to prevent actual animations
@@ -11,17 +11,7 @@ vi.mock('framer-motion', async () => {
     };
 });
 
-// jsdom doesn't implement SVG geometry methods. Patch them globally.
-beforeAll(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const proto = SVGElement.prototype as any;
-    if (!proto.getTotalLength) {
-        proto.getTotalLength = () => 1500;
-    }
-    if (!proto.getPointAtLength) {
-        proto.getPointAtLength = () => ({ x: 100, y: 100 });
-    }
-});
+// SVG geometry methods are stubbed globally in src/test/setup.ts.
 
 describe('SplashCircuit', () => {
     it('renders an SVG with the correct viewBox', () => {

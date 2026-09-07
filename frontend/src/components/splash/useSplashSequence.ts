@@ -26,11 +26,23 @@ function getPhase(elapsed: number): SplashPhase {
 const TOTAL_DURATION = 7000;
 const PROGRESS_DURATION = 6000;
 
-const prefersReducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+/**
+ * Read at mount rather than at module evaluation.  As a module-level constant
+ * this ran on import — which threw in any environment without matchMedia, and
+ * froze the answer for the lifetime of the page, so toggling the OS setting in
+ * an open tab had no effect.
+ */
+function readPrefersReducedMotion(): boolean {
+    return (
+        typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    );
+}
 
 export function useSplashSequence(onComplete: () => void): SplashSequenceState {
+    const [prefersReducedMotion] = useState(readPrefersReducedMotion);
+
     const [state, setState] = useState<SplashSequenceState>(() =>
         prefersReducedMotion
             ? { phase: 'hold', progress: 1, elapsed: TOTAL_DURATION }
@@ -47,7 +59,7 @@ export function useSplashSequence(onComplete: () => void): SplashSequenceState {
         if (!prefersReducedMotion) return;
         const timer = setTimeout(() => onCompleteRef.current(), 500);
         return () => clearTimeout(timer);
-    }, []);
+    }, [prefersReducedMotion]);
 
     // Full animation: RAF-driven timeline
     useEffect(() => {
@@ -78,7 +90,7 @@ export function useSplashSequence(onComplete: () => void): SplashSequenceState {
 
         rafId = requestAnimationFrame(tick);
         return () => cancelAnimationFrame(rafId);
-    }, []);
+    }, [prefersReducedMotion]);
 
     return state;
 }

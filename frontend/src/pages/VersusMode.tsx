@@ -7,6 +7,7 @@ import RadarChart from '../components/versus/RadarChart';
 import StatComparisonBar from '../components/versus/StatComparisonBar';
 import HeadToHeadLoader from '../components/HeadToHeadLoader';
 import { fetchDrivers, fetchDriverStats, type DriverProfile } from '../api/referenceApi';
+import { isRequestCancelled } from '../api/apiClient';
 
 /**
  * Resolves one slot's driver from the URL parameter.
@@ -35,11 +36,17 @@ const VersusMode: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
 
     useEffect(() => {
-        let isMounted = true;
-        fetchDrivers()
-            .then(data => { if (isMounted) setDrivers(data); })
-            .catch(err => console.error('Failed to load master driver list', err));
-        return () => { isMounted = false; };
+        // Abort rather than only guarding setState: an abandoned request used to
+        // keep running and, through the retry policy, keep retrying.
+        const controller = new AbortController();
+        fetchDrivers(controller.signal)
+            .then(setDrivers)
+            .catch(error => {
+                if (!isRequestCancelled(error)) {
+                    console.error('Failed to load master driver list', error);
+                }
+            });
+        return () => controller.abort();
     }, []);
 
     const slotA = searchParams.get('a');
@@ -66,21 +73,21 @@ const VersusMode: React.FC = () => {
     // than the serial await-then-await the initial load used to do.
     const requestedRef = useRef(new Set<number>());
     useEffect(() => {
-        let cancelled = false;
+        const controller = new AbortController();
         for (const base of [baseA, baseB]) {
             if (!base || requestedRef.current.has(base.id)) continue;
             requestedRef.current.add(base.id);
-            fetchDriverStats(base.id)
-                .then(stats => {
-                    if (!cancelled) setDynamicStats(previous => ({ ...previous, [base.id]: stats }));
-                })
+            fetchDriverStats(base.id, controller.signal)
+                .then(stats => setDynamicStats(previous => ({ ...previous, [base.id]: stats })))
                 .catch(error => {
-                    console.error(`Failed to fetch stats for ${base.name}`, error);
                     // Allow a retry if the driver is picked again.
                     requestedRef.current.delete(base.id);
+                    if (!isRequestCancelled(error)) {
+                        console.error(`Failed to fetch stats for ${base.name}`, error);
+                    }
                 });
         }
-        return () => { cancelled = true; };
+        return () => controller.abort();
     }, [baseA, baseB]);
 
     // Derived, not stored: a selection shows immediately with the roster's

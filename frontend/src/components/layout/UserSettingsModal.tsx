@@ -4,6 +4,7 @@ import type { DialogProps } from '@mui/material';
 import { motion } from 'framer-motion';
 import DriverSelector from '../selectors/DriverSelector';
 import { fetchDrivers, type DriverProfile } from '../../api/referenceApi';
+import { isRequestCancelled } from '../../api/apiClient';
 import { useUser } from '../../context/UserContext';
 
 interface UserSettingsModalProps {
@@ -25,11 +26,10 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
 
     useEffect(() => {
         if (!open) return;
-        let cancelled = false;
+        const controller = new AbortController();
 
-        fetchDrivers()
+        fetchDrivers(controller.signal)
             .then(data => {
-                if (cancelled) return;
                 setDrivers(data);
                 const favourite = userProfile?.preferences?.favoriteDriver;
                 if (favourite) {
@@ -37,16 +37,17 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
                     if (fav) setSelectedDriver(fav);
                 }
             })
-            .catch(err => {
-                console.error('Failed to load drivers', err);
+            .catch(error => {
+                if (isRequestCancelled(error)) return;
+                console.error('Failed to load drivers', error);
                 // Leaving `drivers` null would strand the spinner.
-                if (!cancelled) setDrivers([]);
+                setDrivers([]);
             });
 
         // Discarding the data on close means reopening the dialog (or a profile
         // change) shows the spinner again, as it did before.
         return () => {
-            cancelled = true;
+            controller.abort();
             setDrivers(null);
         };
     }, [userProfile, open]);

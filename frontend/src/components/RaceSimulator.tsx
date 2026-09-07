@@ -39,12 +39,13 @@ const RaceSimulator: React.FC = () => {
     const favouriteDriverCode = userProfile?.preferences?.favoriteDriver;
 
     useEffect(() => {
+        const controller = new AbortController();
         let isMounted = true;
 
         const initializeDrivers = async () => {
             setIsLoadingDrivers(true);
             try {
-                const data = await fetchDrivers();
+                const data = await fetchDrivers(controller.signal);
                 if (isMounted) {
                     setDrivers(data);
                     if (data.length > 0) {
@@ -67,6 +68,7 @@ const RaceSimulator: React.FC = () => {
 
         return () => {
             isMounted = false; // Cleanup to prevent state updates on unmounted components
+            controller.abort();
         };
     }, [favouriteDriverCode]);
 

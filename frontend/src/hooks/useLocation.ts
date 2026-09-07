@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { type IMessage } from '@stomp/stompjs';
 import { stompClient } from '../api/stompClient';
+import * as z from 'zod/mini';
+import { locationPacketSchema } from '../api/schemas';
 import type { LocationPacket } from '../types/telemetry';
 
 /**
@@ -37,17 +39,15 @@ export const useLocation = (locationQueueRef: React.RefObject<LocationPacket[]>)
 
                 subscription = stompClient.subscribe('/topic/race-location', (message: IMessage) => {
                     try {
-                        const payload: LocationPacket = JSON.parse(message.body);
-
-                        // ── Diagnostic: validate the parsed payload ──
-                        if (typeof payload !== 'object' || payload === null) {
-                            console.error('[GPS] Parsed payload is not an object:', typeof payload, payload);
+                        // Replaces a hand-rolled three-field check that never
+                        // verified the types — a string x would sail through it
+                        // and land as NaN on the canvas.
+                        const result = z.safeParse(locationPacketSchema, JSON.parse(message.body));
+                        if (!result.success) {
+                            console.error('[GPS] Packet did not match the expected shape', result.error.issues);
                             return;
                         }
-                        if (payload.x === undefined || payload.y === undefined || payload.driver_number === undefined) {
-                            console.error('[GPS] Payload missing required fields (x, y, driver_number):', payload);
-                            return;
-                        }
+                        const payload = result.data;
 
                         const queue = locationQueueRef.current;
                         queue.push(payload);

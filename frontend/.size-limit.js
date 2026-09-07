@@ -20,9 +20,13 @@ export default [
         gzip: true,
     },
     {
+        // Raised from 380 kB deliberately, not to make a failing gate pass:
+        // runtime validation at the API boundary costs ~7 kB gzipped, and that
+        // was a considered trade. The headroom is kept tight on purpose — it is
+        // here to catch a stray dependency, not to absorb one.
         name: 'total JS shipped (all chunks)',
         path: 'dist/assets/*.js',
-        limit: '380 kB',
+        limit: '390 kB',
         gzip: true,
     },
 ];

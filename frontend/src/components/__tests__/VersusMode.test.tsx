@@ -81,9 +81,9 @@ describe('VersusMode Page', () => {
         renderAt('/?a=44&b=16');
 
         await waitFor(() => {
-            expect(fetchDriverStats).toHaveBeenCalledWith(44);
+            expect(fetchDriverStats).toHaveBeenCalledWith(44, expect.any(AbortSignal));
         });
-        expect(fetchDriverStats).toHaveBeenCalledWith(16);
-        expect(fetchDriverStats).not.toHaveBeenCalledWith(1);
+        expect(fetchDriverStats).toHaveBeenCalledWith(16, expect.any(AbortSignal));
+        expect(fetchDriverStats).not.toHaveBeenCalledWith(1, expect.anything());
     });
 });

@@ -58,11 +58,11 @@ describe('HistoricalData Page', () => {
 
         // Verify that once the session list is fetched, it uses the first sessionKey to fetch laps and drivers
         await waitFor(() => {
-            expect(fetchSessionLaps).toHaveBeenCalledWith(9165);
+            expect(fetchSessionLaps).toHaveBeenCalledWith(9165, expect.any(AbortSignal));
         });
 
         await waitFor(() => {
-            expect(fetchSessionDrivers).toHaveBeenCalledWith(9165);
+            expect(fetchSessionDrivers).toHaveBeenCalledWith(9165, expect.any(AbortSignal));
         });
 
         // Ensure the chart renders after loading completes
@@ -78,8 +78,8 @@ describe('HistoricalData Page', () => {
         renderAt('/?session=9222');
 
         await waitFor(() => {
-            expect(fetchSessionLaps).toHaveBeenCalledWith(9222);
+            expect(fetchSessionLaps).toHaveBeenCalledWith(9222, expect.any(AbortSignal));
         });
-        expect(fetchSessionLaps).not.toHaveBeenCalledWith(9165);
+        expect(fetchSessionLaps).not.toHaveBeenCalledWith(9165, expect.anything());
     });
 });

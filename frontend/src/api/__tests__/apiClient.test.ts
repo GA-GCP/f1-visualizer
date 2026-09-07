@@ -118,4 +118,32 @@ describe('apiClient', () => {
             expect(onAuthExpired).toHaveBeenCalledTimes(1);
         });
     });
+
+    describe('retryAfterMs', () => {
+        it('reads a delay given in seconds', async () => {
+            const { retryAfterMs } = await import('../apiClient');
+            expect(retryAfterMs('5')).toBe(5000);
+        });
+
+        it('reads an HTTP-date, which parseInt used to turn into NaN', async () => {
+            const { retryAfterMs } = await import('../apiClient');
+            const tenSecondsOut = new Date(Date.now() + 10_000).toUTCString();
+
+            const ms = retryAfterMs(tenSecondsOut);
+
+            expect(ms).toBeGreaterThan(8_000);
+            expect(ms).toBeLessThanOrEqual(10_000);
+        });
+
+        it('caps an absurd delay rather than sleeping for it', async () => {
+            const { retryAfterMs } = await import('../apiClient');
+            expect(retryAfterMs('99999')).toBe(30_000);
+        });
+
+        it('returns undefined for a missing or unparseable header', async () => {
+            const { retryAfterMs } = await import('../apiClient');
+            expect(retryAfterMs(undefined)).toBeUndefined();
+            expect(retryAfterMs('not-a-date')).toBeUndefined();
+        });
+    });
 });

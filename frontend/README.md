@@ -182,7 +182,7 @@ via `renderHook`, pure utilities, the Axios and STOMP clients, and the Auth0 int
 
 **Visual regression.** `CircuitTrace` is rendered to a Node canvas via `node-canvas` and compared
 against five stored PNG baselines in `src/components/__tests__/__image_snapshots__/`, using
-`jest-image-snapshot` with a 0.01% pixel-difference threshold. This is why `canvas` is a
+`jest-image-snapshot` with a 25-pixel absolute difference threshold. This is why `canvas` is a
 dependency and why the CI image installs Cairo, Pango and a C++ toolchain — the addon is compiled
 natively rather than shipped prebuilt.
 

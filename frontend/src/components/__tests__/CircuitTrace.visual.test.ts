@@ -114,8 +114,11 @@ describe('CircuitTrace Visual Regression', () => {
 
         expect(image).toMatchImageSnapshot({
             customSnapshotIdentifier: 'circuit-trace-oval-selected',
-            failureThreshold: 0.01,
-            failureThresholdType: 'percent',
+            // An absolute pixel budget, not a fraction: 'percent' 0.01 meant
+            // one percent of pixels (4000 px on the 800x500 case), which is
+            // enough to hide a real regression.
+            failureThreshold: 25,
+            failureThresholdType: 'pixel',
         });
     });
 
@@ -125,8 +128,11 @@ describe('CircuitTrace Visual Regression', () => {
 
         expect(image).toMatchImageSnapshot({
             customSnapshotIdentifier: 'circuit-trace-oval-small',
-            failureThreshold: 0.01,
-            failureThresholdType: 'percent',
+            // An absolute pixel budget, not a fraction: 'percent' 0.01 meant
+            // one percent of pixels (4000 px on the 800x500 case), which is
+            // enough to hide a real regression.
+            failureThreshold: 25,
+            failureThresholdType: 'pixel',
         });
     });
 
@@ -136,8 +142,11 @@ describe('CircuitTrace Visual Regression', () => {
 
         expect(image).toMatchImageSnapshot({
             customSnapshotIdentifier: 'circuit-trace-ferrari-red',
-            failureThreshold: 0.01,
-            failureThresholdType: 'percent',
+            // An absolute pixel budget, not a fraction: 'percent' 0.01 meant
+            // one percent of pixels (4000 px on the 800x500 case), which is
+            // enough to hide a real regression.
+            failureThreshold: 25,
+            failureThresholdType: 'pixel',
         });
     });
 
@@ -148,8 +157,11 @@ describe('CircuitTrace Visual Regression', () => {
 
         expect(image).toMatchImageSnapshot({
             customSnapshotIdentifier: 'circuit-trace-ghost-selected',
-            failureThreshold: 0.01,
-            failureThresholdType: 'percent',
+            // An absolute pixel budget, not a fraction: 'percent' 0.01 meant
+            // one percent of pixels (4000 px on the 800x500 case), which is
+            // enough to hide a real regression.
+            failureThreshold: 25,
+            failureThresholdType: 'pixel',
         });
     });
 
@@ -161,8 +173,11 @@ describe('CircuitTrace Visual Regression', () => {
 
         expect(image).toMatchImageSnapshot({
             customSnapshotIdentifier: 'circuit-trace-single-driver',
-            failureThreshold: 0.01,
-            failureThresholdType: 'percent',
+            // An absolute pixel budget, not a fraction: 'percent' 0.01 meant
+            // one percent of pixels (4000 px on the 800x500 case), which is
+            // enough to hide a real regression.
+            failureThreshold: 25,
+            failureThresholdType: 'pixel',
         });
     });
 });

@@ -44,6 +44,13 @@ export const broadcastTheme = createTheme({
     components: {
         MuiCssBaseline: {
             styleOverrides: {
+                html: {
+                    // Reserve the scrollbar gutter permanently. /dashboard forces
+                    // 100vh and the other routes do not, so the scrollbar
+                    // appeared and disappeared mid-navigation and shifted the
+                    // whole page horizontally as it did.
+                    scrollbarGutter: 'stable',
+                },
                 body: {
                     minHeight: '100vh',
                     backgroundColor: '#000000',

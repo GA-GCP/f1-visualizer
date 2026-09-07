@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HistoricalData from '../../pages/HistoricalData';
 import { fetchSessions, fetchSessionDrivers, fetchSessionLaps } from '@/api/referenceApi.ts';
@@ -15,9 +16,18 @@ vi.mock('../../components/LapTimeChart', () => ({
     default: () => <div data-testid="mock-lap-chart">Mock Lap Chart</div>
 }));
 
+/** The page stores its selection in the URL, so it needs router context. */
+const renderAt = (path: string) =>
+    render(
+        <MemoryRouter initialEntries={[path]}>
+            <HistoricalData />
+        </MemoryRouter>,
+    );
+
 describe('HistoricalData Page', () => {
     const mockSessions = [
-        { sessionKey: 9165, sessionName: "Race", meetingName: "Singapore Grand Prix", year: 2023, countryName: "Singapore" }
+        { sessionKey: 9165, sessionName: "Race", meetingName: "Singapore Grand Prix", year: 2023, countryName: "Singapore" },
+        { sessionKey: 9222, sessionName: "Race", meetingName: "Suzuka Grand Prix", year: 2023, countryName: "Japan" },
     ];
 
     const mockRoster = {
@@ -37,7 +47,7 @@ describe('HistoricalData Page', () => {
     });
 
     it('fetches sessions on mount and requests lap data for the default session', async () => {
-        render(<HistoricalData />);
+        renderAt('/');
 
         expect(screen.getByText('Historical Analysis Engine')).toBeInTheDocument();
 
@@ -59,5 +69,17 @@ describe('HistoricalData Page', () => {
         await waitFor(() => {
             expect(screen.getByTestId('mock-lap-chart')).toBeInTheDocument();
         });
+    });
+
+    it('honours a session chosen in the URL instead of defaulting to the first', async () => {
+        // The page unmounts when the user visits another tab, so the selection
+        // has to live somewhere that survives it — and that back/forward can
+        // restore.
+        renderAt('/?session=9222');
+
+        await waitFor(() => {
+            expect(fetchSessionLaps).toHaveBeenCalledWith(9222);
+        });
+        expect(fetchSessionLaps).not.toHaveBeenCalledWith(9165);
     });
 });

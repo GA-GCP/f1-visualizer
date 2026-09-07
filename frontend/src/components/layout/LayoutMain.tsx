@@ -10,6 +10,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import UserSettingsModal from './UserSettingsModal';
 import RouteFallback from '../ui/RouteFallback';
 import ErrorBoundary from '../ErrorBoundary';
+import { queryClient } from '../../api/queryClient';
 import {useAuth0} from "@auth0/auth0-react";
 
 const LayoutMain: React.FC = () => {
@@ -42,7 +43,9 @@ const LayoutMain: React.FC = () => {
     }, [location.pathname]);
 
     const handleLogout = () => {
-        // Log out and redirect back to the app root
+        // Drop every cached response first: signing in as someone else on the
+        // same machine must not read the previous user's data.
+        queryClient.clear();
         logout({ logoutParams: { returnTo: window.location.origin } });
     };
 

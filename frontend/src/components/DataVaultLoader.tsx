@@ -86,7 +86,7 @@ const DataVaultLoader: React.FC = () => {
                     ease: 'easeInOut',
                 }}
             >
-                <Typography variant="h6" color="primary" gutterBottom>
+                <Typography variant="h6" component="h2" color="primary" gutterBottom>
                     LAP TIMES // ████████
                 </Typography>
             </motion.div>

@@ -1,4 +1,5 @@
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { screen, act, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import RaceSimulator from '../RaceSimulator';
 import { useTelemetry } from '@/hooks/useTelemetry.ts';
@@ -52,7 +53,7 @@ describe('RaceSimulator', () => {
         // the client was actually doing, and appeared for 'idle' too.
         setConnectionStatus('reconnecting');
 
-        render(<RaceSimulator />);
+        renderWithProviders(<RaceSimulator />);
         screen.getByText('Start Mock Stream').click();
 
         expect(await screen.findByText(/RECONNECTING/i)).toBeInTheDocument();
@@ -61,7 +62,7 @@ describe('RaceSimulator', () => {
     it('offers a retry once the breaker has opened', async () => {
         setConnectionStatus('circuit-open');
 
-        render(<RaceSimulator />);
+        renderWithProviders(<RaceSimulator />);
         screen.getByText('Start Mock Stream').click();
 
         expect(await screen.findByText(/FEED UNAVAILABLE AFTER REPEATED FAILURES/i)).toBeInTheDocument();
@@ -73,7 +74,7 @@ describe('RaceSimulator', () => {
         // before any attempt had had the chance to fail.
         setConnectionStatus('connecting');
 
-        render(<RaceSimulator />);
+        renderWithProviders(<RaceSimulator />);
         screen.getByText('Start Mock Stream').click();
 
         await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
@@ -104,7 +105,7 @@ describe('RaceSimulator', () => {
             { id: 1, code: 'VER', name: 'Max Verstappen', team: 'Red Bull', teamColor: '#3671C6', stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] } }
         ]);
 
-        render(<RaceSimulator />);
+        renderWithProviders(<RaceSimulator />);
 
         // Wait for drivers to load so selectedDriver is populated in the closure
         await waitFor(() => {
@@ -146,7 +147,7 @@ describe('RaceSimulator', () => {
             { id: 1, code: 'VER', name: 'Max Verstappen', team: 'Red Bull', teamColor: '#3671C6', stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] } }
         ]);
 
-        render(<RaceSimulator />);
+        renderWithProviders(<RaceSimulator />);
 
         await waitFor(() => { expect(fetchDrivers).toHaveBeenCalled(); });
         await act(async () => { await new Promise(r => setTimeout(r, 0)); });
@@ -183,7 +184,7 @@ describe('RaceSimulator', () => {
             { id: 1, code: 'VER', name: 'Max Verstappen', team: 'Red Bull', teamColor: '#3671C6', stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] } }
         ]);
 
-        render(<RaceSimulator />);
+        renderWithProviders(<RaceSimulator />);
 
         await waitFor(() => { expect(fetchDrivers).toHaveBeenCalled(); });
         await act(async () => { await new Promise(r => setTimeout(r, 0)); });
@@ -216,7 +217,7 @@ describe('RaceSimulator', () => {
             { id: 1, code: 'VER', name: 'Max Verstappen', team: 'Red Bull', teamColor: '#3671C6', stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] } }
         ]);
 
-        render(<RaceSimulator />);
+        renderWithProviders(<RaceSimulator />);
 
         await waitFor(() => { expect(fetchDrivers).toHaveBeenCalled(); });
         await act(async () => { await new Promise(r => setTimeout(r, 0)); });
@@ -261,7 +262,7 @@ describe('RaceSimulator', () => {
             { id: 1, code: 'VER', name: 'Max Verstappen', team: 'Red Bull', teamColor: '#3671C6', stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] } }
         ]);
 
-        render(<RaceSimulator />);
+        renderWithProviders(<RaceSimulator />);
 
         await waitFor(() => { expect(fetchDrivers).toHaveBeenCalled(); });
         await act(async () => { await new Promise(r => setTimeout(r, 0)); });

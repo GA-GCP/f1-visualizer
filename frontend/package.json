@@ -20,6 +20,7 @@
     "@mui/icons-material": "^9.4.0",
     "@mui/material": "^9.4.0",
     "@stomp/stompjs": "^7.3.0",
+    "@tanstack/react-query": "^5.102.8",
     "axios": "^1.20.0",
     "d3": "^7.9.0",
     "date-fns": "^4.4.0",
@@ -27,7 +28,6 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.3",
-    "sockjs-client": "^1.6.1",
     "zod": "^4.5.4"
   },
   "devDependencies": {
@@ -41,7 +41,6 @@
     "@types/node": "^26.4.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
-    "@types/sockjs-client": "^1.5.4",
     "@vitejs/plugin-react": "^6.1.1",
     "canvas": "^3.2.3",
     "eslint": "^10.10.0",

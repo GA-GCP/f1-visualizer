@@ -2,6 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import { installGlobalErrorHandlers, reactErrorHandlers } from './lib/errorReporting'
+import { missingEnvVars } from './config/env'
+import ConfigErrorScreen from './components/ConfigErrorScreen'
 
 // Self-hosted Titillium Web — only the faces this design actually uses.
 // Previously a render-blocking Google Fonts <link> that needed two cold
@@ -21,8 +23,14 @@ import '@fontsource/titillium-web/latin-900.css'
 // timer — previously reached nothing but the browser console.
 installGlobalErrorHandlers()
 
-createRoot(document.getElementById('root')!, reactErrorHandlers).render(
+// Checked at boot rather than at import: a missing key used to render nothing
+// at all, so the failure looked like a broken deploy rather than a config gap.
+const root = createRoot(document.getElementById('root')!, reactErrorHandlers)
+
+root.render(
   <StrictMode>
-    <App />
+    {missingEnvVars.length > 0
+      ? <ConfigErrorScreen missing={missingEnvVars} />
+      : <App />}
   </StrictMode>,
 )

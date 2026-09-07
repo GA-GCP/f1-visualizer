@@ -1,5 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HistoricalData from '../../pages/HistoricalData';
 import { fetchSessions, fetchSessionDrivers, fetchSessionLaps } from '@/api/referenceApi.ts';
@@ -8,7 +8,12 @@ import { fetchSessions, fetchSessionDrivers, fetchSessionLaps } from '@/api/refe
 vi.mock('../../api/referenceApi', () => ({
     fetchSessions: vi.fn(),
     fetchSessionDrivers: vi.fn(),
-    fetchSessionLaps: vi.fn()
+    fetchSessionLaps: vi.fn(),
+    fetchDrivers: vi.fn(),
+    fetchYears: vi.fn(),
+    fetchSessionsByYear: vi.fn(),
+    fetchDriverStats: vi.fn(),
+    searchSessions: vi.fn(),
 }));
 
 // Mock the D3 Chart to avoid SVG rendering issues in JSDOM
@@ -17,12 +22,7 @@ vi.mock('../../components/LapTimeChart', () => ({
 }));
 
 /** The page stores its selection in the URL, so it needs router context. */
-const renderAt = (path: string) =>
-    render(
-        <MemoryRouter initialEntries={[path]}>
-            <HistoricalData />
-        </MemoryRouter>,
-    );
+const renderAt = (route: string) => renderWithProviders(<HistoricalData />, { route });
 
 describe('HistoricalData Page', () => {
     const mockSessions = [

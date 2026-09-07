@@ -68,7 +68,7 @@ const HistoricalData: React.FC = () => {
         <Container maxWidth="xl">
             <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Box>
-                    <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'white', mb: 1 }}>
+                    <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: 'white', mb: 1 }}>
                         💾 DATA VAULT
                     </Typography>
                     <Typography variant="subtitle1" color="text.secondary">

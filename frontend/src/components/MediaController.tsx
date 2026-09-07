@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, IconButton, Slider, Typography, Paper, CircularProgress } from '@mui/material';
+import { Box, IconButton, Slider, Typography, Paper, CircularProgress, Tooltip } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import { type StompSubscription } from '@stomp/stompjs';
@@ -82,14 +82,21 @@ const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
 
     return (
         <Paper sx={{ p: 2, bgcolor: '#1a1a1a', borderTop: '2px solid #e10600', display: 'flex', alignItems: 'center', gap: 3 }}>
-            <IconButton
-                onClick={handleTogglePlay}
-                color="primary"
-                disabled={isPending}
-                sx={{ bgcolor: 'rgba(225, 6, 0, 0.1)', '&:hover': { bgcolor: 'rgba(225, 6, 0, 0.2)' } }}
-            >
-                {isPending ? <CircularProgress size={28} color="inherit" /> : isPlaying ? <PauseIcon fontSize="large" /> : <PlayArrowIcon fontSize="large" />}
-            </IconButton>
+            <Tooltip title={isPlaying ? 'Pause simulation' : 'Play simulation'}>
+                <IconButton
+                    onClick={handleTogglePlay}
+                    color="primary"
+                    // The control is icon-only, so without an explicit name a
+                    // screen reader announced it as just "button".
+                    aria-label={isPlaying ? 'Pause simulation' : 'Play simulation'}
+                    aria-pressed={isPlaying}
+                    aria-busy={isPending}
+                    disabled={isPending}
+                    sx={{ bgcolor: 'rgba(225, 6, 0, 0.1)', '&:hover': { bgcolor: 'rgba(225, 6, 0, 0.2)' } }}
+                >
+                    {isPending ? <CircularProgress size={28} color="inherit" /> : isPlaying ? <PauseIcon fontSize="large" /> : <PlayArrowIcon fontSize="large" />}
+                </IconButton>
+            </Tooltip>
 
             <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold', mb: 0.5 }}>

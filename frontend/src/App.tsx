@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Outlet, BrowserRouter, useNavigate, Navigate } from 'react-router-dom';
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import { CssBaseline, ThemeProvider } from '@mui/material';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 import LayoutMain from './components/layout/LayoutMain';
@@ -14,104 +14,7 @@ import VersusMode from './pages/VersusMode';
 import { UserProvider } from "@/context/UserContext.tsx";
 import { fetchDrivers, fetchSessions } from './api/referenceApi';
 import Landing from './pages/Landing';
-
-// --- THE BROADCAST THEME ---
-const broadcastTheme = createTheme({
-    palette: {
-        mode: 'dark',
-        primary: { main: '#e10600' },
-        secondary: { main: '#ffffff' },
-        background: {
-            default: '#101010',
-            paper: 'rgba(20, 20, 20, 0.6)'
-        },
-        text: {
-            primary: '#ffffff',
-            secondary: 'rgba(255,255,255,0.7)',
-        },
-    },
-    typography: {
-        fontFamily: '"Titillium Web", "Roboto", "Helvetica", "Arial", sans-serif',
-        h1: { fontWeight: 700, fontStyle: 'italic', letterSpacing: '-0.02em' },
-        h4: { fontWeight: 700, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '0.05em' },
-        h6: { fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' },
-        body1: { fontSize: '1.1rem' },
-    },
-    shape: { borderRadius: 4 },
-    // MUI's own transitions (Dialog Fade, Autocomplete Grow, Slider thumb,
-    // ripples) follow the OS preference. MUI's value is 'system'; framer's
-    // equivalent is <MotionConfig reducedMotion="user"> below.
-    motion: { reducedMotion: 'system' },
-    components: {
-        MuiCssBaseline: {
-            styleOverrides: {
-                body: {
-                    minHeight: '100vh',
-                    backgroundColor: '#000000',
-                    // The gradient lives on a fixed pseudo-element rather than on
-                    // the body with `background-attachment: fixed`, which is a
-                    // documented Chromium scroll-repaint trigger: it re-rasterised
-                    // a viewport-sized gradient on every scroll tick, and moved
-                    // every blurred surface relative to its backdrop as it did so.
-                    '&::before': {
-                        content: '""',
-                        position: 'fixed',
-                        inset: 0,
-                        zIndex: -1,
-                        pointerEvents: 'none',
-                        background: 'radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000000 100%)',
-                    },
-                },
-            },
-        },
-        MuiPaper: {
-            styleOverrides: {
-                root: {
-                    // No backdropFilter: every Paper in the app overrides this
-                    // colour with an opaque one, so the blurred backdrop was
-                    // computed on all 15 of them and then covered up entirely.
-                    backgroundColor: 'rgba(30, 30, 30, 0.6)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-                },
-            },
-        },
-        MuiAppBar: {
-            styleOverrides: {
-                root: {
-                    // Kept deliberately: the bar is genuinely translucent, so this
-                    // is the only blur in the app the user can actually see. It is
-                    // also much cheaper now that the backdrop behind it no longer
-                    // re-rasterises on every scroll tick.
-                    background: 'rgba(0, 0, 0, 0.8)',
-                    backdropFilter: 'blur(20px)',
-                    borderBottom: '2px solid #e10600',
-                    boxShadow: 'none',
-                }
-            }
-        },
-        MuiChip: {
-            styleOverrides: {
-                root: {
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                }
-            },
-            variants: [
-                {
-                    props: { variant: 'filled', color: 'success' },
-                    style: {
-                        backgroundColor: 'rgba(0, 255, 0, 0.1)',
-                        color: '#00ff00',
-                        border: '1px solid #00ff00',
-                        boxShadow: '0 0 10px rgba(0, 255, 0, 0.2)',
-                    }
-                }
-            ]
-        }
-    }
-});
+import { broadcastTheme } from './theme/theme';
 
 // --- AUTH GUARD COMPONENT ---
 const RequiredAuth: React.FC = () => {

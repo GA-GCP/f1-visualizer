@@ -65,7 +65,7 @@ const VersusMode: React.FC = () => {
     return (
         <Container maxWidth="xl" sx={{ mt: 4, pb: 8 }}>
             <Box sx={{ mb: 6, textAlign: 'center' }}>
-                <Typography variant="h3" sx={{ fontWeight: 800, letterSpacing: -1, color: 'white' }}>
+                <Typography variant="h3" component="h1" sx={{ fontWeight: 800, letterSpacing: -1, color: 'white' }}>
                     HEAD-TO-HEAD
                 </Typography>
                 <Typography variant="subtitle1" color="text.secondary" sx={{ letterSpacing: 2 }}>
@@ -116,7 +116,7 @@ const VersusMode: React.FC = () => {
                         transition={{ duration: 0.5, delay: 0.2 }}
                     >
                         <Paper sx={{ p: 3, bgcolor: '#1e1e1e', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <Typography variant="h6" color="text.secondary" gutterBottom>
+                            <Typography variant="h6" component="h2" color="text.secondary" gutterBottom>
                                 ATTRIBUTE MAPPING
                             </Typography>
                             <RadarChart driverA={driverA} driverB={driverB} />
@@ -136,7 +136,7 @@ const VersusMode: React.FC = () => {
                         transition={{ duration: 0.5, delay: 0.3 }}
                     >
                         <Paper sx={{ p: 4, bgcolor: '#1e1e1e', height: '100%' }}>
-                            <Typography variant="h6" color="text.secondary" gutterBottom sx={{ mb: 4 }}>
+                            <Typography variant="h6" component="h2" color="text.secondary" gutterBottom sx={{ mb: 4 }}>
                                 CAREER STATISTICS
                             </Typography>
 

@@ -7,6 +7,25 @@
 #
 # Dependabot uses a different permission model than GitHub Actions, so it is not
 # affected by the "Actions is not permitted to create pull requests" setting.
+#
+# -----------------------------------------------------------------------------
+# TEMPORARY: interval is `daily` while we confirm this config actually runs.
+# -----------------------------------------------------------------------------
+# It was added on a Tuesday with `interval: weekly, day: monday`, so the first
+# scheduled run was six days out and the Dependabot job page had no rows — and
+# therefore no per-ecosystem "Check for updates" button to press. Daily gets a
+# definitive answer within 24 hours instead of an inference from an empty page.
+#
+# Revert to weekly once a run has appeared at
+# https://github.com/GA-GCP/f1-visualizer/network/updates
+# by changing each `interval: daily` back to:
+#
+#     interval: weekly
+#     day: monday
+#
+# Leaving it on daily is not harmful — the grouping and the PR limits below cap
+# the volume either way — but weekly is the intended cadence, and a daily poll
+# on a project this size is noise for no extra signal.
 version: 2
 
 updates:
@@ -19,8 +38,12 @@ updates:
   - package-ecosystem: npm
     directory: /frontend
     schedule:
-      interval: weekly
-      day: monday
+      # TEMPORARY — see the note at the top of this file. Revert to:
+      #   interval: weekly
+      #   day: monday
+      interval: daily
+      time: '06:00'
+      timezone: America/New_York
     open-pull-requests-limit: 5
     groups:
       frontend-dev:
@@ -44,8 +67,12 @@ updates:
   - package-ecosystem: docker
     directory: /frontend
     schedule:
-      interval: weekly
-      day: monday
+      # TEMPORARY — see the note at the top of this file. Revert to:
+      #   interval: weekly
+      #   day: monday
+      interval: daily
+      time: '06:00'
+      timezone: America/New_York
     open-pull-requests-limit: 3
     commit-message:
       prefix: build
@@ -61,8 +88,12 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      # TEMPORARY — see the note at the top of this file. Revert to:
+      #   interval: weekly
+      #   day: monday
+      interval: daily
+      time: '06:00'
+      timezone: America/New_York
     open-pull-requests-limit: 3
     commit-message:
       prefix: ci

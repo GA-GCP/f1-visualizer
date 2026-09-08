@@ -25,11 +25,18 @@ const ErrorState: React.FC<ErrorStateProps> = ({
             severity="error"
             variant="outlined"
             sx={{ maxWidth: 560, width: '100%' }}
-            action={onRetry ? (
-                <Button color="inherit" size="small" startIcon={<RefreshIcon />} onClick={onRetry}>
-                    Retry
-                </Button>
-            ) : undefined}
+            action={
+                onRetry ? (
+                    <Button
+                        color="inherit"
+                        size="small"
+                        startIcon={<RefreshIcon />}
+                        onClick={onRetry}
+                    >
+                        Retry
+                    </Button>
+                ) : undefined
+            }
         >
             <AlertTitle>{title}</AlertTitle>
             {message}

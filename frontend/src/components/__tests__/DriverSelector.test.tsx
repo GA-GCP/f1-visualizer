@@ -4,9 +4,25 @@ import DriverSelector from '../selectors/DriverSelector';
 
 const mockDrivers = [
     {
-        id: 1, code: "VER", name: "Max Verstappen", team: "Red Bull Racing", teamColor: "#3671C6",
-        stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] }
-    }
+        id: 1,
+        code: 'VER',
+        name: 'Max Verstappen',
+        team: 'Red Bull Racing',
+        teamColor: '#3671C6',
+        stats: {
+            speed: 99,
+            consistency: 95,
+            aggression: 98,
+            tireMgmt: 92,
+            experience: 85,
+            wins: 54,
+            podiums: 98,
+            totalPoints: 2586,
+            bestChampionshipFinish: 1,
+            totalRaces: 185,
+            teamsDrivenFor: ['Red Bull Racing'],
+        },
+    },
 ];
 
 describe('DriverSelector', () => {
@@ -17,7 +33,7 @@ describe('DriverSelector', () => {
                 options={mockDrivers}
                 value={null}
                 onChange={vi.fn()}
-            />
+            />,
         );
         expect(screen.getByLabelText(/select driver/i)).toBeInTheDocument();
     });
@@ -29,7 +45,7 @@ describe('DriverSelector', () => {
                 options={mockDrivers}
                 value={mockDrivers[0]}
                 onChange={vi.fn()}
-            />
+            />,
         );
         // Autocomplete input value should match the format in getOptionLabel
         expect(screen.getByDisplayValue('VER - Max Verstappen')).toBeInTheDocument();

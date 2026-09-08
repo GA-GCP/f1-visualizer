@@ -12,7 +12,9 @@ export function circuitPath(points = 240): { x: number; y: number }[] {
 }
 
 function frame(command: string, headers: Record<string, string>, body = ''): string {
-    const head = Object.entries(headers).map(([k, v]) => `${k}:${v}`).join('\n');
+    const head = Object.entries(headers)
+        .map(([k, v]) => `${k}:${v}`)
+        .join('\n');
     return `${command}\n${head}\n\n${body}${NUL}`;
 }
 
@@ -55,7 +57,7 @@ export interface TelemetryOptions {
 export async function stubTelemetry(page: Page, options: TelemetryOptions = {}): Promise<void> {
     const { path = circuitPath(), sessionKey = 9001, driverNumber = 1 } = options;
 
-    await page.routeWebSocket(/\/ws\/websocket$/, ws => {
+    await page.routeWebSocket(/\/ws\/websocket$/, (ws) => {
         // destination -> subscription id
         const subscriptions = new Map<string, string>();
         let messageId = 0;
@@ -65,15 +67,21 @@ export async function stubTelemetry(page: Page, options: TelemetryOptions = {}):
         const send = (destination: string, payload: unknown) => {
             const id = subscriptions.get(destination);
             if (!id) return;
-            ws.send(frame('MESSAGE', {
-                destination,
-                subscription: id,
-                'message-id': String(++messageId),
-                'content-type': 'application/json',
-            }, JSON.stringify(payload)));
+            ws.send(
+                frame(
+                    'MESSAGE',
+                    {
+                        destination,
+                        subscription: id,
+                        'message-id': String(++messageId),
+                        'content-type': 'application/json',
+                    },
+                    JSON.stringify(payload),
+                ),
+            );
         };
 
-        ws.onMessage(raw => {
+        ws.onMessage((raw) => {
             const parsed = parse(String(raw));
             if (!parsed) return;
 
@@ -97,17 +105,25 @@ export async function stubTelemetry(page: Page, options: TelemetryOptions = {}):
                         const point = path[index % path.length];
                         index++;
                         send('/topic/race-location', {
-                            session_key: sessionKey, meeting_key: 1234,
+                            session_key: sessionKey,
+                            meeting_key: 1234,
                             date: new Date().toISOString(),
                             driver_number: driverNumber,
-                            x: point.x, y: point.y, z: 0,
+                            x: point.x,
+                            y: point.y,
+                            z: 0,
                         });
                         send('/topic/race-data', {
-                            session_key: sessionKey, meeting_key: 1234,
+                            session_key: sessionKey,
+                            meeting_key: 1234,
                             date: new Date().toISOString(),
                             driver_number: driverNumber,
-                            speed: 280 + (index % 40), rpm: 11000, gear: 7,
-                            throttle: 100, brake: 0, drs: 1,
+                            speed: 280 + (index % 40),
+                            rpm: 11000,
+                            gear: 7,
+                            throttle: 100,
+                            brake: 0,
+                            drs: 1,
                         });
                     }, 25);
                 }

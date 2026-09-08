@@ -1,0 +1,29 @@
+# Editor defaults, so a contributor's editor does not fight the formatter and
+# produce whitespace-only hunks. Prettier owns the frontend; this covers what
+# Prettier does not (and what editors do before Prettier ever runs).
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+# Measured rather than assumed: 129 of 130 files under frontend/src use four
+# spaces, as do all of e2e/. The audit suggested two, which would have
+# reformatted the entire tree against its own established style for no benefit.
+[frontend/{src,e2e}/**.{ts,tsx}]
+indent_size = 4
+
+# Config, data and markup files use two, which is both the convention and what
+# these files already do.
+[*.{json,jsonc,yml,yaml,md,html,css}]
+indent_size = 2
+
+[frontend/*.{ts,js}]
+indent_size = 2
+
+# Markdown uses trailing double-space for a hard line break.
+[*.md]
+trim_trailing_whitespace = false

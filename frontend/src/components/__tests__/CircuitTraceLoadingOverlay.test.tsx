@@ -5,7 +5,11 @@ import CircuitTraceLoadingOverlay from '../CircuitTraceLoadingOverlay';
 describe('CircuitTraceLoadingOverlay', () => {
     it('displays race info (year, meeting name, driver code)', () => {
         render(
-            <CircuitTraceLoadingOverlay year={2024} meetingName="Bahrain Grand Prix" driverCode="VER" />,
+            <CircuitTraceLoadingOverlay
+                year={2024}
+                meetingName="Bahrain Grand Prix"
+                driverCode="VER"
+            />,
         );
 
         expect(screen.getByText('YOU HAVE SELECTED')).toBeInTheDocument();
@@ -14,17 +18,13 @@ describe('CircuitTraceLoadingOverlay', () => {
     });
 
     it('displays the INITIALIZING label', () => {
-        render(
-            <CircuitTraceLoadingOverlay year={2024} meetingName="Test GP" driverCode="HAM" />,
-        );
+        render(<CircuitTraceLoadingOverlay year={2024} meetingName="Test GP" driverCode="HAM" />);
 
         expect(screen.getByText('INITIALIZING')).toBeInTheDocument();
     });
 
     it('shows the first status message initially', () => {
-        render(
-            <CircuitTraceLoadingOverlay year={2024} meetingName="Test GP" driverCode="LEC" />,
-        );
+        render(<CircuitTraceLoadingOverlay year={2024} meetingName="Test GP" driverCode="LEC" />);
 
         expect(screen.getByText('CONNECTING TO DATA FEED...')).toBeInTheDocument();
     });

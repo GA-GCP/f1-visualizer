@@ -58,7 +58,7 @@ function renderCircuitToCanvas(
     height: number,
     history: Record<number, { x: number; y: number }[]>,
     selectedDriverId: number,
-    selectedDriverColor: string
+    selectedDriverColor: string,
 ): Buffer {
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
@@ -69,15 +69,7 @@ function renderCircuitToCanvas(
 
     const bounds = computeBounds(history, selectedDriverId);
 
-    drawFullTrace(
-        ctx,
-        history,
-        bounds,
-        width,
-        height,
-        selectedDriverId,
-        selectedDriverColor,
-    );
+    drawFullTrace(ctx, history, bounds, width, height, selectedDriverId, selectedDriverColor);
 
     return canvas.toBuffer('image/png');
 }

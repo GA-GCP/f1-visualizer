@@ -1,6 +1,14 @@
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import { Box, IconButton, Slider, Typography, Paper, CircularProgress, Tooltip } from '@mui/material';
+import {
+    Box,
+    IconButton,
+    Slider,
+    Typography,
+    Paper,
+    CircularProgress,
+    Tooltip,
+} from '@mui/material';
 import { type StompSubscription } from '@stomp/stompjs';
 import React, { memo, useState, useEffect } from 'react';
 import { playSimulation, pauseSimulation, seekSimulation } from '../api/ingestionApi';
@@ -70,7 +78,10 @@ const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
         setProgress(newValue as number);
     };
 
-    const handleSeekCommitted = async (_: React.SyntheticEvent | Event, newValue: number | number[]) => {
+    const handleSeekCommitted = async (
+        _: React.SyntheticEvent | Event,
+        newValue: number | number[],
+    ) => {
         // Clear the trace and stale state BEFORE the seek API call.
         // This prevents in-flight STOMP packets (from the old position)
         // from contaminating the trace while the HTTP request is pending.
@@ -94,7 +105,16 @@ const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
     };
 
     return (
-        <Paper sx={{ p: 2, bgcolor: PAPER_BG_RAISED, borderTop: `2px solid ${BRAND_RED}`, display: 'flex', alignItems: 'center', gap: 3 }}>
+        <Paper
+            sx={{
+                p: 2,
+                bgcolor: PAPER_BG_RAISED,
+                borderTop: `2px solid ${BRAND_RED}`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 3,
+            }}
+        >
             <Tooltip title={isPlaying ? 'Pause simulation' : 'Play simulation'}>
                 <IconButton
                     onClick={() => void handleTogglePlay()}
@@ -115,12 +135,22 @@ const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
                         ...(isPending && { opacity: 0.6, cursor: 'progress' }),
                     }}
                 >
-                    {isPending ? <CircularProgress size={28} color="inherit" /> : isPlaying ? <PauseIcon fontSize="large" /> : <PlayArrowIcon fontSize="large" />}
+                    {isPending ? (
+                        <CircularProgress size={28} color="inherit" />
+                    ) : isPlaying ? (
+                        <PauseIcon fontSize="large" />
+                    ) : (
+                        <PlayArrowIcon fontSize="large" />
+                    )}
                 </IconButton>
             </Tooltip>
 
             <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ fontWeight: 'bold', mb: 0.5 }}
+                >
                     SIMULATION TIMELINE
                 </Typography>
                 <Slider
@@ -144,7 +174,9 @@ const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
                             '&::after': { width: 32, height: 32 },
                             transition: '0.3s cubic-bezier(.47,1.64,.41,.8)',
                             '&::before': { boxShadow: '0 2px 12px 0 rgba(0,0,0,0.4)' },
-                            '&:hover, &.Mui-focusVisible': { boxShadow: '0px 0px 0px 8px rgb(225 6 0 / 16%)' },
+                            '&:hover, &.Mui-focusVisible': {
+                                boxShadow: '0px 0px 0px 8px rgb(225 6 0 / 16%)',
+                            },
                             '&.Mui-active': { width: 20, height: 20 },
                         },
                         '& .MuiSlider-rail': { opacity: 0.28 },

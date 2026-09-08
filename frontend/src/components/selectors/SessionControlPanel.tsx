@@ -13,14 +13,24 @@ import { CANVAS_BG } from '../../theme/tokens';
 const log = createLogger('session-control');
 
 interface SessionControlPanelProps {
-    onStreamStarted: (sessionKey: number, mode: 'LIVE' | 'SIMULATION', session: RaceSession) => void;
+    onStreamStarted: (
+        sessionKey: number,
+        mode: 'LIVE' | 'SIMULATION',
+        session: RaceSession,
+    ) => void;
     onSessionSelected?: (roster: RaceEntryRoster) => void;
     onError?: (message: string) => void;
     isSessionActive?: boolean;
     onCancel?: () => void;
 }
 
-const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStarted, onSessionSelected, onError, isSessionActive = false, onCancel }) => {
+const SessionControlPanel: React.FC<SessionControlPanelProps> = ({
+    onStreamStarted,
+    onSessionSelected,
+    onError,
+    isSessionActive = false,
+    onCancel,
+}) => {
     // Years, sessions and the roster are three cached queries rather than three
     // effects writing three pieces of mirrored state. The selections below store
     // only what the user actually chose; the defaults are derived, so changing
@@ -39,7 +49,8 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
     const sessions = useMemo(() => sessionsQuery.data ?? [], [sessionsQuery.data]);
 
     const [chosenSessionKey, setChosenSessionKey] = useState<number | null>(null);
-    const selectedSession = sessions.find(s => s.sessionKey === chosenSessionKey) ?? sessions[0] ?? null;
+    const selectedSession =
+        sessions.find((s) => s.sessionKey === chosenSessionKey) ?? sessions[0] ?? null;
 
     const rosterQuery = useQuery({
         ...queries.sessionDrivers(selectedSession?.sessionKey ?? 0),
@@ -60,7 +71,10 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
 
         setIsLoading(true);
         try {
-            await sendIngestionCommand({ mode: 'SIMULATION', sessionKey: selectedSession.sessionKey });
+            await sendIngestionCommand({
+                mode: 'SIMULATION',
+                sessionKey: selectedSession.sessionKey,
+            });
             onStreamStarted(selectedSession.sessionKey, 'SIMULATION', selectedSession);
         } catch (error) {
             log.error('Failed to start the simulation', error);
@@ -106,7 +120,9 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                 renderOption={(props, option) => (
                     <Box component="li" {...props} key={option.sessionKey}>
                         <Typography variant="body1">{option.meetingName}</Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>[{option.sessionName}]</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                            [{option.sessionName}]
+                        </Typography>
                     </Box>
                 )}
                 renderInput={(params) => (
@@ -120,13 +136,22 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
             />
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                <m.div whileTap={!isSessionActive ? { scale: 0.97 } : {}} whileHover={!isSessionActive ? { scale: 1.02 } : {}}>
+                <m.div
+                    whileTap={!isSessionActive ? { scale: 0.97 } : {}}
+                    whileHover={!isSessionActive ? { scale: 1.02 } : {}}
+                >
                     <Button
                         variant="contained"
                         color="primary"
                         size="large"
                         fullWidth
-                        startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
+                        startIcon={
+                            isLoading ? (
+                                <CircularProgress size={20} color="inherit" />
+                            ) : (
+                                <PlayArrowIcon />
+                            )
+                        }
                         onClick={() => void handleStart()}
                         disabled={isLoading || !selectedSession || isSessionActive}
                         sx={{ fontWeight: 'bold', py: 1.5 }}
@@ -149,7 +174,12 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                                 fullWidth
                                 startIcon={<StopIcon />}
                                 onClick={onCancel}
-                                sx={{ fontWeight: 'bold', py: 1.5, borderWidth: 2, '&:hover': { borderWidth: 2 } }}
+                                sx={{
+                                    fontWeight: 'bold',
+                                    py: 1.5,
+                                    borderWidth: 2,
+                                    '&:hover': { borderWidth: 2 },
+                                }}
                             >
                                 CANCEL SIMULATION
                             </Button>

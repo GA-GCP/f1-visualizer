@@ -65,7 +65,9 @@ describe('accessibility', () => {
     });
 
     it('the data vault has no violations once loaded', async () => {
-        const { container, findByText } = renderWithTheme(<HistoricalData />, { route: '/historical' });
+        const { container, findByText } = renderWithTheme(<HistoricalData />, {
+            route: '/historical',
+        });
         await findByText(/no lap data for this session/i);
 
         expect(await axe(container)).toHaveNoViolations();

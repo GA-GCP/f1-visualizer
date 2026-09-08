@@ -42,7 +42,7 @@ export function buildLapIndex(sessionLaps: readonly LapDataRecord[]): LapIndex {
     for (const [driverNumber, laps] of byDriver) {
         laps.sort((a, b) => Date.parse(a.dateStart!) - Date.parse(b.dateStart!));
         index.set(driverNumber, {
-            startsMs: laps.map(lap => Date.parse(lap.dateStart!)),
+            startsMs: laps.map((lap) => Date.parse(lap.dateStart!)),
             laps,
             totalLaps: laps.reduce((max, lap) => Math.max(max, lap.lapNumber), 0),
         });

@@ -52,7 +52,7 @@ export async function stubAuth0(page: Page): Promise<void> {
     // Captured from /authorize and replayed into the token response.
     let nonce = '';
 
-    await page.route(`https://${AUTH0_DOMAIN}/authorize*`, async route => {
+    await page.route(`https://${AUTH0_DOMAIN}/authorize*`, async (route) => {
         const url = new URL(route.request().url());
         nonce = url.searchParams.get('nonce') ?? '';
         const state = url.searchParams.get('state') ?? '';
@@ -69,7 +69,7 @@ export async function stubAuth0(page: Page): Promise<void> {
         });
     });
 
-    await page.route(`https://${AUTH0_DOMAIN}/oauth/token`, async route => {
+    await page.route(`https://${AUTH0_DOMAIN}/oauth/token`, async (route) => {
         await route.fulfill({
             json: {
                 access_token: 'e2e-access-token',
@@ -86,7 +86,7 @@ export async function stubAuth0(page: Page): Promise<void> {
     });
 
     // Logout would otherwise navigate to a domain that does not resolve.
-    await page.route(`https://${AUTH0_DOMAIN}/v2/logout*`, async route => {
+    await page.route(`https://${AUTH0_DOMAIN}/v2/logout*`, async (route) => {
         const returnTo = new URL(route.request().url()).searchParams.get('returnTo') ?? '/';
         await route.fulfill({ status: 302, headers: { location: returnTo }, body: '' });
     });

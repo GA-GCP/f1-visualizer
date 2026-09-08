@@ -30,8 +30,7 @@ describe('broadcastTheme', () => {
         // background-attachment: fixed re-rasterises a viewport-sized gradient on
         // every scroll tick; the gradient belongs on a fixed pseudo-element.
         const body = broadcastTheme.components?.MuiCssBaseline?.styleOverrides as
-            | { body?: Record<string, unknown> }
-            | undefined;
+            { body?: Record<string, unknown> } | undefined;
         expect(body?.body).not.toHaveProperty('backgroundAttachment');
         expect(body?.body).toHaveProperty('&::before');
     });

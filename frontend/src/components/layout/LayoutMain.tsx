@@ -1,10 +1,19 @@
-import {useAuth0} from "@auth0/auth0-react";
+import { useAuth0 } from '@auth0/auth0-react';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
 import SpeedIcon from '@mui/icons-material/Speed';
 import StorageIcon from '@mui/icons-material/Storage';
-import { Box, AppBar, Toolbar, Typography, Container, Button, IconButton, Tooltip } from '@mui/material';
+import {
+    Box,
+    AppBar,
+    Toolbar,
+    Typography,
+    Container,
+    Button,
+    IconButton,
+    Tooltip,
+} from '@mui/material';
 import { AnimatePresence, m, LayoutGroup } from 'framer-motion';
 import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useLocation, useOutlet } from 'react-router-dom';
@@ -101,9 +110,24 @@ const LayoutMain: React.FC = () => {
                             which one was current. */}
                         <Box component="nav" aria-label="Primary" sx={{ display: 'flex' }}>
                             <LayoutGroup>
-                                <NavButton to="/dashboard" label="Live Console" icon={<SpeedIcon />} currentPath={location.pathname} />
-                                <NavButton to="/historical" label="Data Vault" icon={<StorageIcon />} currentPath={location.pathname} />
-                                <NavButton to="/versus" label="Head-to-Head" icon={<CompareArrowsIcon />} currentPath={location.pathname} />
+                                <NavButton
+                                    to="/dashboard"
+                                    label="Live Console"
+                                    icon={<SpeedIcon />}
+                                    currentPath={location.pathname}
+                                />
+                                <NavButton
+                                    to="/historical"
+                                    label="Data Vault"
+                                    icon={<StorageIcon />}
+                                    currentPath={location.pathname}
+                                />
+                                <NavButton
+                                    to="/versus"
+                                    label="Head-to-Head"
+                                    icon={<CompareArrowsIcon />}
+                                    currentPath={location.pathname}
+                                />
                             </LayoutGroup>
                         </Box>
 
@@ -111,7 +135,11 @@ const LayoutMain: React.FC = () => {
                             <IconButton
                                 onClick={() => setIsSettingsOpen(true)}
                                 aria-label="User preferences"
-                                sx={{ ml: 2, color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
+                                sx={{
+                                    ml: 2,
+                                    color: 'text.secondary',
+                                    '&:hover': { color: 'primary.main' },
+                                }}
                             >
                                 <SettingsIcon />
                             </IconButton>
@@ -121,7 +149,11 @@ const LayoutMain: React.FC = () => {
                             <IconButton
                                 onClick={handleLogout}
                                 aria-label="Log out"
-                                sx={{ ml: 2, color: 'text.secondary', '&:hover': { color: 'error.main' } }}
+                                sx={{
+                                    ml: 2,
+                                    color: 'text.secondary',
+                                    '&:hover': { color: 'error.main' },
+                                }}
                             >
                                 <LogoutIcon />
                             </IconButton>
@@ -167,9 +199,7 @@ const LayoutMain: React.FC = () => {
                             navigating away clears it. The app-wide boundary
                             above replaced everything with the error screen. */}
                         <ErrorBoundary key={location.pathname}>
-                            <Suspense fallback={<RouteFallback />}>
-                                {outlet}
-                            </Suspense>
+                            <Suspense fallback={<RouteFallback />}>{outlet}</Suspense>
                         </ErrorBoundary>
                     </m.div>
                 </AnimatePresence>
@@ -188,7 +218,17 @@ const LayoutMain: React.FC = () => {
 };
 
 // Helper component for consistent nav buttons
-const NavButton = ({ to, label, icon, currentPath }: { to: string, label: string, icon: React.ReactNode, currentPath: string }) => {
+const NavButton = ({
+    to,
+    label,
+    icon,
+    currentPath,
+}: {
+    to: string;
+    label: string;
+    icon: React.ReactNode;
+    currentPath: string;
+}) => {
     const isActive = currentPath === to;
     return (
         <Button
@@ -207,8 +247,8 @@ const NavButton = ({ to, label, icon, currentPath }: { to: string, label: string
                 borderRadius: 0,
                 '&:hover': {
                     bgcolor: 'rgba(255,255,255,0.05)',
-                    color: 'white'
-                }
+                    color: 'white',
+                },
             }}
         >
             {/* Icon-only below md: three labelled buttons plus the brand and two

@@ -7,8 +7,16 @@ import type { DriverProfile, RaceEntryRoster, SessionDriverEntry } from './schem
  *  neutral values keep the type satisfied without implying real measurements.
  */
 const UNRATED_STATS: DriverProfile['stats'] = {
-    speed: 80, consistency: 80, aggression: 80, tireMgmt: 80, experience: 80,
-    wins: 0, podiums: 0, totalPoints: 0, bestChampionshipFinish: 0, totalRaces: 0,
+    speed: 80,
+    consistency: 80,
+    aggression: 80,
+    tireMgmt: 80,
+    experience: 80,
+    wins: 0,
+    podiums: 0,
+    totalPoints: 0,
+    bestChampionshipFinish: 0,
+    totalRaces: 0,
     teamsDrivenFor: [],
 };
 
@@ -26,7 +34,7 @@ function driverCode(entry: SessionDriverEntry): string {
  * lifecycle and the layout.
  */
 export function rosterToDriverProfiles(roster: RaceEntryRoster): DriverProfile[] {
-    return roster.drivers.map(entry => ({
+    return roster.drivers.map((entry) => ({
         id: entry.driverNumber,
         code: driverCode(entry),
         name: entry.broadcastName || 'Unknown',

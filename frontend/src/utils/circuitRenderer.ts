@@ -65,7 +65,7 @@ export function strokeTrace(
     ctx.shadowColor = 'transparent';
 
     ctx.beginPath();
-    ctx.strokeStyle = isSelected ? (teamColour || DEFAULT_TEAM_COLOUR) : GHOST_STROKE;
+    ctx.strokeStyle = isSelected ? teamColour || DEFAULT_TEAM_COLOUR : GHOST_STROKE;
     ctx.lineWidth = isSelected ? SELECTED_LINE_WIDTH : GHOST_LINE_WIDTH;
     ctx.lineJoin = 'round';
     // Round caps, not the default butt: the cached layer appends each frame's

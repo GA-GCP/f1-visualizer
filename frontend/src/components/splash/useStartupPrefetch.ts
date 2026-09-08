@@ -47,9 +47,9 @@ export function useStartupPrefetch(tasks: PrefetchTask[], enabled: boolean): Sta
             if (cancelled) return;
             if (!ok) {
                 log.error(`[startup] Prefetch failed: ${task.name}`, error);
-                setFailures(prev => [...prev, task.name]);
+                setFailures((prev) => [...prev, task.name]);
             }
-            setSettled(prev => prev + 1);
+            setSettled((prev) => prev + 1);
         };
 
         for (const task of tasks) {

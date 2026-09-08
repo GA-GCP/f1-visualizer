@@ -1,9 +1,9 @@
-import react from '@vitejs/plugin-react'
+import react from '@vitejs/plugin-react';
 // From vitest/config, not vite: this file now owns the test config too, so the
 // two cannot drift. They already had — vitest.config.ts carried its own copy of
 // the alias, the plugin and the build-stamp defines, and a change to any of
 // them had to be made twice or silently apply to only one of build and test.
-import { defineConfig } from 'vitest/config'
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   // React Compiler, via the Rust `oxc-transform-react` port rather than Babel:
@@ -71,8 +71,7 @@ export default defineConfig({
         // `entriesAware` names its subgroups `group~entry~entry~...`, which
         // produces 90-character filenames that leak route names into URLs.
         // Keep the group prefix and let the hash do the disambiguating.
-        chunkFileNames: (chunk: { name: string }) =>
-          `assets/${chunk.name.split('~')[0]}-[hash].js`,
+        chunkFileNames: (chunk: { name: string }) => `assets/${chunk.name.split('~')[0]}-[hash].js`,
         // Vite 8 / rolldown: this replaces Rollup's `manualChunks`.
         //
         // The point is cache lifetime, not chunk count: with one bundle every
@@ -180,7 +179,7 @@ export default defineConfig({
         ws: true,
         changeOrigin: true,
         secure: false,
-      }
-    }
-  }
-})
+      },
+    },
+  },
+});

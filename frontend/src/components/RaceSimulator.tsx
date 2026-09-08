@@ -1,9 +1,19 @@
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
-import { Box, Typography, Paper, Grid, Chip, Snackbar, Alert, Button, CircularProgress } from '@mui/material';
+import {
+    Box,
+    Typography,
+    Paper,
+    Grid,
+    Chip,
+    Snackbar,
+    Alert,
+    Button,
+    CircularProgress,
+} from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { m, AnimatePresence } from 'framer-motion';
-import React, { useMemo, useState, useRef, useCallback  } from 'react';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
 import { pauseSimulation } from '../api/ingestionApi';
 import { rosterToDriverProfiles } from '../api/mappers';
 import { queries } from '../api/queries';
@@ -55,7 +65,8 @@ const RaceSimulator: React.FC = () => {
     // synchronous setState inside an effect, and a cascading render every time
     // the roster or the favourite changed.
     const defaultDriver = useMemo(
-        () => displayDrivers.find(d => d.code === favouriteDriverCode) ?? displayDrivers[0] ?? null,
+        () =>
+            displayDrivers.find((d) => d.code === favouriteDriverCode) ?? displayDrivers[0] ?? null,
         [displayDrivers, favouriteDriverCode],
     );
     const selectedDriver = chosenDriver ?? defaultDriver;
@@ -109,21 +120,35 @@ const RaceSimulator: React.FC = () => {
 
     // Only complain once a session is running and the client has actually lost
     // the connection — 'idle' and 'connecting' are not failures.
-    const feedInterrupted = session.isSessionActive
-        && (connectionStatus === 'reconnecting'
-            || connectionStatus === 'circuit-open'
-            || connectionStatus === 'offline'
-            || connectionStatus === 'auth-rejected');
+    const feedInterrupted =
+        session.isSessionActive &&
+        (connectionStatus === 'reconnecting' ||
+            connectionStatus === 'circuit-open' ||
+            connectionStatus === 'offline' ||
+            connectionStatus === 'auth-rejected');
 
     return (
         <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: CANVAS_BG, minHeight: '100vh', color: 'white' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    mb: 4,
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 2,
+                }}
+            >
                 <Box>
                     {/* React 19 hoists this into <head>: every route shared one
                         static title before, so browser history and tab lists were
                         indistinguishable. */}
                     <title>Live Console · F1 Visualizer</title>
-                    <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', letterSpacing: 1 }}>
+                    <Typography
+                        variant="h4"
+                        component="h1"
+                        sx={{ fontWeight: 'bold', letterSpacing: 1 }}
+                    >
                         <span aria-hidden="true">🏎️</span> RACE ENGINEER CONSOLE
                     </Typography>
                 </Box>
@@ -136,10 +161,23 @@ const RaceSimulator: React.FC = () => {
                 <Box role="status" aria-live="polite" sx={{ display: 'flex', gap: 1 }}>
                     <Chip
                         label={`LIVE FEED: ${describeConnectionStatus(connectionStatus).toUpperCase()}`}
-                        color={connectionStatus === 'connected' ? 'success'
-                            : connectionStatus === 'connecting' || connectionStatus === 'reconnecting' ? 'warning'
-                            : connectionStatus === 'idle' ? 'default' : 'error'}
-                        icon={connectionStatus === 'connected' ? <CheckCircleIcon /> : <ErrorOutlineIcon />}
+                        color={
+                            connectionStatus === 'connected'
+                                ? 'success'
+                                : connectionStatus === 'connecting' ||
+                                    connectionStatus === 'reconnecting'
+                                  ? 'warning'
+                                  : connectionStatus === 'idle'
+                                    ? 'default'
+                                    : 'error'
+                        }
+                        icon={
+                            connectionStatus === 'connected' ? (
+                                <CheckCircleIcon />
+                            ) : (
+                                <ErrorOutlineIcon />
+                            )
+                        }
                         variant="filled"
                     />
                 </Box>
@@ -148,9 +186,14 @@ const RaceSimulator: React.FC = () => {
             <Grid container spacing={3}>
                 <Grid size={{ xs: 12, md: 4 }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-
                         <Paper sx={{ bgcolor: PAPER_BG, border: '1px solid #333' }}>
-                            <SessionControlPanel onStreamStarted={handleStreamStarted} onSessionSelected={handleSessionSelected} onError={setStreamError} isSessionActive={session.isSessionActive} onCancel={() => void handleCancelSimulation()} />
+                            <SessionControlPanel
+                                onStreamStarted={handleStreamStarted}
+                                onSessionSelected={handleSessionSelected}
+                                onError={setStreamError}
+                                isSessionActive={session.isSessionActive}
+                                onCancel={() => void handleCancelSimulation()}
+                            />
                         </Paper>
 
                         <AnimatePresence>
@@ -189,7 +232,6 @@ const RaceSimulator: React.FC = () => {
                             resetKey={session.resetKey}
                             onFirstPacket={handleFirstPacket}
                         />
-
                     </Box>
                 </Grid>
 
@@ -209,30 +251,48 @@ const RaceSimulator: React.FC = () => {
 
             {/* The message used to claim a reconnect was in progress regardless
                 of whether the client was still trying. */}
-            <Snackbar open={feedInterrupted} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+            <Snackbar
+                open={feedInterrupted}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
                 <Alert
                     severity={connectionStatus === 'reconnecting' ? 'warning' : 'error'}
                     variant="filled"
                     sx={{ width: '100%', fontWeight: 'bold', fontSize: '1.1rem' }}
-                    action={connectionStatus === 'circuit-open' || connectionStatus === 'offline' ? (
-                        <Button color="inherit" size="small" onClick={retryStompConnection}>
-                            RETRY
-                        </Button>
-                    ) : undefined}
+                    action={
+                        connectionStatus === 'circuit-open' || connectionStatus === 'offline' ? (
+                            <Button color="inherit" size="small" onClick={retryStompConnection}>
+                                RETRY
+                            </Button>
+                        ) : undefined
+                    }
                 >
-                    {connectionStatus === 'reconnecting' && 'LIVE FEED INTERRUPTED — RECONNECTING...'}
-                    {connectionStatus === 'circuit-open' && 'LIVE FEED UNAVAILABLE AFTER REPEATED FAILURES.'}
-                    {connectionStatus === 'offline' && 'YOU ARE OFFLINE. THE FEED WILL RESUME WHEN THE NETWORK RETURNS.'}
-                    {connectionStatus === 'auth-rejected' && 'SESSION EXPIRED. SIGN IN AGAIN TO RESUME THE FEED.'}
+                    {connectionStatus === 'reconnecting' &&
+                        'LIVE FEED INTERRUPTED — RECONNECTING...'}
+                    {connectionStatus === 'circuit-open' &&
+                        'LIVE FEED UNAVAILABLE AFTER REPEATED FAILURES.'}
+                    {connectionStatus === 'offline' &&
+                        'YOU ARE OFFLINE. THE FEED WILL RESUME WHEN THE NETWORK RETURNS.'}
+                    {connectionStatus === 'auth-rejected' &&
+                        'SESSION EXPIRED. SIGN IN AGAIN TO RESUME THE FEED.'}
                 </Alert>
             </Snackbar>
 
-            <Snackbar open={!!streamError} autoHideDuration={8000} onClose={dismissStreamError} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-                <Alert severity="error" variant="filled" onClose={dismissStreamError} sx={{ width: '100%', fontWeight: 'bold' }}>
+            <Snackbar
+                open={!!streamError}
+                autoHideDuration={8000}
+                onClose={dismissStreamError}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert
+                    severity="error"
+                    variant="filled"
+                    onClose={dismissStreamError}
+                    sx={{ width: '100%', fontWeight: 'bold' }}
+                >
                     {streamError}
                 </Alert>
             </Snackbar>
-
         </Box>
     );
 };

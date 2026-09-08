@@ -30,7 +30,7 @@ vi.mock('d3', () => {
             if (typeof t === 'function') {
                 // Simulate D3 calling the function for each feature label
                 const features = ['speed', 'consistency', 'aggression', 'tireMgmt', 'experience'];
-                features.forEach(f => textCalls.push(t(f)));
+                features.forEach((f) => textCalls.push(t(f)));
             } else if (t !== undefined) {
                 textCalls.push(t);
             }
@@ -57,8 +57,8 @@ vi.mock('d3', () => {
         scaleLinear: vi.fn().mockReturnValue(createScale()),
         line: vi.fn().mockReturnValue({
             x: vi.fn().mockReturnThis(),
-            y: vi.fn().mockReturnThis()
-        })
+            y: vi.fn().mockReturnThis(),
+        }),
     };
 });
 
@@ -69,7 +69,19 @@ describe('RadarChart', () => {
         name: 'Max Verstappen',
         team: 'Red Bull Racing',
         teamColor: '#3671C6',
-        stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] }
+        stats: {
+            speed: 99,
+            consistency: 95,
+            aggression: 98,
+            tireMgmt: 92,
+            experience: 85,
+            wins: 54,
+            podiums: 98,
+            totalPoints: 2586,
+            bestChampionshipFinish: 1,
+            totalRaces: 185,
+            teamsDrivenFor: ['Red Bull Racing'],
+        },
     };
 
     const mockDriverB: DriverProfile = {
@@ -78,7 +90,19 @@ describe('RadarChart', () => {
         name: 'Charles Leclerc',
         team: 'Ferrari',
         teamColor: '#E80020',
-        stats: { speed: 96, consistency: 88, aggression: 90, tireMgmt: 85, experience: 80, wins: 5, podiums: 30, totalPoints: 1200, bestChampionshipFinish: 2, totalRaces: 130, teamsDrivenFor: ['Ferrari', 'Sauber'] }
+        stats: {
+            speed: 96,
+            consistency: 88,
+            aggression: 90,
+            tireMgmt: 85,
+            experience: 80,
+            wins: 5,
+            podiums: 30,
+            totalPoints: 1200,
+            bestChampionshipFinish: 2,
+            totalRaces: 130,
+            teamsDrivenFor: ['Ferrari', 'Sauber'],
+        },
     };
 
     beforeEach(() => {
@@ -118,16 +142,16 @@ describe('RadarChart', () => {
         render(<RadarChart driverA={mockDriverA} driverB={mockDriverB} />);
 
         // The component sets style("stroke", driver.teamColor) and style("fill", driver.teamColor)
-        const strokeCalls = styleCalls.filter(c => c.prop === 'stroke');
-        const fillCalls = styleCalls.filter(c => c.prop === 'fill');
+        const strokeCalls = styleCalls.filter((c) => c.prop === 'stroke');
+        const fillCalls = styleCalls.filter((c) => c.prop === 'fill');
 
         // Both driver colors should appear in stroke calls
-        const strokeValues = strokeCalls.map(c => c.value);
+        const strokeValues = strokeCalls.map((c) => c.value);
         expect(strokeValues).toContain('#3671C6');
         expect(strokeValues).toContain('#E80020');
 
         // Both driver colors should appear in fill calls
-        const fillValues = fillCalls.map(c => c.value);
+        const fillValues = fillCalls.map((c) => c.value);
         expect(fillValues).toContain('#3671C6');
         expect(fillValues).toContain('#E80020');
     });

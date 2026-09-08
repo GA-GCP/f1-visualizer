@@ -27,7 +27,9 @@ export const SPRING = {
 } as const;
 
 /** `cubic-bezier(...)` string for CSS and MUI, from the same array. */
-export function cssEase(ease: readonly [number, number, number, number] | readonly number[]): string {
+export function cssEase(
+    ease: readonly [number, number, number, number] | readonly number[],
+): string {
     return `cubic-bezier(${ease.join(', ')})`;
 }
 

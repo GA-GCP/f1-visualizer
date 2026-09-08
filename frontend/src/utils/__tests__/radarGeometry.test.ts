@@ -7,7 +7,7 @@ import {
 } from '../radarGeometry';
 
 describe('angleForAxis', () => {
-    it('places the first axis at -PI/2 (12 o\'clock)', () => {
+    it("places the first axis at -PI/2 (12 o'clock)", () => {
         expect(angleForAxis(0)).toBeCloseTo(-Math.PI / 2);
     });
 

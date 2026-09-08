@@ -10,7 +10,12 @@ describe('web vitals', () => {
         // is the only thing anyone actually wants to do with these.
         const report = toReport({ name: 'LCP', value: 1234.56, rating: 'good' });
 
-        expect(report).toMatchObject({ name: 'LCP', value: 1234.56, rating: 'good', version: buildInfo.version });
+        expect(report).toMatchObject({
+            name: 'LCP',
+            value: 1234.56,
+            rating: 'good',
+            version: buildInfo.version,
+        });
     });
 
     it('routes a measurement to an installed sink instead of the beacon', () => {

@@ -20,7 +20,7 @@ export const FALLBACK_COLORS: readonly string[] = TEAM_FALLBACK_COLOURS;
 export function getDriverColor(
     driverNum: number,
     index: number,
-    driverColorMap?: Record<number, string>
+    driverColorMap?: Record<number, string>,
 ): string {
     if (driverColorMap?.[driverNum]) return driverColorMap[driverNum];
     return FALLBACK_COLORS[index % FALLBACK_COLORS.length];
@@ -31,9 +31,7 @@ export function getDriverColor(
  * teammates by lightening the second driver's color via HSL adjustment.
  * Returns colors with '#' prefix included.
  */
-export function buildDriverColorMap(
-    drivers: SessionDriverEntry[]
-): Record<number, string> {
+export function buildDriverColorMap(drivers: SessionDriverEntry[]): Record<number, string> {
     const colorMap: Record<number, string> = {};
 
     // Group drivers by team
@@ -58,7 +56,7 @@ export function buildDriverColorMap(
         // Mid-season replacement edge case: 3+ drivers on a team
         for (let i = 2; i < teammates.length; i++) {
             const hsl = d3.hsl('#' + (teammates[i].teamColour || 'ffffff'));
-            hsl.l = Math.min(hsl.l + 0.15 * i, 0.90);
+            hsl.l = Math.min(hsl.l + 0.15 * i, 0.9);
             colorMap[teammates[i].driverNumber] = hsl.formatHex();
         }
     }
@@ -69,9 +67,7 @@ export function buildDriverColorMap(
 /**
  * Builds a driver-number-to-label map from the roster using nameAcronym.
  */
-export function buildDriverLabelMap(
-    drivers: SessionDriverEntry[]
-): Record<number, string> {
+export function buildDriverLabelMap(drivers: SessionDriverEntry[]): Record<number, string> {
     const labelMap: Record<number, string> = {};
     for (const d of drivers) {
         labelMap[d.driverNumber] = d.nameAcronym || String(d.driverNumber);
@@ -98,10 +94,10 @@ export function computeInnerDimensions(width: number) {
 export function createLapChartScales(
     data: LapDataRecord[],
     innerWidth: number,
-    innerHeight: number
+    innerHeight: number,
 ) {
-    const xDomain = d3.extent(data, d => d.lapNumber) as [number, number];
-    const validDurations = data.filter(d => d.lapDuration).map(d => d.lapDuration!);
+    const xDomain = d3.extent(data, (d) => d.lapNumber) as [number, number];
+    const validDurations = data.filter((d) => d.lapDuration).map((d) => d.lapDuration!);
     const yMin = d3.min(validDurations)! - 2;
     const yMax = d3.max(validDurations)! + 2;
 
@@ -115,5 +111,8 @@ export function createLapChartScales(
  * Groups lap data records by driver number.
  */
 export function groupByDriver(data: LapDataRecord[]) {
-    return d3.group(data.filter(d => d.lapDuration), d => d.driverNumber);
+    return d3.group(
+        data.filter((d) => d.lapDuration),
+        (d) => d.driverNumber,
+    );
 }

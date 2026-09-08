@@ -39,7 +39,9 @@ describe('createLogger', () => {
 
     it('survives a sink that throws, so reporting cannot break the caller', () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
-        setErrorSink(() => { throw new Error('sink is down'); });
+        setErrorSink(() => {
+            throw new Error('sink is down');
+        });
 
         expect(() => createLogger('api').error('request failed')).not.toThrow();
     });

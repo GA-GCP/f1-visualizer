@@ -17,7 +17,7 @@ vi.mock('../../api/referenceApi', () => ({
 
 // Mock the heavy D3 Radar Chart
 vi.mock('../../components/versus/RadarChart', () => ({
-    default: () => <div data-testid="mock-radar-chart">Radar Chart</div>
+    default: () => <div data-testid="mock-radar-chart">Radar Chart</div>,
 }));
 
 /** The page stores its selection in the URL, so it needs router context. */
@@ -26,17 +26,65 @@ const renderAt = (route: string) => renderWithProviders(<VersusMode />, { route 
 describe('VersusMode Page', () => {
     const mockDrivers = [
         {
-            id: 1, code: "VER", name: "Max Verstappen", team: "Red Bull", teamColor: "#3671C6",
-            stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] }
+            id: 1,
+            code: 'VER',
+            name: 'Max Verstappen',
+            team: 'Red Bull',
+            teamColor: '#3671C6',
+            stats: {
+                speed: 99,
+                consistency: 95,
+                aggression: 98,
+                tireMgmt: 92,
+                experience: 85,
+                wins: 54,
+                podiums: 98,
+                totalPoints: 2586,
+                bestChampionshipFinish: 1,
+                totalRaces: 185,
+                teamsDrivenFor: ['Red Bull Racing'],
+            },
         },
         {
-            id: 16, code: "LEC", name: "Charles Leclerc", team: "Ferrari", teamColor: "#E80020",
-            stats: { speed: 96, consistency: 88, aggression: 90, tireMgmt: 85, experience: 80, wins: 5, podiums: 30, totalPoints: 1200, bestChampionshipFinish: 2, totalRaces: 130, teamsDrivenFor: ['Ferrari', 'Sauber'] }
+            id: 16,
+            code: 'LEC',
+            name: 'Charles Leclerc',
+            team: 'Ferrari',
+            teamColor: '#E80020',
+            stats: {
+                speed: 96,
+                consistency: 88,
+                aggression: 90,
+                tireMgmt: 85,
+                experience: 80,
+                wins: 5,
+                podiums: 30,
+                totalPoints: 1200,
+                bestChampionshipFinish: 2,
+                totalRaces: 130,
+                teamsDrivenFor: ['Ferrari', 'Sauber'],
+            },
         },
         {
-            id: 44, code: "HAM", name: "Lewis Hamilton", team: "Ferrari", teamColor: "#E80020",
-            stats: { speed: 95, consistency: 94, aggression: 88, tireMgmt: 96, experience: 99, wins: 105, podiums: 202, totalPoints: 4800, bestChampionshipFinish: 1, totalRaces: 350, teamsDrivenFor: ['McLaren', 'Mercedes', 'Ferrari'] }
-        }
+            id: 44,
+            code: 'HAM',
+            name: 'Lewis Hamilton',
+            team: 'Ferrari',
+            teamColor: '#E80020',
+            stats: {
+                speed: 95,
+                consistency: 94,
+                aggression: 88,
+                tireMgmt: 96,
+                experience: 99,
+                wins: 105,
+                podiums: 202,
+                totalPoints: 4800,
+                bestChampionshipFinish: 1,
+                totalRaces: 350,
+                teamsDrivenFor: ['McLaren', 'Mercedes', 'Ferrari'],
+            },
+        },
     ];
 
     beforeEach(() => {
@@ -45,7 +93,7 @@ describe('VersusMode Page', () => {
 
         // FIX: Dynamically return the correct stats based on the driver ID requested
         vi.mocked(fetchDriverStats).mockImplementation(async (id: number) => {
-            const driver = mockDrivers.find(d => d.id === id);
+            const driver = mockDrivers.find((d) => d.id === id);
             return driver ? driver.stats : mockDrivers[0].stats;
         });
     });
@@ -70,7 +118,7 @@ describe('VersusMode Page', () => {
         // Verify stat bars rendered (by checking for driver wins)
         // Since the mock is now dynamic, there will only be exactly one "54" and one "5"
         expect(screen.getByText('54')).toBeInTheDocument(); // VER wins
-        expect(screen.getByText('5')).toBeInTheDocument();  // LEC wins
+        expect(screen.getByText('5')).toBeInTheDocument(); // LEC wins
     });
 
     it('honours a pairing chosen in the URL', async () => {

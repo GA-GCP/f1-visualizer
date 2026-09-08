@@ -24,7 +24,9 @@ import { apiClient, setAuthHandlers } from '../../api/apiClient';
 import { AxiosAuthInterceptor } from '../AuthHandler';
 import { resetLoginRedirectGuard } from '../loginRedirectGuard';
 
-interface Config { headers: Record<string, string> }
+interface Config {
+    headers: Record<string, string>;
+}
 
 const mockAuth0 = (isAuthenticated: boolean) => {
     (useAuth0 as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -43,8 +45,9 @@ const renderAt = (path = '/dashboard') =>
 
 /** The request interceptor the component registered. */
 const registeredInterceptor = () =>
-    vi.mocked(apiClient.interceptors.request.use).mock.calls[0][0] as unknown as
-        (config: Config) => Promise<Config>;
+    vi.mocked(apiClient.interceptors.request.use).mock.calls[0][0] as unknown as (
+        config: Config,
+    ) => Promise<Config>;
 
 describe('AxiosAuthInterceptor', () => {
     beforeEach(() => {
@@ -88,7 +91,8 @@ describe('AxiosAuthInterceptor', () => {
         });
 
         it.each(['login_required', 'consent_required', 'missing_refresh_token'])(
-            're-authenticates on %s', async (code) => {
+            're-authenticates on %s',
+            async (code) => {
                 mockGetAccessTokenSilently.mockRejectedValue({ error: code });
                 mockAuth0(true);
 

@@ -27,7 +27,10 @@ const WS_PATH = '/ws/websocket';
  * just the values actually referenced. Every read here is a static property
  * access for that reason.
  */
-function readRequired(name: string, value: string | undefined): { value: string; missing: string | null } {
+function readRequired(
+    name: string,
+    value: string | undefined,
+): { value: string; missing: string | null } {
     return typeof value === 'string' && value.length > 0
         ? { value, missing: null }
         : { value: '', missing: name };
@@ -83,5 +86,5 @@ export const env = {
  * a readable message at boot rather than a stack trace on first import.
  */
 export const missingEnvVars: readonly string[] = [domain, clientId, audience]
-    .map(entry => entry.missing)
+    .map((entry) => entry.missing)
     .filter((name): name is string => name !== null);

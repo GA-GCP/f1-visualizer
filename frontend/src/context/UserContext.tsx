@@ -38,21 +38,25 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         const status = err.response?.status;
                         if (status === 404) {
                             log.warn(
-                                "[UserContext] User Service returned 404. " +
-                                "The service may not be running or the user may not exist yet."
+                                '[UserContext] User Service returned 404. ' +
+                                    'The service may not be running or the user may not exist yet.',
                             );
                         } else if (status === 400) {
                             log.error(
-                                "[UserContext] User Service returned 400. " +
-                                "JWT may be missing the 'email' claim. " +
-                                "Ensure the Auth0 Post-Login Action enriches the access token.",
-                                err.response?.data
+                                '[UserContext] User Service returned 400. ' +
+                                    "JWT may be missing the 'email' claim. " +
+                                    'Ensure the Auth0 Post-Login Action enriches the access token.',
+                                err.response?.data,
                             );
                         } else {
-                            log.error("[UserContext] Failed to load user profile:", status, err.response?.data);
+                            log.error(
+                                '[UserContext] Failed to load user profile:',
+                                status,
+                                err.response?.data,
+                            );
                         }
                     } else {
-                        log.error("[UserContext] Failed to load user profile:", err);
+                        log.error('[UserContext] Failed to load user profile:', err);
                     }
                     if (isMounted) setError('service_unavailable');
                 }
@@ -66,7 +70,9 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
 
         void loadUser();
-        return () => { isMounted = false; };
+        return () => {
+            isMounted = false;
+        };
     }, [isAuthenticated]);
 
     const handleUpdatePreferences = async (newPrefs: UserPreferences) => {
@@ -83,7 +89,9 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     return (
-        <UserContext.Provider value={{ userProfile, updatePreferences: handleUpdatePreferences, isLoading, error }}>
+        <UserContext.Provider
+            value={{ userProfile, updatePreferences: handleUpdatePreferences, isLoading, error }}
+        >
             {children}
         </UserContext.Provider>
     );
@@ -93,7 +101,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 export const useUser = () => {
     const context = useContext(UserContext);
     if (context === undefined) {
-        throw new Error("useUser must be used within a UserProvider");
+        throw new Error('useUser must be used within a UserProvider');
     }
     return context;
 };

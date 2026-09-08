@@ -36,7 +36,10 @@ export interface Logger {
 }
 
 const CONSOLE_METHOD: Record<LogLevel, 'debug' | 'info' | 'warn' | 'error'> = {
-    debug: 'debug', info: 'info', warn: 'warn', error: 'error',
+    debug: 'debug',
+    info: 'info',
+    warn: 'warn',
+    error: 'error',
 };
 
 /**

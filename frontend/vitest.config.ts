@@ -1,7 +1,7 @@
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vitest/config';
 
 // Reconstruct __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);

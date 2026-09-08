@@ -1,4 +1,5 @@
 import { createTheme } from '@mui/material';
+import { cssEase, DUR, EASE } from './motion';
 import {
     APP_BG,
     BRAND_RED,
@@ -6,7 +7,6 @@ import {
     FONT_FAMILY,
     TEXT_DISABLED,
 } from './tokens';
-import { cssEase, DUR, EASE } from './motion';
 
 /**
  * The broadcast theme.

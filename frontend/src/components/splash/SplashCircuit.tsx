@@ -1,7 +1,7 @@
-import { BRAND_RED } from '../../theme/tokens';
-import React, { useRef, useState, useEffect } from 'react';
-import { m, useMotionValue, animate, useMotionValueEvent } from 'framer-motion';
 import { Box } from '@mui/material';
+import { m, useMotionValue, animate, useMotionValueEvent } from 'framer-motion';
+import React, { useRef, useState, useEffect } from 'react';
+import { BRAND_RED } from '../../theme/tokens';
 import type { SplashPhase } from './useSplashSequence';
 
 /**

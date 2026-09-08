@@ -1,4 +1,4 @@
-import { screen, act } from '@testing-library/react';
+import { screen, act, renderHook  } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
@@ -8,7 +8,6 @@ vi.mock('framer-motion', async (importOriginal) => {
     return { ...actual, useReducedMotion: () => mockUseReducedMotion() };
 });
 
-import { renderHook } from '@testing-library/react';
 import CyclingStatusLabel from '../CyclingStatusLabel';
 import ShimmerBar from '../ShimmerBar';
 import { useCyclingIndex } from '../useCyclingIndex';

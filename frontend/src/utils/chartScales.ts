@@ -1,7 +1,7 @@
 import * as d3 from 'd3';
-import type { LapDataRecord } from '../types/telemetry';
-import type { SessionDriverEntry } from '../api/referenceApi';
 import { TEAM_FALLBACK_COLOURS } from '../theme/tokens';
+import type { SessionDriverEntry } from '../api/referenceApi';
+import type { LapDataRecord } from '../types/telemetry';
 
 export const LAP_CHART_ASPECT_RATIO = 2;
 export const LAP_CHART_MARGIN = { top: 20, right: 120, bottom: 50, left: 60 };

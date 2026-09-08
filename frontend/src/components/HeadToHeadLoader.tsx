@@ -1,6 +1,6 @@
-import React from 'react';
-import { m, useReducedMotion } from 'framer-motion';
 import { Box, Container, Grid, Paper, Typography } from '@mui/material';
+import { m, useReducedMotion } from 'framer-motion';
+import React from 'react';
 import { BORDER_SUBTLE, BRAND_RED, FONT_FAMILY, PAPER_BG } from '../theme/tokens';
 import CyclingStatusLabel from './ui/CyclingStatusLabel';
 

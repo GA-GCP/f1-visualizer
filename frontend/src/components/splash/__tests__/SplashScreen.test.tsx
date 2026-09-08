@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { forgetSplashSkip, isSplashSkipRemembered } from '../splashPreference';
 import SplashScreen from '../SplashScreen';
 
 // Mock sub-components to isolate SplashScreen logic
@@ -24,8 +25,6 @@ vi.mock('../useSplashSequence', () => ({
         return { phase: 'circuit', progress: 0.5, elapsed: 2500 };
     },
 }));
-
-import { forgetSplashSkip, isSplashSkipRemembered } from '../splashPreference';
 
 describe('SplashScreen', () => {
     beforeEach(() => {

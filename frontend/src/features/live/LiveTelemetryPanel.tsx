@@ -1,12 +1,12 @@
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Typography, Paper, Grid, Chip } from '@mui/material';
 import { m } from 'framer-motion';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTelemetry } from '../../hooks/useTelemetry';
+import { staggerContainer, staggerItem } from '../../theme/motion';
+import { BORDER_SUBTLE, COMPOUND_COLOURS, COMPOUND_FALLBACK, FONT_FAMILY, PAPER_BG, type TyreCompound } from '../../theme/tokens';
 import { buildLapIndex, findCurrentLap, type CurrentLap } from './lapCorrelation';
 import type { DriverProfile } from '../../api/referenceApi';
 import type { LapDataRecord, TelemetryPacket } from '../../types/telemetry';
-import { BORDER_SUBTLE, COMPOUND_COLOURS, COMPOUND_FALLBACK, FONT_FAMILY, PAPER_BG, type TyreCompound } from '../../theme/tokens';
-import { staggerContainer, staggerItem } from '../../theme/motion';
 
 /**
  * Minimum gap between committed readouts.
@@ -117,7 +117,7 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
             );
             // Bail out of the render when the lap has not actually changed.
             setCurrentLap(prev =>
-                prev && matched && prev.lapNumber === matched.lapNumber ? prev : matched,
+                prev?.lapNumber === matched?.lapNumber ? prev : matched,
             );
         }
     });

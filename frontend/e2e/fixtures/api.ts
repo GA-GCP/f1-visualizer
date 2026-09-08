@@ -1,5 +1,5 @@
-import type { Page } from '@playwright/test';
 import { E2E_EMAIL, E2E_SUB } from './auth0';
+import type { Page } from '@playwright/test';
 
 /**
  * Fixture payloads.

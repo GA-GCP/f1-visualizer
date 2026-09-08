@@ -1,4 +1,4 @@
-import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosHeaders, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { env } from '../config/env';
 import { createLogger } from '../lib/logger';
 
@@ -85,7 +85,11 @@ export function retryAfterMs(header?: string): number | undefined {
 
 apiClient.interceptors.response.use(
     (response) => response,
-    async (error) => {
+    // Typed rather than left as axios's implicit `any`: the body already cast
+    // to AxiosError in four places to read .response and .code, so the `any`
+    // bought nothing and hid the rest. Rejecting with a typed error also means
+    // the rejection reason is provably an Error.
+    async (error: AxiosError) => {
         const config = error.config;
 
         // A 401 used to only produce a console warning: the request failed, the
@@ -103,7 +107,19 @@ apiClient.interceptors.response.use(
                 retryConfig._authRetried = true;
                 try {
                     const token = await refreshAccessToken();
-                    config.headers = { ...config.headers, Authorization: `Bearer ${token}` };
+                    // Spreading into an object literal used to replace the
+                    // AxiosHeaders instance with a plain object that no longer
+                    // had its methods; it worked only because axios
+                    // re-normalises downstream, and the untyped `error` is what
+                    // kept that from ever being a type error.
+                    //
+                    // `AxiosHeaders.from` rather than calling .set directly:
+                    // real axios always hands the interceptor an instance, but
+                    // it costs nothing to accept a plain object too, and
+                    // assuming otherwise makes the retry path throw inside its
+                    // own try/catch and fail closed for the wrong reason.
+                    config.headers = AxiosHeaders.from(config.headers);
+                    config.headers.set('Authorization', `Bearer ${token}`);
                     return await apiClient(config);
                 } catch {
                     // fall through to re-authentication
@@ -122,8 +138,8 @@ apiClient.interceptors.response.use(
         const retryConfig = config as RetryConfig | undefined;
         if (!retryConfig) return Promise.reject(error);
 
-        const status = (error as AxiosError).response?.status;
-        const code = (error as AxiosError).code;
+        const status = error.response?.status;
+        const code = error.code;
         const isTransient =
             (status !== undefined && RETRYABLE_STATUSES.has(status))
             || code === 'ERR_NETWORK'
@@ -145,7 +161,7 @@ apiClient.interceptors.response.use(
         }
 
         const serverDelay = retryAfterMs(
-            (error as AxiosError).response?.headers?.['retry-after'] as string | undefined,
+            error.response?.headers?.['retry-after'] as string | undefined,
         );
         const backoff = serverDelay ?? 500 * 2 ** retryConfig._attempt;
         // Full jitter: without it, every client that failed together retries
@@ -158,8 +174,6 @@ apiClient.interceptors.response.use(
         );
         await new Promise(resolve => setTimeout(resolve, delayMs));
         return apiClient(retryConfig);
-
-        return Promise.reject(error);
     }
 );
 

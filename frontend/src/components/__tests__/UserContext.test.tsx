@@ -1,8 +1,8 @@
+import { useAuth0 } from '@auth0/auth0-react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fetchCurrentUser } from '@/api/userApi';
 import { UserProvider, useUser } from '../../context/UserContext';
-import { useAuth0 } from '@auth0/auth0-react';
-import { fetchCurrentUser } from '@/api/userApi.ts';
 
 // Mock dependencies
 vi.mock('@auth0/auth0-react', () => ({

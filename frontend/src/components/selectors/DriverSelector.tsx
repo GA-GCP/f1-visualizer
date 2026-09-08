@@ -1,6 +1,6 @@
-import React, { memo } from 'react';
 import { Autocomplete, TextField, Box, Typography } from '@mui/material';
-import type { DriverProfile } from '@/api/referenceApi.ts';
+import React, { memo } from 'react';
+import type { DriverProfile } from '@/api/referenceApi';
 import { PAPER_BG } from '../../theme/tokens';
 
 interface DriverSelectorProps {

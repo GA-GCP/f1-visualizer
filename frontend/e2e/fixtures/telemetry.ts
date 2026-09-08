@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
 const NUL = '\0';
 
 /** A closed oval, so the trace draws a recognisable circuit rather than noise. */
-export function circuitPath(points = 240): Array<{ x: number; y: number }> {
+export function circuitPath(points = 240): { x: number; y: number }[] {
     return Array.from({ length: points }, (_, i) => {
         const t = (i / points) * Math.PI * 2;
         return { x: Math.cos(t) * 900 + Math.sin(t * 3) * 120, y: Math.sin(t) * 520 };
@@ -34,7 +34,7 @@ function parse(raw: string): { command: string; headers: Record<string, string> 
 
 export interface TelemetryOptions {
     /** Points to replay on /topic/race-location. */
-    path?: Array<{ x: number; y: number }>;
+    path?: { x: number; y: number }[];
     sessionKey?: number;
     driverNumber?: number;
 }

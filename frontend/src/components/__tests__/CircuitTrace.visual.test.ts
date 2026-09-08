@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { toMatchImageSnapshot } from 'jest-image-snapshot';
 import { createCanvas } from 'canvas';
+import { toMatchImageSnapshot } from 'jest-image-snapshot';
+import { describe, it, expect } from 'vitest';
 import { computeBounds } from '../../utils/circuitProjection';
-import { drawFullTrace, type TraceContext } from '../../utils/circuitRenderer';
+import { drawFullTrace } from '../../utils/circuitRenderer';
 
 // Extend vitest matchers with jest-image-snapshot
 expect.extend({ toMatchImageSnapshot });
@@ -70,7 +70,7 @@ function renderCircuitToCanvas(
     const bounds = computeBounds(history, selectedDriverId);
 
     drawFullTrace(
-        ctx as unknown as TraceContext,
+        ctx,
         history,
         bounds,
         width,

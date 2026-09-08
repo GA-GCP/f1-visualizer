@@ -1,16 +1,16 @@
-import React, { useCallback, useMemo } from 'react';
 import { Box, Chip, Container, Grid, Typography, Paper } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
 import { m } from 'framer-motion';
+import React, { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { queries } from '../api/queries';
+import HeadToHeadLoader from '../components/HeadToHeadLoader';
 import DriverSelector from '../components/selectors/DriverSelector';
+import ErrorState from '../components/ui/ErrorState';
 import RadarChart from '../components/versus/RadarChart';
 import StatComparisonBar from '../components/versus/StatComparisonBar';
-import HeadToHeadLoader from '../components/HeadToHeadLoader';
-import ErrorState from '../components/ui/ErrorState';
-import { useQuery } from '@tanstack/react-query';
-import { queries } from '../api/queries';
-import type { DriverProfile } from '../api/referenceApi';
 import { PAPER_BG } from '../theme/tokens';
+import type { DriverProfile } from '../api/referenceApi';
 
 /**
  * Resolves one slot's driver from the URL parameter.

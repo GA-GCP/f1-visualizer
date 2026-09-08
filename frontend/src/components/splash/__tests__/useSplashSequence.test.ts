@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { useSplashSequence } from '../useSplashSequence';
-import type { SplashPhase, SplashSequenceState } from '../useSplashSequence';
+import type { SplashPhase } from '../useSplashSequence';
 
 /**
  * Drives the hook's rAF timeline off fake timers so the completion rule — the
@@ -118,7 +118,7 @@ describe('useSplashSequence', () => {
 
         for (let i = 0; i < 6; i++) {
             await clock.advance(1000);
-            const { phase } = result.current as SplashSequenceState;
+            const { phase } = result.current;
             if (seen[seen.length - 1] !== phase) seen.push(phase);
         }
 

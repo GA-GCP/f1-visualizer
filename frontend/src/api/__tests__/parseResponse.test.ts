@@ -24,12 +24,18 @@ describe('parseResponse', () => {
     it('names the endpoint in the error so the drift is locatable', () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
 
+        // Captured rather than asserted inside the catch: an expect in a catch
+        // block passes vacuously if nothing throws, and this way the type is
+        // asserted too.
+        let caught: unknown;
         try {
             parseResponse(schema, {}, 'GET /analysis/drivers');
-            expect.unreachable();
         } catch (error) {
-            expect((error as SchemaMismatchError).context).toBe('GET /analysis/drivers');
+            caught = error;
         }
+
+        expect(caught).toBeInstanceOf(SchemaMismatchError);
+        expect((caught as SchemaMismatchError).context).toBe('GET /analysis/drivers');
     });
 
     it('rejects a wrong primitive type, not just a missing key', () => {

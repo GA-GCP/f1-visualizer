@@ -1,8 +1,8 @@
 import { screen, waitFor } from '@testing-library/react';
-import { renderWithProviders } from '@/test/renderWithProviders';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fetchDrivers, fetchDriverStats } from '@/api/referenceApi';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import VersusMode from '../../pages/VersusMode';
-import { fetchDrivers, fetchDriverStats } from '@/api/referenceApi.ts';
 
 // Mock the reference API
 vi.mock('../../api/referenceApi', () => ({

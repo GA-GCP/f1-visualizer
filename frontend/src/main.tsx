@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import { installGlobalErrorHandlers, reactErrorHandlers } from './lib/errorReporting'
 import { missingEnvVars } from './config/env'
+import { publishBuildInfo } from './lib/buildInfo'
 import ConfigErrorScreen from './components/ConfigErrorScreen'
 
 // Self-hosted Titillium Web — only the faces this design actually uses.
@@ -23,6 +24,10 @@ import '@fontsource/titillium-web/latin-900.css'
 // timer — previously reached nothing but the browser console.
 installGlobalErrorHandlers()
 
+// One console line and a window global, so support can ask 'which build?' and
+// get an answer. Before the render, so it survives a boot-time crash.
+publishBuildInfo()
+
 // Checked at boot rather than at import: a missing key used to render nothing
 // at all, so the failure looked like a broken deploy rather than a config gap.
 const root = createRoot(document.getElementById('root')!, reactErrorHandlers)
@@ -34,3 +39,17 @@ root.render(
       : <App />}
   </StrictMode>,
 )
+
+// Field measurement, deliberately last and dynamically imported: the library
+// that measures the first paint should not be one of the things downloaded
+// before it.
+//
+// Guarded on the collector being configured, and both operands are statically
+// replaced at build time — so a production build with no VITE_RUM_ENDPOINT
+// folds this to `false` and rolldown drops web-vitals and the module below it
+// entirely, rather than shipping ~4 kB gz to measure into a void. Setting the
+// endpoint is what makes it appear. DEV keeps it on regardless, where the
+// measurements go to the console.
+if (import.meta.env.DEV || import.meta.env.VITE_RUM_ENDPOINT) {
+  void import('./lib/webVitals').then(({ reportWebVitals }) => reportWebVitals())
+}

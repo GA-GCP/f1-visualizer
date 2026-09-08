@@ -1,0 +1,8 @@
+# Commits that are pure formatting. `git blame --ignore-revs-file` skips them so
+# blame still points at whoever last changed the code, not at the reformat.
+#
+# GitHub reads this file automatically. Locally, opt in once with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style(frontend): adopt Prettier and an EditorConfig
+873610e49992d5a64a4d81e704739d352ee5a1cf

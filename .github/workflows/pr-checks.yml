@@ -25,10 +25,10 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6
         with:
           java-version: '25'
           distribution: 'temurin'
@@ -47,10 +47,10 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Node 26
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '26'
           cache: 'yarn'
@@ -58,6 +58,24 @@ jobs:
 
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
+
+      # --frozen-lockfile guarantees reproducibility, not safety: nothing here
+      # failed on a newly published advisory. Currently 0 across 764 packages,
+      # so this gate goes on while it is free rather than after it is not.
+      - name: Dependency audit
+        run: |
+          set +e
+          yarn audit --level high
+          code=$?
+          set -e
+          # yarn 1 exits with a bitmask of the severities it found:
+          # 1 INFO, 2 LOW, 4 MODERATE, 8 HIGH, 16 CRITICAL. Fail on high and
+          # critical (8|16 = 24) and let the rest through as a report, so a
+          # low-severity advisory in a dev dependency cannot block every PR.
+          if [ $((code & 24)) -ne 0 ]; then
+            echo "::error::High or critical advisories found - see the audit output above"
+            exit 1
+          fi
 
       - name: Lint
         run: yarn lint
@@ -86,15 +104,15 @@ jobs:
     name: Infrastructure Scan & Plan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install OpenTofu
-        uses: opentofu/setup-opentofu@v2
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2
         with:
           tofu_version: '1.12.6'
 
       - name: Trivy IaC Security Scan
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: config
           scan-ref: infrastructure/modules

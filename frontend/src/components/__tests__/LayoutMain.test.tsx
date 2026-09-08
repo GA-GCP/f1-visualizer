@@ -7,13 +7,13 @@ import LayoutMain from '../layout/LayoutMain';
 vi.mock('@auth0/auth0-react', () => ({
     useAuth0: vi.fn().mockReturnValue({
         logout: vi.fn(),
-        isAuthenticated: true
-    })
+        isAuthenticated: true,
+    }),
 }));
 
 // Mock UserSettingsModal to avoid its internal dependencies
 vi.mock('../layout/UserSettingsModal', () => ({
-    default: () => <div data-testid="mock-settings-modal">Settings Modal</div>
+    default: () => <div data-testid="mock-settings-modal">Settings Modal</div>,
 }));
 
 describe('LayoutMain', () => {
@@ -25,7 +25,7 @@ describe('LayoutMain', () => {
         render(
             <MemoryRouter initialEntries={['/']}>
                 <LayoutMain />
-            </MemoryRouter>
+            </MemoryRouter>,
         );
 
         expect(screen.getByText('Live Console')).toBeInTheDocument();
@@ -37,7 +37,7 @@ describe('LayoutMain', () => {
         render(
             <MemoryRouter initialEntries={['/historical']}>
                 <LayoutMain />
-            </MemoryRouter>
+            </MemoryRouter>,
         );
 
         // The active NavButton gets color: 'white' and a red bottom border
@@ -54,7 +54,7 @@ describe('LayoutMain', () => {
         render(
             <MemoryRouter initialEntries={['/']}>
                 <LayoutMain />
-            </MemoryRouter>
+            </MemoryRouter>,
         );
 
         expect(screen.getByText('UNOFFICIAL TELEMETRY TOOL // F1 23-25')).toBeInTheDocument();
@@ -64,7 +64,7 @@ describe('LayoutMain', () => {
         render(
             <MemoryRouter initialEntries={['/']}>
                 <LayoutMain />
-            </MemoryRouter>
+            </MemoryRouter>,
         );
 
         expect(screen.getByText('F1 VISUALIZER')).toBeInTheDocument();
@@ -74,7 +74,7 @@ describe('LayoutMain', () => {
         render(
             <MemoryRouter initialEntries={['/']}>
                 <LayoutMain />
-            </MemoryRouter>
+            </MemoryRouter>,
         );
 
         expect(screen.getByTestId('mock-settings-modal')).toBeInTheDocument();

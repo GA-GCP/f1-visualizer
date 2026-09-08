@@ -34,7 +34,5 @@ export function publishBuildInfo(target: Window = window): void {
     (target as Window & { __F1V__?: BuildInfo }).__F1V__ = buildInfo;
 
     log.debug('build info published', buildInfo);
-    console.info(
-        `f1v ${buildInfo.version} · ${buildInfo.mode} · built ${buildInfo.buildTime}`,
-    );
+    console.info(`f1v ${buildInfo.version} · ${buildInfo.mode} · built ${buildInfo.buildTime}`);
 }

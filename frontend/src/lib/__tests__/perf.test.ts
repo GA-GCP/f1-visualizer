@@ -6,7 +6,7 @@ let reports: VitalsReport[];
 
 beforeEach(() => {
     reports = [];
-    setVitalsSink(report => reports.push(report));
+    setVitalsSink((report) => reports.push(report));
     performance.clearMarks?.();
 });
 

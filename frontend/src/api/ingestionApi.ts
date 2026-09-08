@@ -25,7 +25,7 @@ export const sendIngestionCommand = async (command: IngestionCommandRequest): Pr
         const response = await apiClient.post<string>('/ingestion/command', command);
         return response.data;
     } catch (error) {
-        log.error("Failed to send ingestion command", error);
+        log.error('Failed to send ingestion command', error);
         throw error;
     }
 };

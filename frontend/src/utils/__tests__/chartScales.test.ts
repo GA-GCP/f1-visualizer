@@ -50,8 +50,18 @@ describe('buildDriverColorMap', () => {
 
     it('assigns base team color to first teammate and lighter variant to second', () => {
         const drivers = [
-            makeDriver({ driverNumber: 44, nameAcronym: 'HAM', teamName: 'Mercedes', teamColour: '00D2BE' }),
-            makeDriver({ driverNumber: 63, nameAcronym: 'RUS', teamName: 'Mercedes', teamColour: '00D2BE' }),
+            makeDriver({
+                driverNumber: 44,
+                nameAcronym: 'HAM',
+                teamName: 'Mercedes',
+                teamColour: '00D2BE',
+            }),
+            makeDriver({
+                driverNumber: 63,
+                nameAcronym: 'RUS',
+                teamName: 'Mercedes',
+                teamColour: '00D2BE',
+            }),
         ];
         const map = buildDriverColorMap(drivers);
 
@@ -72,9 +82,7 @@ describe('buildDriverColorMap', () => {
     });
 
     it('falls back to white for missing teamColour', () => {
-        const drivers = [
-            makeDriver({ driverNumber: 44, teamColour: '' }),
-        ];
+        const drivers = [makeDriver({ driverNumber: 44, teamColour: '' })];
         const map = buildDriverColorMap(drivers);
         expect(map[44]).toBe('#ffffff');
     });
@@ -106,9 +114,7 @@ describe('buildDriverLabelMap', () => {
     });
 
     it('falls back to driver number string when nameAcronym is empty', () => {
-        const drivers = [
-            makeDriver({ driverNumber: 44, nameAcronym: '' }),
-        ];
+        const drivers = [makeDriver({ driverNumber: 44, nameAcronym: '' })];
         const map = buildDriverLabelMap(drivers);
         expect(map[44]).toBe('44');
     });
@@ -131,7 +137,7 @@ describe('computeInnerDimensions', () => {
         const result = computeInnerDimensions(width);
         expect(result.innerWidth).toBe(width - LAP_CHART_MARGIN.left - LAP_CHART_MARGIN.right);
         expect(result.innerHeight).toBe(
-            result.height - LAP_CHART_MARGIN.top - LAP_CHART_MARGIN.bottom
+            result.height - LAP_CHART_MARGIN.top - LAP_CHART_MARGIN.bottom,
         );
     });
 

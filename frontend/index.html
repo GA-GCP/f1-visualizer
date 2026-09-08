@@ -1,23 +1,29 @@
 <!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/speed-favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#101010" />
-    <meta name="description" content="Live Formula 1 telemetry, historical session analysis and driver-versus-driver comparison." />
-    <!--
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="icon" type="image/svg+xml" href="/speed-favicon.svg" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="color-scheme" content="dark" />
+        <meta name="theme-color" content="#101010" />
+        <meta
+            name="description"
+            content="Live Formula 1 telemetry, historical session analysis and driver-versus-driver comparison."
+        />
+        <!--
       Paint the app's own background before any JS runs.  Without this the page
       is white until the bundle has downloaded, parsed and mounted, which reads
       as a flash of white followed by black on every cold visit.  Inline styles
       are permitted by the CSP's style-src 'unsafe-inline'.
     -->
-    <style>
-        html { background-color: #101010; color-scheme: dark; }
-    </style>
-    <title>F1 Visualizer</title>
-</head>
+        <style>
+            html {
+                background-color: #101010;
+                color-scheme: dark;
+            }
+        </style>
+        <title>F1 Visualizer</title>
+    </head>
     <body>
         <div id="root"></div>
         <script type="module" src="/src/main.tsx"></script>

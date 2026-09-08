@@ -10,8 +10,8 @@ vi.mock('../../api/stompClient', () => ({
     stompClient: {
         connected: true,
         subscribe: vi.fn(),
-        unsubscribe: vi.fn()
-    }
+        unsubscribe: vi.fn(),
+    },
 }));
 
 /** A complete wire-shaped location packet; packets are schema-validated now. */
@@ -20,7 +20,9 @@ const packet = (over: Partial<LocationPacket> = {}): LocationPacket => ({
     meeting_key: 1,
     date: '2024-05-01T12:00:00Z',
     driver_number: 1,
-    x: 0, y: 0, z: 0,
+    x: 0,
+    y: 0,
+    z: 0,
     ...over,
 });
 
@@ -47,7 +49,10 @@ describe('useLocation Hook', () => {
         renderHook(() => useLocation(queueRef));
 
         await waitFor(() => {
-            expect(stompClient.subscribe).toHaveBeenCalledWith('/topic/race-location', expect.any(Function));
+            expect(stompClient.subscribe).toHaveBeenCalledWith(
+                '/topic/race-location',
+                expect.any(Function),
+            );
         });
     });
 
@@ -64,13 +69,40 @@ describe('useLocation Hook', () => {
 
         // Wait for the subscription to be established
         await waitFor(() => {
-            expect(stompClient.subscribe).toHaveBeenCalledWith('/topic/race-location', expect.any(Function));
+            expect(stompClient.subscribe).toHaveBeenCalledWith(
+                '/topic/race-location',
+                expect.any(Function),
+            );
         });
 
         // Simulate multiple STOMP messages arriving
-        const packet1 = { session_key: 1, meeting_key: 1, date: '2024-01-01', driver_number: 1, x: 100, y: 200, z: 0 };
-        const packet2 = { session_key: 1, meeting_key: 1, date: '2024-01-01', driver_number: 1, x: 150, y: 250, z: 0 };
-        const packet3 = { session_key: 1, meeting_key: 1, date: '2024-01-01', driver_number: 1, x: 200, y: 300, z: 0 };
+        const packet1 = {
+            session_key: 1,
+            meeting_key: 1,
+            date: '2024-01-01',
+            driver_number: 1,
+            x: 100,
+            y: 200,
+            z: 0,
+        };
+        const packet2 = {
+            session_key: 1,
+            meeting_key: 1,
+            date: '2024-01-01',
+            driver_number: 1,
+            x: 150,
+            y: 250,
+            z: 0,
+        };
+        const packet3 = {
+            session_key: 1,
+            meeting_key: 1,
+            date: '2024-01-01',
+            driver_number: 1,
+            x: 200,
+            y: 300,
+            z: 0,
+        };
 
         stompCallback({ body: JSON.stringify(packet1) });
         stompCallback({ body: JSON.stringify(packet2) });
@@ -106,7 +138,7 @@ describe('useLocation Hook', () => {
         expect(queueRef.current).toHaveLength(0);
         expect(consoleSpy).toHaveBeenCalledWith(
             expect.stringContaining('did not match the expected shape'),
-            expect.anything()
+            expect.anything(),
         );
 
         consoleSpy.mockRestore();
@@ -129,14 +161,20 @@ describe('useLocation Hook', () => {
         });
 
         // Simulate double-encoded JSON (JSON.parse returns a string, not an object)
-        const innerJson = JSON.stringify({ session_key: 1, driver_number: 1, x: 100, y: 200, z: 0 });
+        const innerJson = JSON.stringify({
+            session_key: 1,
+            driver_number: 1,
+            x: 100,
+            y: 200,
+            z: 0,
+        });
         stompCallback({ body: JSON.stringify(innerJson) });
 
         // Should NOT be added to queue (it's a string, not an object)
         expect(queueRef.current).toHaveLength(0);
         expect(consoleSpy).toHaveBeenCalledWith(
             expect.stringContaining('did not match the expected shape'),
-            expect.anything()
+            expect.anything(),
         );
 
         consoleSpy.mockRestore();
@@ -205,11 +243,16 @@ describe('useLocation Hook', () => {
 
         // One position per car, so the first frame back is O(drivers) not O(queue).
         expect(queueRef.current).toHaveLength(2);
-        expect(queueRef.current).toEqual(expect.arrayContaining([
-            expect.objectContaining({ driver_number: 1, x: 99 }),
-            expect.objectContaining({ driver_number: 44, x: 198 }),
-        ]));
+        expect(queueRef.current).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({ driver_number: 1, x: 99 }),
+                expect.objectContaining({ driver_number: 44, x: 198 }),
+            ]),
+        );
 
-        Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+        Object.defineProperty(document, 'visibilityState', {
+            value: 'visible',
+            configurable: true,
+        });
     });
 });

@@ -1,4 +1,4 @@
-import { screen, act, renderHook  } from '@testing-library/react';
+import { screen, act, renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
@@ -37,16 +37,22 @@ describe('CyclingStatusLabel', () => {
         const { result } = renderHook(() => useCyclingIndex(3, 1000));
 
         expect(result.current).toBe(0);
-        await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(1000);
+        });
         expect(result.current).toBe(1);
-        await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(2000);
+        });
         expect(result.current).toBe(0);
     });
 
     it('does not cycle a single message', async () => {
         const { result } = renderHook(() => useCyclingIndex(1, 1000));
 
-        await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(5000);
+        });
 
         expect(result.current).toBe(0);
     });
@@ -56,7 +62,9 @@ describe('CyclingStatusLabel', () => {
         mockUseReducedMotion.mockReturnValue(true);
         const { result } = renderHook(() => useCyclingIndex(3, 1000));
 
-        await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(5000);
+        });
 
         expect(result.current).toBe(0);
     });

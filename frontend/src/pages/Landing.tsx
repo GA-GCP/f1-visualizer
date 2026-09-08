@@ -154,16 +154,14 @@ const Landing: React.FC = () => {
                             height: '200%',
                             top: '-50%',
                             left: '-20%',
-                            background: 'radial-gradient(ellipse, rgba(225,6,0,0.15) 0%, transparent 70%)',
+                            background:
+                                'radial-gradient(ellipse, rgba(225,6,0,0.15) 0%, transparent 70%)',
                             pointerEvents: 'none',
                             zIndex: -1,
                         }}
                     />
 
-                    <m.div
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.97 }}
-                    >
+                    <m.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
                         <Button
                             variant="contained"
                             onClick={handleLogin}
@@ -183,7 +181,8 @@ const Landing: React.FC = () => {
                                 transition: 'box-shadow 0.3s ease',
                                 '&:hover': {
                                     background: 'linear-gradient(135deg, #ff1a1a 0%, #ff4040 100%)',
-                                    boxShadow: '0 0 30px rgba(225,6,0,0.5), 0 0 80px rgba(225,6,0,0.2)',
+                                    boxShadow:
+                                        '0 0 30px rgba(225,6,0,0.5), 0 0 80px rgba(225,6,0,0.2)',
                                 },
                             }}
                         >

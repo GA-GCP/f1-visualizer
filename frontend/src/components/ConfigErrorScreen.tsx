@@ -29,10 +29,13 @@ const ConfigErrorScreen: React.FC<{ missing: readonly string[] }> = ({ missing }
     >
         <h1 style={{ fontSize: '1.5rem', margin: 0 }}>Configuration error</h1>
         <p style={{ margin: 0, color: 'rgba(255,255,255,0.7)' }}>
-            This build is missing required environment {missing.length === 1 ? 'variable' : 'variables'}:
+            This build is missing required environment{' '}
+            {missing.length === 1 ? 'variable' : 'variables'}:
         </p>
         <ul style={{ margin: 0, padding: 0, listStyle: 'none', fontFamily: 'monospace' }}>
-            {missing.map(name => <li key={name}>{name}</li>)}
+            {missing.map((name) => (
+                <li key={name}>{name}</li>
+            ))}
         </ul>
         <p style={{ margin: 0, fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)' }}>
             See <code>.env.example</code> for the full contract.

@@ -141,9 +141,9 @@ apiClient.interceptors.response.use(
         const status = error.response?.status;
         const code = error.code;
         const isTransient =
-            (status !== undefined && RETRYABLE_STATUSES.has(status))
-            || code === 'ERR_NETWORK'
-            || code === 'ECONNABORTED'; // the instance timeout above
+            (status !== undefined && RETRYABLE_STATUSES.has(status)) ||
+            code === 'ERR_NETWORK' ||
+            code === 'ECONNABORTED'; // the instance timeout above
 
         const method = (retryConfig.method ?? 'get').toLowerCase();
         const isSafeToReplay = IDEMPOTENT_METHODS.has(method) || retryConfig.idempotent === true;
@@ -151,11 +151,11 @@ apiClient.interceptors.response.use(
         retryConfig._attempt = (retryConfig._attempt ?? 0) + 1;
 
         if (
-            !isTransient
-            || !isSafeToReplay
-            || retryConfig._attempt > MAX_ATTEMPTS
+            !isTransient ||
+            !isSafeToReplay ||
+            retryConfig._attempt > MAX_ATTEMPTS ||
             // The caller has walked away; do not keep the request alive.
-            || retryConfig.signal?.aborted
+            retryConfig.signal?.aborted
         ) {
             return Promise.reject(error);
         }
@@ -169,12 +169,12 @@ apiClient.interceptors.response.use(
         const delayMs = Math.round(backoff * (0.5 + Math.random()));
 
         log.warn(
-            `[API] ${status ?? code} on ${method.toUpperCase()} ${retryConfig.url ?? ''} — `
-            + `retrying in ${delayMs}ms (attempt ${retryConfig._attempt}/${MAX_ATTEMPTS})`,
+            `[API] ${status ?? code} on ${method.toUpperCase()} ${retryConfig.url ?? ''} — ` +
+                `retrying in ${delayMs}ms (attempt ${retryConfig._attempt}/${MAX_ATTEMPTS})`,
         );
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
         return apiClient(retryConfig);
-    }
+    },
 );
 
 /** True when a rejection is a deliberate cancellation rather than a failure. */

@@ -20,9 +20,15 @@ const mockRaceSession = {
 // Mock child components to isolate the container logic
 vi.mock('../CircuitTrace', () => ({ default: () => <div data-testid="circuit-trace" /> }));
 vi.mock('../selectors/SessionControlPanel', () => ({
-    default: ({ onStreamStarted }: { onStreamStarted: (key: number, mode: string, session: typeof mockRaceSession) => void }) => (
-        <button onClick={() => onStreamStarted(9165, 'SIMULATION', mockRaceSession)}>Start Mock Stream</button>
-    )
+    default: ({
+        onStreamStarted,
+    }: {
+        onStreamStarted: (key: number, mode: string, session: typeof mockRaceSession) => void;
+    }) => (
+        <button onClick={() => onStreamStarted(9165, 'SIMULATION', mockRaceSession)}>
+            Start Mock Stream
+        </button>
+    ),
 }));
 // Expose onSeek so tests can trigger it to simulate a seek
 let capturedOnSeek: (() => void) | undefined;
@@ -30,7 +36,7 @@ vi.mock('../MediaController', () => ({
     default: ({ onSeek }: { onSeek?: () => void }) => {
         capturedOnSeek = onSeek;
         return <div data-testid="media-controller" />;
-    }
+    },
 }));
 
 // Mock hooks
@@ -43,7 +49,12 @@ describe('RaceSimulator', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         resetConnectionStatus();
-        vi.mocked(useUser).mockReturnValue({ userProfile: null, isLoading: false, updatePreferences: vi.fn(), error: null });
+        vi.mocked(useUser).mockReturnValue({
+            userProfile: null,
+            isLoading: false,
+            updatePreferences: vi.fn(),
+            error: null,
+        });
         vi.mocked(fetchDrivers).mockResolvedValue([]);
         vi.mocked(fetchSessionLaps).mockResolvedValue([]);
     });
@@ -65,7 +76,9 @@ describe('RaceSimulator', () => {
         renderWithProviders(<RaceSimulator />);
         screen.getByText('Start Mock Stream').click();
 
-        expect(await screen.findByText(/FEED UNAVAILABLE AFTER REPEATED FAILURES/i)).toBeInTheDocument();
+        expect(
+            await screen.findByText(/FEED UNAVAILABLE AFTER REPEATED FAILURES/i),
+        ).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
     });
 
@@ -102,7 +115,26 @@ describe('RaceSimulator', () => {
         });
         vi.mocked(useLocation).mockReturnValue({ isConnected: true });
         vi.mocked(fetchDrivers).mockResolvedValue([
-            { id: 1, code: 'VER', name: 'Max Verstappen', team: 'Red Bull', teamColor: '#3671C6', stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] } }
+            {
+                id: 1,
+                code: 'VER',
+                name: 'Max Verstappen',
+                team: 'Red Bull',
+                teamColor: '#3671C6',
+                stats: {
+                    speed: 99,
+                    consistency: 95,
+                    aggression: 98,
+                    tireMgmt: 92,
+                    experience: 85,
+                    wins: 54,
+                    podiums: 98,
+                    totalPoints: 2586,
+                    bestChampionshipFinish: 1,
+                    totalRaces: 185,
+                    teamsDrivenFor: ['Red Bull Racing'],
+                },
+            },
         ]);
 
         renderWithProviders(<RaceSimulator />);
@@ -113,7 +145,7 @@ describe('RaceSimulator', () => {
         });
         // Allow the async fetchDrivers resolution + re-render to complete
         await act(async () => {
-            await new Promise(r => setTimeout(r, 0));
+            await new Promise((r) => setTimeout(r, 0));
         });
 
         // Start stream (sets activeSession)
@@ -132,9 +164,27 @@ describe('RaceSimulator', () => {
 
     it('displays lap counter when lap data is available', async () => {
         vi.mocked(fetchSessionLaps).mockResolvedValue([
-            { driverNumber: 1, lapNumber: 0, dateStart: '2024-01-01T00:00:00Z', isPitOutLap: false, compound: 'SOFT' },
-            { driverNumber: 1, lapNumber: 1, dateStart: '2024-01-01T00:02:00Z', isPitOutLap: false, compound: 'SOFT' },
-            { driverNumber: 1, lapNumber: 2, dateStart: '2024-01-01T00:03:30Z', isPitOutLap: false, compound: 'SOFT' },
+            {
+                driverNumber: 1,
+                lapNumber: 0,
+                dateStart: '2024-01-01T00:00:00Z',
+                isPitOutLap: false,
+                compound: 'SOFT',
+            },
+            {
+                driverNumber: 1,
+                lapNumber: 1,
+                dateStart: '2024-01-01T00:02:00Z',
+                isPitOutLap: false,
+                compound: 'SOFT',
+            },
+            {
+                driverNumber: 1,
+                lapNumber: 2,
+                dateStart: '2024-01-01T00:03:30Z',
+                isPitOutLap: false,
+                compound: 'SOFT',
+            },
         ]);
 
         let telemetryCallback: ((data: TelemetryPacket) => void) | undefined;
@@ -144,24 +194,59 @@ describe('RaceSimulator', () => {
         });
         vi.mocked(useLocation).mockReturnValue({ isConnected: true });
         vi.mocked(fetchDrivers).mockResolvedValue([
-            { id: 1, code: 'VER', name: 'Max Verstappen', team: 'Red Bull', teamColor: '#3671C6', stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] } }
+            {
+                id: 1,
+                code: 'VER',
+                name: 'Max Verstappen',
+                team: 'Red Bull',
+                teamColor: '#3671C6',
+                stats: {
+                    speed: 99,
+                    consistency: 95,
+                    aggression: 98,
+                    tireMgmt: 92,
+                    experience: 85,
+                    wins: 54,
+                    podiums: 98,
+                    totalPoints: 2586,
+                    bestChampionshipFinish: 1,
+                    totalRaces: 185,
+                    teamsDrivenFor: ['Red Bull Racing'],
+                },
+            },
         ]);
 
         renderWithProviders(<RaceSimulator />);
 
-        await waitFor(() => { expect(fetchDrivers).toHaveBeenCalled(); });
-        await act(async () => { await new Promise(r => setTimeout(r, 0)); });
+        await waitFor(() => {
+            expect(fetchDrivers).toHaveBeenCalled();
+        });
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
+        });
 
-        await act(async () => { screen.getByText('Start Mock Stream').click(); });
+        await act(async () => {
+            screen.getByText('Start Mock Stream').click();
+        });
 
         // Allow fetchSessionLaps to resolve
-        await act(async () => { await new Promise(r => setTimeout(r, 0)); });
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
+        });
 
         // Trigger telemetry at a time during lap 1
         act(() => {
             telemetryCallback?.({
-                session_key: 9165, meeting_key: 1, date: '2024-01-01T00:02:30.000Z',
-                driver_number: 1, speed: 300, rpm: 11000, gear: 7, throttle: 100, brake: 0, drs: 0,
+                session_key: 9165,
+                meeting_key: 1,
+                date: '2024-01-01T00:02:30.000Z',
+                driver_number: 1,
+                speed: 300,
+                rpm: 11000,
+                gear: 7,
+                throttle: 100,
+                brake: 0,
+                drs: 0,
             });
         });
 
@@ -170,8 +255,20 @@ describe('RaceSimulator', () => {
 
     it('shows FORMATION LAP badge when lap number is 0', async () => {
         vi.mocked(fetchSessionLaps).mockResolvedValue([
-            { driverNumber: 1, lapNumber: 0, dateStart: '2024-01-01T00:00:00Z', isPitOutLap: false, compound: 'SOFT' },
-            { driverNumber: 1, lapNumber: 1, dateStart: '2024-01-01T00:02:00Z', isPitOutLap: false, compound: 'SOFT' },
+            {
+                driverNumber: 1,
+                lapNumber: 0,
+                dateStart: '2024-01-01T00:00:00Z',
+                isPitOutLap: false,
+                compound: 'SOFT',
+            },
+            {
+                driverNumber: 1,
+                lapNumber: 1,
+                dateStart: '2024-01-01T00:02:00Z',
+                isPitOutLap: false,
+                compound: 'SOFT',
+            },
         ]);
 
         let telemetryCallback: ((data: TelemetryPacket) => void) | undefined;
@@ -181,20 +278,55 @@ describe('RaceSimulator', () => {
         });
         vi.mocked(useLocation).mockReturnValue({ isConnected: true });
         vi.mocked(fetchDrivers).mockResolvedValue([
-            { id: 1, code: 'VER', name: 'Max Verstappen', team: 'Red Bull', teamColor: '#3671C6', stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] } }
+            {
+                id: 1,
+                code: 'VER',
+                name: 'Max Verstappen',
+                team: 'Red Bull',
+                teamColor: '#3671C6',
+                stats: {
+                    speed: 99,
+                    consistency: 95,
+                    aggression: 98,
+                    tireMgmt: 92,
+                    experience: 85,
+                    wins: 54,
+                    podiums: 98,
+                    totalPoints: 2586,
+                    bestChampionshipFinish: 1,
+                    totalRaces: 185,
+                    teamsDrivenFor: ['Red Bull Racing'],
+                },
+            },
         ]);
 
         renderWithProviders(<RaceSimulator />);
 
-        await waitFor(() => { expect(fetchDrivers).toHaveBeenCalled(); });
-        await act(async () => { await new Promise(r => setTimeout(r, 0)); });
-        await act(async () => { screen.getByText('Start Mock Stream').click(); });
-        await act(async () => { await new Promise(r => setTimeout(r, 0)); });
+        await waitFor(() => {
+            expect(fetchDrivers).toHaveBeenCalled();
+        });
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
+        });
+        await act(async () => {
+            screen.getByText('Start Mock Stream').click();
+        });
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
+        });
 
         act(() => {
             telemetryCallback?.({
-                session_key: 9165, meeting_key: 1, date: '2024-01-01T00:01:00.000Z',
-                driver_number: 1, speed: 200, rpm: 9000, gear: 5, throttle: 60, brake: 0, drs: 0,
+                session_key: 9165,
+                meeting_key: 1,
+                date: '2024-01-01T00:01:00.000Z',
+                driver_number: 1,
+                speed: 200,
+                rpm: 9000,
+                gear: 5,
+                throttle: 60,
+                brake: 0,
+                drs: 0,
             });
         });
 
@@ -203,8 +335,20 @@ describe('RaceSimulator', () => {
 
     it('clears telemetry and lap state on seek to prevent stale data', async () => {
         vi.mocked(fetchSessionLaps).mockResolvedValue([
-            { driverNumber: 1, lapNumber: 1, dateStart: '2024-01-01T00:02:00Z', isPitOutLap: false, compound: 'SOFT' },
-            { driverNumber: 1, lapNumber: 2, dateStart: '2024-01-01T00:03:30Z', isPitOutLap: false, compound: 'MEDIUM' },
+            {
+                driverNumber: 1,
+                lapNumber: 1,
+                dateStart: '2024-01-01T00:02:00Z',
+                isPitOutLap: false,
+                compound: 'SOFT',
+            },
+            {
+                driverNumber: 1,
+                lapNumber: 2,
+                dateStart: '2024-01-01T00:03:30Z',
+                isPitOutLap: false,
+                compound: 'MEDIUM',
+            },
         ]);
 
         let telemetryCallback: ((data: TelemetryPacket) => void) | undefined;
@@ -214,21 +358,56 @@ describe('RaceSimulator', () => {
         });
         vi.mocked(useLocation).mockReturnValue({ isConnected: true });
         vi.mocked(fetchDrivers).mockResolvedValue([
-            { id: 1, code: 'VER', name: 'Max Verstappen', team: 'Red Bull', teamColor: '#3671C6', stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] } }
+            {
+                id: 1,
+                code: 'VER',
+                name: 'Max Verstappen',
+                team: 'Red Bull',
+                teamColor: '#3671C6',
+                stats: {
+                    speed: 99,
+                    consistency: 95,
+                    aggression: 98,
+                    tireMgmt: 92,
+                    experience: 85,
+                    wins: 54,
+                    podiums: 98,
+                    totalPoints: 2586,
+                    bestChampionshipFinish: 1,
+                    totalRaces: 185,
+                    teamsDrivenFor: ['Red Bull Racing'],
+                },
+            },
         ]);
 
         renderWithProviders(<RaceSimulator />);
 
-        await waitFor(() => { expect(fetchDrivers).toHaveBeenCalled(); });
-        await act(async () => { await new Promise(r => setTimeout(r, 0)); });
-        await act(async () => { screen.getByText('Start Mock Stream').click(); });
-        await act(async () => { await new Promise(r => setTimeout(r, 0)); });
+        await waitFor(() => {
+            expect(fetchDrivers).toHaveBeenCalled();
+        });
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
+        });
+        await act(async () => {
+            screen.getByText('Start Mock Stream').click();
+        });
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
+        });
 
         // Send telemetry to populate lap and tire data
         act(() => {
             telemetryCallback?.({
-                session_key: 9165, meeting_key: 1, date: '2024-01-01T00:03:45.000Z',
-                driver_number: 1, speed: 280, rpm: 10000, gear: 6, throttle: 80, brake: 0, drs: 0,
+                session_key: 9165,
+                meeting_key: 1,
+                date: '2024-01-01T00:03:45.000Z',
+                driver_number: 1,
+                speed: 280,
+                rpm: 10000,
+                gear: 6,
+                throttle: 80,
+                brake: 0,
+                drs: 0,
             });
         });
 
@@ -237,7 +416,9 @@ describe('RaceSimulator', () => {
         expect(await screen.findByText(/280/)).toBeInTheDocument();
 
         // Simulate a seek — should clear telemetry and lap state
-        act(() => { capturedOnSeek?.(); });
+        act(() => {
+            capturedOnSeek?.();
+        });
 
         // After seek, telemetry section should show "waiting" message
         await waitFor(() => {
@@ -248,8 +429,20 @@ describe('RaceSimulator', () => {
 
     it('shows PIT OUT badge and compound change chip', async () => {
         vi.mocked(fetchSessionLaps).mockResolvedValue([
-            { driverNumber: 1, lapNumber: 1, dateStart: '2024-01-01T00:02:00Z', isPitOutLap: false, compound: 'SOFT' },
-            { driverNumber: 1, lapNumber: 2, dateStart: '2024-01-01T00:03:30Z', isPitOutLap: true, compound: 'HARD' },
+            {
+                driverNumber: 1,
+                lapNumber: 1,
+                dateStart: '2024-01-01T00:02:00Z',
+                isPitOutLap: false,
+                compound: 'SOFT',
+            },
+            {
+                driverNumber: 1,
+                lapNumber: 2,
+                dateStart: '2024-01-01T00:03:30Z',
+                isPitOutLap: true,
+                compound: 'HARD',
+            },
         ]);
 
         let telemetryCallback: ((data: TelemetryPacket) => void) | undefined;
@@ -259,20 +452,55 @@ describe('RaceSimulator', () => {
         });
         vi.mocked(useLocation).mockReturnValue({ isConnected: true });
         vi.mocked(fetchDrivers).mockResolvedValue([
-            { id: 1, code: 'VER', name: 'Max Verstappen', team: 'Red Bull', teamColor: '#3671C6', stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] } }
+            {
+                id: 1,
+                code: 'VER',
+                name: 'Max Verstappen',
+                team: 'Red Bull',
+                teamColor: '#3671C6',
+                stats: {
+                    speed: 99,
+                    consistency: 95,
+                    aggression: 98,
+                    tireMgmt: 92,
+                    experience: 85,
+                    wins: 54,
+                    podiums: 98,
+                    totalPoints: 2586,
+                    bestChampionshipFinish: 1,
+                    totalRaces: 185,
+                    teamsDrivenFor: ['Red Bull Racing'],
+                },
+            },
         ]);
 
         renderWithProviders(<RaceSimulator />);
 
-        await waitFor(() => { expect(fetchDrivers).toHaveBeenCalled(); });
-        await act(async () => { await new Promise(r => setTimeout(r, 0)); });
-        await act(async () => { screen.getByText('Start Mock Stream').click(); });
-        await act(async () => { await new Promise(r => setTimeout(r, 0)); });
+        await waitFor(() => {
+            expect(fetchDrivers).toHaveBeenCalled();
+        });
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
+        });
+        await act(async () => {
+            screen.getByText('Start Mock Stream').click();
+        });
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
+        });
 
         act(() => {
             telemetryCallback?.({
-                session_key: 9165, meeting_key: 1, date: '2024-01-01T00:03:45.000Z',
-                driver_number: 1, speed: 280, rpm: 10000, gear: 6, throttle: 80, brake: 0, drs: 0,
+                session_key: 9165,
+                meeting_key: 1,
+                date: '2024-01-01T00:03:45.000Z',
+                driver_number: 1,
+                speed: 280,
+                rpm: 10000,
+                gear: 6,
+                throttle: 80,
+                brake: 0,
+                drs: 0,
             });
         });
 

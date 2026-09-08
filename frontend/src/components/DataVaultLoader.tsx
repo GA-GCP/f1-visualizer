@@ -55,10 +55,7 @@ function generateGhostPath(index: number): string {
  * transition from loading → loaded feels seamless.
  */
 const DataVaultLoader: React.FC = () => {
-    const paths = useMemo(
-        () => GHOST_COLORS.map((_, i) => generateGhostPath(i)),
-        [],
-    );
+    const paths = useMemo(() => GHOST_COLORS.map((_, i) => generateGhostPath(i)), []);
 
     return (
         <Paper
@@ -172,22 +169,10 @@ const DataVaultLoader: React.FC = () => {
 
                     {/* Vertical scan line */}
                     <defs>
-                        <linearGradient
-                            id="dvl-scan-grad"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                        >
+                        <linearGradient id="dvl-scan-grad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="rgba(225,6,0,0)" />
-                            <stop
-                                offset="50%"
-                                stopColor="rgba(225,6,0,0.25)"
-                            />
-                            <stop
-                                offset="100%"
-                                stopColor="rgba(225,6,0,0)"
-                            />
+                            <stop offset="50%" stopColor="rgba(225,6,0,0.25)" />
+                            <stop offset="100%" stopColor="rgba(225,6,0,0)" />
                         </linearGradient>
                     </defs>
                     <m.rect

@@ -14,7 +14,7 @@ export function useCyclingIndex(length: number, intervalMs = 2200): number {
 
     useEffect(() => {
         if (reduceMotion || length <= 1) return;
-        const id = setInterval(() => setIndex(previous => (previous + 1) % length), intervalMs);
+        const id = setInterval(() => setIndex((previous) => (previous + 1) % length), intervalMs);
         return () => clearInterval(id);
     }, [length, intervalMs, reduceMotion]);
 

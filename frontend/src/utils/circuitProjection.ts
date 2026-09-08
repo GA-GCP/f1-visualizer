@@ -30,7 +30,7 @@ export const CIRCUIT_PADDING = 40;
  */
 export function computeBounds(
     history: Record<number, { x: number; y: number }[]>,
-    selectedDriverId: number | undefined
+    selectedDriverId: number | undefined,
 ): Bounds {
     const bounds: Bounds = {
         minX: Infinity,
@@ -63,7 +63,7 @@ export function createProjection(
     bounds: Bounds,
     canvasWidth: number,
     canvasHeight: number,
-    padding: number = CIRCUIT_PADDING
+    padding: number = CIRCUIT_PADDING,
 ): Projection {
     const { minX, minY } = bounds;
     // A single recorded point gives a zero-width domain; nudge it so the
@@ -86,7 +86,7 @@ export function createProjection(
 export function projectPoint(
     x: number,
     y: number,
-    projection: Projection
+    projection: Projection,
 ): { sx: number; sy: number } {
     return {
         sx: x * projection.scaleX + projection.offsetX,

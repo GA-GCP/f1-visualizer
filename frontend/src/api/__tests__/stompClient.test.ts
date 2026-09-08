@@ -92,7 +92,13 @@ describe('stompClient', () => {
             const { client, getConnectionStatus } = await loadStomp();
 
             for (let i = 0; i < 5; i++) client.onWebSocketClose?.(new CloseEvent('close'));
-            client.onConnect?.({ command: 'CONNECTED', headers: {}, body: '', binaryBody: new Uint8Array(), isBinaryBody: false });
+            client.onConnect?.({
+                command: 'CONNECTED',
+                headers: {},
+                body: '',
+                binaryBody: new Uint8Array(),
+                isBinaryBody: false,
+            });
             expect(getConnectionStatus()).toBe('connected');
 
             // The budget is full again, so five more closes must not open the breaker.
@@ -117,7 +123,8 @@ describe('stompClient', () => {
     describe('token acquisition', () => {
         it('beforeConnect asks the provider for a fresh token on every CONNECT', async () => {
             const { client, setStompTokenProvider } = await loadStomp();
-            const provider = vi.fn()
+            const provider = vi
+                .fn()
                 .mockResolvedValueOnce('token-1')
                 .mockResolvedValueOnce('token-2');
             setStompTokenProvider(provider);

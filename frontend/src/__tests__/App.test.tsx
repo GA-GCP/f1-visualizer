@@ -31,7 +31,9 @@ vi.mock('../auth/StompAuthHandler', () => ({
     StompAuthHandler: () => <div data-testid="stomp-handler" />,
 }));
 vi.mock('../pages/Home', () => ({ default: () => <div data-testid="page-home" /> }));
-vi.mock('../pages/HistoricalData', () => ({ default: () => <div data-testid="page-historical" /> }));
+vi.mock('../pages/HistoricalData', () => ({
+    default: () => <div data-testid="page-historical" />,
+}));
 vi.mock('../pages/VersusMode', () => ({ default: () => <div data-testid="page-versus" /> }));
 
 import { queryClient } from '../api/queryClient';
@@ -124,7 +126,9 @@ describe('AppRoutes', () => {
 
             renderAt('/dashboard');
 
-            expect(screen.getByRole('heading', { name: /authentication error/i })).toBeInTheDocument();
+            expect(
+                screen.getByRole('heading', { name: /authentication error/i }),
+            ).toBeInTheDocument();
             expect(screen.queryByTestId('page-home')).not.toBeInTheDocument();
         });
 
@@ -190,7 +194,9 @@ describe('AppRoutes', () => {
             expect(fetchDrivers).toHaveBeenCalledTimes(1);
             expect(fetchSessions).not.toHaveBeenCalled();
 
-            await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+            await act(async () => {
+                await vi.advanceTimersByTimeAsync(400);
+            });
             expect(fetchSessions).toHaveBeenCalledTimes(1);
         });
 
@@ -203,7 +209,9 @@ describe('AppRoutes', () => {
             mockAuth0({ isAuthenticated: true });
 
             renderAt('/dashboard');
-            await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+            await act(async () => {
+                await vi.advanceTimersByTimeAsync(50);
+            });
 
             expect(screen.getByTestId('splash')).toBeInTheDocument();
             expect(screen.getByTestId('page-home')).toBeInTheDocument();

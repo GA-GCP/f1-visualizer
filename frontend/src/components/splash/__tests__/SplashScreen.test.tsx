@@ -9,7 +9,9 @@ vi.mock('../SplashBackground', () => ({
 }));
 
 vi.mock('../SplashCircuit', () => ({
-    default: ({ phase }: { phase: string }) => <div data-testid="splash-circuit" data-phase={phase} />,
+    default: ({ phase }: { phase: string }) => (
+        <div data-testid="splash-circuit" data-phase={phase} />
+    ),
 }));
 
 vi.mock('../SplashProgress', () => ({
@@ -72,9 +74,7 @@ describe('SplashScreen', () => {
     it('passes readiness through to the sequence, so the bar tracks real work', () => {
         render(<SplashScreen onComplete={vi.fn()} readiness={0.75} />);
 
-        expect(sequenceOptions).toHaveBeenCalledWith(
-            expect.objectContaining({ readiness: 0.75 }),
-        );
+        expect(sequenceOptions).toHaveBeenCalledWith(expect.objectContaining({ readiness: 0.75 }));
     });
 
     it('offers a skip control that ends the sequence and is remembered', () => {

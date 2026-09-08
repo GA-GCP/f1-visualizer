@@ -13,12 +13,7 @@ import {
     type RaceSession,
 } from './schemas';
 
-export type {
-    DriverProfile,
-    RaceSession,
-    SessionDriverEntry,
-    RaceEntryRoster,
-} from './schemas';
+export type { DriverProfile, RaceSession, SessionDriverEntry, RaceEntryRoster } from './schemas';
 
 // Plain fetchers. Caching, de-duplication, staleness and invalidation are
 // TanStack Query's job now (see queries.ts) — the module-level caches this
@@ -40,8 +35,9 @@ export const fetchSessions = async (signal?: AbortSignal): Promise<RaceSession[]
     const res = await apiClient.get('/analysis/sessions', { signal });
     // v1.0: Only Race sessions have lap data in BigQuery.
     // Practice/Qualifying/Sprint will be added in v1.1.
-    return parseResponse(z.array(raceSessionSchema), res.data, 'GET /analysis/sessions')
-        .filter(session => session.sessionName === 'Race');
+    return parseResponse(z.array(raceSessionSchema), res.data, 'GET /analysis/sessions').filter(
+        (session) => session.sessionName === 'Race',
+    );
 };
 
 export const fetchYears = async (signal?: AbortSignal): Promise<number[]> => {
@@ -49,24 +45,36 @@ export const fetchYears = async (signal?: AbortSignal): Promise<number[]> => {
     return parseResponse(z.array(z.number()), res.data, 'GET /analysis/years');
 };
 
-export const fetchDriverStats = async (driverId: number, signal?: AbortSignal): Promise<DriverProfile['stats']> => {
+export const fetchDriverStats = async (
+    driverId: number,
+    signal?: AbortSignal,
+): Promise<DriverProfile['stats']> => {
     const res = await apiClient.get(`/analysis/drivers/${driverId}/stats`, { signal });
     return parseResponse(driverStatsSchema, res.data, 'GET /analysis/drivers/:id/stats');
 };
 
-export const fetchSessionLaps = async (sessionKey: number, signal?: AbortSignal): Promise<LapDataRecord[]> => {
+export const fetchSessionLaps = async (
+    sessionKey: number,
+    signal?: AbortSignal,
+): Promise<LapDataRecord[]> => {
     const res = await apiClient.get(`/analysis/session/${sessionKey}/laps`, { signal });
     return parseResponse(z.array(lapDataRecordSchema), res.data, 'GET /analysis/session/:key/laps');
 };
 
 // ── Season-aware API functions ──
 
-export const fetchSessionsByYear = async (year: number, signal?: AbortSignal): Promise<RaceSession[]> => {
+export const fetchSessionsByYear = async (
+    year: number,
+    signal?: AbortSignal,
+): Promise<RaceSession[]> => {
     const res = await apiClient.get(`/analysis/sessions/year/${year}`, { signal });
     return parseResponse(z.array(raceSessionSchema), res.data, 'GET /analysis/sessions/year/:year');
 };
 
-export const fetchSessionDrivers = async (sessionKey: number, signal?: AbortSignal): Promise<RaceEntryRoster> => {
+export const fetchSessionDrivers = async (
+    sessionKey: number,
+    signal?: AbortSignal,
+): Promise<RaceEntryRoster> => {
     const res = await apiClient.get(`/analysis/sessions/${sessionKey}/drivers`, { signal });
     return parseResponse(raceEntryRosterSchema, res.data, 'GET /analysis/sessions/:key/drivers');
 };

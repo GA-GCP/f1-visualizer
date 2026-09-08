@@ -22,7 +22,9 @@ const DriverSelector: React.FC<DriverSelectorProps> = ({ label, options, value, 
                     <Box sx={{ width: 4, bgcolor: option.teamColor, borderRadius: 1 }} />
                     <Box>
                         <Typography variant="body1">{option.name}</Typography>
-                        <Typography variant="caption" color="text.secondary">{option.team}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            {option.team}
+                        </Typography>
                     </Box>
                 </Box>
             )}
@@ -35,7 +37,7 @@ const DriverSelector: React.FC<DriverSelectorProps> = ({ label, options, value, 
                         '& .MuiOutlinedInput-root': {
                             bgcolor: PAPER_BG,
                             '& fieldset': { borderColor: '#444' },
-                        }
+                        },
                     }}
                 />
             )}

@@ -25,7 +25,11 @@ interface CircuitTraceLoadingOverlayProps {
  *
  * Pattern follows SplashProgress and HeadToHeadLoader cycling message approach.
  */
-const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({ year, meetingName, driverCode }) => {
+const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({
+    year,
+    meetingName,
+    driverCode,
+}) => {
     const reduceMotion = useReducedMotion();
     return (
         <m.div
@@ -129,8 +133,7 @@ const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({
                             left: 0,
                             height: '100%',
                             width: '200%',
-                            background:
-                                SHIMMER_GRADIENT,
+                            background: SHIMMER_GRADIENT,
                         }}
                         animate={reduceMotion ? undefined : { x: ['0%', '-50%'] }}
                         transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}

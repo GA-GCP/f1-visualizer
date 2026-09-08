@@ -97,15 +97,17 @@ class ErrorBoundary extends React.Component<React.PropsWithChildren, ErrorBounda
             const isAutoRetrying = this.state.retryCount < MAX_AUTO_RETRIES;
 
             return (
-                <Box sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minHeight: '60vh',
-                    p: 4,
-                    textAlign: 'center',
-                }}>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: '60vh',
+                        p: 4,
+                        textAlign: 'center',
+                    }}
+                >
                     <m.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -128,12 +130,20 @@ class ErrorBoundary extends React.Component<React.PropsWithChildren, ErrorBounda
                                 An unexpected rendering error has occurred.
                             </Typography>
                         )}
-                        <Typography variant="caption" color="text.secondary" sx={{ mb: 3, fontFamily: 'monospace' }}>
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ mb: 3, fontFamily: 'monospace' }}
+                        >
                             {this.state.error?.message}
                         </Typography>
 
                         {!isAutoRetrying && (
-                            <Stack direction="row" spacing={2} sx={{ justifyContent: 'center', mt: 2 }}>
+                            <Stack
+                                direction="row"
+                                spacing={2}
+                                sx={{ justifyContent: 'center', mt: 2 }}
+                            >
                                 <Button
                                     variant="contained"
                                     color="error"

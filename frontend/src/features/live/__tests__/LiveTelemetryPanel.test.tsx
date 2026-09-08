@@ -36,8 +36,7 @@ const laps: LapDataRecord[] = [
 ];
 
 /** Reads a metric by its <dt> label, so values are never confused with each other. */
-const metric = (label: string) =>
-    screen.getByText(label).nextElementSibling?.textContent ?? '';
+const metric = (label: string) => screen.getByText(label).nextElementSibling?.textContent ?? '';
 
 const renderPanel = (over: Partial<React.ComponentProps<typeof LiveTelemetryPanel>> = {}) =>
     render(
@@ -180,5 +179,4 @@ describe('LiveTelemetryPanel', () => {
         expect(screen.queryByText('300')).not.toBeInTheDocument();
         expect(screen.getByText(/waiting for data/i)).toBeInTheDocument();
     });
-
 });

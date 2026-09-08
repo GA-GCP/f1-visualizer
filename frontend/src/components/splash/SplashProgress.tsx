@@ -5,9 +5,9 @@ import { BRAND_RED, FONT_FAMILY, SHIMMER_GRADIENT } from '../../theme/tokens';
 
 const STATUS_MESSAGES: { max: number; label: string }[] = [
     { max: 0.25, label: 'INITIALIZING TELEMETRY...' },
-    { max: 0.50, label: 'LOADING DATA FEEDS...' },
+    { max: 0.5, label: 'LOADING DATA FEEDS...' },
     { max: 0.75, label: 'CALIBRATING SENSORS...' },
-    { max: 1.00, label: 'PIT LANE CLEAR' },
+    { max: 1.0, label: 'PIT LANE CLEAR' },
 ];
 
 function getStatusMessage(progress: number): string {
@@ -85,8 +85,7 @@ const SplashProgress: React.FC<SplashProgressProps> = ({ progress }) => {
                             left: 0,
                             width: '200%',
                             height: '100%',
-                            background:
-                                SHIMMER_GRADIENT,
+                            background: SHIMMER_GRADIENT,
                         }}
                         animate={reduceMotion ? undefined : { x: ['0%', '-50%'] }}
                         transition={{

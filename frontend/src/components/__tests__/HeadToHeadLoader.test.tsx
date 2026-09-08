@@ -48,8 +48,14 @@ describe('HeadToHeadLoader', () => {
         render(<HeadToHeadLoader />);
 
         // 5 stat bars means 5 stat label rows
-        const statLabels = ['RACE WINS', 'PODIUM FINISHES', 'TOTAL CAREER POINTS', 'TOTAL RACES', 'BEST CHAMPIONSHIP FINISH'];
-        statLabels.forEach(label => {
+        const statLabels = [
+            'RACE WINS',
+            'PODIUM FINISHES',
+            'TOTAL CAREER POINTS',
+            'TOTAL RACES',
+            'BEST CHAMPIONSHIP FINISH',
+        ];
+        statLabels.forEach((label) => {
             expect(screen.getByText(label)).toBeInTheDocument();
         });
     });

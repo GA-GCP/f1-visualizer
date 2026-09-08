@@ -65,12 +65,19 @@ if (typeof window !== 'undefined') {
 /** Human-readable status, for chips and banners. */
 export function describeConnectionStatus(value: ConnectionStatus): string {
     switch (value) {
-        case 'idle': return 'Not connected';
-        case 'connecting': return 'Connecting';
-        case 'connected': return 'Live';
-        case 'reconnecting': return 'Reconnecting';
-        case 'auth-rejected': return 'Session expired';
-        case 'circuit-open': return 'Feed unavailable';
-        case 'offline': return 'Offline';
+        case 'idle':
+            return 'Not connected';
+        case 'connecting':
+            return 'Connecting';
+        case 'connected':
+            return 'Live';
+        case 'reconnecting':
+            return 'Reconnecting';
+        case 'auth-rejected':
+            return 'Session expired';
+        case 'circuit-open':
+            return 'Feed unavailable';
+        case 'offline':
+            return 'Offline';
     }
 }

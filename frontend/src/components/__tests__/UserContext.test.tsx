@@ -6,17 +6,19 @@ import { UserProvider, useUser } from '../../context/UserContext';
 
 // Mock dependencies
 vi.mock('@auth0/auth0-react', () => ({
-    useAuth0: vi.fn()
+    useAuth0: vi.fn(),
 }));
 
 vi.mock('../../api/userApi', () => ({
-    fetchCurrentUser: vi.fn()
+    fetchCurrentUser: vi.fn(),
 }));
 
 const DummyConsumer = () => {
     const { userProfile, isLoading } = useUser();
     if (isLoading) return <div>Loading...</div>;
-    return <div>{userProfile ? `Driver: ${userProfile.preferences.favoriteDriver}` : 'No User'}</div>;
+    return (
+        <div>{userProfile ? `Driver: ${userProfile.preferences.favoriteDriver}` : 'No User'}</div>
+    );
 };
 
 describe('UserContext', () => {
@@ -27,21 +29,21 @@ describe('UserContext', () => {
     it('fetches user profile if Auth0 is authenticated', async () => {
         // Arrange: Use double assertion to bypass "any" rule safely
         vi.mocked(useAuth0).mockReturnValue({
-            isAuthenticated: true
+            isAuthenticated: true,
         } as unknown as ReturnType<typeof useAuth0>);
 
         vi.mocked(fetchCurrentUser).mockResolvedValue({
             authSubId: '123',
             email: 'test@f1.com',
             createdAt: '2024-01-01',
-            preferences: { favoriteDriver: 'LEC' }
+            preferences: { favoriteDriver: 'LEC' },
         });
 
         // Act
         render(
             <UserProvider>
                 <DummyConsumer />
-            </UserProvider>
+            </UserProvider>,
         );
 
         // Assert
@@ -56,14 +58,14 @@ describe('UserContext', () => {
     it('does not fetch profile if Auth0 is unauthenticated', async () => {
         // Arrange: Use double assertion to bypass "any" rule safely
         vi.mocked(useAuth0).mockReturnValue({
-            isAuthenticated: false
+            isAuthenticated: false,
         } as unknown as ReturnType<typeof useAuth0>);
 
         // Act
         render(
             <UserProvider>
                 <DummyConsumer />
-            </UserProvider>
+            </UserProvider>,
         );
 
         // Assert

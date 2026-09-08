@@ -38,8 +38,13 @@ describe('ingestionApi', () => {
 
             const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-            await expect(sendIngestionCommand({ mode: 'LIVE', sessionKey: 1 })).rejects.toThrow('Network Error');
-            expect(consoleSpy).toHaveBeenCalledWith('[ingestion] Failed to send ingestion command', error);
+            await expect(sendIngestionCommand({ mode: 'LIVE', sessionKey: 1 })).rejects.toThrow(
+                'Network Error',
+            );
+            expect(consoleSpy).toHaveBeenCalledWith(
+                '[ingestion] Failed to send ingestion command',
+                error,
+            );
 
             consoleSpy.mockRestore();
         });

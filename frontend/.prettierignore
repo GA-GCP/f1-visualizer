@@ -1,0 +1,9 @@
+dist
+coverage
+playwright-report
+test-results
+blob-report
+node_modules
+# Image-snapshot baselines are binary and the audit markdown is generated.
+**/__image_snapshots__
+AUDIT-*.md

@@ -8,7 +8,7 @@ import UserSettingsModal from '../layout/UserSettingsModal';
 
 // Mock contexts and APIs
 vi.mock('../../context/UserContext', () => ({
-    useUser: vi.fn()
+    useUser: vi.fn(),
 }));
 
 vi.mock('../../api/referenceApi', () => ({
@@ -28,13 +28,35 @@ describe('UserSettingsModal', () => {
     // not a DriverProfile and the test asserted against a shape the API cannot
     // return. Typed explicitly so the next schema change fails here.
     const stats: DriverProfile['stats'] = {
-        speed: 90, consistency: 88, aggression: 82, tireMgmt: 85, experience: 87,
-        wins: 5, podiums: 40, totalPoints: 1200, bestChampionshipFinish: 2,
-        totalRaces: 150, teamsDrivenFor: ['Ferrari'],
+        speed: 90,
+        consistency: 88,
+        aggression: 82,
+        tireMgmt: 85,
+        experience: 87,
+        wins: 5,
+        podiums: 40,
+        totalPoints: 1200,
+        bestChampionshipFinish: 2,
+        totalRaces: 150,
+        teamsDrivenFor: ['Ferrari'],
     };
     const mockDrivers: DriverProfile[] = [
-        { id: 16, code: "LEC", name: "Charles Leclerc", team: "Ferrari", teamColor: "#E80020", stats },
-        { id: 1, code: "VER", name: "Max Verstappen", team: "Red Bull", teamColor: "#3671C6", stats }
+        {
+            id: 16,
+            code: 'LEC',
+            name: 'Charles Leclerc',
+            team: 'Ferrari',
+            teamColor: '#E80020',
+            stats,
+        },
+        {
+            id: 1,
+            code: 'VER',
+            name: 'Max Verstappen',
+            team: 'Red Bull',
+            teamColor: '#3671C6',
+            stats,
+        },
     ];
 
     beforeEach(() => {
@@ -62,13 +84,20 @@ describe('UserSettingsModal', () => {
     it('shows the spinner while drivers load, then serves a reopen from cache', async () => {
         let resolveFetch: (drivers: typeof mockDrivers) => void = () => {};
         vi.mocked(fetchDrivers).mockImplementation(
-            () => new Promise(resolve => { resolveFetch = resolve; })
+            () =>
+                new Promise((resolve) => {
+                    resolveFetch = resolve;
+                }),
         );
 
-        const { rerender } = renderWithProviders(<UserSettingsModal open={true} onClose={vi.fn()} />);
+        const { rerender } = renderWithProviders(
+            <UserSettingsModal open={true} onClose={vi.fn()} />,
+        );
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
 
-        await act(async () => { resolveFetch(mockDrivers); });
+        await act(async () => {
+            resolveFetch(mockDrivers);
+        });
         await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
 
         // The roster is cached now, so reopening shows the list immediately
@@ -96,7 +125,7 @@ describe('UserSettingsModal', () => {
         // Verify it sent the right data
         await waitFor(() => {
             expect(mockUpdatePreferences).toHaveBeenCalledWith({
-                favoriteDriver: 'LEC'
+                favoriteDriver: 'LEC',
             });
         });
     });

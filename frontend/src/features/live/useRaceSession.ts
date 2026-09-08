@@ -19,7 +19,13 @@ interface SessionMeta {
  */
 export type RaceSessionState =
     | { status: 'idle'; resetKey: number }
-    | { status: 'initializing'; resetKey: number; key: number; mode: RaceSessionMode; meta: SessionMeta }
+    | {
+          status: 'initializing';
+          resetKey: number;
+          key: number;
+          mode: RaceSessionMode;
+          meta: SessionMeta;
+      }
     | { status: 'active'; resetKey: number; key: number; mode: RaceSessionMode; meta: SessionMeta };
 
 type Action =

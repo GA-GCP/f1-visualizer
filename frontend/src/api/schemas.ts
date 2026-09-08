@@ -118,10 +118,7 @@ export type UserPreferences = z.infer<typeof userPreferencesSchema>;
 export const userProfileSchema = z.object({
     authSubId: z.string(),
     email: z.string(),
-    createdAt: z.union([
-        z.object({ seconds: z.number(), nanos: z.number() }),
-        z.string(),
-    ]),
+    createdAt: z.union([z.object({ seconds: z.number(), nanos: z.number() }), z.string()]),
     preferences: userPreferencesSchema,
 });
 export type UserProfile = z.infer<typeof userProfileSchema>;

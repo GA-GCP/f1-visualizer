@@ -27,7 +27,11 @@ describe('StompAuthHandler', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.useFakeTimers();
-        Object.defineProperty(stompClient, 'active', { value: false, writable: true, configurable: true });
+        Object.defineProperty(stompClient, 'active', {
+            value: false,
+            writable: true,
+            configurable: true,
+        });
     });
 
     afterEach(() => {
@@ -72,8 +76,8 @@ describe('StompAuthHandler', () => {
 
         render(<StompAuthHandler />);
 
-        const provider = (setStompTokenProvider as unknown as ReturnType<typeof vi.fn>)
-            .mock.calls[0][0] as () => Promise<string>;
+        const provider = (setStompTokenProvider as unknown as ReturnType<typeof vi.fn>).mock
+            .calls[0][0] as () => Promise<string>;
 
         // A reconnect calls the provider again and must get a freshly-issued token.
         await expect(provider()).resolves.toBe('first-token');
@@ -82,7 +86,11 @@ describe('StompAuthHandler', () => {
     });
 
     it('clears the provider and deactivates STOMP on unmount when active', () => {
-        Object.defineProperty(stompClient, 'active', { value: true, writable: true, configurable: true });
+        Object.defineProperty(stompClient, 'active', {
+            value: true,
+            writable: true,
+            configurable: true,
+        });
         mockUseAuth0(true);
 
         const { unmount } = render(<StompAuthHandler />);

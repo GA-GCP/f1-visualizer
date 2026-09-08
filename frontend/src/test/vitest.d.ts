@@ -8,7 +8,7 @@ declare module 'vitest' {
         R extends void | Promise<void> = void | Promise<void>,
         // `T` is required to match Vitest's own signature for declaration merging.
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        T = unknown
+        T = unknown,
     > {
         toMatchImageSnapshot(options?: MatchImageSnapshotOptions): R;
         /** vitest-axe ships its matchers the same way; declare them here too. */

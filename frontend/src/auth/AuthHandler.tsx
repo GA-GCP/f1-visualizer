@@ -71,7 +71,13 @@ export const AxiosAuthInterceptor: React.FC = () => {
             apiClient.interceptors.request.eject(requestInterceptor);
             setAuthHandlers({ refreshAccessToken: null, onAuthExpired: null });
         };
-    }, [isAuthenticated, getAccessTokenSilently, loginWithRedirect, location.pathname, location.search]);
+    }, [
+        isAuthenticated,
+        getAccessTokenSilently,
+        loginWithRedirect,
+        location.pathname,
+        location.search,
+    ]);
 
     return null;
 };

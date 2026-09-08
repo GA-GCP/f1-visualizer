@@ -36,7 +36,7 @@ const VersusMode = lazy(importVersusMode);
 // Renders null, so it needs no fallback — but it must not be imported
 // statically or the whole WebSocket stack stays on the public route.
 const StompAuthHandler = lazy(() =>
-    import('./auth/StompAuthHandler').then(mod => ({ default: mod.StompAuthHandler })),
+    import('./auth/StompAuthHandler').then((mod) => ({ default: mod.StompAuthHandler })),
 );
 
 // framer-motion's feature set (layout projection, drag, gestures) is ~40 kB gz
@@ -44,12 +44,12 @@ const StompAuthHandler = lazy(() =>
 // the core alone; LazyMotion pulls this in afterwards and the animations start
 // on the next frame. Module scope, not inline: LazyMotion loads on mount only,
 // so a new function identity per render would be silently ignored anyway.
-const loadMotionFeatures = () => import('./motionFeatures').then(mod => mod.default);
+const loadMotionFeatures = () => import('./motionFeatures').then((mod) => mod.default);
 
 // Also deferred: it pulls in the query client, the user API, and with them the
 // wire schemas and the validator. None of that can be used before login.
 const AppDataProvider = lazy(() =>
-    import('./app/AppDataProvider').then(mod => ({ default: mod.AppDataProvider })),
+    import('./app/AppDataProvider').then((mod) => ({ default: mod.AppDataProvider })),
 );
 
 // --- STARTUP PREFETCH ---
@@ -64,8 +64,12 @@ const AppDataProvider = lazy(() =>
 // dynamically, not statically: it is unreachable before login, so a static
 // import would put all of it in the chunk the public landing page downloads.
 const STARTUP_PREFETCH: PrefetchTask[] = [
-    { name: 'drivers', run: () => import('./api/prefetch').then(mod => mod.prefetchDrivers()) },
-    { name: 'sessions', run: () => import('./api/prefetch').then(mod => mod.prefetchSessions()), delayMs: 400 },
+    { name: 'drivers', run: () => import('./api/prefetch').then((mod) => mod.prefetchDrivers()) },
+    {
+        name: 'sessions',
+        run: () => import('./api/prefetch').then((mod) => mod.prefetchSessions()),
+        delayMs: 400,
+    },
     { name: 'the app shell', run: importLayoutMain },
     { name: 'the dashboard', run: importHome },
     { name: 'the data vault', run: importHistoricalData, delayMs: 1000 },
@@ -99,10 +103,19 @@ const RequiredAuth: React.FC = () => {
 
     if (error) {
         return (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#ff4444', fontFamily: 'sans-serif' }}>
+            <div
+                style={{
+                    padding: '2rem',
+                    textAlign: 'center',
+                    color: '#ff4444',
+                    fontFamily: 'sans-serif',
+                }}
+            >
                 <h2>Authentication Error</h2>
                 <p>{error.message}</p>
-                <p style={{ fontSize: '0.8rem', color: '#888' }}>Check your Auth0 Dashboard and .env configuration.</p>
+                <p style={{ fontSize: '0.8rem', color: '#888' }}>
+                    Check your Auth0 Dashboard and .env configuration.
+                </p>
             </div>
         );
     }
@@ -114,41 +127,40 @@ const RequiredAuth: React.FC = () => {
 
     return (
         <>
-        {/* The splash sits outside the UserProvider boundary so it paints
+            {/* The splash sits outside the UserProvider boundary so it paints
             immediately, without waiting on that chunk. */}
-        <Suspense fallback={null}>
-        <AppDataProvider>
-            {/* Mounted here rather than at the app root: the WebSocket stack is
+            <Suspense fallback={null}>
+                <AppDataProvider>
+                    {/* Mounted here rather than at the app root: the WebSocket stack is
                 useless before login, and mounting it under the guard is what
                 keeps it out of the public route's chunk. */}
-            <Suspense fallback={null}>
-                <StompAuthHandler />
-            </Suspense>
+                    <Suspense fallback={null}>
+                        <StompAuthHandler />
+                    </Suspense>
 
-            {/* The app mounts immediately and the splash sits over it as a
+                    {/* The app mounts immediately and the splash sits over it as a
                 fixed overlay, rather than the two being branches of a ternary.
                 That is the whole point: route chunks, the STOMP handshake, the
                 session cascade and the driver list all load *during* the intro
                 instead of starting cold once it ends. */}
-            <m.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4 }}
-                // Mounting the app behind the overlay would otherwise put a
-                // whole dashboard in the accessibility tree and the tab order
-                // underneath a splash the user cannot see past. `inert` removes
-                // it from both until the splash is gone.
-                inert={showSplash}
-            >
-                {/* Covers the shell chunk itself; LayoutMain carries its
+                    <m.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.4 }}
+                        // Mounting the app behind the overlay would otherwise put a
+                        // whole dashboard in the accessibility tree and the tab order
+                        // underneath a splash the user cannot see past. `inert` removes
+                        // it from both until the splash is gone.
+                        inert={showSplash}
+                    >
+                        {/* Covers the shell chunk itself; LayoutMain carries its
                     own boundary for the page chunks under it. */}
-                <Suspense fallback={<RouteFallback />}>
-                    <Outlet />
-                </Suspense>
-            </m.div>
-
-        </AppDataProvider>
-        </Suspense>
+                        <Suspense fallback={<RouteFallback />}>
+                            <Outlet />
+                        </Suspense>
+                    </m.div>
+                </AppDataProvider>
+            </Suspense>
 
             <AnimatePresence>
                 {showSplash && (
@@ -205,7 +217,6 @@ export const AppRoutes: React.FC = () => (
 const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const navigate = useNavigate();
 
-
     const onRedirectCallback = (appState?: { returnTo?: string }) => {
         // Signal to RequiredAuth that it should show the post-login splash.
         // We use sessionStorage instead of a DOM event because RequiredAuth
@@ -258,7 +269,10 @@ function App() {
             <LazyMotion features={loadMotionFeatures} strict>
                 {/* Every framer animation in the tree respects prefers-reduced-motion:
                     transform and layout animations are dropped, opacity is kept. */}
-                <MotionConfig reducedMotion="user" transition={{ duration: DUR.base, ease: EASE.out }}>
+                <MotionConfig
+                    reducedMotion="user"
+                    transition={{ duration: DUR.base, ease: EASE.out }}
+                >
                     <BrowserRouter>
                         <Auth0ProviderWithNavigate>
                             <AxiosAuthInterceptor />

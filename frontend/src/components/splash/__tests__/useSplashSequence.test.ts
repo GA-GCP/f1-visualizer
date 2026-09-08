@@ -101,9 +101,7 @@ describe('useSplashSequence', () => {
 
     it('reports settled prefetch work as progress rather than elapsed time', async () => {
         const clock = withFakeFrames();
-        const { result } = renderHook(() =>
-            useSplashSequence(vi.fn(), { readiness: 0.25 }),
-        );
+        const { result } = renderHook(() => useSplashSequence(vi.fn(), { readiness: 0.25 }));
 
         await clock.advance(1000);
 
@@ -123,7 +121,7 @@ describe('useSplashSequence', () => {
         }
 
         const order: SplashPhase[] = ['background', 'circuit', 'text', 'progress', 'hold', 'exit'];
-        const indices = seen.map(p => order.indexOf(p));
+        const indices = seen.map((p) => order.indexOf(p));
         expect(indices).toEqual([...indices].sort((a, b) => a - b));
         expect(seen.length).toBeGreaterThan(1);
     });

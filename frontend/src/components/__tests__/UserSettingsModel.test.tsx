@@ -19,7 +19,6 @@ vi.mock('../../api/referenceApi', () => ({
     fetchSessionLaps: vi.fn(),
     fetchSessionDrivers: vi.fn(),
     fetchDriverStats: vi.fn(),
-    searchSessions: vi.fn(),
 }));
 
 describe('UserSettingsModal', () => {

@@ -22,7 +22,6 @@ the infrastructure, see the [root README](../README.md).
 | Real-time transport | `@stomp/stompjs` over SockJS | 7.3 |
 | HTTP | Axios | 1.20 |
 | Auth | Auth0 React SDK (OAuth2 + PKCE) | 2.24 |
-| Dates | date-fns | 4.4 |
 | Tests | Vitest + React Testing Library + jsdom | 5.0 |
 
 Node 26 and Yarn 1.x (classic). The CI image and the production `Dockerfile` both build on

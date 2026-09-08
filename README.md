@@ -269,7 +269,6 @@ The real-time pipeline is the core of the platform — a four-hop event-driven c
 | | @stomp/stompjs | 7.3 | STOMP protocol client over SockJS WebSocket transport |
 | | Axios | 1.20 | HTTP client with JWT interceptor, retry logic, and 429 backoff |
 | | Emotion | 11.14 | CSS-in-JS styling engine powering MUI's theme layer |
-| | date-fns | 4.4 | Lightweight date manipulation utilities |
 | | Auth0 React SDK | 2.24 | OAuth2/OIDC authentication flow with PKCE |
 | **Backend** | Java | 25 | Language runtime (Temurin distribution) |
 | | Spring Boot | 4.1 | Microservice framework |
@@ -345,7 +344,6 @@ f1-visualizer/
 |   +-- Dockerfile                              # Multi-stage local build (Node -> nginx)
 |   +-- Dockerfile.ci                           # Lean CI image (pre-built dist -> nginx)
 |   +-- vite.config.ts                          # Dev server proxy to 4 backend services + WebSocket
-|   +-- vitest.config.ts                        # jsdom test environment with setup
 |   +-- .env.dev / .env.uat / .env.prod         # Per-environment Auth0 + API config (Vite build modes)
 |   +-- eslint.config.js                        # TypeScript-ESLint + React Hooks rules
 |
@@ -798,7 +796,7 @@ cd backend && mvn clean package -pl f1v-service-data-analysis -am
 
 **Framework:** Vitest 5.0 with React Testing Library, jsdom 30, jest-image-snapshot
 
-**Configuration:** `vitest.config.ts` — jsdom environment, global test APIs enabled, `@` path alias, and a setup file (`src/test/setup.ts`) that polyfills `ResizeObserver`, `requestAnimationFrame`/`cancelAnimationFrame`, and configures automatic React Testing Library cleanup between tests.
+**Configuration:** the `test` block in `vite.config.ts` — jsdom environment, global test APIs enabled, `@` path alias resolved from `tsconfig.app.json`, and a setup file (`src/test/setup.ts`) that polyfills `ResizeObserver`, `requestAnimationFrame`/`cancelAnimationFrame`, and configures automatic React Testing Library cleanup between tests.
 
 | Category | Framework / Tool | Description |
 |----------|-----------------|-------------|

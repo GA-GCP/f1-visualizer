@@ -9,11 +9,31 @@ WORKDIR /app
 ARG ENV_MODE=dev
 
 # 1. Install dependencies
+#
+# --ignore-scripts skips node-gyp, and with it the `canvas` native addon. canvas
+# exists only for the visual-regression tests, has no musl prebuilt, and needs a
+# C++ toolchain plus Cairo and Pango headers that this stage never installs —
+# which cloudbuild/frontend.yaml documents and installs for its own test step.
+# So the documented local image build was either failing here or spending
+# minutes compiling Cairo bindings for an image that never runs a test.
+# vite and tsc need no install scripts.
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+RUN yarn install --frozen-lockfile --ignore-scripts
 
-# 2. Copy source and build using the specific mode
-COPY . .
+# 2. Copy only what the build reads, rather than `COPY . .`
+#
+# `COPY . .` pulled in the host's dist/, the test suites and the image snapshots,
+# and busted this layer's cache on any file change anywhere in frontend/.
+#
+# e2e/ and playwright.config.ts are here not because the image needs them but
+# because `yarn build` runs `tsc -b`, which builds every referenced project —
+# tsconfig.e2e.json among them. Omitting them turns the build into a type error
+# about missing inputs.
+COPY index.html tsconfig*.json vite.config.ts playwright.config.ts ./
+COPY .env.* ./
+COPY public ./public
+COPY src ./src
+COPY e2e ./e2e
 RUN yarn build --mode ${ENV_MODE}
 
 # ==========================================

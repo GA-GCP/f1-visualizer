@@ -18,7 +18,6 @@ vi.mock('../../api/referenceApi', () => ({
     fetchSessions: vi.fn(),
     fetchSessionLaps: vi.fn(),
     fetchDriverStats: vi.fn(),
-    searchSessions: vi.fn(),
 }));
 
 describe('SessionControlPanel', () => {

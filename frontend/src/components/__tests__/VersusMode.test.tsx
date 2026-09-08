@@ -13,7 +13,6 @@ vi.mock('../../api/referenceApi', () => ({
     fetchSessionsByYear: vi.fn(),
     fetchSessionLaps: vi.fn(),
     fetchSessionDrivers: vi.fn(),
-    searchSessions: vi.fn(),
 }));
 
 // Mock the heavy D3 Radar Chart

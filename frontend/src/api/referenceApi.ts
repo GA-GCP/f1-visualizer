@@ -49,11 +49,6 @@ export const fetchYears = async (signal?: AbortSignal): Promise<number[]> => {
     return parseResponse(z.array(z.number()), res.data, 'GET /analysis/years');
 };
 
-export const searchSessions = async (query: string, signal?: AbortSignal): Promise<RaceSession[]> => {
-    const res = await apiClient.get(`/analysis/sessions/search?query=${encodeURIComponent(query)}`, { signal });
-    return parseResponse(z.array(raceSessionSchema), res.data, 'GET /analysis/sessions/search');
-};
-
 export const fetchDriverStats = async (driverId: number, signal?: AbortSignal): Promise<DriverProfile['stats']> => {
     const res = await apiClient.get(`/analysis/drivers/${driverId}/stats`, { signal });
     return parseResponse(driverStatsSchema, res.data, 'GET /analysis/drivers/:id/stats');

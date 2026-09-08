@@ -138,7 +138,7 @@ export default defineConfig([
   {
     // Playwright specs run in Node and are not vitest, so they get the node
     // globals and none of the vitest rules.
-    files: ['e2e/**/*.ts', 'playwright.config.ts', 'vite.config.ts', 'vitest.config.ts', '.size-limit.js'],
+    files: ['e2e/**/*.ts', 'playwright.config.ts', 'vite.config.ts', '.size-limit.js'],
     languageOptions: { globals: globals.node },
     rules: {
       '@typescript-eslint/no-unsafe-argument': 'off',

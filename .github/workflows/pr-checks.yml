@@ -75,7 +75,7 @@ jobs:
         run: yarn build --mode dev
 
       # Bundle budget: fails the PR if the gzipped output grows past the limit
-      # in frontend/.size-limit.json.
+      # in frontend/.size-limit.js.
       - name: Bundle size budget
         run: yarn size
 

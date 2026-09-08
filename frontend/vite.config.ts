@@ -15,7 +15,23 @@ export default defineConfig({
   // a build error instead of a stale render.
   //
   // `logDiagnostics` surfaces the components the compiler declined to compile.
-  plugins: [react({ compiler: { logDiagnostics: true } })],
+  plugins: [
+    react({ compiler: { logDiagnostics: true } }),
+    {
+      // The same version buildInfo.ts publishes to the console and
+      // window.__F1V__, in a form readable without running any JavaScript —
+      // `curl -s <url> | grep version` is what support and the deploy smoke
+      // test actually have to hand.
+      name: 'f1v:build-stamp-meta',
+      transformIndexHtml: () => [
+        {
+          tag: 'meta',
+          attrs: { name: 'version', content: process.env.APP_VERSION ?? 'local' },
+          injectTo: 'head' as const,
+        },
+      ],
+    },
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

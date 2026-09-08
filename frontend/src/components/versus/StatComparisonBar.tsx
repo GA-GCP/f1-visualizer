@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import type { DriverProfile } from '@/api/referenceApi.ts';
 import { BORDER_SUBTLE } from '../../theme/tokens';
 
@@ -59,7 +59,7 @@ const StatComparisonBar: React.FC<StatComparisonBarProps> = ({ label, driverA, d
                 result is visually identical. `key` re-runs the reveal when the
                 pairing changes. */}
             <Box sx={{ position: 'relative', height: 10, borderRadius: 1, overflow: 'hidden', bgcolor: BORDER_SUBTLE }}>
-                <motion.div
+                <m.div
                     key={`${driverA.id}-a`}
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: 1 }}
@@ -74,7 +74,7 @@ const StatComparisonBar: React.FC<StatComparisonBarProps> = ({ label, driverA, d
                         backgroundColor: driverA.teamColor,
                     }}
                 />
-                <motion.div
+                <m.div
                     key={`${driverB.id}-b`}
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: 1 }}

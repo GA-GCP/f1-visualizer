@@ -20,13 +20,24 @@ export default [
         gzip: true,
     },
     {
-        // Raised from 380 kB deliberately, not to make a failing gate pass:
-        // runtime validation at the API boundary costs ~7 kB gzipped, and that
-        // was a considered trade. The headroom is kept tight on purpose — it is
-        // here to catch a stray dependency, not to absorb one.
+        // Raised twice, both times for a named and measured trade rather than to
+        // make a failing gate pass. This budget exists to catch a stray
+        // dependency, not to absorb one, so each raise records its reason:
+        //
+        //   380 -> 390 kB  runtime validation at the API boundary (~7 kB gz)
+        //   390 -> 405 kB  React Compiler (+14.7 kB gz, measured per chunk:
+        //                  VersusMode +4.2, Home +3.9, entry +3.0, the rest
+        //                  spread across 41 compiled components / 988 cache
+        //                  slots). Vendor chunks are byte-identical — the
+        //                  compiler does not touch node_modules.
+        //
+        // This is the total across *all* chunks, most of which are lazy route
+        // chunks behind the login. The number a first-time visitor actually
+        // feels is the first-load budget above, and the compiler costs that
+        // 3.1 kB, not 14.7.
         name: 'total JS shipped (all chunks)',
         path: 'dist/assets/*.js',
-        limit: '390 kB',
+        limit: '405 kB',
         gzip: true,
     },
 ];

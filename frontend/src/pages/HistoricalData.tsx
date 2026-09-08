@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { Box, Typography, Container, Autocomplete, TextField } from '@mui/material';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 import LapTimeChart from '../components/LapTimeChart';
 import DataVaultLoader from '../components/DataVaultLoader';
@@ -119,15 +119,15 @@ const HistoricalData: React.FC = () => {
 
             <AnimatePresence mode="wait">
                 {hasError ? (
-                    <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <m.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                         <ErrorState
                             title="Session data unavailable"
                             message="The analysis service could not be reached."
                             onRetry={retry}
                         />
-                    </motion.div>
+                    </m.div>
                 ) : isLoading ? (
-                    <motion.div
+                    <m.div
                         key="loader"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -135,9 +135,9 @@ const HistoricalData: React.FC = () => {
                         transition={{ duration: 0.3 }}
                     >
                         <DataVaultLoader />
-                    </motion.div>
+                    </m.div>
                 ) : (
-                    <motion.div
+                    <m.div
                         key="chart"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -157,7 +157,7 @@ const HistoricalData: React.FC = () => {
                             driverLabelMap={driverLabelMap}
                         />
                         )}
-                    </motion.div>
+                    </m.div>
                 )}
             </AnimatePresence>
         </Container>

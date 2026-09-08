@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { m, useReducedMotion } from 'framer-motion';
 import { Box } from '@mui/material';
 import { SHIMMER_GRADIENT } from '../../theme/tokens';
 
@@ -33,7 +33,7 @@ const ShimmerBar: React.FC<ShimmerBarProps> = ({ height = 4, width = '100%' }) =
             }}
         >
             <Box sx={{ height: '100%', width, overflow: 'hidden', position: 'relative' }}>
-                <motion.div
+                <m.div
                     style={{
                         position: 'absolute',
                         top: 0,

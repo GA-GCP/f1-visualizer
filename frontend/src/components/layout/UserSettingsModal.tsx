@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, CircularProgress, Alert , useMediaQuery, useTheme } from '@mui/material';
 import type { DialogProps } from '@mui/material';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import DriverSelector from '../selectors/DriverSelector';
 import { useQuery } from '@tanstack/react-query';
 import { queries } from '../../api/queries';
@@ -63,7 +63,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
             // minWidth: 400 overflowed a 375px viewport horizontally. Full
             // screen below `sm` is the standard answer and avoids the scroll.
             fullScreen={isSmallScreen}
-            slots={{ paper: motion.div }}
+            slots={{ paper: m.div }}
             slotProps={{
                 paper: {
                     initial: { opacity: 0, scale: 0.95 },

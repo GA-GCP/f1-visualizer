@@ -1,6 +1,6 @@
 import { BRAND_RED } from '../../theme/tokens';
 import React, { useRef, useState, useEffect } from 'react';
-import { motion, useMotionValue, animate, useMotionValueEvent } from 'framer-motion';
+import { m, useMotionValue, animate, useMotionValueEvent } from 'framer-motion';
 import { Box } from '@mui/material';
 import type { SplashPhase } from './useSplashSequence';
 
@@ -43,7 +43,7 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase, continuous }) => {
     const dotProgress = useMotionValue(0);
 
     // Measure SVG path length on mount via the hidden measurement element.
-    // The animated <motion.path> is only rendered once pathLength > 0 so
+    // The animated <m.path> is only rendered once pathLength > 0 so
     // Framer Motion receives the correct strokeDasharray/offset from the
     // start — avoiding the 1px-dash fallback that caused scattered dots.
     useEffect(() => {
@@ -128,7 +128,7 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase, continuous }) => {
                     fallback of 1 which caused a 1px-dash/1px-gap pattern
                     (scattered dots along the entire path). */}
                 {pathLength > 0 && (
-                    <motion.path
+                    <m.path
                         ref={pathRef}
                         d={CIRCUIT_PATH}
                         fill="none"
@@ -150,7 +150,7 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase, continuous }) => {
 
                 {/* Orbiting racing dot */}
                 {showDot && (
-                    <motion.circle
+                    <m.circle
                         cx={dotX}
                         cy={dotY}
                         r={5}

@@ -1,6 +1,6 @@
 import React, { memo, useEffect, useMemo, useState } from 'react';
 import { Box, Button, Typography, CircularProgress, Autocomplete, TextField } from '@mui/material';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
 import { sendIngestionCommand } from '@/api/ingestionApi.ts';
@@ -120,7 +120,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
             />
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                <motion.div whileTap={!isSessionActive ? { scale: 0.97 } : {}} whileHover={!isSessionActive ? { scale: 1.02 } : {}}>
+                <m.div whileTap={!isSessionActive ? { scale: 0.97 } : {}} whileHover={!isSessionActive ? { scale: 1.02 } : {}}>
                     <Button
                         variant="contained"
                         color="primary"
@@ -133,10 +133,10 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                     >
                         {isLoading ? 'INITIALIZING...' : 'START SIMULATION'}
                     </Button>
-                </motion.div>
+                </m.div>
                 <AnimatePresence>
                     {isSessionActive && (
-                        <motion.div
+                        <m.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
@@ -153,7 +153,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                             >
                                 CANCEL SIMULATION
                             </Button>
-                        </motion.div>
+                        </m.div>
                     )}
                 </AnimatePresence>
             </Box>

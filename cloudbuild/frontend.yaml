@@ -134,16 +134,90 @@ steps:
         docker push "$$IMAGE:${_SHORT_SHA}"
         docker push "$$IMAGE:latest-${_ENV}"
 
-  # 6. Deploy to Cloud Run (immutable SHA tag)
+  # 6. Deploy the new revision WITHOUT traffic.
+  #     `gcloud run services update` used to shift 100% of traffic the moment
+  #     the revision passed Cloud Run's default TCP probe — which only proves
+  #     nginx bound a port. A build that produced an empty or half-copied dist/
+  #     reached every user instantly, and recovery was a console action.
+  #
+  #     Deploying with --no-traffic makes the next two steps a real gate: if the
+  #     smoke test fails the build stops here and no user ever sees this
+  #     revision, so the rollback is 'do nothing' rather than a manual undo.
+  #     --tag gives the revision its own URL to be tested on.
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
-    id: 'deploy'
+    id: 'deploy-no-traffic'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'f1v-webapp-${_ENV}'
+      - '--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:${_SHORT_SHA}'
+      - '--tag=sha-${_SHORT_SHA}'
+      - '--no-traffic'
+      - '--region=${_REGION}'
+      - '--project=$PROJECT_ID'
+      - '--quiet'
+
+  # 7. Smoke test the revision on its tag URL, before it serves anyone.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
+    id: 'smoke'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+
+        # The tag URL is only in the service's traffic list. Parsed with python3
+        # (which ships in this image, gcloud is written in it) rather than a
+        # --format expression, because the filter syntax for a tagged entry is
+        # easy to get subtly wrong and fail open.
+        TAG_URL=$(gcloud run services describe f1v-webapp-${_ENV} \
+          --region=${_REGION} --project=$PROJECT_ID --format=json \
+          | python3 -c "import json,sys; print(next(t['url'] for t in json.load(sys.stdin)['status']['traffic'] if t.get('tag') == 'sha-${_SHORT_SHA}'))")
+
+        echo "Smoke testing $$TAG_URL"
+
+        # 1. The health endpoint answers with exactly 'ok'.
+        #    This is the strongest single check available: before nginx.conf
+        #    grew a /healthz location, ANY path returned the SPA shell with a
+        #    200 — so 'ok' proves the new config is really in the image, not
+        #    just that index.html exists.
+        test "$(curl -fsS "$$TAG_URL/healthz")" = "ok"
+
+        # 2. The app shell is served and has a mount point. An empty or
+        #    half-copied dist/ fails here.
+        curl -fsS "$$TAG_URL/" | grep -q '<div id="root">'
+
+        # 3. A deep link still falls back to the shell rather than 404ing.
+        curl -fsS "$$TAG_URL/dashboard" | grep -q '<div id="root">'
+
+        # 4. The security headers survived. These are set in nginx.conf and are
+        #    exactly the kind of thing that silently disappears when a location
+        #    block is edited — see the add_header inheritance note in that file.
+        curl -fsSI "$$TAG_URL/" | grep -qi '^content-security-policy:'
+
+        # 5. The revision serving this URL is the one we just built. Vite stamps
+        #    APP_VERSION into <meta name="version">, so this catches a stale
+        #    image, a cache-hit that reused an older layer, or a tag pointing
+        #    somewhere unexpected — none of which the checks above would notice,
+        #    because a previous good build passes all of them.
+        curl -fsS "$$TAG_URL/" | grep -q '<meta name="version" content="${_SHORT_SHA}">'
+
+        echo "Smoke test passed for sha-${_SHORT_SHA}"
+
+  # 8. Promote: send 100% of traffic to the revision that just passed.
+  #     Pinned by tag rather than --to-latest, so traffic points at this exact
+  #     revision instead of following whatever becomes latest — a later
+  #     terragrunt apply cannot silently shift users onto a different image.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
+    id: 'promote'
     entrypoint: 'gcloud'
     args:
       - 'run'
       - 'services'
-      - 'update'
+      - 'update-traffic'
       - 'f1v-webapp-${_ENV}'
-      - '--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:${_SHORT_SHA}'
+      - '--to-tags=sha-${_SHORT_SHA}=100'
       - '--region=${_REGION}'
       - '--project=$PROJECT_ID'
       - '--quiet'

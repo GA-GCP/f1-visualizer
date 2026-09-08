@@ -1,7 +1,7 @@
-import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { m } from 'framer-motion';
-import type { DriverProfile } from '@/api/referenceApi.ts';
+import React from 'react';
+import type { DriverProfile } from '@/api/referenceApi';
 import { BORDER_SUBTLE } from '../../theme/tokens';
 
 type NumericStatMetric = 'wins' | 'podiums' | 'totalPoints' | 'totalRaces' | 'bestChampionshipFinish';

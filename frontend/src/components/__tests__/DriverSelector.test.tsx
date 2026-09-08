@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import DriverSelector from '../selectors/DriverSelector';
 import { expect, vi } from 'vitest';
+import DriverSelector from '../selectors/DriverSelector';
 
 const mockDrivers = [
     {

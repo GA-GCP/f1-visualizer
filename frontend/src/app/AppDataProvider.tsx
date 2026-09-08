@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '../api/queryClient';
 import { UserProvider } from '../context/UserContext';
+import type { ReactNode } from 'react';
 
 /**
  * Server-state and user-profile providers for the authenticated app.

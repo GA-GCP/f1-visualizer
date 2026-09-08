@@ -1,3 +1,4 @@
+import { useAuth0 } from '@auth0/auth0-react';
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -12,7 +13,6 @@ vi.mock('../../api/stompClient', () => ({
     stompClient: { active: false, deactivate: vi.fn() },
 }));
 
-import { useAuth0 } from '@auth0/auth0-react';
 import { activateStomp, setStompTokenProvider, stompClient } from '../../api/stompClient';
 import { StompAuthHandler } from '../StompAuthHandler';
 

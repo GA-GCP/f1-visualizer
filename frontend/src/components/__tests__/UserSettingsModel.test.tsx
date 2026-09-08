@@ -1,9 +1,10 @@
 import { screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { renderWithProviders } from '@/test/renderWithProviders';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import UserSettingsModal from '../layout/UserSettingsModal';
+import { fetchDrivers } from '@/api/referenceApi';
+import type { DriverProfile } from '@/api/schemas';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { useUser } from '../../context/UserContext';
-import { fetchDrivers } from '@/api/referenceApi.ts';
+import UserSettingsModal from '../layout/UserSettingsModal';
 
 // Mock contexts and APIs
 vi.mock('../../context/UserContext', () => ({
@@ -23,26 +24,45 @@ vi.mock('../../api/referenceApi', () => ({
 
 describe('UserSettingsModal', () => {
     const mockUpdatePreferences = vi.fn();
-    const mockDrivers = [
-        { id: 16, code: "LEC", name: "Charles Leclerc", team: "Ferrari", teamColor: "#E80020" },
-        { id: 1, code: "VER", name: "Max Verstappen", team: "Red Bull", teamColor: "#3671C6" }
+    // `stats` is required by DriverProfile and was missing here. Nothing caught
+    // it because the mock was reached through a double cast — the fixture was
+    // not a DriverProfile and the test asserted against a shape the API cannot
+    // return. Typed explicitly so the next schema change fails here.
+    const stats: DriverProfile['stats'] = {
+        speed: 90, consistency: 88, aggression: 82, tireMgmt: 85, experience: 87,
+        wins: 5, podiums: 40, totalPoints: 1200, bestChampionshipFinish: 2,
+        totalRaces: 150, teamsDrivenFor: ['Ferrari'],
+    };
+    const mockDrivers: DriverProfile[] = [
+        { id: 16, code: "LEC", name: "Charles Leclerc", team: "Ferrari", teamColor: "#E80020", stats },
+        { id: 1, code: "VER", name: "Max Verstappen", team: "Red Bull", teamColor: "#3671C6", stats }
     ];
 
     beforeEach(() => {
         vi.clearAllMocks();
 
-        // Use direct casting to bypass strict vi.mocked() TS errors
-        (fetchDrivers as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockDrivers);
-        (useUser as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-            userProfile: { preferences: { favoriteDriver: 'LEC' } },
+        // vi.mocked keeps each mock's real signature. The previous double cast
+        // was there "to bypass strict vi.mocked() TS errors" — those errors
+        // were the fixture genuinely not matching DriverProfile.
+        vi.mocked(fetchDrivers).mockResolvedValue(mockDrivers);
+        vi.mocked(useUser).mockReturnValue({
+            // Same story: authSubId, email and createdAt are required by
+            // UserProfile and were absent, hidden by the cast.
+            userProfile: {
+                authSubId: 'auth0|test-user',
+                email: 'test@example.com',
+                createdAt: '2025-01-01T00:00:00Z',
+                preferences: { favoriteDriver: 'LEC' },
+            },
             updatePreferences: mockUpdatePreferences,
-            isLoading: false
+            isLoading: false,
+            error: null,
         });
     });
 
     it('shows the spinner while drivers load, then serves a reopen from cache', async () => {
         let resolveFetch: (drivers: typeof mockDrivers) => void = () => {};
-        (fetchDrivers as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        vi.mocked(fetchDrivers).mockImplementation(
             () => new Promise(resolve => { resolveFetch = resolve; })
         );
 

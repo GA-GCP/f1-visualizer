@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'; // <-- 'act' imported here
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { playSimulation, pauseSimulation, seekSimulation } from '@/api/ingestionApi';
 import MediaController from '../MediaController';
-import { playSimulation, pauseSimulation, seekSimulation } from '@/api/ingestionApi.ts';
 
 // Mock the API calls (mockResolvedValue ensures the await inside the component finishes)
 vi.mock('../../api/ingestionApi', () => ({

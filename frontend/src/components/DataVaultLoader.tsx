@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
-import { m } from 'framer-motion';
 import { Box, Paper, Typography } from '@mui/material';
+import { m } from 'framer-motion';
+import React, { useMemo } from 'react';
 import { BRAND_RED, FONT_FAMILY, PAPER_BG } from '../theme/tokens';
 import CyclingStatusLabel from './ui/CyclingStatusLabel';
 

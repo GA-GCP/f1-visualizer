@@ -1,9 +1,9 @@
 import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { renderWithProviders } from '@/test/renderWithProviders';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { sendIngestionCommand } from '@/api/ingestionApi';
+import { fetchYears, fetchSessionsByYear, fetchSessionDrivers } from '@/api/referenceApi';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import SessionControlPanel from '../selectors/SessionControlPanel';
-import { sendIngestionCommand } from '@/api/ingestionApi.ts';
-import { fetchYears, fetchSessionsByYear, fetchSessionDrivers } from '@/api/referenceApi.ts';
 
 // 1. Mock BOTH API modules
 vi.mock('../../api/ingestionApi', () => ({

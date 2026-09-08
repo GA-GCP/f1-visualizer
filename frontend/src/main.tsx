@@ -1,10 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
-import { installGlobalErrorHandlers, reactErrorHandlers } from './lib/errorReporting'
+import App from './App'
+import ConfigErrorScreen from './components/ConfigErrorScreen'
 import { missingEnvVars } from './config/env'
 import { publishBuildInfo } from './lib/buildInfo'
-import ConfigErrorScreen from './components/ConfigErrorScreen'
+import { installGlobalErrorHandlers, reactErrorHandlers } from './lib/errorReporting'
 
 // Self-hosted Titillium Web — only the faces this design actually uses.
 // Previously a render-blocking Google Fonts <link> that needed two cold

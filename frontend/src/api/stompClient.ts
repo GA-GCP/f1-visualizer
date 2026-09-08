@@ -1,8 +1,8 @@
 import { Client, ReconnectionTimeMode, TickerStrategy } from '@stomp/stompjs';
 import { env } from '../config/env';
-import { setConnectionStatus } from '../realtime/connectionStatus';
 import { createLogger } from '../lib/logger';
 import { MARK, mark } from '../lib/perf';
+import { setConnectionStatus } from '../realtime/connectionStatus';
 
 const log = createLogger('stomp');
 
@@ -109,7 +109,7 @@ export const stompClient = new Client({
         setConnectionStatus('reconnecting');
     },
     onStompError: (frame) => {
-        log.error('Broker reported an error', frame.headers['message']);
+        log.error('Broker reported an error', frame.headers.message);
         if (DEBUG_ENABLED) log.error('Broker error details', frame.body);
     },
 });

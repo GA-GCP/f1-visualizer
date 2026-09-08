@@ -1,28 +1,27 @@
-import React, { useMemo, useState, useRef } from 'react';
-import { Box, Typography, Paper, Grid, Chip, Snackbar, Alert, Button, CircularProgress } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
-import { useConnectionStatus } from '../realtime/useConnectionStatus';
-import { describeConnectionStatus } from '../realtime/connectionStatus';
-import { retryStompConnection } from '../api/stompClient';
+import { Box, Typography, Paper, Grid, Chip, Snackbar, Alert, Button, CircularProgress } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
 import { m, AnimatePresence } from 'framer-motion';
+import React, { useMemo, useState, useRef, useCallback  } from 'react';
+import { pauseSimulation } from '../api/ingestionApi';
+import { rosterToDriverProfiles } from '../api/mappers';
+import { queries } from '../api/queries';
+import { retryStompConnection } from '../api/stompClient';
+import { useUser } from '../context/UserContext';
+import LiveTelemetryPanel from '../features/live/LiveTelemetryPanel';
+import { useRaceSession } from '../features/live/useRaceSession';
 import { useLocation } from '../hooks/useLocation';
+import { createLogger } from '../lib/logger';
+import { describeConnectionStatus } from '../realtime/connectionStatus';
+import { useConnectionStatus } from '../realtime/useConnectionStatus';
+import { CANVAS_BG, PAPER_BG } from '../theme/tokens';
 import CircuitTrace from './CircuitTrace';
+import MediaController from './MediaController';
 import DriverSelector from './selectors/DriverSelector';
 import SessionControlPanel from './selectors/SessionControlPanel';
-import MediaController from './MediaController';
-import LiveTelemetryPanel from '../features/live/LiveTelemetryPanel';
-import { useQuery } from '@tanstack/react-query';
-import { queries } from '../api/queries';
 import type { DriverProfile, RaceEntryRoster, RaceSession } from '../api/referenceApi';
-import { pauseSimulation } from '../api/ingestionApi';
 import type { LocationPacket } from '../types/telemetry';
-import { useUser } from '../context/UserContext';
-import { useRaceSession } from '../features/live/useRaceSession';
-import { rosterToDriverProfiles } from '../api/mappers';
-import { useCallback } from 'react';
-import { createLogger } from '../lib/logger';
-import { CANVAS_BG, PAPER_BG } from '../theme/tokens';
 
 const log = createLogger('race-console');
 
@@ -151,7 +150,7 @@ const RaceSimulator: React.FC = () => {
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 
                         <Paper sx={{ bgcolor: PAPER_BG, border: '1px solid #333' }}>
-                            <SessionControlPanel onStreamStarted={handleStreamStarted} onSessionSelected={handleSessionSelected} onError={setStreamError} isSessionActive={session.isSessionActive} onCancel={handleCancelSimulation} />
+                            <SessionControlPanel onStreamStarted={handleStreamStarted} onSessionSelected={handleSessionSelected} onError={setStreamError} isSessionActive={session.isSessionActive} onCancel={() => void handleCancelSimulation()} />
                         </Paper>
 
                         <AnimatePresence>

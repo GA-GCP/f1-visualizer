@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useEffect } from 'react';
 import { activateStomp, setStompTokenProvider, stompClient } from '../api/stompClient';
 
 // Delay before the first STOMP activation after login (ms).

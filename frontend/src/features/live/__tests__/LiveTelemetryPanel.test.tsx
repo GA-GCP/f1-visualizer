@@ -1,7 +1,8 @@
 import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { TelemetryPacket, LapDataRecord } from '../../../types/telemetry';
+import LiveTelemetryPanel from '../LiveTelemetryPanel';
 import type { DriverProfile } from '../../../api/referenceApi';
+import type { TelemetryPacket, LapDataRecord } from '../../../types/telemetry';
 
 let emit: (packet: TelemetryPacket) => void = () => {};
 let connected = true;
@@ -11,8 +12,6 @@ vi.mock('../../../hooks/useTelemetry', () => ({
         return { isConnected: connected };
     },
 }));
-
-import LiveTelemetryPanel from '../LiveTelemetryPanel';
 
 const driver = { id: 1, code: 'VER', teamColor: '#123456' } as DriverProfile;
 const session = { key: 500, mode: 'SIMULATION' };

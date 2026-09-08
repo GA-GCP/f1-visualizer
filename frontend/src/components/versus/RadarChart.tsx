@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from 'react';
-import * as d3 from 'd3';
 import { Box } from '@mui/material';
 import { visuallyHidden } from '@mui/utils';
-import type { DriverProfile } from '@/api/referenceApi.ts';
+import * as d3 from 'd3';
+import React, { useEffect, useRef } from 'react';
+import type { DriverProfile } from '@/api/referenceApi';
 
 /** The axes the radar plots, as the label a reader would expect. */
 const RADAR_ATTRIBUTES = [

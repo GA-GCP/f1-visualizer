@@ -1,5 +1,5 @@
-import { apiClient } from './apiClient';
 import { createLogger } from '../lib/logger';
+import { apiClient } from './apiClient';
 
 const log = createLogger('ingestion');
 
@@ -19,7 +19,10 @@ export interface IngestionCommandRequest {
 
 export const sendIngestionCommand = async (command: IngestionCommandRequest): Promise<string> => {
     try {
-        const response = await apiClient.post('/ingestion/command', command);
+        // The generic, rather than returning axios's `any` and letting the
+        // declared Promise<string> assert it silently. Still an assertion
+        // about the wire — but a visible one, unlike the `any` it replaces.
+        const response = await apiClient.post<string>('/ingestion/command', command);
         return response.data;
     } catch (error) {
         log.error("Failed to send ingestion command", error);

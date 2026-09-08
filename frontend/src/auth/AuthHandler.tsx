@@ -1,10 +1,10 @@
-import React, { useEffect } from 'react';
-import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
+import axios from 'axios';
+import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { apiClient, setAuthHandlers } from '../api/apiClient';
-import { claimLoginRedirect } from './loginRedirectGuard';
 import { createLogger } from '../lib/logger';
+import { claimLoginRedirect } from './loginRedirectGuard';
 
 const log = createLogger('auth');
 

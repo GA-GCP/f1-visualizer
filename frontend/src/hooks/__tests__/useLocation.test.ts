@@ -1,10 +1,10 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { useLocation } from '../useLocation';
-import { stompClient } from '@/api/stompClient.ts';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { stompClient } from '@/api/stompClient';
 import { setConnectionStatus, resetConnectionStatus } from '@/realtime/connectionStatus';
-import type { LocationPacket } from '@/types/telemetry.ts';
+import type { LocationPacket } from '@/types/telemetry';
+import { useLocation } from '../useLocation';
 
 vi.mock('../../api/stompClient', () => ({
     stompClient: {

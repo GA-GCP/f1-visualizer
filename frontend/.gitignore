@@ -25,3 +25,7 @@ dist-ssr
 
 # Environment variables and development files
 .env.local
+
+# Coverage output (vitest --coverage)
+coverage/
+

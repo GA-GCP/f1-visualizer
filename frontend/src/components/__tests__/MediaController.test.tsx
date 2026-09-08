@@ -20,9 +20,9 @@ describe('MediaController', () => {
 
         expect(screen.getByText('SIMULATION TIMELINE')).toBeInTheDocument();
 
-        // Since isPlaying defaults to true, the Pause icon (used to trigger a pause) should be in the DOM
-        expect(screen.getByTestId('PauseIcon')).toBeInTheDocument();
-        // The accessible name is the contract, not the icon test id.
+        // The accessible name is the contract. The MUI icon's data-testid is an
+        // implementation detail MUI does not guarantee, and the assertion below
+        // already covers what a user can perceive.
         expect(screen.getByRole('button', { name: /pause simulation/i })).toBeInTheDocument();
     });
 
@@ -41,7 +41,6 @@ describe('MediaController', () => {
         // 2. WAIT for React to process the async state update!
         // The Pause icon should switch to the Play icon.
         await waitFor(() => {
-            expect(screen.getByTestId('PlayArrowIcon')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /play simulation/i })).toBeInTheDocument();
         });
 

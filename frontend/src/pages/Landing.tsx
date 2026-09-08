@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Box, Typography, Button } from '@mui/material';
 import { useAuth0 } from '@auth0/auth0-react';
 import SplashBackground from '../components/splash/SplashBackground';
@@ -38,7 +38,7 @@ const Landing: React.FC = () => {
     };
 
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, scale: 1.02 }}
@@ -71,7 +71,7 @@ const Landing: React.FC = () => {
                 }}
             >
                 {/* Per-letter title reveal */}
-                <motion.div
+                <m.div
                     variants={letterContainerVariants}
                     initial="hidden"
                     animate="visible"
@@ -85,7 +85,7 @@ const Landing: React.FC = () => {
                         const t = LETTERS.length > 1 ? i / (LETTERS.length - 1) : 0;
                         const gray = Math.round(255 - t * 100); // 255 → 155
                         return (
-                            <motion.span
+                            <m.span
                                 key={i}
                                 variants={letterVariants}
                                 style={{
@@ -101,13 +101,13 @@ const Landing: React.FC = () => {
                                 }}
                             >
                                 {letter}
-                            </motion.span>
+                            </m.span>
                         );
                     })}
-                </motion.div>
+                </m.div>
 
                 {/* Tagline */}
-                <motion.div
+                <m.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 1.5, ease: 'easeOut' }}
@@ -127,7 +127,7 @@ const Landing: React.FC = () => {
                     >
                         REAL-TIME TELEMETRY // HISTORICAL ANALYSIS // DRIVER COMPARISON
                     </Typography>
-                </motion.div>
+                </m.div>
 
                 {/* Circuit animation (continuous, perpetual) */}
                 <SplashCircuit continuous />
@@ -138,14 +138,14 @@ const Landing: React.FC = () => {
                     within ~550 ms rather than the 2.2 s it used to wait; the title
                     reveal and the rest of the decoration keep their own timing and
                     continue around it. */}
-                <motion.div
+                <m.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: 0.15, ease: 'easeOut' }}
                     style={{ position: 'relative', marginTop: 16 }}
                 >
                     {/* Pulsing glow ring behind the button */}
-                    <motion.div
+                    <m.div
                         animate={{ opacity: [0.2, 0.5, 0.2] }}
                         transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                         style={{
@@ -160,7 +160,7 @@ const Landing: React.FC = () => {
                         }}
                     />
 
-                    <motion.div
+                    <m.div
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.97 }}
                     >
@@ -189,8 +189,8 @@ const Landing: React.FC = () => {
                         >
                             Login or Sign Up For An Account
                         </Button>
-                    </motion.div>
-                </motion.div>
+                    </m.div>
+                </m.div>
             </Box>
 
             {/* Footer */}
@@ -204,7 +204,7 @@ const Landing: React.FC = () => {
                     zIndex: 1,
                 }}
             >
-                <motion.div
+                <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 0.4 }}
                     transition={{ duration: 0.5, delay: 3.0 }}
@@ -220,9 +220,9 @@ const Landing: React.FC = () => {
                     >
                         UNOFFICIAL TELEMETRY TOOL // F1 23-25
                     </Typography>
-                </motion.div>
+                </m.div>
             </Box>
-        </motion.div>
+        </m.div>
     );
 };
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { Box, Chip, Container, Grid, Typography, Paper } from '@mui/material';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 import DriverSelector from '../components/selectors/DriverSelector';
 import RadarChart from '../components/versus/RadarChart';
@@ -102,7 +102,7 @@ const VersusMode: React.FC = () => {
 
             <Grid container spacing={4} sx={{ mb: 6 }}>
                 <Grid size={{ xs: 12, md: 6 }}>
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, x: -40 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -115,10 +115,10 @@ const VersusMode: React.FC = () => {
                                 onChange={(d) => handleDriverSelect(d, 'A')}
                             />
                         </Paper>
-                    </motion.div>
+                    </m.div>
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, x: 40 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -131,13 +131,13 @@ const VersusMode: React.FC = () => {
                                 onChange={(d) => handleDriverSelect(d, 'B')}
                             />
                         </Paper>
-                    </motion.div>
+                    </m.div>
                 </Grid>
             </Grid>
 
             <Grid container spacing={4}>
                 <Grid size={{ xs: 12, md: 5 }}>
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.2 }}
@@ -153,11 +153,11 @@ const VersusMode: React.FC = () => {
                                 <Typography sx={{ color: driverB.teamColor, fontWeight: 'bold' }}>{driverB.code}</Typography>
                             </Box>
                         </Paper>
-                    </motion.div>
+                    </m.div>
                 </Grid>
 
                 <Grid size={{ xs: 12, md: 7 }}>
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.3 }}
@@ -224,7 +224,7 @@ const VersusMode: React.FC = () => {
                                 </Typography>
                             </Box>
                         </Paper>
-                    </motion.div>
+                    </m.div>
                 </Grid>
             </Grid>
         </Container>

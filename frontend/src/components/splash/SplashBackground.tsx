@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { m, useReducedMotion } from 'framer-motion';
 import { Box } from '@mui/material';
 
 const GRID_SVG = encodeURIComponent(
@@ -22,7 +22,7 @@ const SplashBackground: React.FC = () => {
     return (
         <Box sx={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
             {/* Base */}
-            <motion.div
+            <m.div
                 style={{
                     position: 'absolute',
                     inset: 0,
@@ -41,7 +41,7 @@ const SplashBackground: React.FC = () => {
                 a viewport-sized gradient at 60 fps for as long as the page was
                 open — on the Landing page, indefinitely. */}
             <Box sx={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-                <motion.div
+                <m.div
                     style={{
                         position: 'absolute',
                         top: 0,
@@ -74,8 +74,8 @@ const SplashBackground: React.FC = () => {
 
             {/* Pulsing radial glow — opacity only, so it stays on the compositor,
                 but it is still an infinite loop and is dropped under
-                prefers-reduced-motion. */}
-            <motion.div
+                prefers-reduced-m. */}
+            <m.div
                 style={{
                     position: 'absolute',
                     inset: 0,

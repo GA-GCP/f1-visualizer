@@ -3,6 +3,8 @@ import { render, type RenderOptions, type RenderResult } from '@testing-library/
 import { ThemeProvider } from '@mui/material';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { LazyMotion } from 'framer-motion';
+import motionFeatures from '../motionFeatures';
 import { broadcastTheme } from '../theme/theme';
 
 interface Options extends Omit<RenderOptions, 'wrapper'> {
@@ -35,7 +37,15 @@ export function renderWithProviders(
     const wrapper = ({ children }: { children: ReactNode }) => (
         <QueryClientProvider client={queryClient}>
             <ThemeProvider theme={broadcastTheme}>
-                <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+                {/* The same bundle App.tsx loads, imported statically rather than
+                    dynamically: features are present on the first render instead
+                    of arriving a microtask later, and the suite cannot drift onto
+                    a different feature set than production runs.
+                    `strict` is kept: a `motion.*` that escaped the codemod fails
+                    a test rather than only production. */}
+                <LazyMotion features={motionFeatures} strict>
+                    <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+                </LazyMotion>
             </ThemeProvider>
         </QueryClientProvider>
     );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { m, useReducedMotion } from 'framer-motion';
 import { Box, Container, Grid, Paper, Typography } from '@mui/material';
 import { BORDER_SUBTLE, BRAND_RED, FONT_FAMILY, PAPER_BG } from '../theme/tokens';
 import CyclingStatusLabel from './ui/CyclingStatusLabel';
@@ -72,7 +72,7 @@ const HeadToHeadLoader: React.FC = () => {
         <Container maxWidth="xl" sx={{ mt: 4, pb: 8 }}>
             {/* ── Header (pulsing, with redacted title) ── */}
             <Box sx={{ mb: 6, textAlign: 'center' }}>
-                <motion.div
+                <m.div
                     animate={{ opacity: [0.3, 0.65, 0.3] }}
                     transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                 >
@@ -88,14 +88,14 @@ const HeadToHeadLoader: React.FC = () => {
                     >
                         COMPARISON ENGINE
                     </Typography>
-                </motion.div>
+                </m.div>
             </Box>
 
             {/* ── Driver selector placeholders ── */}
             <Grid container spacing={4} sx={{ mb: 6 }}>
                 {/* Driver A */}
                 <Grid size={{ xs: 12, md: 6 }}>
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, x: -40 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -109,7 +109,7 @@ const HeadToHeadLoader: React.FC = () => {
                             }}
                         >
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <motion.div
+                                <m.div
                                     animate={{ opacity: [0.08, 0.2, 0.08] }}
                                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                                     style={{
@@ -120,7 +120,7 @@ const HeadToHeadLoader: React.FC = () => {
                                     }}
                                 />
                                 <Box sx={{ flex: 1 }}>
-                                    <motion.div
+                                    <m.div
                                         animate={{ opacity: [0.06, 0.15, 0.06] }}
                                         transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                                         style={{
@@ -131,7 +131,7 @@ const HeadToHeadLoader: React.FC = () => {
                                             marginBottom: 8,
                                         }}
                                     />
-                                    <motion.div
+                                    <m.div
                                         animate={{ opacity: [0.04, 0.1, 0.04] }}
                                         transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
                                         style={{
@@ -144,12 +144,12 @@ const HeadToHeadLoader: React.FC = () => {
                                 </Box>
                             </Box>
                         </Paper>
-                    </motion.div>
+                    </m.div>
                 </Grid>
 
                 {/* Driver B */}
                 <Grid size={{ xs: 12, md: 6 }}>
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, x: 40 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -163,7 +163,7 @@ const HeadToHeadLoader: React.FC = () => {
                             }}
                         >
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'row-reverse' }}>
-                                <motion.div
+                                <m.div
                                     animate={{ opacity: [0.08, 0.2, 0.08] }}
                                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
                                     style={{
@@ -174,7 +174,7 @@ const HeadToHeadLoader: React.FC = () => {
                                     }}
                                 />
                                 <Box sx={{ flex: 1, textAlign: 'right' }}>
-                                    <motion.div
+                                    <m.div
                                         animate={{ opacity: [0.06, 0.15, 0.06] }}
                                         transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
                                         style={{
@@ -186,7 +186,7 @@ const HeadToHeadLoader: React.FC = () => {
                                             marginLeft: 'auto',
                                         }}
                                     />
-                                    <motion.div
+                                    <m.div
                                         animate={{ opacity: [0.04, 0.1, 0.04] }}
                                         transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.7 }}
                                         style={{
@@ -200,7 +200,7 @@ const HeadToHeadLoader: React.FC = () => {
                                 </Box>
                             </Box>
                         </Paper>
-                    </motion.div>
+                    </m.div>
                 </Grid>
             </Grid>
 
@@ -208,7 +208,7 @@ const HeadToHeadLoader: React.FC = () => {
             <Grid container spacing={4}>
                 {/* Ghost Radar Chart */}
                 <Grid size={{ xs: 12, md: 5 }}>
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.2 }}
@@ -225,14 +225,14 @@ const HeadToHeadLoader: React.FC = () => {
                                 overflow: 'hidden',
                             }}
                         >
-                            <motion.div
+                            <m.div
                                 animate={{ opacity: [0.3, 0.6, 0.3] }}
                                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                             >
                                 <Typography variant="h6" component="h2" color="text.secondary" gutterBottom>
                                     ATTRIBUTE MAPPING
                                 </Typography>
-                            </motion.div>
+                            </m.div>
 
                             <svg
                                 viewBox={`0 0 ${RADAR_SIZE} ${RADAR_SIZE}`}
@@ -292,7 +292,7 @@ const HeadToHeadLoader: React.FC = () => {
                                 })}
 
                                 {/* Ghost blob A — draws in, then pulses */}
-                                <motion.path
+                                <m.path
                                     d={radarPath(blobA)}
                                     fill={GHOST_A}
                                     fillOpacity={0.06}
@@ -314,7 +314,7 @@ const HeadToHeadLoader: React.FC = () => {
                                 />
 
                                 {/* Ghost blob B — draws in staggered */}
-                                <motion.path
+                                <m.path
                                     d={radarPath(blobB)}
                                     fill={GHOST_B}
                                     fillOpacity={0.06}
@@ -342,7 +342,7 @@ const HeadToHeadLoader: React.FC = () => {
                                         <stop offset="100%" stopColor="rgba(225,6,0,0.2)" />
                                     </linearGradient>
                                 </defs>
-                                <motion.line
+                                <m.line
                                     x1={RADAR_CX}
                                     y1={RADAR_CY}
                                     x2={RADAR_CX + RADAR_R}
@@ -361,7 +361,7 @@ const HeadToHeadLoader: React.FC = () => {
 
                             {/* Ghost driver code labels */}
                             <Box sx={{ mt: 2, display: 'flex', gap: 3, alignItems: 'center' }}>
-                                <motion.div
+                                <m.div
                                     animate={{ opacity: [0.1, 0.3, 0.1] }}
                                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                                     style={{
@@ -374,7 +374,7 @@ const HeadToHeadLoader: React.FC = () => {
                                 <Typography color="text.secondary" sx={{ opacity: 0.3 }}>
                                     vs
                                 </Typography>
-                                <motion.div
+                                <m.div
                                     animate={{ opacity: [0.1, 0.3, 0.1] }}
                                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
                                     style={{
@@ -386,12 +386,12 @@ const HeadToHeadLoader: React.FC = () => {
                                 />
                             </Box>
                         </Paper>
-                    </motion.div>
+                    </m.div>
                 </Grid>
 
                 {/* Ghost Career Statistics */}
                 <Grid size={{ xs: 12, md: 7 }}>
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.3 }}
@@ -405,21 +405,21 @@ const HeadToHeadLoader: React.FC = () => {
                                 overflow: 'hidden',
                             }}
                         >
-                            <motion.div
+                            <m.div
                                 animate={{ opacity: [0.3, 0.6, 0.3] }}
                                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                             >
                                 <Typography variant="h6" component="h2" color="text.secondary" gutterBottom sx={{ mb: 4 }}>
                                     CAREER STATISTICS
                                 </Typography>
-                            </motion.div>
+                            </m.div>
 
                             {/* Ghost stat bars */}
                             {GHOST_STATS.map((stat, idx) => (
                                 <Box key={stat.label} sx={{ mb: 3 }}>
                                     {/* Label row */}
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                        <motion.div
+                                        <m.div
                                             animate={{ opacity: [0.08, 0.22, 0.08] }}
                                             transition={{
                                                 duration: 2,
@@ -444,7 +444,7 @@ const HeadToHeadLoader: React.FC = () => {
                                         >
                                             {stat.label}
                                         </Typography>
-                                        <motion.div
+                                        <m.div
                                             animate={{ opacity: [0.08, 0.22, 0.08] }}
                                             transition={{
                                                 duration: 2,
@@ -477,7 +477,7 @@ const HeadToHeadLoader: React.FC = () => {
                                             bgcolor: BORDER_SUBTLE,
                                         }}
                                     >
-                                        <motion.div
+                                        <m.div
                                             initial={{ scaleX: 0 }}
                                             animate={reduceMotion ? { scaleX: 1 } : { scaleX: [0, 1] }}
                                             transition={{
@@ -499,7 +499,7 @@ const HeadToHeadLoader: React.FC = () => {
                                                 opacity: 0.25,
                                             }}
                                         />
-                                        <motion.div
+                                        <m.div
                                             initial={{ scaleX: 0 }}
                                             animate={reduceMotion ? { scaleX: 1 } : { scaleX: [0, 1] }}
                                             transition={{
@@ -534,7 +534,7 @@ const HeadToHeadLoader: React.FC = () => {
                                     borderRadius: 1,
                                 }}
                             >
-                                <motion.div
+                                <m.div
                                     animate={{ opacity: [0.04, 0.1, 0.04] }}
                                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                                     style={{
@@ -574,7 +574,7 @@ const HeadToHeadLoader: React.FC = () => {
                                 </Box>
                             </Box>
                         </Paper>
-                    </motion.div>
+                    </m.div>
                 </Grid>
             </Grid>
 
@@ -588,7 +588,7 @@ const HeadToHeadLoader: React.FC = () => {
                     overflow: 'hidden',
                 }}
             >
-                <motion.div
+                <m.div
                     style={{
                         height: '100%',
                         width: '30%',

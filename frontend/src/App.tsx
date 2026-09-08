@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useState } from 'react';
 import { Routes, Route, Outlet, BrowserRouter, useNavigate, Navigate } from 'react-router-dom';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
-import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
+import { AnimatePresence, LazyMotion, m, MotionConfig } from 'framer-motion';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AxiosAuthInterceptor } from './auth/AuthHandler';
 import SplashScreen from './components/splash/SplashScreen';
@@ -36,13 +36,20 @@ const VersusMode = lazy(importVersusMode);
 // Renders null, so it needs no fallback — but it must not be imported
 // statically or the whole WebSocket stack stays on the public route.
 const StompAuthHandler = lazy(() =>
-    import('./auth/StompAuthHandler').then(m => ({ default: m.StompAuthHandler })),
+    import('./auth/StompAuthHandler').then(mod => ({ default: mod.StompAuthHandler })),
 );
+
+// framer-motion's feature set (layout projection, drag, gestures) is ~40 kB gz
+// and nothing on the public route needs it before first paint. `m` renders from
+// the core alone; LazyMotion pulls this in afterwards and the animations start
+// on the next frame. Module scope, not inline: LazyMotion loads on mount only,
+// so a new function identity per render would be silently ignored anyway.
+const loadMotionFeatures = () => import('./motionFeatures').then(mod => mod.default);
 
 // Also deferred: it pulls in the query client, the user API, and with them the
 // wire schemas and the validator. None of that can be used before login.
 const AppDataProvider = lazy(() =>
-    import('./app/AppDataProvider').then(m => ({ default: m.AppDataProvider })),
+    import('./app/AppDataProvider').then(mod => ({ default: mod.AppDataProvider })),
 );
 
 // --- STARTUP PREFETCH ---
@@ -57,8 +64,8 @@ const AppDataProvider = lazy(() =>
 // dynamically, not statically: it is unreachable before login, so a static
 // import would put all of it in the chunk the public landing page downloads.
 const STARTUP_PREFETCH: PrefetchTask[] = [
-    { name: 'drivers', run: () => import('./api/prefetch').then(m => m.prefetchDrivers()) },
-    { name: 'sessions', run: () => import('./api/prefetch').then(m => m.prefetchSessions()), delayMs: 400 },
+    { name: 'drivers', run: () => import('./api/prefetch').then(mod => mod.prefetchDrivers()) },
+    { name: 'sessions', run: () => import('./api/prefetch').then(mod => mod.prefetchSessions()), delayMs: 400 },
     { name: 'the app shell', run: importLayoutMain },
     { name: 'the dashboard', run: importHome },
     { name: 'the data vault', run: importHistoricalData, delayMs: 1000 },
@@ -123,7 +130,7 @@ const RequiredAuth: React.FC = () => {
                 That is the whole point: route chunks, the STOMP handshake, the
                 session cascade and the driver list all load *during* the intro
                 instead of starting cold once it ends. */}
-            <motion.div
+            <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4 }}
@@ -138,7 +145,7 @@ const RequiredAuth: React.FC = () => {
                 <Suspense fallback={<RouteFallback />}>
                     <Outlet />
                 </Suspense>
-            </motion.div>
+            </m.div>
 
         </AppDataProvider>
         </Suspense>
@@ -242,18 +249,23 @@ function App() {
     return (
         <ThemeProvider theme={broadcastTheme}>
             <CssBaseline />
-            {/* Every framer animation in the tree respects prefers-reduced-motion:
-                transform and layout animations are dropped, opacity is kept. */}
-            <MotionConfig reducedMotion="user" transition={{ duration: DUR.base, ease: EASE.out }}>
-            <BrowserRouter>
-                <Auth0ProviderWithNavigate>
-                    <AxiosAuthInterceptor />
-                    <ErrorBoundary>
-                        <AppRoutes />
-                    </ErrorBoundary>
-                </Auth0ProviderWithNavigate>
-            </BrowserRouter>
-            </MotionConfig>
+            {/* `strict` turns a stray `motion.*` into a thrown error rather than a
+                silently re-bundled feature set. The eslint rule catches those at
+                build time; this is the backstop for anything it cannot see. */}
+            <LazyMotion features={loadMotionFeatures} strict>
+                {/* Every framer animation in the tree respects prefers-reduced-motion:
+                    transform and layout animations are dropped, opacity is kept. */}
+                <MotionConfig reducedMotion="user" transition={{ duration: DUR.base, ease: EASE.out }}>
+                    <BrowserRouter>
+                        <Auth0ProviderWithNavigate>
+                            <AxiosAuthInterceptor />
+                            <ErrorBoundary>
+                                <AppRoutes />
+                            </ErrorBoundary>
+                        </Auth0ProviderWithNavigate>
+                    </BrowserRouter>
+                </MotionConfig>
+            </LazyMotion>
         </ThemeProvider>
     );
 }

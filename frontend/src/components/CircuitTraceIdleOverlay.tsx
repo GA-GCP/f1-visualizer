@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Box, Typography } from '@mui/material';
 import SpeedIcon from '@mui/icons-material/Speed';
 import { BRAND_RED, FONT_FAMILY } from '../theme/tokens';
@@ -10,7 +10,7 @@ import { BRAND_RED, FONT_FAMILY } from '../theme/tokens';
  * Uses the same animation patterns as DataVaultLoader and HeadToHeadLoader.
  */
 const CircuitTraceIdleOverlay: React.FC = () => (
-    <motion.div
+    <m.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0, scale: 0.98 }}
@@ -27,12 +27,12 @@ const CircuitTraceIdleOverlay: React.FC = () => (
         }}
     >
         {/* Pulsing SpeedIcon */}
-        <motion.div
+        <m.div
             animate={{ opacity: [0.15, 0.4, 0.15], scale: [1, 1.05, 1] }}
             transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
         >
             <SpeedIcon sx={{ fontSize: 64, color: BRAND_RED }} />
-        </motion.div>
+        </m.div>
 
         {/* Primary instructional text */}
         <Typography
@@ -76,7 +76,7 @@ const CircuitTraceIdleOverlay: React.FC = () => (
                 overflow: 'hidden',
             }}
         >
-            <motion.div
+            <m.div
                 style={{
                     height: '100%',
                     width: '30%',
@@ -86,7 +86,7 @@ const CircuitTraceIdleOverlay: React.FC = () => (
                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
             />
         </Box>
-    </motion.div>
+    </m.div>
 );
 
 export default CircuitTraceIdleOverlay;

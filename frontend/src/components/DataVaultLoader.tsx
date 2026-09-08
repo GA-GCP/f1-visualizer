@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Box, Paper, Typography } from '@mui/material';
 import { BRAND_RED, FONT_FAMILY, PAPER_BG } from '../theme/tokens';
 import CyclingStatusLabel from './ui/CyclingStatusLabel';
@@ -70,7 +70,7 @@ const DataVaultLoader: React.FC = () => {
             }}
         >
             {/* ── Title (pulsing, redacted race name) ── */}
-            <motion.div
+            <m.div
                 animate={{ opacity: [0.3, 0.65, 0.3] }}
                 transition={{
                     duration: 2.5,
@@ -81,7 +81,7 @@ const DataVaultLoader: React.FC = () => {
                 <Typography variant="h6" component="h2" color="primary" gutterBottom>
                     LAP TIMES // ████████
                 </Typography>
-            </motion.div>
+            </m.div>
 
             {/* ── Animated chart preview area ── */}
             <Box sx={{ width: '100%', position: 'relative' }}>
@@ -144,7 +144,7 @@ const DataVaultLoader: React.FC = () => {
 
                     {/* Ghost chart lines — draw in / out continuously */}
                     {paths.map((d, i) => (
-                        <motion.path
+                        <m.path
                             key={i}
                             d={d}
                             fill="none"
@@ -190,7 +190,7 @@ const DataVaultLoader: React.FC = () => {
                             />
                         </linearGradient>
                     </defs>
-                    <motion.rect
+                    <m.rect
                         y={MARGIN.top}
                         width={2}
                         height={INNER_H}
@@ -210,7 +210,7 @@ const DataVaultLoader: React.FC = () => {
                             key={`leg${i}`}
                             transform={`translate(${MARGIN.left + INNER_W + 10}, ${MARGIN.top + i * 18})`}
                         >
-                            <motion.rect
+                            <m.rect
                                 width={12}
                                 height={12}
                                 fill={color}
@@ -222,7 +222,7 @@ const DataVaultLoader: React.FC = () => {
                                     delay: i * 0.2,
                                 }}
                             />
-                            <motion.rect
+                            <m.rect
                                 x={16}
                                 y={2}
                                 width={40}
@@ -279,7 +279,7 @@ const DataVaultLoader: React.FC = () => {
                     overflow: 'hidden',
                 }}
             >
-                <motion.div
+                <m.div
                     style={{
                         height: '100%',
                         width: '30%',

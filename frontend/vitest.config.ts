@@ -8,7 +8,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig({
-    plugins: [react()],
+    // The compiler is enabled here too, not just in vite.config.ts: without it
+    // the suite would validate uncompiled components while production ships
+    // compiled ones, and the compiler rewrites hook call order.
+    plugins: [react({ compiler: true })],
     resolve: {
         alias: {
             '@': path.resolve(__dirname, './src'),

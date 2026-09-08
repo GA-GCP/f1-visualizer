@@ -1,6 +1,6 @@
 import React, { memo, useRef, useEffect, useLayoutEffect, useState } from 'react';
 import { Box, Paper, Typography } from '@mui/material';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, m } from 'framer-motion';
 import type { LocationPacket } from '../types/telemetry';
 import type { DriverProfile } from '../api/referenceApi';
 import CircuitTraceIdleOverlay from './CircuitTraceIdleOverlay';
@@ -405,7 +405,7 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                 </Typography>
                 <AnimatePresence>
                     {isSessionActive && !isInitializing && sessionMeta && (
-                        <motion.div
+                        <m.div
                             key="race-info"
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 0.4, x: 0 }}
@@ -422,7 +422,7 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                             >
                                 {sessionMeta.year} | {sessionMeta.meetingName.toUpperCase()}
                             </Typography>
-                        </motion.div>
+                        </m.div>
                     )}
                 </AnimatePresence>
             </Box>

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Box, Button, Typography } from '@mui/material';
 import SplashBackground from './SplashBackground';
 import SplashCircuit from './SplashCircuit';
@@ -51,7 +51,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, readiness, fail
     }, []);
 
     return (
-        <motion.div
+        <m.div
             key="splash"
             initial={{ opacity: 1 }}
             exit={{ opacity: 0, scale: 1.02 }}
@@ -85,7 +85,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, readiness, fail
                 }}
             >
                 {/* Title text reveal */}
-                <motion.div
+                <m.div
                     variants={letterContainerVariants}
                     initial="hidden"
                     animate="visible"
@@ -102,7 +102,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, readiness, fail
                         const t = LETTERS.length > 1 ? i / (LETTERS.length - 1) : 0;
                         const gray = Math.round(255 - t * 100); // 255 → 155
                         return (
-                            <motion.span
+                            <m.span
                                 key={i}
                                 variants={letterVariants}
                                 style={{
@@ -118,10 +118,10 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, readiness, fail
                                 }}
                             >
                                 {letter}
-                            </motion.span>
+                            </m.span>
                         );
                     })}
-                </motion.div>
+                </m.div>
 
                 {/* Circuit animation */}
                 <SplashCircuit phase={phase} />
@@ -168,7 +168,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, readiness, fail
             >
                 Skip intro
             </Button>
-        </motion.div>
+        </m.div>
     );
 };
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, m } from 'framer-motion';
 import { Typography } from '@mui/material';
 import { useCyclingIndex } from './useCyclingIndex';
 import { DUR } from '../../theme/motion';
@@ -22,7 +22,7 @@ const CyclingStatusLabel: React.FC<CyclingStatusLabelProps> = ({ messages, inter
 
     return (
         <AnimatePresence mode="wait">
-            <motion.div
+            <m.div
                 key={index}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -42,7 +42,7 @@ const CyclingStatusLabel: React.FC<CyclingStatusLabelProps> = ({ messages, inter
                 >
                     {messages[index]}
                 </Typography>
-            </motion.div>
+            </m.div>
         </AnimatePresence>
     );
 };

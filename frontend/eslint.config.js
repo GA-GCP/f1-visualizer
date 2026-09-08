@@ -25,6 +25,30 @@ export default defineConfig([
     },
   },
   {
+    // `m` renders from framer's core; `motion` statically pulls in the whole
+    // feature set, which is the 40 kB the LazyMotion split exists to defer.
+    // LazyMotion's `strict` catches this too, but only when the component
+    // actually renders — and in production it throws rather than warns. This
+    // catches it at lint time instead.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/motionFeatures.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'framer-motion',
+              importNames: ['motion', 'domMax', 'domAnimation'],
+              message:
+                'Import `m` instead of `motion`, and let src/motionFeatures.ts own the feature bundle — see the LazyMotion wrapper in App.tsx.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Design tokens are only worth centralising if they stay centralised.
     // src/theme/ is where the values are allowed to be written literally.
     files: ['src/**/*.{ts,tsx}'],

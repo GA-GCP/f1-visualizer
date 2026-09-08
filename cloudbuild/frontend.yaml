@@ -28,6 +28,8 @@ substitutions:
   # The tag is kept next to the digest for readability; the digest resolves.
   _NODE_IMAGE: 'node:26.8.1-alpine3.24@sha256:2d984a15c9b54fd0aeb608b8e0d0d83529eb34d2966db27a1fb4f1edc3d298a3'
   _CLOUD_SDK_IMAGE: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0@sha256:c6c6bec5b8b94e4eb2f8ade1f17cf4cb01f07973b7fbb3a4843f0a61592ad5ed'
+  # Scans the built image before any traffic reaches it. Pinned like the rest.
+  _TRIVY_IMAGE: 'aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969'
   # Digest only: this image is published without a meaningful version tag.
   _DOCKER_IMAGE: 'gcr.io/cloud-builders/docker@sha256:3d00b6c1a9b862621c30fc74d4f2abfc62bcbdee631ed3febd31e7edbdf6252c'
 
@@ -146,6 +148,45 @@ steps:
 
         docker push "$$IMAGE:${_SHORT_SHA}"
         docker push "$$IMAGE:latest-${_ENV}"
+
+  # 5b. Scan the image that was just built.
+  #     pr-checks.yml runs Trivy in `config` mode over infrastructure/modules —
+  #     it has never looked at the artifact that actually runs. Pinning the base
+  #     image by digest made it reproducible; it says nothing about whether it
+  #     is safe.
+  #
+  #     Runs through the docker builder so trivy can reach the daemon and scan
+  #     layers already present locally, rather than pulling from Artifact
+  #     Registry and needing credentials of its own.
+  #
+  #     --ignore-unfixed on purpose: an Alpine base carries CVEs with no fixed
+  #     version available, and a gate that fails on those gets switched off
+  #     within a month. HIGH and CRITICAL *with a fix* is the actionable set.
+  #
+  #     Placed after the push and before the deploy. The image exists in the
+  #     registry at this point but no revision serves it, so a failure here
+  #     costs an unused tag rather than a rollback.
+  - name: '${_DOCKER_IMAGE}'
+    id: 'scan-image'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:${_SHORT_SHA}"
+
+        docker run --rm \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -v /workspace/.trivycache:/root/.cache \
+          ${_TRIVY_IMAGE} image \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 1 \
+            --no-progress \
+            --scanners vuln \
+            "$$IMAGE"
+
+        echo "No fixable HIGH or CRITICAL vulnerabilities in $$IMAGE"
 
   # 6. Deploy the new revision WITHOUT traffic.
   #     `gcloud run services update` used to shift 100% of traffic the moment

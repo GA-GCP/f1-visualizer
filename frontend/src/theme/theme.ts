@@ -1,12 +1,6 @@
 import { createTheme } from '@mui/material';
 import { cssEase, DUR, EASE } from './motion';
-import {
-    APP_BG,
-    BRAND_RED,
-    BRAND_RED_LIGHT,
-    FONT_FAMILY,
-    TEXT_DISABLED,
-} from './tokens';
+import { APP_BG, BRAND_RED, BRAND_RED_LIGHT, FONT_FAMILY, TEXT_DISABLED } from './tokens';
 
 /**
  * The broadcast theme.
@@ -33,7 +27,7 @@ export const broadcastTheme = createTheme({
         secondary: { main: '#ffffff' },
         background: {
             default: APP_BG,
-            paper: 'rgba(20, 20, 20, 0.6)'
+            paper: 'rgba(20, 20, 20, 0.6)',
         },
         text: {
             primary: '#ffffff',
@@ -50,7 +44,12 @@ export const broadcastTheme = createTheme({
         // telemetry value shifted everything after it sideways on every commit.
         allVariants: { fontVariantNumeric: 'tabular-nums' },
         h1: { fontWeight: 700, fontStyle: 'italic', letterSpacing: '-0.02em' },
-        h4: { fontWeight: 700, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '0.05em' },
+        h4: {
+            fontWeight: 700,
+            fontStyle: 'italic',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+        },
         h6: { fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' },
         body1: { fontSize: '1.1rem' },
     },
@@ -129,8 +128,8 @@ export const broadcastTheme = createTheme({
                     backdropFilter: 'blur(20px)',
                     borderBottom: `2px solid ${BRAND_RED}`,
                     boxShadow: 'none',
-                }
-            }
+                },
+            },
         },
         MuiChip: {
             styleOverrides: {
@@ -138,7 +137,7 @@ export const broadcastTheme = createTheme({
                     fontWeight: 700,
                     textTransform: 'uppercase',
                     border: '1px solid rgba(255,255,255,0.2)',
-                }
+                },
             },
             variants: [
                 {
@@ -148,9 +147,9 @@ export const broadcastTheme = createTheme({
                         color: '#00ff00',
                         border: '1px solid #00ff00',
                         boxShadow: '0 0 10px rgba(0, 255, 0, 0.2)',
-                    }
-                }
-            ]
-        }
-    }
+                    },
+                },
+            ],
+        },
+    },
 });

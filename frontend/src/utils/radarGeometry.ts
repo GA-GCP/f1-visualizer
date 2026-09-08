@@ -1,7 +1,13 @@
 import * as d3 from 'd3';
 
-export const RADAR_FEATURES = ['speed', 'consistency', 'aggression', 'tireMgmt', 'experience'] as const;
-export type RadarFeature = typeof RADAR_FEATURES[number];
+export const RADAR_FEATURES = [
+    'speed',
+    'consistency',
+    'aggression',
+    'tireMgmt',
+    'experience',
+] as const;
+export type RadarFeature = (typeof RADAR_FEATURES)[number];
 
 export interface RadarPoint {
     x: number;
@@ -13,7 +19,7 @@ export interface RadarPoint {
  * Axes are evenly distributed around the circle, starting from 12-o'clock.
  */
 export function angleForAxis(index: number, total: number = RADAR_FEATURES.length): number {
-    return (Math.PI * 2 / total) * index - Math.PI / 2;
+    return ((Math.PI * 2) / total) * index - Math.PI / 2;
 }
 
 /**
@@ -22,7 +28,7 @@ export function angleForAxis(index: number, total: number = RADAR_FEATURES.lengt
  */
 export function computeRadarPoints(
     stats: Record<string, number>,
-    rScale: d3.ScaleLinear<number, number>
+    rScale: d3.ScaleLinear<number, number>,
 ): RadarPoint[] {
     const points = RADAR_FEATURES.map((feature, i) => {
         const value = stats[feature] ?? 0;

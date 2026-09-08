@@ -104,12 +104,7 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase, continuous }) => {
                 {/* Hidden path solely for getTotalLength() measurement.
                     Rendered unconditionally so the useEffect can measure on
                     mount, but invisible (no stroke, no fill). */}
-                <path
-                    ref={measureRef}
-                    d={CIRCUIT_PATH}
-                    fill="none"
-                    stroke="none"
-                />
+                <path ref={measureRef} d={CIRCUIT_PATH} fill="none" stroke="none" />
 
                 {/* Faint track "shadow" outline always visible once measured */}
                 {pathLength > 0 && (

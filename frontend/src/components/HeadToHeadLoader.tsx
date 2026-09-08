@@ -111,7 +111,11 @@ const HeadToHeadLoader: React.FC = () => {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                 <m.div
                                     animate={{ opacity: [0.08, 0.2, 0.08] }}
-                                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                                    transition={{
+                                        duration: 2,
+                                        repeat: Infinity,
+                                        ease: 'easeInOut',
+                                    }}
                                     style={{
                                         width: 44,
                                         height: 44,
@@ -122,7 +126,11 @@ const HeadToHeadLoader: React.FC = () => {
                                 <Box sx={{ flex: 1 }}>
                                     <m.div
                                         animate={{ opacity: [0.06, 0.15, 0.06] }}
-                                        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                                        transition={{
+                                            duration: 2,
+                                            repeat: Infinity,
+                                            ease: 'easeInOut',
+                                        }}
                                         style={{
                                             height: 14,
                                             width: '60%',
@@ -133,7 +141,12 @@ const HeadToHeadLoader: React.FC = () => {
                                     />
                                     <m.div
                                         animate={{ opacity: [0.04, 0.1, 0.04] }}
-                                        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
+                                        transition={{
+                                            duration: 2,
+                                            repeat: Infinity,
+                                            ease: 'easeInOut',
+                                            delay: 0.3,
+                                        }}
                                         style={{
                                             height: 10,
                                             width: '40%',
@@ -162,10 +175,22 @@ const HeadToHeadLoader: React.FC = () => {
                                 overflow: 'hidden',
                             }}
                         >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: 'row-reverse' }}>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 2,
+                                    flexDirection: 'row-reverse',
+                                }}
+                            >
                                 <m.div
                                     animate={{ opacity: [0.08, 0.2, 0.08] }}
-                                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
+                                    transition={{
+                                        duration: 2,
+                                        repeat: Infinity,
+                                        ease: 'easeInOut',
+                                        delay: 0.4,
+                                    }}
                                     style={{
                                         width: 44,
                                         height: 44,
@@ -176,7 +201,12 @@ const HeadToHeadLoader: React.FC = () => {
                                 <Box sx={{ flex: 1, textAlign: 'right' }}>
                                     <m.div
                                         animate={{ opacity: [0.06, 0.15, 0.06] }}
-                                        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
+                                        transition={{
+                                            duration: 2,
+                                            repeat: Infinity,
+                                            ease: 'easeInOut',
+                                            delay: 0.4,
+                                        }}
                                         style={{
                                             height: 14,
                                             width: '60%',
@@ -188,7 +218,12 @@ const HeadToHeadLoader: React.FC = () => {
                                     />
                                     <m.div
                                         animate={{ opacity: [0.04, 0.1, 0.04] }}
-                                        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.7 }}
+                                        transition={{
+                                            duration: 2,
+                                            repeat: Infinity,
+                                            ease: 'easeInOut',
+                                            delay: 0.7,
+                                        }}
                                         style={{
                                             height: 10,
                                             width: '40%',
@@ -229,7 +264,12 @@ const HeadToHeadLoader: React.FC = () => {
                                 animate={{ opacity: [0.3, 0.6, 0.3] }}
                                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                             >
-                                <Typography variant="h6" component="h2" color="text.secondary" gutterBottom>
+                                <Typography
+                                    variant="h6"
+                                    component="h2"
+                                    color="text.secondary"
+                                    gutterBottom
+                                >
                                     ATTRIBUTE MAPPING
                                 </Typography>
                             </m.div>
@@ -363,7 +403,11 @@ const HeadToHeadLoader: React.FC = () => {
                             <Box sx={{ mt: 2, display: 'flex', gap: 3, alignItems: 'center' }}>
                                 <m.div
                                     animate={{ opacity: [0.1, 0.3, 0.1] }}
-                                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                                    transition={{
+                                        duration: 2,
+                                        repeat: Infinity,
+                                        ease: 'easeInOut',
+                                    }}
                                     style={{
                                         width: 36,
                                         height: 14,
@@ -376,7 +420,12 @@ const HeadToHeadLoader: React.FC = () => {
                                 </Typography>
                                 <m.div
                                     animate={{ opacity: [0.1, 0.3, 0.1] }}
-                                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
+                                    transition={{
+                                        duration: 2,
+                                        repeat: Infinity,
+                                        ease: 'easeInOut',
+                                        delay: 0.4,
+                                    }}
                                     style={{
                                         width: 36,
                                         height: 14,
@@ -409,7 +458,13 @@ const HeadToHeadLoader: React.FC = () => {
                                 animate={{ opacity: [0.3, 0.6, 0.3] }}
                                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                             >
-                                <Typography variant="h6" component="h2" color="text.secondary" gutterBottom sx={{ mb: 4 }}>
+                                <Typography
+                                    variant="h6"
+                                    component="h2"
+                                    color="text.secondary"
+                                    gutterBottom
+                                    sx={{ mb: 4 }}
+                                >
                                     CAREER STATISTICS
                                 </Typography>
                             </m.div>
@@ -418,7 +473,13 @@ const HeadToHeadLoader: React.FC = () => {
                             {GHOST_STATS.map((stat, idx) => (
                                 <Box key={stat.label} sx={{ mb: 3 }}>
                                     {/* Label row */}
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            mb: 1,
+                                        }}
+                                    >
                                         <m.div
                                             animate={{ opacity: [0.08, 0.22, 0.08] }}
                                             transition={{
@@ -479,7 +540,9 @@ const HeadToHeadLoader: React.FC = () => {
                                     >
                                         <m.div
                                             initial={{ scaleX: 0 }}
-                                            animate={reduceMotion ? { scaleX: 1 } : { scaleX: [0, 1] }}
+                                            animate={
+                                                reduceMotion ? { scaleX: 1 } : { scaleX: [0, 1] }
+                                            }
                                             transition={{
                                                 duration: 2,
                                                 delay: 0.5 + idx * 0.4,
@@ -501,7 +564,9 @@ const HeadToHeadLoader: React.FC = () => {
                                         />
                                         <m.div
                                             initial={{ scaleX: 0 }}
-                                            animate={reduceMotion ? { scaleX: 1 } : { scaleX: [0, 1] }}
+                                            animate={
+                                                reduceMotion ? { scaleX: 1 } : { scaleX: [0, 1] }
+                                            }
                                             transition={{
                                                 duration: 2,
                                                 delay: 0.5 + idx * 0.4,
@@ -536,7 +601,11 @@ const HeadToHeadLoader: React.FC = () => {
                             >
                                 <m.div
                                     animate={{ opacity: [0.04, 0.1, 0.04] }}
-                                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                                    transition={{
+                                        duration: 2,
+                                        repeat: Infinity,
+                                        ease: 'easeInOut',
+                                    }}
                                     style={{
                                         height: 8,
                                         width: '70%',

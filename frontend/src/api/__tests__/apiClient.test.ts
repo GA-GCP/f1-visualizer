@@ -96,8 +96,9 @@ describe('apiClient', () => {
 
             // A distinguishable error: an expired session and an outage used to
             // be presented to the user identically.
-            await expect(onRejected({ response: { status: 401 }, config }))
-                .rejects.toBeInstanceOf(AuthExpiredError);
+            await expect(onRejected({ response: { status: 401 }, config })).rejects.toBeInstanceOf(
+                AuthExpiredError,
+            );
             expect(onAuthExpired).toHaveBeenCalledTimes(1);
         });
 
@@ -111,8 +112,9 @@ describe('apiClient', () => {
 
             const config = { headers: {}, _authRetried: true };
 
-            await expect(onRejected({ response: { status: 401 }, config }))
-                .rejects.toBeInstanceOf(AuthExpiredError);
+            await expect(onRejected({ response: { status: 401 }, config })).rejects.toBeInstanceOf(
+                AuthExpiredError,
+            );
             expect(refreshAccessToken).not.toHaveBeenCalled();
             expect(onAuthExpired).toHaveBeenCalledTimes(1);
         });

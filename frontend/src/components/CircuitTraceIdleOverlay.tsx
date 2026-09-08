@@ -23,7 +23,8 @@ const CircuitTraceIdleOverlay: React.FC = () => (
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 2,
-            background: 'radial-gradient(ellipse at center, rgba(225,6,0,0.03) 0%, transparent 70%)',
+            background:
+                'radial-gradient(ellipse at center, rgba(225,6,0,0.03) 0%, transparent 70%)',
         }}
     >
         {/* Pulsing SpeedIcon */}
@@ -80,7 +81,8 @@ const CircuitTraceIdleOverlay: React.FC = () => (
                 style={{
                     height: '100%',
                     width: '30%',
-                    background: 'linear-gradient(90deg, transparent, rgba(225,6,0,0.2), transparent)',
+                    background:
+                        'linear-gradient(90deg, transparent, rgba(225,6,0,0.2), transparent)',
                 }}
                 animate={{ x: ['-100%', '400%'] }}
                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}

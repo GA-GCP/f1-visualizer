@@ -1,4 +1,16 @@
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, CircularProgress, Alert , useMediaQuery, useTheme } from '@mui/material';
+import {
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Button,
+    Box,
+    Typography,
+    CircularProgress,
+    Alert,
+    useMediaQuery,
+    useTheme,
+} from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { m } from 'framer-motion';
 import React, { useState } from 'react';
@@ -35,9 +47,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
     // Derived rather than seeded by an effect: the saved favourite is the
     // default until the user picks something else in this dialog.
     const savedFavourite = userProfile?.preferences?.favoriteDriver;
-    const selectedDriver = chosenDriver
-        ?? drivers?.find(d => d.code === savedFavourite)
-        ?? null;
+    const selectedDriver = chosenDriver ?? drivers?.find((d) => d.code === savedFavourite) ?? null;
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -45,7 +55,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
         try {
             await updatePreferences({
                 ...userProfile?.preferences,
-                favoriteDriver: selectedDriver?.code || undefined
+                favoriteDriver: selectedDriver?.code || undefined,
             });
             onClose();
         } catch (e) {
@@ -70,8 +80,13 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
                     animate: { opacity: 1, scale: 1 },
                     exit: { opacity: 0, scale: 0.95 },
                     transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] as const },
-                    sx: { bgcolor: PAPER_BG, color: 'white', minWidth: { xs: 'auto', sm: 400 }, border: '1px solid #333' }
-                } as NonNullable<DialogProps['slotProps']>['paper']
+                    sx: {
+                        bgcolor: PAPER_BG,
+                        color: 'white',
+                        minWidth: { xs: 'auto', sm: 400 },
+                        border: '1px solid #333',
+                    },
+                } as NonNullable<DialogProps['slotProps']>['paper'],
             }}
         >
             <DialogTitle sx={{ borderBottom: '1px solid #333', pb: 2 }}>
@@ -79,15 +94,26 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
             </DialogTitle>
             <DialogContent sx={{ pt: 3 }}>
                 {errorMsg && (
-                    <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert>
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {errorMsg}
+                    </Alert>
                 )}
                 {isLoading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            py: 6,
+                        }}
+                    >
                         <CircularProgress size={40} />
                     </Box>
                 ) : (
                     <Box sx={{ mt: 2 }}>
-                        <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>DEFAULT DRIVER CHANNEL</Typography>
+                        <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                            DEFAULT DRIVER CHANNEL
+                        </Typography>
                         <DriverSelector
                             label="Select Driver"
                             options={drivers ?? []}
@@ -98,8 +124,15 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
                 )}
             </DialogContent>
             <DialogActions sx={{ p: 2, borderTop: '1px solid #333' }}>
-                <Button onClick={onClose} color="inherit">Cancel</Button>
-                <Button onClick={() => void handleSave()} variant="contained" color="primary" disabled={isSaving || isLoading}>
+                <Button onClick={onClose} color="inherit">
+                    Cancel
+                </Button>
+                <Button
+                    onClick={() => void handleSave()}
+                    variant="contained"
+                    color="primary"
+                    disabled={isSaving || isLoading}
+                >
                     {isSaving ? 'SAVING...' : 'SAVE SETTINGS'}
                 </Button>
             </DialogActions>

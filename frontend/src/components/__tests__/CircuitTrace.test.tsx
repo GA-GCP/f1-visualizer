@@ -9,12 +9,22 @@ import CircuitTrace from '../CircuitTrace';
 
 // Mock overlay components to isolate CircuitTrace logic
 vi.mock('../CircuitTraceIdleOverlay', () => ({
-    default: () => <div data-testid="idle-overlay">SELECT A RACE AND START A SIMULATION</div>
+    default: () => <div data-testid="idle-overlay">SELECT A RACE AND START A SIMULATION</div>,
 }));
 vi.mock('../CircuitTraceLoadingOverlay', () => ({
-    default: ({ year, meetingName, driverCode }: { year: number; meetingName: string; driverCode: string }) => (
-        <div data-testid="loading-overlay">{year} {meetingName} {driverCode}</div>
-    )
+    default: ({
+        year,
+        meetingName,
+        driverCode,
+    }: {
+        year: number;
+        meetingName: string;
+        driverCode: string;
+    }) => (
+        <div data-testid="loading-overlay">
+            {year} {meetingName} {driverCode}
+        </div>
+    ),
 }));
 
 /** Helper: creates a mutable ref pre-loaded with packets */
@@ -39,7 +49,19 @@ describe('CircuitTrace', () => {
         name: 'Max Verstappen',
         team: 'Red Bull Racing',
         teamColor: '#3671C6',
-        stats: { speed: 99, consistency: 95, aggression: 98, tireMgmt: 92, experience: 85, wins: 54, podiums: 98, totalPoints: 2586, bestChampionshipFinish: 1, totalRaces: 185, teamsDrivenFor: ['Red Bull Racing'] }
+        stats: {
+            speed: 99,
+            consistency: 95,
+            aggression: 98,
+            tireMgmt: 92,
+            experience: 85,
+            wins: 54,
+            podiums: 98,
+            totalPoints: 2586,
+            bestChampionshipFinish: 1,
+            totalRaces: 185,
+            teamsDrivenFor: ['Red Bull Racing'],
+        },
     };
 
     const SESSION_KEY = 9165;
@@ -51,7 +73,7 @@ describe('CircuitTrace', () => {
         driver_number: 1,
         x: 100,
         y: 200,
-        z: 0
+        z: 0,
     };
 
     beforeEach(() => {
@@ -81,10 +103,12 @@ describe('CircuitTrace', () => {
             shadowBlur: 0,
             shadowColor: '',
             font: '',
-            textBaseline: ''
+            textBaseline: '',
         };
 
-        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(mockCtx as unknown as CanvasRenderingContext2D);
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+            mockCtx as unknown as CanvasRenderingContext2D,
+        );
 
         // Mock requestAnimationFrame to run one frame synchronously then stop
         vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
@@ -98,10 +122,18 @@ describe('CircuitTrace', () => {
 
     it('clears canvas on each render frame', async () => {
         const queueRef = makeQueueRef([mockLocation]);
-        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} {...defaultOverlayProps} />);
+        render(
+            <CircuitTrace
+                locationQueueRef={queueRef}
+                selectedDriver={mockDriver}
+                sessionKey={SESSION_KEY}
+                resetKey={0}
+                {...defaultOverlayProps}
+            />,
+        );
 
         await act(async () => {
-            await new Promise(r => setTimeout(r, 50));
+            await new Promise((r) => setTimeout(r, 50));
         });
 
         expect(mockCtx.clearRect).toHaveBeenCalled();
@@ -112,10 +144,18 @@ describe('CircuitTrace', () => {
         const location2: LocationPacket = { ...mockLocation, x: 150, y: 250 };
         const queueRef = makeQueueRef([location1, location2]);
 
-        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} {...defaultOverlayProps} />);
+        render(
+            <CircuitTrace
+                locationQueueRef={queueRef}
+                selectedDriver={mockDriver}
+                sessionKey={SESSION_KEY}
+                resetKey={0}
+                {...defaultOverlayProps}
+            />,
+        );
 
         await act(async () => {
-            await new Promise(r => setTimeout(r, 50));
+            await new Promise((r) => setTimeout(r, 50));
         });
 
         expect(mockCtx.beginPath).toHaveBeenCalled();
@@ -126,22 +166,38 @@ describe('CircuitTrace', () => {
 
     it('draws ghost traces for non-selected drivers', async () => {
         const otherDriverLocation: LocationPacket = {
-            ...mockLocation, driver_number: 44, x: 300, y: 400
+            ...mockLocation,
+            driver_number: 44,
+            x: 300,
+            y: 400,
         };
         const otherDriverLocation2: LocationPacket = {
-            ...mockLocation, driver_number: 44, x: 350, y: 450
+            ...mockLocation,
+            driver_number: 44,
+            x: 350,
+            y: 450,
         };
         const location2: LocationPacket = { ...mockLocation, x: 150, y: 250 };
 
         const queueRef = makeQueueRef([
-            mockLocation, location2,
-            otherDriverLocation, otherDriverLocation2
+            mockLocation,
+            location2,
+            otherDriverLocation,
+            otherDriverLocation2,
         ]);
 
-        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} {...defaultOverlayProps} />);
+        render(
+            <CircuitTrace
+                locationQueueRef={queueRef}
+                selectedDriver={mockDriver}
+                sessionKey={SESSION_KEY}
+                resetKey={0}
+                {...defaultOverlayProps}
+            />,
+        );
 
         await act(async () => {
-            await new Promise(r => setTimeout(r, 50));
+            await new Promise((r) => setTimeout(r, 50));
         });
 
         expect(mockCtx.beginPath).toHaveBeenCalled();
@@ -150,20 +206,36 @@ describe('CircuitTrace', () => {
 
     it('shows "None" when no driver is selected', () => {
         const queueRef = makeQueueRef();
-        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={null} sessionKey={null} resetKey={0} {...defaultOverlayProps} />);
+        render(
+            <CircuitTrace
+                locationQueueRef={queueRef}
+                selectedDriver={null}
+                sessionKey={null}
+                resetKey={0}
+                {...defaultOverlayProps}
+            />,
+        );
 
         expect(screen.getByText(/None/)).toBeInTheDocument();
     });
 
     it('handles empty queue gracefully', async () => {
         const queueRef = makeQueueRef();
-        render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} {...defaultOverlayProps} />);
+        render(
+            <CircuitTrace
+                locationQueueRef={queueRef}
+                selectedDriver={mockDriver}
+                sessionKey={SESSION_KEY}
+                resetKey={0}
+                {...defaultOverlayProps}
+            />,
+        );
 
         expect(screen.getByText('CIRCUIT TRACE')).toBeInTheDocument();
         expect(screen.getByText(/VER/)).toBeInTheDocument();
 
         await act(async () => {
-            await new Promise(r => setTimeout(r, 50));
+            await new Promise((r) => setTimeout(r, 50));
         });
 
         expect(mockCtx.clearRect).toHaveBeenCalled();
@@ -181,7 +253,7 @@ describe('CircuitTrace', () => {
                 isInitializing={false}
                 sessionMeta={null}
                 driverCode={null}
-            />
+            />,
         );
 
         expect(screen.getByTestId('idle-overlay')).toBeInTheDocument();
@@ -199,7 +271,7 @@ describe('CircuitTrace', () => {
                 isInitializing={true}
                 sessionMeta={{ year: 2024, meetingName: 'Bahrain Grand Prix' }}
                 driverCode="VER"
-            />
+            />,
         );
 
         expect(screen.getByTestId('loading-overlay')).toBeInTheDocument();
@@ -218,7 +290,7 @@ describe('CircuitTrace', () => {
                 isInitializing={false}
                 sessionMeta={{ year: 2024, meetingName: 'Bahrain Grand Prix' }}
                 driverCode="VER"
-            />
+            />,
         );
 
         expect(screen.queryByTestId('idle-overlay')).not.toBeInTheDocument();
@@ -237,7 +309,7 @@ describe('CircuitTrace', () => {
                 isInitializing={false}
                 sessionMeta={{ year: 2024, meetingName: 'Bahrain Grand Prix' }}
                 driverCode="VER"
-            />
+            />,
         );
 
         expect(screen.getByText('2024 | BAHRAIN GRAND PRIX')).toBeInTheDocument();
@@ -248,29 +320,58 @@ describe('CircuitTrace', () => {
             // The loop used to clearRect and re-stroke every point of every
             // driver 60 times a second whether or not anything had changed.
             const queueRef = makeQueueRef([mockLocation]);
-            render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} {...defaultOverlayProps} />);
+            render(
+                <CircuitTrace
+                    locationQueueRef={queueRef}
+                    selectedDriver={mockDriver}
+                    sessionKey={SESSION_KEY}
+                    resetKey={0}
+                    {...defaultOverlayProps}
+                />,
+            );
 
-            await act(async () => { await new Promise(r => setTimeout(r, 50)); });
-            const paintsAfterData = (mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls.length;
+            await act(async () => {
+                await new Promise((r) => setTimeout(r, 50));
+            });
+            const paintsAfterData = (mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls
+                .length;
             expect(paintsAfterData).toBeGreaterThan(0);
 
             // Several more frames, queue empty.
-            await act(async () => { await new Promise(r => setTimeout(r, 100)); });
+            await act(async () => {
+                await new Promise((r) => setTimeout(r, 100));
+            });
 
-            expect((mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls.length).toBe(paintsAfterData);
+            expect((mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls.length).toBe(
+                paintsAfterData,
+            );
         });
 
         it('repaints once new packets arrive', async () => {
             const queueRef = makeQueueRef([mockLocation]);
-            render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} {...defaultOverlayProps} />);
+            render(
+                <CircuitTrace
+                    locationQueueRef={queueRef}
+                    selectedDriver={mockDriver}
+                    sessionKey={SESSION_KEY}
+                    resetKey={0}
+                    {...defaultOverlayProps}
+                />,
+            );
 
-            await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+            await act(async () => {
+                await new Promise((r) => setTimeout(r, 50));
+            });
             const before = (mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls.length;
 
             queueRef.current.push({ ...mockLocation, x: 300, y: 400 });
-            await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+            await act(async () => {
+                await new Promise((r) => setTimeout(r, 50));
+            });
 
-            expect((mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(before);
+            expect(
+                (mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls.length,
+            ).toBeGreaterThan(before);
         });
 
         it('runs no animation loop while no session is active', async () => {
@@ -286,7 +387,9 @@ describe('CircuitTrace', () => {
                 />,
             );
 
-            await act(async () => { await new Promise(r => setTimeout(r, 100)); });
+            await act(async () => {
+                await new Promise((r) => setTimeout(r, 100));
+            });
 
             // One clear to blank the canvas, and nothing drawn thereafter.
             expect(mockCtx.stroke).not.toHaveBeenCalled();
@@ -300,18 +403,35 @@ describe('CircuitTrace', () => {
             // display every canvas pixel was stretched over four device pixels.
             vi.spyOn(window, 'devicePixelRatio', 'get').mockReturnValue(2);
             vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
-                width: 400, height: 250, top: 0, left: 0, right: 400, bottom: 250, x: 0, y: 0,
+                width: 400,
+                height: 250,
+                top: 0,
+                left: 0,
+                right: 400,
+                bottom: 250,
+                x: 0,
+                y: 0,
                 toJSON: () => ({}),
             });
 
             const queueRef = makeQueueRef();
-            const { container } = render(<CircuitTrace locationQueueRef={queueRef} selectedDriver={mockDriver} sessionKey={SESSION_KEY} resetKey={0} {...defaultOverlayProps} />);
+            const { container } = render(
+                <CircuitTrace
+                    locationQueueRef={queueRef}
+                    selectedDriver={mockDriver}
+                    sessionKey={SESSION_KEY}
+                    resetKey={0}
+                    {...defaultOverlayProps}
+                />,
+            );
 
-            await act(async () => { await new Promise(r => setTimeout(r, 20)); });
+            await act(async () => {
+                await new Promise((r) => setTimeout(r, 20));
+            });
 
             const canvas = container.querySelector('canvas')!;
-            expect(canvas.width).toBe(800);          // 400 CSS px x dpr 2
-            expect(canvas.height).toBe(500);         // 400 / 1.6 = 250, x 2
+            expect(canvas.width).toBe(800); // 400 CSS px x dpr 2
+            expect(canvas.height).toBe(500); // 400 / 1.6 = 250, x 2
             expect(canvas.style.width).toBe('400px');
             expect(mockCtx.setTransform).toHaveBeenCalledWith(2, 0, 0, 2, 0, 0);
         });

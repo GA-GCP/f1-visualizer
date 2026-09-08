@@ -24,15 +24,34 @@ import {
  * shared in-flight promise are gone with the code they described.
  */
 const stats = {
-    speed: 90, consistency: 85, aggression: 70, tireMgmt: 80, experience: 95,
-    wins: 5, podiums: 12, totalPoints: 400, bestChampionshipFinish: 2,
-    totalRaces: 100, teamsDrivenFor: ['Red Bull'],
+    speed: 90,
+    consistency: 85,
+    aggression: 70,
+    tireMgmt: 80,
+    experience: 95,
+    wins: 5,
+    podiums: 12,
+    totalPoints: 400,
+    bestChampionshipFinish: 2,
+    totalRaces: 100,
+    teamsDrivenFor: ['Red Bull'],
 };
 const driver = (over: Record<string, unknown> = {}) => ({
-    id: 1, code: 'VER', name: 'Max Verstappen', team: 'Red Bull', teamColor: '3671C6', stats, ...over,
+    id: 1,
+    code: 'VER',
+    name: 'Max Verstappen',
+    team: 'Red Bull',
+    teamColor: '3671C6',
+    stats,
+    ...over,
 });
 const session = (over: Record<string, unknown> = {}) => ({
-    sessionKey: 1, sessionName: 'Race', meetingName: 'Bahrain GP', year: 2024, countryName: 'Bahrain', ...over,
+    sessionKey: 1,
+    sessionName: 'Race',
+    meetingName: 'Bahrain GP',
+    year: 2024,
+    countryName: 'Bahrain',
+    ...over,
 });
 
 describe('referenceApi', () => {
@@ -55,7 +74,9 @@ describe('referenceApi', () => {
 
         await fetchDrivers(controller.signal);
 
-        expect(apiClient.get).toHaveBeenCalledWith('/analysis/drivers', { signal: controller.signal });
+        expect(apiClient.get).toHaveBeenCalledWith('/analysis/drivers', {
+            signal: controller.signal,
+        });
     });
 
     it('does not cache: every call is a request, because Query owns caching now', async () => {
@@ -79,7 +100,7 @@ describe('referenceApi', () => {
         const result = await fetchSessions();
 
         expect(result).toHaveLength(2);
-        expect(result.every(s => s.sessionName === 'Race')).toBe(true);
+        expect(result.every((s) => s.sessionName === 'Race')).toBe(true);
     });
 
     it('fetches driver stats by id', async () => {
@@ -87,7 +108,9 @@ describe('referenceApi', () => {
 
         const result = await fetchDriverStats(1);
 
-        expect(apiClient.get).toHaveBeenCalledWith('/analysis/drivers/1/stats', { signal: undefined });
+        expect(apiClient.get).toHaveBeenCalledWith('/analysis/drivers/1/stats', {
+            signal: undefined,
+        });
         expect(result).toEqual(stats);
     });
 
@@ -97,7 +120,9 @@ describe('referenceApi', () => {
 
         const result = await fetchSessionLaps(9165);
 
-        expect(apiClient.get).toHaveBeenCalledWith('/analysis/session/9165/laps', { signal: undefined });
+        expect(apiClient.get).toHaveBeenCalledWith('/analysis/session/9165/laps', {
+            signal: undefined,
+        });
         expect(result).toEqual(laps);
     });
 
@@ -112,22 +137,33 @@ describe('referenceApi', () => {
 
         await fetchSessionsByYear(2024);
 
-        expect(apiClient.get).toHaveBeenCalledWith('/analysis/sessions/year/2024', { signal: undefined });
+        expect(apiClient.get).toHaveBeenCalledWith('/analysis/sessions/year/2024', {
+            signal: undefined,
+        });
     });
 
     it('fetches a session roster', async () => {
         const roster = {
-            sessionKey: 9165, year: 2024,
-            drivers: [{
-                driverNumber: 1, broadcastName: 'M VERSTAPPEN', nameAcronym: 'VER',
-                teamName: 'Red Bull', teamColour: '3671C6', countryCode: 'NED',
-            }],
+            sessionKey: 9165,
+            year: 2024,
+            drivers: [
+                {
+                    driverNumber: 1,
+                    broadcastName: 'M VERSTAPPEN',
+                    nameAcronym: 'VER',
+                    teamName: 'Red Bull',
+                    teamColour: '3671C6',
+                    countryCode: 'NED',
+                },
+            ],
         };
         vi.mocked(apiClient.get).mockResolvedValue({ data: roster });
 
         const result = await fetchSessionDrivers(9165);
 
-        expect(apiClient.get).toHaveBeenCalledWith('/analysis/sessions/9165/drivers', { signal: undefined });
+        expect(apiClient.get).toHaveBeenCalledWith('/analysis/sessions/9165/drivers', {
+            signal: undefined,
+        });
         expect(result).toEqual(roster);
     });
 

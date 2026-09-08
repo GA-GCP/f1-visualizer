@@ -17,18 +17,21 @@ async function signIn(page: import('@playwright/test').Page) {
  * matters — something was drawn — and is identical on every machine.
  */
 async function paintedPixels(page: import('@playwright/test').Page): Promise<number> {
-    return page.locator('canvas').first().evaluate((node: HTMLCanvasElement) => {
-        const context = node.getContext('2d');
-        if (!context) return -1;
-        const { data } = context.getImageData(0, 0, node.width, node.height);
-        let painted = 0;
-        // The canvas background is a near-black fill; anything materially
-        // lighter is the trace, the car dot or the start marker.
-        for (let i = 0; i < data.length; i += 4) {
-            if (data[i] + data[i + 1] + data[i + 2] > 90) painted++;
-        }
-        return painted;
-    });
+    return page
+        .locator('canvas')
+        .first()
+        .evaluate((node: HTMLCanvasElement) => {
+            const context = node.getContext('2d');
+            if (!context) return -1;
+            const { data } = context.getImageData(0, 0, node.width, node.height);
+            let painted = 0;
+            // The canvas background is a near-black fill; anything materially
+            // lighter is the trace, the car dot or the start marker.
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i] + data[i + 1] + data[i + 2] > 90) painted++;
+            }
+            return painted;
+        });
 }
 
 test.describe('the live trace', () => {
@@ -51,10 +54,12 @@ test.describe('the live trace', () => {
         // subscribes to /topic/race-location, so the trace accumulates. This
         // exercises the real client: CONNECT/CONNECTED negotiation, the
         // subscription, the rAF flush loop and the canvas draw path.
-        await expect.poll(() => paintedPixels(page), {
-            message: 'the trace never painted anything',
-            timeout: 20_000,
-        }).toBeGreaterThan(500);
+        await expect
+            .poll(() => paintedPixels(page), {
+                message: 'the trace never painted anything',
+                timeout: 20_000,
+            })
+            .toBeGreaterThan(500);
     });
 
     test('re-scales the canvas when the viewport changes', async ({ page }) => {
@@ -80,9 +85,11 @@ test.describe('the live trace', () => {
             height: viewport!.height,
         });
 
-        await expect.poll(() => canvas.evaluate((node: HTMLCanvasElement) => node.width), {
-            message: 'the canvas backing store never followed the viewport',
-            timeout: 10_000,
-        }).toBeLessThan(wide);
+        await expect
+            .poll(() => canvas.evaluate((node: HTMLCanvasElement) => node.width), {
+                message: 'the canvas backing store never followed the viewport',
+                timeout: 10_000,
+            })
+            .toBeLessThan(wide);
     });
 });

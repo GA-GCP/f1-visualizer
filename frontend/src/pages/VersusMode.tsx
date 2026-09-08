@@ -25,7 +25,7 @@ function resolveSlot(
 ): DriverProfile | null {
     if (drivers.length === 0) return null;
     if (param === null) return drivers[fallbackIndex] ?? null;
-    return drivers.find(d => String(d.id) === param) ?? null;
+    return drivers.find((d) => String(d.id) === param) ?? null;
 }
 
 const VersusMode: React.FC = () => {
@@ -37,8 +37,14 @@ const VersusMode: React.FC = () => {
     const driversQuery = useQuery(queries.drivers());
     const drivers = useMemo(() => driversQuery.data ?? [], [driversQuery.data]);
 
-    const baseA = useMemo(() => resolveSlot(drivers, searchParams.get('a'), 0), [drivers, searchParams]);
-    const baseB = useMemo(() => resolveSlot(drivers, searchParams.get('b'), 1), [drivers, searchParams]);
+    const baseA = useMemo(
+        () => resolveSlot(drivers, searchParams.get('a'), 0),
+        [drivers, searchParams],
+    );
+    const baseB = useMemo(
+        () => resolveSlot(drivers, searchParams.get('b'), 1),
+        [drivers, searchParams],
+    );
 
     // Query caches per driver id, so re-selecting a driver is instant and the
     // requests for the two slots run in parallel rather than the serial
@@ -46,15 +52,21 @@ const VersusMode: React.FC = () => {
     const statsA = useQuery({ ...queries.driverStats(baseA?.id ?? 0), enabled: baseA !== null });
     const statsB = useQuery({ ...queries.driverStats(baseB?.id ?? 0), enabled: baseB !== null });
 
-    const handleDriverSelect = useCallback((driver: DriverProfile | null, slot: 'A' | 'B') => {
-        setSearchParams(previous => {
-            const next = new URLSearchParams(previous);
-            next.set(slot === 'A' ? 'a' : 'b', driver ? String(driver.id) : '');
-            return next;
-        // Picking a driver is not a navigation; it should not add a history
-        // entry the back button has to walk through.
-        }, { replace: true });
-    }, [setSearchParams]);
+    const handleDriverSelect = useCallback(
+        (driver: DriverProfile | null, slot: 'A' | 'B') => {
+            setSearchParams(
+                (previous) => {
+                    const next = new URLSearchParams(previous);
+                    next.set(slot === 'A' ? 'a' : 'b', driver ? String(driver.id) : '');
+                    return next;
+                    // Picking a driver is not a navigation; it should not add a history
+                    // entry the back button has to walk through.
+                },
+                { replace: true },
+            );
+        },
+        [setSearchParams],
+    );
 
     // Derived, not stored: a selection shows immediately with the roster's
     // static stats and upgrades in place when the dynamic ones land, instead of
@@ -91,11 +103,20 @@ const VersusMode: React.FC = () => {
                     static title before, so browser history and tab lists were
                     indistinguishable. */}
                 <title>Head-to-Head · F1 Visualizer</title>
-                <Typography variant="h3" component="h1" sx={{ fontWeight: 800, letterSpacing: -1, color: 'white' }}>
+                <Typography
+                    variant="h3"
+                    component="h1"
+                    sx={{ fontWeight: 800, letterSpacing: -1, color: 'white' }}
+                >
                     HEAD-TO-HEAD
                 </Typography>
                 {/* subtitle1 renders as an h6; this is a subtitle, not a heading. */}
-                <Typography variant="subtitle1" component="p" color="text.secondary" sx={{ letterSpacing: 2 }}>
+                <Typography
+                    variant="subtitle1"
+                    component="p"
+                    color="text.secondary"
+                    sx={{ letterSpacing: 2 }}
+                >
                     COMPARISON ENGINE
                 </Typography>
             </Box>
@@ -107,7 +128,13 @@ const VersusMode: React.FC = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.4, ease: 'easeOut' }}
                     >
-                        <Paper sx={{ p: 3, bgcolor: PAPER_BG, borderLeft: `4px solid ${driverA.teamColor}` }}>
+                        <Paper
+                            sx={{
+                                p: 3,
+                                bgcolor: PAPER_BG,
+                                borderLeft: `4px solid ${driverA.teamColor}`,
+                            }}
+                        >
                             <DriverSelector
                                 label="DRIVER A"
                                 options={drivers}
@@ -123,7 +150,13 @@ const VersusMode: React.FC = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.4, ease: 'easeOut' }}
                     >
-                        <Paper sx={{ p: 3, bgcolor: PAPER_BG, borderRight: `4px solid ${driverB.teamColor}` }}>
+                        <Paper
+                            sx={{
+                                p: 3,
+                                bgcolor: PAPER_BG,
+                                borderRight: `4px solid ${driverB.teamColor}`,
+                            }}
+                        >
                             <DriverSelector
                                 label="DRIVER B"
                                 options={drivers}
@@ -142,15 +175,33 @@ const VersusMode: React.FC = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.2 }}
                     >
-                        <Paper sx={{ p: 3, bgcolor: PAPER_BG, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <Typography variant="h6" component="h2" color="text.secondary" gutterBottom>
+                        <Paper
+                            sx={{
+                                p: 3,
+                                bgcolor: PAPER_BG,
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                            }}
+                        >
+                            <Typography
+                                variant="h6"
+                                component="h2"
+                                color="text.secondary"
+                                gutterBottom
+                            >
                                 ATTRIBUTE MAPPING
                             </Typography>
                             <RadarChart driverA={driverA} driverB={driverB} />
                             <Box sx={{ mt: 2, display: 'flex', gap: 3 }}>
-                                <Typography sx={{ color: driverA.teamColor, fontWeight: 'bold' }}>{driverA.code}</Typography>
+                                <Typography sx={{ color: driverA.teamColor, fontWeight: 'bold' }}>
+                                    {driverA.code}
+                                </Typography>
                                 <Typography color="text.secondary">vs</Typography>
-                                <Typography sx={{ color: driverB.teamColor, fontWeight: 'bold' }}>{driverB.code}</Typography>
+                                <Typography sx={{ color: driverB.teamColor, fontWeight: 'bold' }}>
+                                    {driverB.code}
+                                </Typography>
                             </Box>
                         </Paper>
                     </m.div>
@@ -163,24 +214,67 @@ const VersusMode: React.FC = () => {
                         transition={{ duration: 0.5, delay: 0.3 }}
                     >
                         <Paper sx={{ p: 4, bgcolor: PAPER_BG, height: '100%' }}>
-                            <Typography variant="h6" component="h2" color="text.secondary" gutterBottom sx={{ mb: 4 }}>
+                            <Typography
+                                variant="h6"
+                                component="h2"
+                                color="text.secondary"
+                                gutterBottom
+                                sx={{ mb: 4 }}
+                            >
                                 CAREER STATISTICS
                             </Typography>
 
-                            <StatComparisonBar label="Race Wins" driverA={driverA} driverB={driverB} metric="wins" />
-                            <StatComparisonBar label="Podium Finishes" driverA={driverA} driverB={driverB} metric="podiums" />
-                            <StatComparisonBar label="Total Career Points" driverA={driverA} driverB={driverB} metric="totalPoints" />
-                            <StatComparisonBar label="Total Races" driverA={driverA} driverB={driverB} metric="totalRaces" />
-                            <StatComparisonBar label="Best Championship Finish" driverA={driverA} driverB={driverB} metric="bestChampionshipFinish" invert />
+                            <StatComparisonBar
+                                label="Race Wins"
+                                driverA={driverA}
+                                driverB={driverB}
+                                metric="wins"
+                            />
+                            <StatComparisonBar
+                                label="Podium Finishes"
+                                driverA={driverA}
+                                driverB={driverB}
+                                metric="podiums"
+                            />
+                            <StatComparisonBar
+                                label="Total Career Points"
+                                driverA={driverA}
+                                driverB={driverB}
+                                metric="totalPoints"
+                            />
+                            <StatComparisonBar
+                                label="Total Races"
+                                driverA={driverA}
+                                driverB={driverB}
+                                metric="totalRaces"
+                            />
+                            <StatComparisonBar
+                                label="Best Championship Finish"
+                                driverA={driverA}
+                                driverB={driverB}
+                                metric="bestChampionshipFinish"
+                                invert
+                            />
 
                             {/* Teams Driven For */}
                             <Box sx={{ mt: 4 }}>
-                                <Typography variant="body2" color="text.secondary" sx={{ textTransform: 'uppercase', textAlign: 'center', mb: 2 }}>
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{ textTransform: 'uppercase', textAlign: 'center', mb: 2 }}
+                                >
                                     Teams Driven For
                                 </Typography>
                                 <Grid container spacing={2}>
                                     <Grid size={{ xs: 6 }}>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, justifyContent: 'center' }}>
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                flexWrap: 'wrap',
+                                                gap: 0.75,
+                                                justifyContent: 'center',
+                                            }}
+                                        >
                                             {(driverA.stats.teamsDrivenFor ?? []).map((team) => (
                                                 <Chip
                                                     key={team}
@@ -198,7 +292,14 @@ const VersusMode: React.FC = () => {
                                         </Box>
                                     </Grid>
                                     <Grid size={{ xs: 6 }}>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, justifyContent: 'center' }}>
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                flexWrap: 'wrap',
+                                                gap: 0.75,
+                                                justifyContent: 'center',
+                                            }}
+                                        >
                                             {(driverB.stats.teamsDrivenFor ?? []).map((team) => (
                                                 <Chip
                                                     key={team}

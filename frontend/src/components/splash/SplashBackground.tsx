@@ -4,9 +4,9 @@ import React from 'react';
 
 const GRID_SVG = encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">' +
-    '<line x1="0" y1="0" x2="40" y2="0" stroke="white" stroke-width="0.5"/>' +
-    '<line x1="0" y1="0" x2="0" y2="40" stroke="white" stroke-width="0.5"/>' +
-    '</svg>'
+        '<line x1="0" y1="0" x2="40" y2="0" stroke="white" stroke-width="0.5"/>' +
+        '<line x1="0" y1="0" x2="0" y2="40" stroke="white" stroke-width="0.5"/>' +
+        '</svg>',
 );
 
 // The sweep gradient is drawn at twice the viewport in both axes and repeated

@@ -4,7 +4,8 @@ import React from 'react';
 import type { DriverProfile } from '@/api/referenceApi';
 import { BORDER_SUBTLE } from '../../theme/tokens';
 
-type NumericStatMetric = 'wins' | 'podiums' | 'totalPoints' | 'totalRaces' | 'bestChampionshipFinish';
+type NumericStatMetric =
+    'wins' | 'podiums' | 'totalPoints' | 'totalRaces' | 'bestChampionshipFinish';
 
 interface StatComparisonBarProps {
     label: string;
@@ -15,7 +16,13 @@ interface StatComparisonBarProps {
     invert?: boolean;
 }
 
-const StatComparisonBar: React.FC<StatComparisonBarProps> = ({ label, driverA, driverB, metric, invert = false }) => {
+const StatComparisonBar: React.FC<StatComparisonBarProps> = ({
+    label,
+    driverA,
+    driverB,
+    metric,
+    invert = false,
+}) => {
     const valA = driverA.stats[metric];
     const valB = driverB.stats[metric];
     const total = valA + valB;
@@ -43,7 +50,11 @@ const StatComparisonBar: React.FC<StatComparisonBarProps> = ({ label, driverA, d
                 <Typography variant="h6" sx={{ color: driverA.teamColor, fontWeight: 'bold' }}>
                     {formatVal(valA)}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ textTransform: 'uppercase' }}>
+                <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ textTransform: 'uppercase' }}
+                >
                     {label}
                 </Typography>
                 <Typography variant="h6" sx={{ color: driverB.teamColor, fontWeight: 'bold' }}>
@@ -58,12 +69,20 @@ const StatComparisonBar: React.FC<StatComparisonBarProps> = ({ label, driverA, d
                 other's geometry too. Inside a 10 px `overflow: hidden` track the
                 result is visually identical. `key` re-runs the reveal when the
                 pairing changes. */}
-            <Box sx={{ position: 'relative', height: 10, borderRadius: 1, overflow: 'hidden', bgcolor: BORDER_SUBTLE }}>
+            <Box
+                sx={{
+                    position: 'relative',
+                    height: 10,
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                    bgcolor: BORDER_SUBTLE,
+                }}
+            >
                 <m.div
                     key={`${driverA.id}-a`}
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: 1 }}
-                    transition={{ duration: 1.2, ease: "circOut" }}
+                    transition={{ duration: 1.2, ease: 'circOut' }}
                     style={{
                         position: 'absolute',
                         top: 0,
@@ -78,7 +97,7 @@ const StatComparisonBar: React.FC<StatComparisonBarProps> = ({ label, driverA, d
                     key={`${driverB.id}-b`}
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: 1 }}
-                    transition={{ duration: 1.2, ease: "circOut" }}
+                    transition={{ duration: 1.2, ease: 'circOut' }}
                     style={{
                         position: 'absolute',
                         top: 0,

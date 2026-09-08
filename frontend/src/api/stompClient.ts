@@ -37,8 +37,7 @@ export function setStompTokenProvider(provider: StompTokenProvider | null): void
     tokenProvider = provider;
 }
 
-const DEBUG_ENABLED =
-    import.meta.env.DEV || env.stompDebug;
+const DEBUG_ENABLED = import.meta.env.DEV || env.stompDebug;
 
 /**
  * Frame logger. `FrameImpl.toString()` serialises every header, so the CONNECT

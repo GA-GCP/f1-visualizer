@@ -7,7 +7,7 @@ import SessionControlPanel from '../selectors/SessionControlPanel';
 
 // 1. Mock BOTH API modules
 vi.mock('../../api/ingestionApi', () => ({
-    sendIngestionCommand: vi.fn()
+    sendIngestionCommand: vi.fn(),
 }));
 
 vi.mock('../../api/referenceApi', () => ({
@@ -26,14 +26,27 @@ describe('SessionControlPanel', () => {
     // Mock data
     const mockYears = [2023];
     const mockSessions = [
-        { sessionKey: 9165, sessionName: "Race", meetingName: "Singapore Grand Prix", year: 2023, countryName: "Singapore" }
+        {
+            sessionKey: 9165,
+            sessionName: 'Race',
+            meetingName: 'Singapore Grand Prix',
+            year: 2023,
+            countryName: 'Singapore',
+        },
     ];
     const mockRoster = {
         sessionKey: 9165,
         year: 2023,
         drivers: [
-            { driverNumber: 1, broadcastName: "M VERSTAPPEN", nameAcronym: "VER", teamName: "Red Bull Racing", teamColour: "3671C6", countryCode: "NED" }
-        ]
+            {
+                driverNumber: 1,
+                broadcastName: 'M VERSTAPPEN',
+                nameAcronym: 'VER',
+                teamName: 'Red Bull Racing',
+                teamColour: '3671C6',
+                countryCode: 'NED',
+            },
+        ],
     };
 
     beforeEach(() => {
@@ -50,7 +63,9 @@ describe('SessionControlPanel', () => {
 
         // Wait for the cascading fetch to populate both dropdowns
         await waitFor(() => {
-            expect(screen.getByLabelText(/Select Grand Prix/i)).toHaveValue('Singapore Grand Prix - Race');
+            expect(screen.getByLabelText(/Select Grand Prix/i)).toHaveValue(
+                'Singapore Grand Prix - Race',
+            );
         });
 
         expect(screen.getByRole('button', { name: /START SIMULATION/i })).toBeInTheDocument();
@@ -61,8 +76,8 @@ describe('SessionControlPanel', () => {
         vi.mocked(fetchSessionsByYear).mockImplementation((year: number) =>
             year === 2023
                 ? Promise.resolve(mockSessions)
-                // Never resolves, so 2022 stays in the loading state.
-                : new Promise<typeof mockSessions>(() => {})
+                : // Never resolves, so 2022 stays in the loading state.
+                  new Promise<typeof mockSessions>(() => {}),
         );
 
         renderWithProviders(<SessionControlPanel onStreamStarted={mockOnStreamStarted} />);
@@ -94,7 +109,7 @@ describe('SessionControlPanel', () => {
         // Assert 1: The API was called with the correct payload (using camelCase sessionKey)
         expect(sendIngestionCommand).toHaveBeenCalledWith({
             mode: 'SIMULATION',
-            sessionKey: 9165
+            sessionKey: 9165,
         });
 
         // Assert 2: The UI shows the loading state temporarily
@@ -114,7 +129,9 @@ describe('SessionControlPanel', () => {
         const mockOnError = vi.fn();
 
         // 2. Pass the mock into the component
-        renderWithProviders(<SessionControlPanel onStreamStarted={mockOnStreamStarted} onError={mockOnError} />);
+        renderWithProviders(
+            <SessionControlPanel onStreamStarted={mockOnStreamStarted} onError={mockOnError} />,
+        );
 
         const startButton = await screen.findByRole('button', { name: /START SIMULATION/i });
         await waitFor(() => expect(startButton).toBeEnabled());

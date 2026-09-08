@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { expect, afterEach, vi  } from 'vitest';
+import { expect, afterEach, vi } from 'vitest';
 import * as axeMatchers from 'vitest-axe/matchers';
 
 // axe assertions: `expect(await axe(container)).toHaveNoViolations()`
@@ -33,7 +33,9 @@ Object.defineProperty(performance, 'measure', {
     configurable: true,
     value: (name: string, start: string, end: string) => {
         if (!performanceMarks.has(start) || !performanceMarks.has(end)) {
-            throw new SyntaxError(`The mark '${performanceMarks.has(start) ? end : start}' does not exist.`);
+            throw new SyntaxError(
+                `The mark '${performanceMarks.has(start) ? end : start}' does not exist.`,
+            );
         }
         return { name, duration: performanceMarks.get(end)! - performanceMarks.get(start)! };
     },
@@ -89,10 +91,9 @@ svgProto.getPointAtLength ??= () => ({ x: 100, y: 100 });
 
 // requestAnimationFrame / cancelAnimationFrame mock (consistent 60fps simulation)
 if (!global.requestAnimationFrame) {
-    global.requestAnimationFrame = ((cb: FrameRequestCallback) =>
-        setTimeout(() => cb(Date.now()), 16) as unknown as number);
-    global.cancelAnimationFrame = ((id: number) =>
-        clearTimeout(id));
+    global.requestAnimationFrame = (cb: FrameRequestCallback) =>
+        setTimeout(() => cb(Date.now()), 16) as unknown as number;
+    global.cancelAnimationFrame = (id: number) => clearTimeout(id);
 }
 
 // Automatically clean up after each test

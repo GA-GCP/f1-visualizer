@@ -49,8 +49,16 @@ export const COMPOUND_FALLBACK = COMPOUND_COLOURS.WET;
  * against CANVAS_BG so a chart line stays distinguishable.
  */
 export const TEAM_FALLBACK_COLOURS = [
-    BRAND_RED, '#00D2BE', '#3b6bff', '#FF8700', '#00a08a',
-    '#5c8fb8', '#B6BABD', '#C92D4B', '#5E8FAA', '#27F4D2',
+    BRAND_RED,
+    '#00D2BE',
+    '#3b6bff',
+    '#FF8700',
+    '#00a08a',
+    '#5c8fb8',
+    '#B6BABD',
+    '#C92D4B',
+    '#5E8FAA',
+    '#27F4D2',
 ] as const;
 
 // ── Type ──
@@ -61,8 +69,8 @@ export const FONT_FAMILY = '"Titillium Web", "Roboto", "Helvetica", "Arial", san
 
 /** Repeats once across a 200%-wide child, so translating -50% loops seamlessly. */
 export const SHIMMER_GRADIENT =
-    `linear-gradient(90deg, ${BRAND_RED} 0%, ${BRAND_RED_BRIGHT} 25%, ${BRAND_RED} 50%, `
-    + `${BRAND_RED_BRIGHT} 75%, ${BRAND_RED} 100%)`;
+    `linear-gradient(90deg, ${BRAND_RED} 0%, ${BRAND_RED_BRIGHT} 25%, ${BRAND_RED} 50%, ` +
+    `${BRAND_RED_BRIGHT} 75%, ${BRAND_RED} 100%)`;
 
 /** The primary call-to-action fill. */
 export const BRAND_GRADIENT = `linear-gradient(135deg, ${BRAND_RED} 0%, ${BRAND_RED_BRIGHT} 100%)`;

@@ -5,15 +5,17 @@ import type { RaceEntryRoster } from '../schemas';
 const roster = (over: Partial<RaceEntryRoster['drivers'][number]> = {}): RaceEntryRoster => ({
     sessionKey: 9165,
     year: 2023,
-    drivers: [{
-        driverNumber: 44,
-        broadcastName: 'L HAMILTON',
-        nameAcronym: 'HAM',
-        teamName: 'Mercedes',
-        teamColour: '00D2BE',
-        countryCode: 'GBR',
-        ...over,
-    }],
+    drivers: [
+        {
+            driverNumber: 44,
+            broadcastName: 'L HAMILTON',
+            nameAcronym: 'HAM',
+            teamName: 'Mercedes',
+            teamColour: '00D2BE',
+            countryCode: 'GBR',
+            ...over,
+        },
+    ],
 });
 
 describe('rosterToDriverProfiles', () => {
@@ -26,7 +28,9 @@ describe('rosterToDriverProfiles', () => {
     });
 
     it('falls back to the number when neither is usable', () => {
-        expect(rosterToDriverProfiles(roster({ nameAcronym: '', broadcastName: 'X' }))[0].code).toBe('44');
+        expect(
+            rosterToDriverProfiles(roster({ nameAcronym: '', broadcastName: 'X' }))[0].code,
+        ).toBe('44');
     });
 
     it("adds the '#' the wire format omits", () => {

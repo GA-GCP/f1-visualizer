@@ -10,7 +10,9 @@ import { expect, test } from './fixtures/test';
  * component boundary mocks useAuth0, so none of it ran in CI before.
  */
 test.describe('authentication', () => {
-    test('signs in through the real redirect handshake and reaches the dashboard', async ({ page }) => {
+    test('signs in through the real redirect handshake and reaches the dashboard', async ({
+        page,
+    }) => {
         await page.goto('/');
 
         // The public route renders without a token — a config or CSP failure

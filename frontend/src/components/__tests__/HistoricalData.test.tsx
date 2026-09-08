@@ -17,7 +17,7 @@ vi.mock('../../api/referenceApi', () => ({
 
 // Mock the D3 Chart to avoid SVG rendering issues in JSDOM
 vi.mock('../../components/LapTimeChart', () => ({
-    default: () => <div data-testid="mock-lap-chart">Mock Lap Chart</div>
+    default: () => <div data-testid="mock-lap-chart">Mock Lap Chart</div>,
 }));
 
 /** The page stores its selection in the URL, so it needs router context. */
@@ -25,8 +25,20 @@ const renderAt = (route: string) => renderWithProviders(<HistoricalData />, { ro
 
 describe('HistoricalData Page', () => {
     const mockSessions = [
-        { sessionKey: 9165, sessionName: "Race", meetingName: "Singapore Grand Prix", year: 2023, countryName: "Singapore" },
-        { sessionKey: 9222, sessionName: "Race", meetingName: "Suzuka Grand Prix", year: 2023, countryName: "Japan" },
+        {
+            sessionKey: 9165,
+            sessionName: 'Race',
+            meetingName: 'Singapore Grand Prix',
+            year: 2023,
+            countryName: 'Singapore',
+        },
+        {
+            sessionKey: 9222,
+            sessionName: 'Race',
+            meetingName: 'Suzuka Grand Prix',
+            year: 2023,
+            countryName: 'Japan',
+        },
     ];
 
     const mockLaps = [
@@ -38,9 +50,23 @@ describe('HistoricalData Page', () => {
         sessionKey: 9165,
         year: 2023,
         drivers: [
-            { driverNumber: 44, broadcastName: 'L HAMILTON', nameAcronym: 'HAM', teamName: 'Mercedes', teamColour: '00D2BE', countryCode: 'GBR' },
-            { driverNumber: 63, broadcastName: 'G RUSSELL', nameAcronym: 'RUS', teamName: 'Mercedes', teamColour: '00D2BE', countryCode: 'GBR' },
-        ]
+            {
+                driverNumber: 44,
+                broadcastName: 'L HAMILTON',
+                nameAcronym: 'HAM',
+                teamName: 'Mercedes',
+                teamColour: '00D2BE',
+                countryCode: 'GBR',
+            },
+            {
+                driverNumber: 63,
+                broadcastName: 'G RUSSELL',
+                nameAcronym: 'RUS',
+                teamName: 'Mercedes',
+                teamColour: '00D2BE',
+                countryCode: 'GBR',
+            },
+        ],
     };
 
     beforeEach(() => {

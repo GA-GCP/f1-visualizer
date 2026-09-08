@@ -17,7 +17,7 @@ describe('ErrorBoundary', () => {
         render(
             <ErrorBoundary>
                 <BombComponent shouldThrow={true} />
-            </ErrorBoundary>
+            </ErrorBoundary>,
         );
 
         expect(screen.getByText('SYSTEM FAULT DETECTED')).toBeInTheDocument();
@@ -30,7 +30,7 @@ describe('ErrorBoundary', () => {
         render(
             <ErrorBoundary>
                 <BombComponent shouldThrow={false} />
-            </ErrorBoundary>
+            </ErrorBoundary>,
         );
 
         expect(screen.getByText('All systems nominal')).toBeInTheDocument();

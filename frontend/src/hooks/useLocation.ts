@@ -54,8 +54,8 @@ export const useLocation = (locationQueueRef: React.RefObject<LocationPacket[]>)
                 packetCountRef.current++;
                 if (packetCountRef.current === 1 || packetCountRef.current % 500 === 0) {
                     log.debug(
-                        `Packet #${packetCountRef.current} | driver=${result.data.driver_number} `
-                        + `x=${result.data.x} y=${result.data.y} | queue=${queue.length}`,
+                        `Packet #${packetCountRef.current} | driver=${result.data.driver_number} ` +
+                            `x=${result.data.x} y=${result.data.y} | queue=${queue.length}`,
                     );
                 }
             } catch (err) {

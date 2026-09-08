@@ -46,7 +46,7 @@ vi.mock('d3', () => {
             curve: vi.fn().mockReturnThis(),
         }),
         curveMonotoneX: vi.fn(),
-        pointer: vi.fn().mockReturnValue([0, 0])
+        pointer: vi.fn().mockReturnValue([0, 0]),
     };
 });
 
@@ -103,7 +103,7 @@ describe('LapTimeChart', () => {
         const colorMap = { 1: '#3671C6', 16: '#E80020' };
         const labelMap = { 1: 'VER', 16: 'LEC' };
         const { container } = render(
-            <LapTimeChart data={mockLapData} driverColorMap={colorMap} driverLabelMap={labelMap} />
+            <LapTimeChart data={mockLapData} driverColorMap={colorMap} driverLabelMap={labelMap} />,
         );
         expect(container.querySelector('svg')).toBeInTheDocument();
     });

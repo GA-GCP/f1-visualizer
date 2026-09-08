@@ -23,31 +23,41 @@ const HistoricalData: React.FC = () => {
     // another tab, and back/forward could not restore it either.
     const selectedSession = useMemo(() => {
         if (sessions.length === 0) return null;
-        const fromUrl = sessionKeyParam !== null
-            ? sessions.find(s => String(s.sessionKey) === sessionKeyParam)
-            : undefined;
+        const fromUrl =
+            sessionKeyParam !== null
+                ? sessions.find((s) => String(s.sessionKey) === sessionKeyParam)
+                : undefined;
         return fromUrl ?? sessions[0];
     }, [sessions, sessionKeyParam]);
 
-    const setSelectedSession = useCallback((session: RaceSession | null) => {
-        setSearchParams(
-            previous => {
-                const next = new URLSearchParams(previous);
-                if (session) next.set('session', String(session.sessionKey));
-                else next.delete('session');
-                return next;
-            },
-            // Choosing a session is not a navigation: it should not add an entry
-            // the back button has to walk through.
-            { replace: true },
-        );
-    }, [setSearchParams]);
+    const setSelectedSession = useCallback(
+        (session: RaceSession | null) => {
+            setSearchParams(
+                (previous) => {
+                    const next = new URLSearchParams(previous);
+                    if (session) next.set('session', String(session.sessionKey));
+                    else next.delete('session');
+                    return next;
+                },
+                // Choosing a session is not a navigation: it should not add an entry
+                // the back button has to walk through.
+                { replace: true },
+            );
+        },
+        [setSearchParams],
+    );
 
     const sessionKey = selectedSession?.sessionKey;
     // Two queries rather than one Promise.all, so each is cached and
     // invalidated on its own key.
-    const lapsQuery = useQuery({ ...queries.sessionLaps(sessionKey!), enabled: sessionKey !== undefined });
-    const rosterQuery = useQuery({ ...queries.sessionDrivers(sessionKey!), enabled: sessionKey !== undefined });
+    const lapsQuery = useQuery({
+        ...queries.sessionLaps(sessionKey!),
+        enabled: sessionKey !== undefined,
+    });
+    const rosterQuery = useQuery({
+        ...queries.sessionDrivers(sessionKey!),
+        enabled: sessionKey !== undefined,
+    });
 
     const laps = useMemo(() => lapsQuery.data ?? [], [lapsQuery.data]);
     const driverColorMap = useMemo(
@@ -60,8 +70,9 @@ const HistoricalData: React.FC = () => {
     );
 
     const hasError = sessionsQuery.isError || lapsQuery.isError || rosterQuery.isError;
-    const isLoading = sessionsQuery.isPending
-        || (sessionKey !== undefined && (lapsQuery.isPending || rosterQuery.isPending));
+    const isLoading =
+        sessionsQuery.isPending ||
+        (sessionKey !== undefined && (lapsQuery.isPending || rosterQuery.isPending));
 
     const retry = useCallback(() => {
         void sessionsQuery.refetch();
@@ -71,13 +82,26 @@ const HistoricalData: React.FC = () => {
 
     return (
         <Container maxWidth="xl">
-            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+            <Box
+                sx={{
+                    mb: 4,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 2,
+                }}
+            >
                 <Box>
                     {/* React 19 hoists this into <head>: every route shared one
                         static title before, so browser history and tab lists were
                         indistinguishable. */}
                     <title>Data Vault · F1 Visualizer</title>
-                    <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: 'white', mb: 1 }}>
+                    <Typography
+                        variant="h4"
+                        component="h1"
+                        sx={{ fontWeight: 'bold', color: 'white', mb: 1 }}
+                    >
                         💾 DATA VAULT
                     </Typography>
                     {/* MUI renders subtitle1 as an h6, so this jumped the
@@ -94,14 +118,22 @@ const HistoricalData: React.FC = () => {
                 <Box sx={{ width: { xs: '100%', sm: 300 } }}>
                     <Autocomplete
                         options={sessions}
-                        getOptionLabel={(option) => `${option.year} ${option.meetingName} - ${option.sessionName}`}
+                        getOptionLabel={(option) =>
+                            `${option.year} ${option.meetingName} - ${option.sessionName}`
+                        }
                         value={selectedSession}
                         onChange={(_, newValue) => setSelectedSession(newValue)}
-                        isOptionEqualToValue={(option, value) => option.sessionKey === value.sessionKey}
+                        isOptionEqualToValue={(option, value) =>
+                            option.sessionKey === value.sessionKey
+                        }
                         renderOption={(props, option) => (
                             <Box component="li" {...props} key={option.sessionKey}>
-                                <Typography variant="body2">{option.year} {option.meetingName}</Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>[{option.sessionName}]</Typography>
+                                <Typography variant="body2">
+                                    {option.year} {option.meetingName}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                                    [{option.sessionName}]
+                                </Typography>
                             </Box>
                         )}
                         renderInput={(params) => (
@@ -119,7 +151,12 @@ const HistoricalData: React.FC = () => {
 
             <AnimatePresence mode="wait">
                 {hasError ? (
-                    <m.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <m.div
+                        key="error"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
                         <ErrorState
                             title="Session data unavailable"
                             message="The analysis service could not be reached."
@@ -150,12 +187,16 @@ const HistoricalData: React.FC = () => {
                                 message="Lap timings are only recorded for race sessions that have been ingested."
                             />
                         ) : (
-                        <LapTimeChart
-                            data={laps}
-                            title={selectedSession ? `LAP TIMES // ${selectedSession.year} ${selectedSession.meetingName}` : undefined}
-                            driverColorMap={driverColorMap}
-                            driverLabelMap={driverLabelMap}
-                        />
+                            <LapTimeChart
+                                data={laps}
+                                title={
+                                    selectedSession
+                                        ? `LAP TIMES // ${selectedSession.year} ${selectedSession.meetingName}`
+                                        : undefined
+                                }
+                                driverColorMap={driverColorMap}
+                                driverLabelMap={driverLabelMap}
+                            />
                         )}
                     </m.div>
                 )}

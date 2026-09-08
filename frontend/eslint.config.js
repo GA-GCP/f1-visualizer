@@ -1,21 +1,22 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import tseslint from 'typescript-eslint'
-import jsxA11y from 'eslint-plugin-jsx-a11y'
-import react from 'eslint-plugin-react'
-import importX from 'eslint-plugin-import-x'
-import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript'
-import vitest from '@vitest/eslint-plugin'
-import { defineConfig, globalIgnores } from 'eslint/config'
-import { createRequire } from 'node:module'
+import js from '@eslint/js';
+import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import tseslint from 'typescript-eslint';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
+import react from 'eslint-plugin-react';
+import importX from 'eslint-plugin-import-x';
+import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
+import vitest from '@vitest/eslint-plugin';
+import prettier from 'eslint-config-prettier/flat';
+import { defineConfig, globalIgnores } from 'eslint/config';
+import { createRequire } from 'node:module';
 
 // eslint-plugin-react's `version: 'detect'` calls context.getFilename(),
 // removed in ESLint 10 — it throws before linting a single file. Reading the
 // installed version here avoids that code path without hard-coding a number
 // that would silently drift from the dependency.
-const reactVersion = createRequire(import.meta.url)('react/package.json').version
+const reactVersion = createRequire(import.meta.url)('react/package.json').version;
 
 export default defineConfig([
   globalIgnores(['dist', 'coverage', 'playwright-report', 'test-results', 'blob-report']),
@@ -179,18 +180,22 @@ export default defineConfig([
       'no-restricted-syntax': [
         'error',
         {
-          selector: "Literal[value=/^#e10600$/i]",
+          selector: 'Literal[value=/^#e10600$/i]',
           message: 'Use BRAND_RED from theme/tokens (or the `primary.main` palette entry).',
         },
         {
-          selector: "Literal[value=/^#1e1e1e$/i]",
+          selector: 'Literal[value=/^#1e1e1e$/i]',
           message: 'Use PAPER_BG from theme/tokens.',
         },
         {
-          selector: "Literal[value=/Titillium Web/]",
+          selector: 'Literal[value=/Titillium Web/]',
           message: 'Use FONT_FAMILY from theme/tokens, or let the theme supply it.',
         },
       ],
     },
   },
-])
+  // Last, so it wins: turns off every ESLint rule that overlaps with Prettier.
+  // Without it the two disagree about the same line and `--fix` and `--write`
+  // undo each other on every save.
+  prettier,
+]);

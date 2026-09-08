@@ -4,7 +4,9 @@ import type { LapDataRecord } from '../../../types/telemetry';
 
 const at = (iso: string) => Date.parse(iso);
 
-const lap = (over: Partial<LapDataRecord> & { lapNumber: number; dateStart: string }): LapDataRecord => ({
+const lap = (
+    over: Partial<LapDataRecord> & { lapNumber: number; dateStart: string },
+): LapDataRecord => ({
     driverNumber: 1,
     ...over,
 });
@@ -15,8 +17,18 @@ describe('buildLapIndex / findCurrentLap', () => {
         lap({ lapNumber: 2, dateStart: '2024-05-01T12:01:30Z', compound: 'MEDIUM' }),
         lap({ lapNumber: 0, dateStart: '2024-05-01T12:00:00Z', compound: 'SOFT' }),
         lap({ lapNumber: 1, dateStart: '2024-05-01T12:01:00Z', compound: 'SOFT' }),
-        lap({ lapNumber: 3, dateStart: '2024-05-01T12:02:00Z', compound: 'MEDIUM', isPitOutLap: true }),
-        lap({ driverNumber: 44, lapNumber: 1, dateStart: '2024-05-01T12:00:30Z', compound: 'HARD' }),
+        lap({
+            lapNumber: 3,
+            dateStart: '2024-05-01T12:02:00Z',
+            compound: 'MEDIUM',
+            isPitOutLap: true,
+        }),
+        lap({
+            driverNumber: 44,
+            lapNumber: 1,
+            dateStart: '2024-05-01T12:00:30Z',
+            compound: 'HARD',
+        }),
     ];
     const index = buildLapIndex(laps);
 

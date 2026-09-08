@@ -11,18 +11,18 @@ the infrastructure, see the [root README](../README.md).
 
 ## Stack
 
-| Concern | Choice | Version |
-|---|---|---|
-| UI framework | React | 19.2 |
-| Language | TypeScript | 6.0 |
-| Build tooling | Vite | 8.2 |
-| Component library | Material UI + Emotion | 9.4 / 11.14 |
-| Animation | Framer Motion | 13.2 |
-| Charting | D3.js | 7.9 |
-| Real-time transport | `@stomp/stompjs` over SockJS | 7.3 |
-| HTTP | Axios | 1.20 |
-| Auth | Auth0 React SDK (OAuth2 + PKCE) | 2.24 |
-| Tests | Vitest + React Testing Library + jsdom | 5.0 |
+| Concern             | Choice                                 | Version     |
+| ------------------- | -------------------------------------- | ----------- |
+| UI framework        | React                                  | 19.2        |
+| Language            | TypeScript                             | 6.0         |
+| Build tooling       | Vite                                   | 8.2         |
+| Component library   | Material UI + Emotion                  | 9.4 / 11.14 |
+| Animation           | Framer Motion                          | 13.2        |
+| Charting            | D3.js                                  | 7.9         |
+| Real-time transport | `@stomp/stompjs` over SockJS           | 7.3         |
+| HTTP                | Axios                                  | 1.20        |
+| Auth                | Auth0 React SDK (OAuth2 + PKCE)        | 2.24        |
+| Tests               | Vitest + React Testing Library + jsdom | 5.0         |
 
 Node 26 and Yarn 1.x (classic). The CI image and the production `Dockerfile` both build on
 `node:26-alpine`.
@@ -41,12 +41,12 @@ The dev server listens on `http://localhost:5173` with hot module replacement.
 `yarn dev` expects the backend services to be running locally. Vite proxies API and WebSocket
 traffic to them, so no CORS configuration or base-URL override is needed in development:
 
-| Path prefix | Proxied to | Service |
-|---|---|---|
+| Path prefix         | Proxied to       | Service                                                |
+| ------------------- | ---------------- | ------------------------------------------------------ |
 | `/api/v1/ingestion` | `localhost:8081` | Ingestion — live/simulation commands, playback control |
-| `/api/v1/analysis` | `localhost:8082` | Analysis — laps, driver stats, session catalog |
-| `/api/v1/users` | `localhost:8083` | User — profiles and preferences |
-| `/ws` | `localhost:8080` | Telemetry — STOMP over WebSocket (upgrade enabled) |
+| `/api/v1/analysis`  | `localhost:8082` | Analysis — laps, driver stats, session catalog         |
+| `/api/v1/users`     | `localhost:8083` | User — profiles and preferences                        |
+| `/ws`               | `localhost:8080` | Telemetry — STOMP over WebSocket (upgrade enabled)     |
 
 Any route the app calls that isn't listed above is served by Vite itself, so a 404 from the dev
 server usually means a missing proxy entry rather than a backend fault.
@@ -79,13 +79,13 @@ takes over instead.
 
 ## Scripts
 
-| Script | Does |
-|---|---|
-| `yarn dev` | Vite dev server on port 5173 with HMR |
-| `yarn build` | `tsc -b` project-references typecheck, then a Vite production build to `dist/` |
-| `yarn preview` | Serve a built `dist/` locally to sanity-check a production bundle |
-| `yarn lint` | ESLint across the project (flat config, `eslint.config.js`) |
-| `yarn test:ci` | Vitest single-pass run, no watch — what CI executes |
+| Script         | Does                                                                           |
+| -------------- | ------------------------------------------------------------------------------ |
+| `yarn dev`     | Vite dev server on port 5173 with HMR                                          |
+| `yarn build`   | `tsc -b` project-references typecheck, then a Vite production build to `dist/` |
+| `yarn preview` | Serve a built `dist/` locally to sanity-check a production bundle              |
+| `yarn lint`    | ESLint across the project (flat config, `eslint.config.js`)                    |
+| `yarn test:ci` | Vitest single-pass run, no watch — what CI executes                            |
 
 For a watch-mode test loop during development, run `yarn vitest` directly.
 
@@ -136,12 +136,12 @@ src/
 
 ## Routes
 
-| Path | Screen | Access |
-|---|---|---|
-| `/` | Landing — public login page | Public |
-| `/dashboard` | Live Console (`RaceSimulator`) | Authenticated |
+| Path          | Screen                                     | Access        |
+| ------------- | ------------------------------------------ | ------------- |
+| `/`           | Landing — public login page                | Public        |
+| `/dashboard`  | Live Console (`RaceSimulator`)             | Authenticated |
 | `/historical` | Data Vault — session search and lap charts | Authenticated |
-| `/versus` | Head-to-Head — radar and stat comparison | Authenticated |
+| `/versus`     | Head-to-Head — radar and stat comparison   | Authenticated |
 
 Authenticated routes are nested inside a `RequiredAuth` guard and the `LayoutMain` shell, so the
 navigation chrome renders once and survives route transitions.

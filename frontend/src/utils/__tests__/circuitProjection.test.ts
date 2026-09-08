@@ -50,8 +50,14 @@ describe('computeBounds', () => {
 
     it('only uses the selected driver, ignoring others', () => {
         const history = {
-            1: [{ x: 0, y: 0 }, { x: 10, y: 10 }],
-            2: [{ x: -999, y: -999 }, { x: 999, y: 999 }],
+            1: [
+                { x: 0, y: 0 },
+                { x: 10, y: 10 },
+            ],
+            2: [
+                { x: -999, y: -999 },
+                { x: 999, y: 999 },
+            ],
         };
         const bounds = computeBounds(history, 1);
         expect(bounds.minX).toBe(0);
@@ -119,8 +125,9 @@ describe('createProjection', () => {
         const midpoint = projectPoint(50, 50, projection);
         expect(projectPoint(50, 50, projection)).toEqual(midpoint);
         // Linear: doubling the distance from the origin doubles the offset.
-        expect(projectPoint(100, 0, projection).sx - projectPoint(0, 0, projection).sx)
-            .toBeCloseTo(2 * (projectPoint(50, 0, projection).sx - projectPoint(0, 0, projection).sx));
+        expect(projectPoint(100, 0, projection).sx - projectPoint(0, 0, projection).sx).toBeCloseTo(
+            2 * (projectPoint(50, 0, projection).sx - projectPoint(0, 0, projection).sx),
+        );
     });
 });
 

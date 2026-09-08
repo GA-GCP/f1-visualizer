@@ -7,7 +7,7 @@ import MediaController from '../MediaController';
 vi.mock('../../api/ingestionApi', () => ({
     playSimulation: vi.fn().mockResolvedValue(undefined),
     pauseSimulation: vi.fn().mockResolvedValue(undefined),
-    seekSimulation: vi.fn().mockResolvedValue(undefined)
+    seekSimulation: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe('MediaController', () => {
@@ -56,8 +56,12 @@ describe('MediaController', () => {
 
     it('calls onSeek before seekSimulation to clear stale trace data', async () => {
         const callOrder: string[] = [];
-        const onSeek = vi.fn(() => { callOrder.push('onSeek'); });
-        vi.mocked(seekSimulation).mockImplementation(async () => { callOrder.push('seekSimulation'); });
+        const onSeek = vi.fn(() => {
+            callOrder.push('onSeek');
+        });
+        vi.mocked(seekSimulation).mockImplementation(async () => {
+            callOrder.push('seekSimulation');
+        });
 
         render(<MediaController onSeek={onSeek} />);
 

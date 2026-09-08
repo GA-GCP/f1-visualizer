@@ -15,5 +15,9 @@ import {
  * distinguish "connecting" from "the breaker is open".
  */
 export function useConnectionStatus(): ConnectionStatus {
-    return useSyncExternalStore(subscribeConnectionStatus, getConnectionStatus, getConnectionStatus);
+    return useSyncExternalStore(
+        subscribeConnectionStatus,
+        getConnectionStatus,
+        getConnectionStatus,
+    );
 }

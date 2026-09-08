@@ -60,10 +60,22 @@ const HISTORY_TRIM_SLACK = 512;
 const MAX_DPR = 2;
 
 const emptyBounds = (): Bounds => ({
-    minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity,
+    minX: Infinity,
+    maxX: -Infinity,
+    minY: Infinity,
+    maxY: -Infinity,
 });
 
-const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedDriver, sessionKey, resetKey, isSessionActive, isInitializing, sessionMeta, driverCode }) => {
+const CircuitTrace: React.FC<CircuitTraceProps> = ({
+    locationQueueRef,
+    selectedDriver,
+    sessionKey,
+    resetKey,
+    isSessionActive,
+    isInitializing,
+    sessionMeta,
+    driverCode,
+}) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -98,7 +110,11 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
     const trimGenerationRef = useRef(0);
 
     // Diagnostic counters (visible in the canvas overlay)
-    const diagRef = useRef({ totalPackets: 0, driversSeenSet: new Set<number>(), lastDrainSize: 0 });
+    const diagRef = useRef({
+        totalPackets: 0,
+        driversSeenSet: new Set<number>(),
+        lastDrainSize: 0,
+    });
 
     // Keep selectedDriver and sessionKey available to the animation loop via refs
     const selectedDriverRef = useRef(selectedDriver);
@@ -131,7 +147,9 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
         diagRef.current = { totalPackets: 0, driversSeenSet: new Set(), lastDrainSize: 0 };
         needsPaintRef.current = true;
         if (import.meta.env.DEV && sessionKey !== null) {
-            log.debug(`[CircuitTrace] Reset (session=${sessionKey}, resetKey=${resetKey}) — cleared all history and bounds`);
+            log.debug(
+                `[CircuitTrace] Reset (session=${sessionKey}, resetKey=${resetKey}) — cleared all history and bounds`,
+            );
         }
     }, [sessionKey, resetKey]);
 
@@ -298,13 +316,17 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                 queue.length = 0;
 
                 // Log first drain and then periodically
-                if (import.meta.env.DEV && (diagRef.current.totalPackets <= drainSize || diagRef.current.totalPackets % 2000 < drainSize)) {
+                if (
+                    import.meta.env.DEV &&
+                    (diagRef.current.totalPackets <= drainSize ||
+                        diagRef.current.totalPackets % 2000 < drainSize)
+                ) {
                     const b = boundsRef.current;
                     log.debug(
                         `[CircuitTrace] Drained ${drainSize} packets | total=${diagRef.current.totalPackets} | ` +
-                        `drivers=${diagRef.current.driversSeenSet.size} | ` +
-                        `selected=${driver?.id ?? 'none'} | ` +
-                        `boundsValid=${areBoundsValid(b)} (${areBoundsValid(b) ? `${b.minX.toFixed(0)}..${b.maxX.toFixed(0)}, ${b.minY.toFixed(0)}..${b.maxY.toFixed(0)}` : 'Infinity'})`
+                            `drivers=${diagRef.current.driversSeenSet.size} | ` +
+                            `selected=${driver?.id ?? 'none'} | ` +
+                            `boundsValid=${areBoundsValid(b)} (${areBoundsValid(b) ? `${b.minX.toFixed(0)}..${b.maxX.toFixed(0)}, ${b.minY.toFixed(0)}..${b.maxY.toFixed(0)}` : 'Infinity'})`,
                     );
                 }
             }
@@ -333,8 +355,9 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                 // Identity of everything the cached polylines depend on. The
                 // bounds stop growing once the selected driver has completed a
                 // lap, at which point the layer becomes purely incremental.
-                const key = `${width}x${height}|${b.minX},${b.maxX},${b.minY},${b.maxY}`
-                    + `|${driver?.id ?? 'none'}|${driver?.teamColor ?? ''}|${trimGenerationRef.current}`;
+                const key =
+                    `${width}x${height}|${b.minX},${b.maxX},${b.minY},${b.maxY}` +
+                    `|${driver?.id ?? 'none'}|${driver?.teamColor ?? ''}|${trimGenerationRef.current}`;
 
                 if (layer && layer.key !== key) {
                     layer.ctx.clearRect(0, 0, width, height);
@@ -348,7 +371,11 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
 
                     if (layer) {
                         layer.drawn[driverId] = strokeTrace(
-                            layer.ctx, points, projection, isSelected, driver?.teamColor,
+                            layer.ctx,
+                            points,
+                            projection,
+                            isSelected,
+                            driver?.teamColor,
                             { from: layer.drawn[driverId] ?? 0 },
                         );
                     } else {
@@ -367,8 +394,11 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                 for (const [key, points] of Object.entries(historyMap)) {
                     if (points.length === 0) continue;
                     drawCarDot(
-                        ctx, points[points.length - 1], projection,
-                        driver?.id === Number(key), driver?.teamColor,
+                        ctx,
+                        points[points.length - 1],
+                        projection,
+                        driver?.id === Number(key),
+                        driver?.teamColor,
                     );
                 }
             }
@@ -390,16 +420,32 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
         const id = setInterval(() => {
             const diag = diagRef.current;
             setDiagnostics(
-                `PKT: ${diag.totalPackets}  DRV: ${diag.driversSeenSet.size}  `
-                + `BOUNDS: ${areBoundsValid(boundsRef.current) ? 'OK' : 'WAITING'}`,
+                `PKT: ${diag.totalPackets}  DRV: ${diag.driversSeenSet.size}  ` +
+                    `BOUNDS: ${areBoundsValid(boundsRef.current) ? 'OK' : 'WAITING'}`,
             );
         }, 1000);
         return () => clearInterval(id);
     }, [isSessionActive]);
 
     return (
-        <Paper sx={{ p: 2, bgcolor: PAPER_BG, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2, mb: 1, alignSelf: 'flex-start' }}>
+        <Paper
+            sx={{
+                p: 2,
+                bgcolor: PAPER_BG,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+            }}
+        >
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: 2,
+                    mb: 1,
+                    alignSelf: 'flex-start',
+                }}
+            >
                 <Typography id="circuit-trace-title" variant="h6" component="h2" color="primary">
                     CIRCUIT TRACE
                 </Typography>
@@ -426,7 +472,17 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                     )}
                 </AnimatePresence>
             </Box>
-            <Box ref={containerRef} sx={{ position: 'relative', border: '1px solid #333', borderRadius: 1, bgcolor: CANVAS_BG, width: '100%', overflow: 'hidden' }}>
+            <Box
+                ref={containerRef}
+                sx={{
+                    position: 'relative',
+                    border: '1px solid #333',
+                    borderRadius: 1,
+                    bgcolor: CANVAS_BG,
+                    width: '100%',
+                    overflow: 'hidden',
+                }}
+            >
                 {/* Sized imperatively by the ResizeObserver, in device pixels
                     with a CSS-pixel transform, so no resize costs a render.
 
@@ -444,9 +500,7 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                     plotted from GPS telemetry.
                 </canvas>
                 <AnimatePresence mode="wait">
-                    {!isSessionActive && (
-                        <CircuitTraceIdleOverlay key="idle" />
-                    )}
+                    {!isSessionActive && <CircuitTraceIdleOverlay key="idle" />}
                     {isSessionActive && isInitializing && (
                         <CircuitTraceLoadingOverlay
                             key="loading"
@@ -457,7 +511,12 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                     )}
                 </AnimatePresence>
             </Box>
-            <Typography id="circuit-trace-caption" variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+            <Typography
+                id="circuit-trace-caption"
+                variant="caption"
+                color="text.secondary"
+                sx={{ mt: 1 }}
+            >
                 Live Plotting (Tracking Driver: {selectedDriver?.code || 'None'})
             </Typography>
             {isSessionActive && diagnostics && (

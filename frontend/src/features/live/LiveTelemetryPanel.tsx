@@ -3,7 +3,14 @@ import { m } from 'framer-motion';
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTelemetry } from '../../hooks/useTelemetry';
 import { staggerContainer, staggerItem } from '../../theme/motion';
-import { BORDER_SUBTLE, COMPOUND_COLOURS, COMPOUND_FALLBACK, FONT_FAMILY, PAPER_BG, type TyreCompound } from '../../theme/tokens';
+import {
+    BORDER_SUBTLE,
+    COMPOUND_COLOURS,
+    COMPOUND_FALLBACK,
+    FONT_FAMILY,
+    PAPER_BG,
+    type TyreCompound,
+} from '../../theme/tokens';
 import { buildLapIndex, findCurrentLap, type CurrentLap } from './lapCorrelation';
 import type { DriverProfile } from '../../api/referenceApi';
 import type { LapDataRecord, TelemetryPacket } from '../../types/telemetry';
@@ -103,7 +110,7 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
         const now = performance.now();
         const dueByTime = now - lastCommitRef.current >= COMMIT_INTERVAL_MS;
         const gearChanged = packet.gear !== previous?.gear;
-        const brakeToggled = (packet.brake > 0) !== ((previous?.brake ?? 0) > 0);
+        const brakeToggled = packet.brake > 0 !== (previous?.brake ?? 0) > 0;
 
         if (dueByTime || gearChanged || brakeToggled) {
             lastCommitRef.current = now;
@@ -116,21 +123,20 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
                 Date.parse(packet.date),
             );
             // Bail out of the render when the lap has not actually changed.
-            setCurrentLap(prev =>
-                prev?.lapNumber === matched?.lapNumber ? prev : matched,
-            );
+            setCurrentLap((prev) => (prev?.lapNumber === matched?.lapNumber ? prev : matched));
         }
     });
 
-
     return (
-        <Paper sx={{
-            p: 3,
-            bgcolor: PAPER_BG,
-            color: 'white',
-            minHeight: '200px',
-            borderTop: `4px solid ${selectedDriver?.teamColor || BORDER_SUBTLE}`,
-        }}>
+        <Paper
+            sx={{
+                p: 3,
+                bgcolor: PAPER_BG,
+                color: 'white',
+                minHeight: '200px',
+                borderTop: `4px solid ${selectedDriver?.teamColor || BORDER_SUBTLE}`,
+            }}
+        >
             <Typography variant="h6" component="h2" color="secondary" sx={{ mb: 2 }}>
                 LIVE TELEMETRY
             </Typography>
@@ -139,37 +145,70 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
                     {currentLap && (
                         <m.div variants={staggerItem}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                                <Typography variant="h6" component="p" sx={{
-                                    fontFamily: FONT_FAMILY,
-                                    fontWeight: 700,
-                                    letterSpacing: '0.05em',
-                                    ...numericSx,
-                                }}>
+                                <Typography
+                                    variant="h6"
+                                    component="p"
+                                    sx={{
+                                        fontFamily: FONT_FAMILY,
+                                        fontWeight: 700,
+                                        letterSpacing: '0.05em',
+                                        ...numericSx,
+                                    }}
+                                >
                                     LAP {currentLap.lapNumber}
-                                    <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>
+                                    <span
+                                        style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}
+                                    >
                                         /{currentLap.totalLaps}
                                     </span>
                                 </Typography>
                                 {currentLap.isFormationLap && (
-                                    <Chip label="FORMATION LAP" size="small"
-                                        sx={{ bgcolor: '#ff9800', color: 'black', fontWeight: 700, fontSize: '0.75rem' }} />
-                                )}
-                                {currentLap.isPitOutLap && (
-                                    <Chip label="PIT OUT" size="small"
-                                        sx={{ bgcolor: '#2196f3', color: 'white', fontWeight: 700, fontSize: '0.75rem' }} />
-                                )}
-                                {currentLap.compound && currentLap.prevCompound &&
-                                 currentLap.compound !== currentLap.prevCompound && (
                                     <Chip
-                                        label={`${currentLap.prevCompound} → ${currentLap.compound}`}
+                                        label="FORMATION LAP"
                                         size="small"
-                                        sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'white', fontSize: '0.75rem' }}
+                                        sx={{
+                                            bgcolor: '#ff9800',
+                                            color: 'black',
+                                            fontWeight: 700,
+                                            fontSize: '0.75rem',
+                                        }}
                                     />
                                 )}
-                                {currentLap.compound && (
-                                    <Chip label={currentLap.compound} size="small" variant="outlined"
+                                {currentLap.isPitOutLap && (
+                                    <Chip
+                                        label="PIT OUT"
+                                        size="small"
                                         sx={{
-                                            borderColor: COMPOUND_COLOURS[currentLap.compound as TyreCompound] ?? COMPOUND_FALLBACK,
+                                            bgcolor: '#2196f3',
+                                            color: 'white',
+                                            fontWeight: 700,
+                                            fontSize: '0.75rem',
+                                        }}
+                                    />
+                                )}
+                                {currentLap.compound &&
+                                    currentLap.prevCompound &&
+                                    currentLap.compound !== currentLap.prevCompound && (
+                                        <Chip
+                                            label={`${currentLap.prevCompound} → ${currentLap.compound}`}
+                                            size="small"
+                                            sx={{
+                                                bgcolor: 'rgba(255,255,255,0.1)',
+                                                color: 'white',
+                                                fontSize: '0.75rem',
+                                            }}
+                                        />
+                                    )}
+                                {currentLap.compound && (
+                                    <Chip
+                                        label={currentLap.compound}
+                                        size="small"
+                                        variant="outlined"
+                                        sx={{
+                                            borderColor:
+                                                COMPOUND_COLOURS[
+                                                    currentLap.compound as TyreCompound
+                                                ] ?? COMPOUND_FALLBACK,
                                             color: 'white',
                                             fontSize: '0.75rem',
                                         }}
@@ -179,42 +218,70 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
                         </m.div>
                     )}
                     <m.div variants={staggerItem}>
-                        <Typography variant="h2" component="p" sx={{ fontWeight: 'bold', color: 'white' }}>
-                            <Box component="span" sx={{
-                                ...numericSx,
-                                display: 'inline-block',
-                                minWidth: '3ch',
-                                textAlign: 'right',
-                            }}>
+                        <Typography
+                            variant="h2"
+                            component="p"
+                            sx={{ fontWeight: 'bold', color: 'white' }}
+                        >
+                            <Box
+                                component="span"
+                                sx={{
+                                    ...numericSx,
+                                    display: 'inline-block',
+                                    minWidth: '3ch',
+                                    textAlign: 'right',
+                                }}
+                            >
                                 {lastTelemetry.speed}
-                            </Box>
-                            {' '}
+                            </Box>{' '}
                             <span style={{ fontSize: '1.5rem', color: '#666' }}>KM/H</span>
                         </Typography>
                     </m.div>
                     <Grid container component="dl" spacing={2} sx={{ mt: 2, mb: 0 }}>
                         <Grid size={3}>
                             <m.div variants={staggerItem}>
-                                <Typography variant="caption" component="dt" color="text.secondary">RPM</Typography>
-                                <Typography variant="h6" component="dd" sx={{ m: 0, ...numericSx }}>{lastTelemetry.rpm}</Typography>
+                                <Typography variant="caption" component="dt" color="text.secondary">
+                                    RPM
+                                </Typography>
+                                <Typography variant="h6" component="dd" sx={{ m: 0, ...numericSx }}>
+                                    {lastTelemetry.rpm}
+                                </Typography>
                             </m.div>
                         </Grid>
                         <Grid size={3}>
                             <m.div variants={staggerItem}>
-                                <Typography variant="caption" component="dt" color="text.secondary">GEAR</Typography>
-                                <Typography variant="h6" component="dd" sx={{ m: 0, ...numericSx }}>{lastTelemetry.gear}</Typography>
+                                <Typography variant="caption" component="dt" color="text.secondary">
+                                    GEAR
+                                </Typography>
+                                <Typography variant="h6" component="dd" sx={{ m: 0, ...numericSx }}>
+                                    {lastTelemetry.gear}
+                                </Typography>
                             </m.div>
                         </Grid>
                         <Grid size={3}>
                             <m.div variants={staggerItem}>
-                                <Typography variant="caption" component="dt" color="text.secondary">THROTTLE</Typography>
-                                <Typography variant="h6" component="dd" sx={{ m: 0, ...numericSx }}>{lastTelemetry.throttle}%</Typography>
+                                <Typography variant="caption" component="dt" color="text.secondary">
+                                    THROTTLE
+                                </Typography>
+                                <Typography variant="h6" component="dd" sx={{ m: 0, ...numericSx }}>
+                                    {lastTelemetry.throttle}%
+                                </Typography>
                             </m.div>
                         </Grid>
                         <Grid size={3}>
                             <m.div variants={staggerItem}>
-                                <Typography variant="caption" component="dt" color="text.secondary">BRAKE</Typography>
-                                <Typography variant="h6" component="dd" sx={{ m: 0, ...numericSx, color: lastTelemetry.brake > 0 ? '#ff4444' : 'white' }}>
+                                <Typography variant="caption" component="dt" color="text.secondary">
+                                    BRAKE
+                                </Typography>
+                                <Typography
+                                    variant="h6"
+                                    component="dd"
+                                    sx={{
+                                        m: 0,
+                                        ...numericSx,
+                                        color: lastTelemetry.brake > 0 ? '#ff4444' : 'white',
+                                    }}
+                                >
                                     {lastTelemetry.brake}%
                                 </Typography>
                             </m.div>
@@ -223,7 +290,9 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
                 </m.div>
             ) : (
                 <Typography color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>
-                    {activeSession ? `Waiting for data from ${selectedDriver?.code}...` : 'Initialize a session to begin.'}
+                    {activeSession
+                        ? `Waiting for data from ${selectedDriver?.code}...`
+                        : 'Initialize a session to begin.'}
                 </Typography>
             )}
         </Paper>

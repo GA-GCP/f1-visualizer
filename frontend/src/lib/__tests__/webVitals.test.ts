@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { buildInfo } from '../buildInfo';
 import { dispatch, reportWebVitals, setVitalsSink, toReport } from '../webVitals';
 
 afterEach(() => setVitalsSink(null));
@@ -9,7 +10,7 @@ describe('web vitals', () => {
         // is the only thing anyone actually wants to do with these.
         const report = toReport({ name: 'LCP', value: 1234.56, rating: 'good' });
 
-        expect(report).toMatchObject({ name: 'LCP', value: 1234.56, rating: 'good', version: 'test' });
+        expect(report).toMatchObject({ name: 'LCP', value: 1234.56, rating: 'good', version: buildInfo.version });
     });
 
     it('routes a measurement to an installed sink instead of the beacon', () => {
@@ -19,7 +20,7 @@ describe('web vitals', () => {
         dispatch({ name: 'INP', value: 42, rating: 'good' });
 
         expect(sink).toHaveBeenCalledOnce();
-        expect(sink.mock.calls[0][0]).toMatchObject({ name: 'INP', version: 'test' });
+        expect(sink.mock.calls[0][0]).toMatchObject({ name: 'INP', version: buildInfo.version });
         expect(navigator.sendBeacon).not.toHaveBeenCalled();
     });
 

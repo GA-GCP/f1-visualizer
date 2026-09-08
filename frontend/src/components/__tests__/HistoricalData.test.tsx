@@ -13,7 +13,6 @@ vi.mock('../../api/referenceApi', () => ({
     fetchYears: vi.fn(),
     fetchSessionsByYear: vi.fn(),
     fetchDriverStats: vi.fn(),
-    searchSessions: vi.fn(),
 }));
 
 // Mock the D3 Chart to avoid SVG rendering issues in JSDOM

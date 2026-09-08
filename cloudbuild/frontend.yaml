@@ -17,6 +17,19 @@ substitutions:
   # a production stack trace can be symbolicated. Empty means skip the upload —
   # the maps are still built, just not kept.
   _SOURCEMAP_BUCKET: ''
+  # Builder images, pinned by digest and declared once rather than repeated
+  # across ten steps. Unpinned, `node:26-alpine` tracked every 26.x patch and
+  # every Alpine bump, and `gcr.io/cloud-builders/docker` had no tag at all —
+  # so two builds of the same commit could compile the canvas addon against a
+  # different musl and push with a different docker client, with no diff in
+  # this repo to bisect. The --cache-from layer cache also cannot hit when the
+  # base moves underneath it.
+  #
+  # The tag is kept next to the digest for readability; the digest resolves.
+  _NODE_IMAGE: 'node:26.8.1-alpine3.24@sha256:2d984a15c9b54fd0aeb608b8e0d0d83529eb34d2966db27a1fb4f1edc3d298a3'
+  _CLOUD_SDK_IMAGE: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0@sha256:c6c6bec5b8b94e4eb2f8ade1f17cf4cb01f07973b7fbb3a4843f0a61592ad5ed'
+  # Digest only: this image is published without a meaningful version tag.
+  _DOCKER_IMAGE: 'gcr.io/cloud-builders/docker@sha256:3d00b6c1a9b862621c30fc74d4f2abfc62bcbdee631ed3febd31e7edbdf6252c'
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -27,7 +40,7 @@ steps:
   #    triggered build used to push that same tag — so :manual-build moved,
   #    while step 6 deploys by tag on the assumption that it does not. An
   #    unidentifiable build is also one no one can map an error report back to.
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
+  - name: '${_CLOUD_SDK_IMAGE}'
     id: 'verify-version'
     entrypoint: 'bash'
     args:
@@ -45,7 +58,7 @@ steps:
   #    canvas (node-canvas) is a native C++ addon used by visual-regression
   #    tests. Alpine needs Python, a C++ toolchain, and Cairo/Pango libs
   #    for node-gyp to compile it.
-  - name: 'node:26-alpine'
+  - name: '${_NODE_IMAGE}'
     id: 'install'
     entrypoint: 'sh'
     args:
@@ -57,7 +70,7 @@ steps:
     dir: 'frontend'
 
   # 2. ESLint Check
-  - name: 'node:26-alpine'
+  - name: '${_NODE_IMAGE}'
     id: 'lint'
     entrypoint: 'yarn'
     args: ['lint']
@@ -66,7 +79,7 @@ steps:
   # 3. Unit Tests
   #    canvas runtime libs needed for visual-regression tests (the compiled
   #    .node addon from step 1 links against cairo/pango shared libs).
-  - name: 'node:26-alpine'
+  - name: '${_NODE_IMAGE}'
     id: 'test'
     entrypoint: 'sh'
     args:
@@ -80,7 +93,7 @@ steps:
     env: ['CI=true']
 
   # 4. Production Build (produces dist/)
-  - name: 'node:26-alpine'
+  - name: '${_NODE_IMAGE}'
     id: 'build'
     entrypoint: 'yarn'
     args: ['build', '--mode', '${_ENV}']
@@ -94,7 +107,7 @@ steps:
   #     request them; .dockerignore keeps them out of the image. Archiving is
   #     what makes them useful — without a copy keyed by version, a minified
   #     production stack trace stays unreadable.
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
+  - name: '${_CLOUD_SDK_IMAGE}'
     id: 'archive-sourcemaps'
     entrypoint: 'bash'
     args:
@@ -112,7 +125,7 @@ steps:
   # 5. Docker Build + Push (registry layer cache)
   #    Kaniko was archived upstream; this uses the maintained Cloud Build
   #    docker builder, seeding the cache from the previous env image.
-  - name: 'gcr.io/cloud-builders/docker'
+  - name: '${_DOCKER_IMAGE}'
     id: 'build-push-image'
     entrypoint: 'bash'
     args:
@@ -144,7 +157,7 @@ steps:
   #     smoke test fails the build stops here and no user ever sees this
   #     revision, so the rollback is 'do nothing' rather than a manual undo.
   #     --tag gives the revision its own URL to be tested on.
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
+  - name: '${_CLOUD_SDK_IMAGE}'
     id: 'deploy-no-traffic'
     entrypoint: 'gcloud'
     args:
@@ -159,7 +172,7 @@ steps:
       - '--quiet'
 
   # 7. Smoke test the revision on its tag URL, before it serves anyone.
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
+  - name: '${_CLOUD_SDK_IMAGE}'
     id: 'smoke'
     entrypoint: 'bash'
     args:
@@ -209,7 +222,7 @@ steps:
   #     Pinned by tag rather than --to-latest, so traffic points at this exact
   #     revision instead of following whatever becomes latest — a later
   #     terragrunt apply cannot silently shift users onto a different image.
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
+  - name: '${_CLOUD_SDK_IMAGE}'
     id: 'promote'
     entrypoint: 'gcloud'
     args:

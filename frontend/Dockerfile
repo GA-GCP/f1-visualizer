@@ -1,7 +1,22 @@
 # ==========================================
+# Base images, pinned by digest.
+# ==========================================
+# `node:26-alpine` tracked every 26.x patch and every Alpine bump, and
+# `nginx-unprivileged:alpine` carried no nginx version at all — so two builds of
+# the same commit could produce a different nginx binary and, because canvas is
+# compiled from source, a different native addon against whatever musl and cairo
+# Alpine shipped that day. A digest makes the base image part of the commit.
+#
+# The tag is kept alongside the digest for readability; the digest is what
+# actually resolves. Dockerfile.ci pins the same NGINX_IMAGE and the two must
+# move together.
+ARG NODE_IMAGE=node:26.8.1-alpine3.24@sha256:2d984a15c9b54fd0aeb608b8e0d0d83529eb34d2966db27a1fb4f1edc3d298a3
+ARG NGINX_IMAGE=nginxinc/nginx-unprivileged:1.31.5-alpine@sha256:2ddec616f1cb58bcac057aa388f28cb81e35137641ef4226d321714499329bd1
+
+# ==========================================
 # STAGE 1: Build the React Application
 # ==========================================
-FROM node:26-alpine AS builder
+FROM ${NODE_IMAGE} AS builder
 
 WORKDIR /app
 
@@ -39,7 +54,7 @@ RUN yarn build --mode ${ENV_MODE}
 # ==========================================
 # STAGE 2: Serve with NGINX (Unprivileged)
 # ==========================================
-FROM nginxinc/nginx-unprivileged:alpine
+FROM ${NGINX_IMAGE}
 
 # 1. Copy the custom Nginx config (SPA Routing)
 COPY nginx.conf /etc/nginx/conf.d/default.conf

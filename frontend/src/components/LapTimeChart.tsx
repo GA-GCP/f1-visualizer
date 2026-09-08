@@ -175,11 +175,21 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({
                 const driverIdx = driverNumbers.indexOf(d.driverNumber);
                 const color = getDriverColor(d.driverNumber, driverIdx, driverColorMap);
                 const driverLabel = driverLabelMap?.[d.driverNumber] ?? `#${d.driverNumber}`;
-                tooltip
-                    .style('opacity', 1)
-                    .html(
-                        `<strong style="color:${color}">${driverLabel}</strong> Lap ${d.lapNumber}<br/>${d.lapDuration!.toFixed(3)}s`,
-                    );
+                // Built as nodes rather than with .html(). driverLabel and
+                // color come from the session roster, which the backend fills
+                // from third-party F1 timing data — so this was the app's only
+                // innerHTML sink taking remote content. The strict script-src
+                // blocks script execution, but not an injected <img> or <a>,
+                // and not style-attribute injection.
+                //
+                // .text() sets textContent, and .style() goes through CSSOM,
+                // which drops a value it cannot parse instead of writing it.
+                tooltip.style('opacity', 1);
+                tooltip.selectAll('*').remove();
+                tooltip.append('strong').style('color', color).text(driverLabel);
+                tooltip.append('span').text(` Lap ${d.lapNumber}`);
+                tooltip.append('br');
+                tooltip.append('span').text(`${d.lapDuration!.toFixed(3)}s`);
             })
             .on('mousemove', (event: MouseEvent) => {
                 const [mx, my] = d3.pointer(event, containerRef.current);

@@ -1,3 +1,4 @@
+import { hasLapStart, type StartedLap } from '../../api/schemas';
 import type { LapDataRecord } from '../../types/telemetry';
 
 export interface CurrentLap {
@@ -12,8 +13,8 @@ export interface CurrentLap {
 interface DriverLapIndex {
     /** Lap start times in epoch ms, ascending. Parallel to `laps`. */
     startsMs: number[];
-    /** Laps ordered by start time. */
-    laps: LapDataRecord[];
+    /** Laps ordered by start time. Every entry has one — see hasLapStart. */
+    laps: StartedLap[];
     totalLaps: number;
 }
 
@@ -29,10 +30,13 @@ export type LapIndex = ReadonlyMap<number, DriverLapIndex>;
  * a second on the hot path, all recomputing a result that never changes.
  */
 export function buildLapIndex(sessionLaps: readonly LapDataRecord[]): LapIndex {
-    const byDriver = new Map<number, LapDataRecord[]>();
+    // Typed to StartedLap so the narrowing survives being put in an array. The
+    // check below used to narrow only inside the loop body, so every later read
+    // of dateStart needed a `!` that the compiler could not verify.
+    const byDriver = new Map<number, StartedLap[]>();
 
     for (const lap of sessionLaps) {
-        if (!lap.dateStart) continue;
+        if (!hasLapStart(lap)) continue;
         const existing = byDriver.get(lap.driverNumber);
         if (existing) existing.push(lap);
         else byDriver.set(lap.driverNumber, [lap]);
@@ -40,9 +44,9 @@ export function buildLapIndex(sessionLaps: readonly LapDataRecord[]): LapIndex {
 
     const index = new Map<number, DriverLapIndex>();
     for (const [driverNumber, laps] of byDriver) {
-        laps.sort((a, b) => Date.parse(a.dateStart!) - Date.parse(b.dateStart!));
+        laps.sort((a, b) => Date.parse(a.dateStart) - Date.parse(b.dateStart));
         index.set(driverNumber, {
-            startsMs: laps.map((lap) => Date.parse(lap.dateStart!)),
+            startsMs: laps.map((lap) => Date.parse(lap.dateStart)),
             laps,
             totalLaps: laps.reduce((max, lap) => Math.max(max, lap.lapNumber), 0),
         });

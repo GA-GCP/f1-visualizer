@@ -50,12 +50,15 @@ const HistoricalData: React.FC = () => {
     const sessionKey = selectedSession?.sessionKey;
     // Two queries rather than one Promise.all, so each is cached and
     // invalidated on its own key.
+    // `?? 0` rather than `!`: the query is disabled when there is no session, so
+    // the value is never used — but an assertion here claims a guarantee that
+    // only `enabled` provides, two lines apart, and nothing keeps them in step.
     const lapsQuery = useQuery({
-        ...queries.sessionLaps(sessionKey!),
+        ...queries.sessionLaps(sessionKey ?? 0),
         enabled: sessionKey !== undefined,
     });
     const rosterQuery = useQuery({
-        ...queries.sessionDrivers(sessionKey!),
+        ...queries.sessionDrivers(sessionKey ?? 0),
         enabled: sessionKey !== undefined,
     });
 
@@ -102,7 +105,7 @@ const HistoricalData: React.FC = () => {
                         component="h1"
                         sx={{ fontWeight: 'bold', color: 'white', mb: 1 }}
                     >
-                        💾 DATA VAULT
+                        <span aria-hidden="true">💾</span> DATA VAULT
                     </Typography>
                     {/* MUI renders subtitle1 as an h6, so this jumped the
                         heading order straight from h1 to h6. It is a subtitle,

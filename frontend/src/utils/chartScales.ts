@@ -1,4 +1,5 @@
 import * as d3 from 'd3';
+import { hasLapDuration } from '../api/schemas';
 import { TEAM_FALLBACK_COLOURS } from '../theme/tokens';
 import type { SessionDriverEntry } from '../api/referenceApi';
 import type { LapDataRecord } from '../types/telemetry';
@@ -97,7 +98,9 @@ export function createLapChartScales(
     innerHeight: number,
 ) {
     const xDomain = d3.extent(data, (d) => d.lapNumber) as [number, number];
-    const validDurations = data.filter((d) => d.lapDuration).map((d) => d.lapDuration!);
+    // The same guard the chart uses, rather than a truthiness filter plus an
+    // assertion — three call sites used three different predicates for one idea.
+    const validDurations = data.filter(hasLapDuration).map((d) => d.lapDuration);
     const yMin = d3.min(validDurations)! - 2;
     const yMax = d3.max(validDurations)! + 2;
 

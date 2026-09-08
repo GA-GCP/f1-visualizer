@@ -46,6 +46,24 @@ Object.defineProperty(performance, 'clearMarks', {
     value: () => performanceMarks.clear(),
 });
 
+// React 19's "not wrapped in act(...)" warning means an update was flushed
+// outside act, so assertions afterwards may be reading stale DOM. It is a
+// warning, so a suite stays green while producing it — this run produced five —
+// and the noise hides the ones that matter. Thrown instead, which is the only
+// way a warning stops accumulating.
+//
+// Narrow on purpose: every other console.error still prints. Several tests
+// deliberately exercise failure paths and log through them, so failing the
+// suite on any console.error would mean deleting real assertions to keep it
+// quiet.
+const originalConsoleError = console.error;
+console.error = (...args: unknown[]) => {
+    if (typeof args[0] === 'string' && args[0].includes('not wrapped in act')) {
+        throw new Error(args[0]);
+    }
+    originalConsoleError(...args);
+};
+
 // sendBeacon mock (jsdom doesn't implement it either). Defined rather than
 // left absent so the vitals tests exercise the real send path — webVitals.ts
 // feature-detects it, so without this the assertion 'no beacon was sent' would

@@ -37,10 +37,10 @@ describe('SplashScreen', () => {
     it('renders the F1 VISUALIZER title letters', () => {
         render(<SplashScreen onComplete={vi.fn()} readiness={0.5} />);
 
-        // Each letter is rendered individually — check for key letters
-        expect(screen.getByText('F')).toBeInTheDocument();
-        expect(screen.getByText('1')).toBeInTheDocument();
-        expect(screen.getByText('V')).toBeInTheDocument();
+        // The letters are rendered individually, but the container is what
+        // carries the accessible name. Single-character queries collide with
+        // the first matching character anywhere on the page.
+        expect(screen.getByRole('status', { name: /loading f1 visualizer/i })).toBeInTheDocument();
     });
 
     it('renders SplashBackground sub-component', () => {

@@ -10,11 +10,15 @@ describe('CircuitTraceIdleOverlay', () => {
         expect(screen.getByText('CIRCUIT TRACE WILL APPEAR HERE')).toBeInTheDocument();
     });
 
-    it('renders the SpeedIcon', () => {
+    it('renders its icon as decoration, not as content', () => {
         const { container } = render(<CircuitTraceIdleOverlay />);
 
-        // MUI SpeedIcon renders as an SVG with data-testid
-        const svgIcon = container.querySelector('svg[data-testid="SpeedIcon"]');
-        expect(svgIcon).toBeInTheDocument();
+        // Was keyed on svg[data-testid="SpeedIcon"] — MUI's testid convention is
+        // an implementation detail it does not guarantee, and which glyph is
+        // used is not a contract. That it is hidden from assistive technology
+        // is: the message beside it carries the meaning.
+        const icon = container.querySelector('svg');
+        expect(icon).toBeInTheDocument();
+        expect(icon).toHaveAttribute('aria-hidden', 'true');
     });
 });

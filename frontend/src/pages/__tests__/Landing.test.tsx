@@ -31,8 +31,11 @@ describe('Landing', () => {
     it('renders the F1 VISUALIZER title letters', () => {
         render(<Landing />);
 
-        expect(screen.getByText('F')).toBeInTheDocument();
-        expect(screen.getByText('1')).toBeInTheDocument();
+        // By heading role. getByText('F') collides with the first 'F' anywhere
+        // on the page and says nothing about the title being a title.
+        expect(
+            screen.getByRole('heading', { level: 1, name: /f1 visualizer/i }),
+        ).toBeInTheDocument();
         expect(screen.getByText('V')).toBeInTheDocument();
     });
 

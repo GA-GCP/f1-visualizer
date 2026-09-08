@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import * as d3 from 'd3';
 import React, { useEffect, useRef, useState } from 'react';
+import { hasLapDuration, type PlottableLap } from '../api/schemas';
 import { PAPER_BG } from '../theme/tokens';
 import {
     getDriverColor,
@@ -36,7 +37,11 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({
 }) => {
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [containerWidth, setContainerWidth] = useState(800);
+    // 0, not 800. A hard-coded starting width meant mount always did two full
+    // imperative builds: one at a guessed size, then one at the real size as
+    // soon as the observer reported it. The effect below bails while this is 0,
+    // so the first build is the only build.
+    const [containerWidth, setContainerWidth] = useState(0);
 
     // Observe container resize
     useEffect(() => {
@@ -45,14 +50,25 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({
 
         const observer = new ResizeObserver((entries) => {
             const { width } = entries[0].contentRect;
-            if (width > 0) setContainerWidth(width);
+            if (width <= 0) return;
+            // Rounded, and only committed when it actually changes. The observer
+            // fires per frame while a window is being dragged or a MUI Grid
+            // reflows, and each distinct value used to tear down and rebuild
+            // every axis, one path per driver, the legend, the tooltip and one
+            // hover circle per lap. Sub-pixel jitter now costs nothing.
+            setContainerWidth((current) => {
+                const next = Math.round(width);
+                return next === current ? current : next;
+            });
         });
         observer.observe(container);
         return () => observer.disconnect();
     }, []);
 
     useEffect(() => {
-        if (!data || data.length === 0 || !svgRef.current) return;
+        // containerWidth 0 means the observer has not reported yet; building
+        // now would be the throwaway first pass this component used to do.
+        if (!data || data.length === 0 || !svgRef.current || containerWidth === 0) return;
 
         // Clear previous render
         d3.select(svgRef.current).selectAll('*').remove();
@@ -75,9 +91,11 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({
         const driverNumbers = Array.from(grouped.keys());
 
         // Scales
-        const validDurations = data
-            .filter((d) => d.lapDuration != null && d.lapDuration > 0)
-            .map((d) => d.lapDuration!);
+        // A type guard rather than a predicate plus `!` at every later use: the
+        // narrowed type carries the guarantee, so a change to the filter is a
+        // compile error instead of a silent undefined.
+        const timedLaps = data.filter(hasLapDuration);
+        const validDurations = timedLaps.map((d) => d.lapDuration);
         if (validDurations.length === 0) return;
 
         const { xScale: x, yScale: y } = createLapChartScales(data, innerWidth, innerHeight);
@@ -109,15 +127,19 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({
             .text('LAP DURATION (s)');
 
         // Line Generator
+        // Typed to PlottableLap, so the generator cannot be handed a lap without a
+        // duration. It previously took LapDataRecord and asserted — and a lap
+        // with no duration produced y(undefined), i.e. NaN, and a broken
+        // segment in the path rather than a gap.
         const line = d3
-            .line<LapDataRecord>()
+            .line<PlottableLap>()
             .x((d) => x(d.lapNumber))
-            .y((d) => y(d.lapDuration!))
+            .y((d) => y(d.lapDuration))
             .curve(d3.curveMonotoneX);
 
         // Draw a line per driver
         driverNumbers.forEach((driverNum, idx) => {
-            const driverLaps = grouped.get(driverNum)!;
+            const driverLaps = (grouped.get(driverNum) ?? []).filter(hasLapDuration);
             const color = getDriverColor(driverNum, idx, driverColorMap);
 
             svg.append('path')
@@ -161,17 +183,17 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({
             .style('opacity', 0);
 
         // Invisible hover circles for each data point
-        const allPoints = data.filter((d) => d.lapDuration);
+        const allPoints = data.filter(hasLapDuration);
         svg.selectAll('.hover-dot')
             .data(allPoints)
             .enter()
             .append('circle')
             .attr('cx', (d) => x(d.lapNumber))
-            .attr('cy', (d) => y(d.lapDuration!))
+            .attr('cy', (d) => y(d.lapDuration))
             .attr('r', 6)
             .attr('fill', 'transparent')
             .attr('cursor', 'crosshair')
-            .on('mouseenter', (_event: MouseEvent, d: LapDataRecord) => {
+            .on('mouseenter', (_event: MouseEvent, d: PlottableLap) => {
                 const driverIdx = driverNumbers.indexOf(d.driverNumber);
                 const color = getDriverColor(d.driverNumber, driverIdx, driverColorMap);
                 const driverLabel = driverLabelMap?.[d.driverNumber] ?? `#${d.driverNumber}`;
@@ -189,7 +211,7 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({
                 tooltip.append('strong').style('color', color).text(driverLabel);
                 tooltip.append('span').text(` Lap ${d.lapNumber}`);
                 tooltip.append('br');
-                tooltip.append('span').text(`${d.lapDuration!.toFixed(3)}s`);
+                tooltip.append('span').text(`${d.lapDuration.toFixed(3)}s`);
             })
             .on('mousemove', (event: MouseEvent) => {
                 const [mx, my] = d3.pointer(event, containerRef.current);
@@ -239,20 +261,17 @@ const LapTimeChart: React.FC<LapTimeChartProps> = ({
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {data
-                                    .filter((lap) => typeof lap.lapDuration === 'number')
-                                    .map((lap) => (
-                                        <TableRow key={`${lap.driverNumber}-${lap.lapNumber}`}>
-                                            <TableCell>
-                                                {driverLabelMap?.[lap.driverNumber] ??
-                                                    lap.driverNumber}
-                                            </TableCell>
-                                            <TableCell align="right">{lap.lapNumber}</TableCell>
-                                            <TableCell align="right">
-                                                {lap.lapDuration!.toFixed(3)}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                                {data.filter(hasLapDuration).map((lap) => (
+                                    <TableRow key={`${lap.driverNumber}-${lap.lapNumber}`}>
+                                        <TableCell>
+                                            {driverLabelMap?.[lap.driverNumber] ?? lap.driverNumber}
+                                        </TableCell>
+                                        <TableCell align="right">{lap.lapNumber}</TableCell>
+                                        <TableCell align="right">
+                                            {lap.lapDuration.toFixed(3)}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
                             </TableBody>
                         </Table>
                     </TableContainer>

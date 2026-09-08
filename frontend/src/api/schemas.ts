@@ -122,3 +122,39 @@ export const userProfileSchema = z.object({
     preferences: userPreferencesSchema,
 });
 export type UserProfile = z.infer<typeof userProfileSchema>;
+
+/** A lap whose duration and start time are known. */
+export type TimedLap = LapDataRecord & { lapDuration: number; dateStart: string };
+
+/**
+ * Narrows a lap to one that can be plotted or correlated.
+ *
+ * Consumers used to filter on these fields and then re-assert with `!` at every
+ * subsequent use — five times in LapTimeChart alone. The assertion says "trust
+ * me" to the compiler at each site, so the day the filter changes, nothing
+ * fails; the reads just start producing undefined. Narrowing once means the
+ * type carries the guarantee instead.
+ */
+export function isTimedLap(lap: LapDataRecord): lap is TimedLap {
+    return (
+        typeof lap.lapDuration === 'number' &&
+        lap.lapDuration > 0 &&
+        typeof lap.dateStart === 'string'
+    );
+}
+
+/** A lap whose start time is known, so it can be ordered and correlated. */
+export type StartedLap = LapDataRecord & { dateStart: string };
+
+/** Narrows a lap to one that has a start time. */
+export function hasLapStart(lap: LapDataRecord): lap is StartedLap {
+    return typeof lap.dateStart === 'string' && lap.dateStart.length > 0;
+}
+
+/** A lap that can be plotted: its duration is known, its start time need not be. */
+export type PlottableLap = LapDataRecord & { lapDuration: number };
+
+/** Narrows a lap to one with a usable duration, ignoring its start time. */
+export function hasLapDuration(lap: LapDataRecord): lap is PlottableLap {
+    return typeof lap.lapDuration === 'number' && lap.lapDuration > 0;
+}

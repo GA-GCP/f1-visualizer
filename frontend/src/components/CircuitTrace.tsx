@@ -501,11 +501,16 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({
                 </canvas>
                 <AnimatePresence mode="wait">
                     {!isSessionActive && <CircuitTraceIdleOverlay key="idle" />}
-                    {isSessionActive && isInitializing && (
+                    {/* Conditioned on sessionMeta itself, not on two derived
+                        booleans that happen to imply it. The assertion held only
+                        because the parent sets the meta before flipping
+                        isInitializing — an ordering nothing enforced, and a
+                        crash if it ever changed. */}
+                    {isSessionActive && isInitializing && sessionMeta && (
                         <CircuitTraceLoadingOverlay
                             key="loading"
-                            year={sessionMeta!.year}
-                            meetingName={sessionMeta!.meetingName}
+                            year={sessionMeta.year}
+                            meetingName={sessionMeta.meetingName}
                             driverCode={driverCode || 'N/A'}
                         />
                     )}

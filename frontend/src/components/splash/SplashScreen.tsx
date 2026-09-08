@@ -41,6 +41,9 @@ interface SplashScreenProps {
 }
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, readiness, failures = [] }) => {
+    // Flipped once the per-letter reveal has finished, so the compositing
+    // hints and the residual filter can be dropped.
+    const [revealed, setRevealed] = React.useState(false);
     const [skipped, setSkipped] = useState(false);
     const { phase, progress } = useSplashSequence(onComplete, { readiness, skipped });
 
@@ -89,6 +92,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, readiness, fail
                     variants={letterContainerVariants}
                     initial="hidden"
                     animate="visible"
+                    onAnimationComplete={() => setRevealed(true)}
                     style={{
                         display: 'flex',
                         justifyContent: 'center',
@@ -114,7 +118,19 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, readiness, fail
                                     letterSpacing: '-0.02em',
                                     color: `rgb(${gray}, ${gray}, ${gray})`,
                                     minWidth: letter === ' ' ? '0.3em' : undefined,
-                                    willChange: 'transform, opacity, filter',
+                                    // No inline `willChange`. framer sets
+                                    // will-change for the properties it is
+                                    // animating and clears it when idle;
+                                    // hard-coding it here made all 13 glyphs
+                                    // permanently promoted compositing layers,
+                                    // for the life of the page.
+                                    //
+                                    // The finished variant also leaves
+                                    // `filter: blur(0px)`, which is a no-op
+                                    // visually but still keeps a filter region
+                                    // alive per layer, so it is cleared once
+                                    // the reveal has run.
+                                    ...(revealed ? { filter: 'none', willChange: 'auto' } : null),
                                 }}
                             >
                                 {letter}

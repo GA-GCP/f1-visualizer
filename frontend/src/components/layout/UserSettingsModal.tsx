@@ -96,9 +96,11 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
             slots={{ paper: MotionPaper }}
             slotProps={{
                 paper: {
+                    // No `exit`: MUI unmounts the Dialog through its own
+                    // transition rather than through AnimatePresence, so a
+                    // framer exit variant here never runs.
                     initial: { opacity: 0, scale: 0.95 },
                     animate: { opacity: 1, scale: 1 },
-                    exit: { opacity: 0, scale: 0.95 },
                     transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] as const },
                     sx: {
                         bgcolor: PAPER_BG,

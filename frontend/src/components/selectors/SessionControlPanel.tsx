@@ -8,6 +8,7 @@ import { sendIngestionCommand } from '@/api/ingestionApi';
 import { queries } from '@/api/queries';
 import type { RaceSession, RaceEntryRoster } from '@/api/referenceApi';
 import { createLogger } from '../../lib/logger';
+import { DUR, EASE } from '../../theme/motion';
 import { CANVAS_BG } from '../../theme/tokens';
 
 const log = createLogger('session-control');
@@ -165,7 +166,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.25, ease: 'easeOut' }}
+                            transition={{ duration: DUR.base, ease: EASE.out }}
                         >
                             <Button
                                 variant="outlined"

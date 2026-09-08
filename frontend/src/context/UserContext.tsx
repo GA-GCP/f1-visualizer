@@ -1,6 +1,14 @@
 import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import React, {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
+    type ReactNode,
+} from 'react';
 import { fetchCurrentUser, updateUserPreferences } from '../api/userApi';
 import { createLogger } from '../lib/logger';
 import type { UserProfile, UserPreferences } from '../types/user';
@@ -75,7 +83,16 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     }, [isAuthenticated]);
 
-    const handleUpdatePreferences = async (newPrefs: UserPreferences) => {
+    // useCallback, and the value below is memoised, because every consumer of a
+    // context re-renders whenever the *value identity* changes — not when the
+    // data does. UserProvider re-renders on any Auth0 state change and on the
+    // splash toggle, and each of those handed RaceSimulator and
+    // UserSettingsModal a brand-new object and a brand-new function.
+    //
+    // The React Compiler covers most identity churn, but not this: it memoises
+    // within a component, and the thing that has to stay stable here is what
+    // crosses the provider boundary.
+    const handleUpdatePreferences = useCallback(async (newPrefs: UserPreferences) => {
         try {
             const updatedProfile = await updateUserPreferences(newPrefs);
             setUserProfile(updatedProfile);
@@ -86,15 +103,14 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // succeeded, and the preference silently did not persist.
             throw err;
         }
-    };
+    }, []);
 
-    return (
-        <UserContext.Provider
-            value={{ userProfile, updatePreferences: handleUpdatePreferences, isLoading, error }}
-        >
-            {children}
-        </UserContext.Provider>
+    const value = useMemo(
+        () => ({ userProfile, updatePreferences: handleUpdatePreferences, isLoading, error }),
+        [userProfile, handleUpdatePreferences, isLoading, error],
     );
+
+    return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 };
 
 // eslint-disable-next-line react-refresh/only-export-components

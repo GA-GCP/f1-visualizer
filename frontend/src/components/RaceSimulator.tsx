@@ -25,6 +25,7 @@ import { useLocation } from '../hooks/useLocation';
 import { createLogger } from '../lib/logger';
 import { describeConnectionStatus } from '../realtime/connectionStatus';
 import { useConnectionStatus } from '../realtime/useConnectionStatus';
+import { DUR, EASE } from '../theme/motion';
 import { CANVAS_BG, PAPER_BG } from '../theme/tokens';
 import CircuitTrace from './CircuitTrace';
 import MediaController from './MediaController';
@@ -203,7 +204,15 @@ const RaceSimulator: React.FC = () => {
                                     initial={{ opacity: 0, height: 0 }}
                                     animate={{ opacity: 1, height: 'auto' }}
                                     exit={{ opacity: 0, height: 0 }}
-                                    transition={{ duration: 0.35, ease: 'easeOut' }}
+                                    // Same duration and easing as the Cancel
+                                    // button's collapse in SessionControlPanel.
+                                    // Both animate height, which is not
+                                    // compositor-driven, and they fire together
+                                    // in one flex column — at 0.35s against
+                                    // 0.25s the column was relaying out on two
+                                    // overlapping schedules, so everything below
+                                    // shifted twice per interaction.
+                                    transition={{ duration: DUR.base, ease: EASE.out }}
                                 >
                                     <MediaController onSeek={handleSeek} />
                                 </m.div>

@@ -1,4 +1,4 @@
-import { screen, act, renderHook } from '@testing-library/react';
+import { screen, act, renderHook, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
@@ -94,7 +94,14 @@ describe('ShimmerBar', () => {
 
         // An oversized child translated with x, not a viewport-sized layer with
         // backgroundSize 200% and a tweened backgroundPosition.
-        const fill = container.querySelector<HTMLElement>('div[style*="200%"]');
+        //
+        // Scoped to the progressbar rather than searched for across the whole
+        // container: the style assertion below is the point of the test, but
+        // finding the element by that same style meant any other 200% element
+        // on the page could satisfy it.
+        const fill = within(container)
+            .getByRole('progressbar')
+            .querySelector<HTMLElement>('[style*="200%"]');
         expect(fill).not.toBeNull();
         expect(fill!.style.width).toBe('200%');
         expect(fill!.style.backgroundSize).not.toBe('200% 100%');

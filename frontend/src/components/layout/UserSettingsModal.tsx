@@ -24,6 +24,26 @@ import type { DialogProps } from '@mui/material';
 
 const log = createLogger('settings');
 
+/**
+ * The Dialog's paper slot, animated.
+ *
+ * Not `m.div` directly: MUI 9 passes `ownerState` to every slot, and a motion
+ * DOM component forwards unknown props straight to the element — so React
+ * logged "does not recognize the ownerState prop on a DOM element" on every
+ * open. It was only a console warning, so the test stayed green while the
+ * warning fired in production consoles too (and would be an unknown-attribute
+ * hydration error under SSR).
+ *
+ * Destructured out rather than deleted, so the rest still spreads.
+ */
+const MotionPaper = React.forwardRef<
+    HTMLDivElement,
+    React.ComponentProps<typeof m.div> & { ownerState?: unknown }
+>(function MotionPaper({ ownerState, ...rest }, ref) {
+    void ownerState;
+    return <m.div ref={ref} {...rest} />;
+});
+
 interface UserSettingsModalProps {
     open: boolean;
     onClose: () => void;
@@ -73,7 +93,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
             // minWidth: 400 overflowed a 375px viewport horizontally. Full
             // screen below `sm` is the standard answer and avoids the scroll.
             fullScreen={isSmallScreen}
-            slots={{ paper: m.div }}
+            slots={{ paper: MotionPaper }}
             slotProps={{
                 paper: {
                     initial: { opacity: 0, scale: 0.95 },

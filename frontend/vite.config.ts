@@ -162,6 +162,39 @@ export default defineConfig({
     // e2e/ is Playwright's; without this vitest would collect the specs and
     // fail on an import of @playwright/test.
     exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'html', 'lcov'],
+      // `include` is the point of the exercise, and Vitest 5 removed the old
+      // `all` flag in favour of it: with an explicit include, every matching
+      // file is reported whether or not a test imported it. Without one, v8
+      // reports only on files some test touched — so an untested 300-line
+      // component does not lower coverage, it simply is not counted, and the
+      // number stays green while the gap grows.
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/__tests__/**',
+        'src/test/**',
+        'src/**/*.d.ts',
+        // The composition root. It wires modules together and is exercised by
+        // the Playwright specs rather than by unit tests; counting it would
+        // measure how much of createRoot is reachable from jsdom.
+        'src/main.tsx',
+        // Four lines re-exporting framer's feature bundle.
+        'src/motionFeatures.ts',
+      ],
+      // Set roughly a point under the measured values (90.2 / 78.0 / 78.1 /
+      // 90.7) rather than at them: a threshold with no slack fails on an honest
+      // refactor and gets lowered, and a threshold that gets lowered on contact
+      // is not a threshold. Still tight enough that an untested component of
+      // any size trips it.
+      thresholds: {
+        statements: 89,
+        branches: 76,
+        functions: 77,
+        lines: 89,
+      },
+    },
   },
   server: {
     port: 5173,

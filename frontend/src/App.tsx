@@ -2,8 +2,18 @@ import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import { AnimatePresence, LazyMotion, m, MotionConfig } from 'framer-motion';
 import React, { lazy, Suspense, useState } from 'react';
-import { Routes, Route, Outlet, BrowserRouter, useNavigate, Navigate } from 'react-router-dom';
+import {
+    Routes,
+    Route,
+    Outlet,
+    BrowserRouter,
+    useNavigate,
+    useLocation,
+    Navigate,
+} from 'react-router-dom';
 import { AxiosAuthInterceptor } from './auth/AuthHandler';
+import { safeReturnTo } from './auth/returnTo';
+import AuthErrorScreen from './components/AuthErrorScreen';
 import ErrorBoundary from './components/ErrorBoundary';
 import { isSplashSkipRemembered } from './components/splash/splashPreference';
 import SplashScreen from './components/splash/SplashScreen';
@@ -78,7 +88,8 @@ const STARTUP_PREFETCH: PrefetchTask[] = [
 
 // --- AUTH GUARD COMPONENT ---
 const RequiredAuth: React.FC = () => {
-    const { isAuthenticated, isLoading, error } = useAuth0();
+    const { isAuthenticated, isLoading, error, loginWithRedirect } = useAuth0();
+    const location = useLocation();
 
     // Post-login splash: read a sessionStorage flag set by onRedirectCallback.
     // With the Landing page routing, RequiredAuth only mounts AFTER navigate('/dashboard'),
@@ -102,27 +113,16 @@ const RequiredAuth: React.FC = () => {
     }
 
     if (error) {
-        return (
-            <div
-                style={{
-                    padding: '2rem',
-                    textAlign: 'center',
-                    color: '#ff4444',
-                    fontFamily: 'sans-serif',
-                }}
-            >
-                <h2>Authentication Error</h2>
-                <p>{error.message}</p>
-                <p style={{ fontSize: '0.8rem', color: '#888' }}>
-                    Check your Auth0 Dashboard and .env configuration.
-                </p>
-            </div>
-        );
+        return <AuthErrorScreen error={error} onRetry={() => void loginWithRedirect()} />;
     }
 
     // Redirect unauthenticated users to the public landing page
     if (!isAuthenticated) {
-        return <Navigate to="/" replace />;
+        // Carries the path the user actually asked for, so signing in from a
+        // deep link does not silently land them on the dashboard instead.
+        return (
+            <Navigate to="/" replace state={{ returnTo: location.pathname + location.search }} />
+        );
     }
 
     return (
@@ -227,7 +227,10 @@ const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ ch
         // react-router 7's navigate returns a promise. Nothing here can act
         // on a failed navigation, so the intent is fire-and-forget — said out
         // loud rather than left as a floating promise.
-        void navigate(appState?.returnTo || '/dashboard');
+        // Narrowed to a same-origin path rather than passed through. Nothing
+        // sets appState to a URL today, but this commit is what starts putting
+        // one in there.
+        void navigate(safeReturnTo(appState?.returnTo));
     };
 
     return (

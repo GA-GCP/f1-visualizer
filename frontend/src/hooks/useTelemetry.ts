@@ -5,6 +5,7 @@ import { stompClient } from '../api/stompClient';
 import { telemetryPacketSchema } from '../api/schemas';
 import { useConnectionStatus } from '../realtime/useConnectionStatus';
 import { createLogger } from '../lib/logger';
+import { createFrameMonitor, MARK, mark, measureBetween } from '../lib/perf';
 import type { TelemetryPacket } from '../types/telemetry';
 
 const log = createLogger('telemetry');
@@ -32,7 +33,17 @@ export const useTelemetry = (onDataReceived: (data: TelemetryPacket) => void) =>
     useEffect(() => {
         if (!isConnected) return;
 
+        // Time-to-first-packet is per subscription, not per page: a reconnect
+        // re-runs this effect, and how quickly the feed resumes after one is
+        // exactly as interesting as how quickly it started.
+        let sawFirstPacket = false;
+
         const subscription = stompClient.subscribe('/topic/race-data', (message: IMessage) => {
+            if (!sawFirstPacket) {
+                sawFirstPacket = true;
+                mark(MARK.firstPacket);
+                measureBetween('f1v:stomp-ttfp', MARK.stompConnected, MARK.firstPacket);
+            }
             try {
                 // safeParse, not parse: one malformed packet must not tear down
                 // the subscription for the rest of the feed.
@@ -53,8 +64,12 @@ export const useTelemetry = (onDataReceived: (data: TelemetryPacket) => void) =>
     // 60fps flush loop (safe to start immediately — buffer is just empty until data arrives)
     useEffect(() => {
         let animationFrameId: number;
+        // The trace holding 60 fps is the app's core value, and regressions in
+        // it were previously found by users rather than by us.
+        const frames = createFrameMonitor();
 
-        const flushBuffer = () => {
+        const flushBuffer = (now: number = performance.now()) => {
+            frames.frame(now);
             const buffer = bufferRef.current;
             if (buffer.size > 0 && callbackRef.current) {
                 // /topic/race-data carries every driver, and the replay engine
@@ -73,7 +88,12 @@ export const useTelemetry = (onDataReceived: (data: TelemetryPacket) => void) =>
         };
         flushBuffer();
 
-        return () => cancelAnimationFrame(animationFrameId);
+        return () => {
+            cancelAnimationFrame(animationFrameId);
+            // Report the partial window rather than discarding it: a session
+            // that ends after 40 seconds is still evidence about frame health.
+            frames.flush(performance.now());
+        };
     }, []);
 
     return { isConnected };

@@ -16,6 +16,45 @@ class ResizeObserverMock {
 }
 global.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
 
+// User Timing API (jsdom implements only performance.now). perf.ts guards every
+// call, so without this the mark/measure tests would pass by taking the
+// 'unsupported environment' path rather than by exercising the logic.
+// Minimal but faithful: mark records a timestamp, measure returns the gap and
+// throws on a missing mark, which is the behaviour perf.ts relies on.
+const performanceMarks = new Map<string, number>();
+Object.defineProperty(performance, 'mark', {
+    writable: true,
+    configurable: true,
+    value: (name: string) => {
+        performanceMarks.set(name, performance.now());
+    },
+});
+Object.defineProperty(performance, 'measure', {
+    writable: true,
+    configurable: true,
+    value: (name: string, start: string, end: string) => {
+        if (!performanceMarks.has(start) || !performanceMarks.has(end)) {
+            throw new SyntaxError(`The mark '${performanceMarks.has(start) ? end : start}' does not exist.`);
+        }
+        return { name, duration: performanceMarks.get(end)! - performanceMarks.get(start)! };
+    },
+});
+Object.defineProperty(performance, 'clearMarks', {
+    writable: true,
+    configurable: true,
+    value: () => performanceMarks.clear(),
+});
+
+// sendBeacon mock (jsdom doesn't implement it either). Defined rather than
+// left absent so the vitals tests exercise the real send path — webVitals.ts
+// feature-detects it, so without this the assertion 'no beacon was sent' would
+// pass for the wrong reason.
+Object.defineProperty(navigator, 'sendBeacon', {
+    writable: true,
+    configurable: true,
+    value: vi.fn().mockReturnValue(true),
+});
+
 // matchMedia mock (jsdom doesn't implement it).  Without this, anything that
 // reads prefers-reduced-motion — useSplashSequence, framer's useReducedMotion,
 // MUI's useMediaQuery — throws on import, which is why App.tsx could not be

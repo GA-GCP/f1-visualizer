@@ -8,13 +8,39 @@ serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@
 
 substitutions:
   _ENV: 'dev'
+  # Kept as a default so `gcloud builds submit` still parses, but the guard step
+  # below refuses to build with it: deploying it would overwrite a mutable
+  # :manual-build tag that the deploy step assumes is immutable.
   _SHORT_SHA: 'manual-build'
   _REGION: 'us-central1'
+  # Optional. When set, hidden source maps are archived here keyed by version so
+  # a production stack trace can be symbolicated. Empty means skip the upload —
+  # the maps are still built, just not kept.
+  _SOURCEMAP_BUCKET: ''
 
 options:
   logging: CLOUD_LOGGING_ONLY
 
 steps:
+  # 0. Refuse a build that cannot be identified.
+  #    _SHORT_SHA defaults to the literal 'manual-build', and every manually
+  #    triggered build used to push that same tag — so :manual-build moved,
+  #    while step 6 deploys by tag on the assumption that it does not. An
+  #    unidentifiable build is also one no one can map an error report back to.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
+    id: 'verify-version'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        if [ "${_SHORT_SHA}" = "manual-build" ]; then
+          echo "ERROR: _SHORT_SHA is still the default 'manual-build'."
+          echo "Pass one explicitly: --substitutions=_SHORT_SHA=<short-sha>"
+          exit 1
+        fi
+        echo "Building version ${_SHORT_SHA} for ${_ENV}"
+
   # 1. Install Dependencies
   #    canvas (node-canvas) is a native C++ addon used by visual-regression
   #    tests. Alpine needs Python, a C++ toolchain, and Cairo/Pango libs
@@ -59,6 +85,29 @@ steps:
     entrypoint: 'yarn'
     args: ['build', '--mode', '${_ENV}']
     dir: 'frontend'
+    # Read by `define` in vite.config.ts. Without it the bundle reports
+    # itself as 'local' and nothing in the served page says which build it is.
+    env: ['APP_VERSION=${_SHORT_SHA}']
+
+  # 4b. Archive the hidden source maps, then leave them behind.
+  #     vite emits them without a sourceMappingURL comment, so browsers never
+  #     request them; .dockerignore keeps them out of the image. Archiving is
+  #     what makes them useful — without a copy keyed by version, a minified
+  #     production stack trace stays unreadable.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
+    id: 'archive-sourcemaps'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        if [ -z "${_SOURCEMAP_BUCKET}" ]; then
+          echo "No _SOURCEMAP_BUCKET set; source maps built but not archived."
+          exit 0
+        fi
+        gcloud storage cp frontend/dist/assets/*.map \
+          "gs://${_SOURCEMAP_BUCKET}/frontend/${_ENV}/${_SHORT_SHA}/"
+        echo "Archived to gs://${_SOURCEMAP_BUCKET}/frontend/${_ENV}/${_SHORT_SHA}/"
 
   # 5. Docker Build + Push (registry layer cache)
   #    Kaniko was archived upstream; this uses the maintained Cloud Build
@@ -85,16 +134,90 @@ steps:
         docker push "$$IMAGE:${_SHORT_SHA}"
         docker push "$$IMAGE:latest-${_ENV}"
 
-  # 6. Deploy to Cloud Run (immutable SHA tag)
+  # 6. Deploy the new revision WITHOUT traffic.
+  #     `gcloud run services update` used to shift 100% of traffic the moment
+  #     the revision passed Cloud Run's default TCP probe — which only proves
+  #     nginx bound a port. A build that produced an empty or half-copied dist/
+  #     reached every user instantly, and recovery was a console action.
+  #
+  #     Deploying with --no-traffic makes the next two steps a real gate: if the
+  #     smoke test fails the build stops here and no user ever sees this
+  #     revision, so the rollback is 'do nothing' rather than a manual undo.
+  #     --tag gives the revision its own URL to be tested on.
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
-    id: 'deploy'
+    id: 'deploy-no-traffic'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'f1v-webapp-${_ENV}'
+      - '--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:${_SHORT_SHA}'
+      - '--tag=sha-${_SHORT_SHA}'
+      - '--no-traffic'
+      - '--region=${_REGION}'
+      - '--project=$PROJECT_ID'
+      - '--quiet'
+
+  # 7. Smoke test the revision on its tag URL, before it serves anyone.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
+    id: 'smoke'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+
+        # The tag URL is only in the service's traffic list. Parsed with python3
+        # (which ships in this image, gcloud is written in it) rather than a
+        # --format expression, because the filter syntax for a tagged entry is
+        # easy to get subtly wrong and fail open.
+        TAG_URL=$(gcloud run services describe f1v-webapp-${_ENV} \
+          --region=${_REGION} --project=$PROJECT_ID --format=json \
+          | python3 -c "import json,sys; print(next(t['url'] for t in json.load(sys.stdin)['status']['traffic'] if t.get('tag') == 'sha-${_SHORT_SHA}'))")
+
+        echo "Smoke testing $$TAG_URL"
+
+        # 1. The health endpoint answers with exactly 'ok'.
+        #    This is the strongest single check available: before nginx.conf
+        #    grew a /healthz location, ANY path returned the SPA shell with a
+        #    200 — so 'ok' proves the new config is really in the image, not
+        #    just that index.html exists.
+        test "$(curl -fsS "$$TAG_URL/healthz")" = "ok"
+
+        # 2. The app shell is served and has a mount point. An empty or
+        #    half-copied dist/ fails here.
+        curl -fsS "$$TAG_URL/" | grep -q '<div id="root">'
+
+        # 3. A deep link still falls back to the shell rather than 404ing.
+        curl -fsS "$$TAG_URL/dashboard" | grep -q '<div id="root">'
+
+        # 4. The security headers survived. These are set in nginx.conf and are
+        #    exactly the kind of thing that silently disappears when a location
+        #    block is edited — see the add_header inheritance note in that file.
+        curl -fsSI "$$TAG_URL/" | grep -qi '^content-security-policy:'
+
+        # 5. The revision serving this URL is the one we just built. Vite stamps
+        #    APP_VERSION into <meta name="version">, so this catches a stale
+        #    image, a cache-hit that reused an older layer, or a tag pointing
+        #    somewhere unexpected — none of which the checks above would notice,
+        #    because a previous good build passes all of them.
+        curl -fsS "$$TAG_URL/" | grep -q '<meta name="version" content="${_SHORT_SHA}">'
+
+        echo "Smoke test passed for sha-${_SHORT_SHA}"
+
+  # 8. Promote: send 100% of traffic to the revision that just passed.
+  #     Pinned by tag rather than --to-latest, so traffic points at this exact
+  #     revision instead of following whatever becomes latest — a later
+  #     terragrunt apply cannot silently shift users onto a different image.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
+    id: 'promote'
     entrypoint: 'gcloud'
     args:
       - 'run'
       - 'services'
-      - 'update'
+      - 'update-traffic'
       - 'f1v-webapp-${_ENV}'
-      - '--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/frontend:${_SHORT_SHA}'
+      - '--to-tags=sha-${_SHORT_SHA}=100'
       - '--region=${_REGION}'
       - '--project=$PROJECT_ID'
       - '--quiet'

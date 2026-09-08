@@ -14,8 +14,19 @@ interface ImportMetaEnv {
     readonly VITE_API_BASE_URL: string;
     /** Optional: enables STOMP frame logging outside DEV. */
     readonly VITE_STOMP_DEBUG?: string;
+    /** Optional RUM collector. Unset means web-vitals are measured, not sent. */
+    readonly VITE_RUM_ENDPOINT?: string;
 }
 
 interface ImportMeta {
     readonly env: ImportMetaEnv;
 }
+
+/**
+ * Substituted by `define` in vite.config.ts, so these exist at runtime but have
+ * no import to hang a type off. Declared rather than read through
+ * `import.meta.env` because they are build facts, not configuration: a deploy
+ * cannot change them without producing a different bundle.
+ */
+declare const __APP_VERSION__: string;
+declare const __BUILD_TIME__: string;

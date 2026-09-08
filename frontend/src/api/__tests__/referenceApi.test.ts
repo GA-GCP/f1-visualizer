@@ -14,7 +14,6 @@ import {
     fetchSessions,
     fetchSessionsByYear,
     fetchYears,
-    searchSessions,
 } from '../referenceApi';
 
 /**
@@ -81,17 +80,6 @@ describe('referenceApi', () => {
 
         expect(result).toHaveLength(2);
         expect(result.every(s => s.sessionName === 'Race')).toBe(true);
-    });
-
-    it('URL-encodes a search query', async () => {
-        vi.mocked(apiClient.get).mockResolvedValue({ data: [session()] });
-
-        await searchSessions('Bahrain GP');
-
-        expect(apiClient.get).toHaveBeenCalledWith(
-            '/analysis/sessions/search?query=Bahrain%20GP',
-            { signal: undefined },
-        );
     });
 
     it('fetches driver stats by id', async () => {

@@ -18,7 +18,6 @@ vi.mock('../../api/referenceApi', () => ({
     fetchDriverStats: vi.fn().mockResolvedValue({}),
     fetchYears: vi.fn().mockResolvedValue([]),
     fetchSessionsByYear: vi.fn().mockResolvedValue([]),
-    searchSessions: vi.fn(),
 }));
 
 vi.mock('../../context/UserContext', () => ({

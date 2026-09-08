@@ -1,6 +1,9 @@
-import path from 'path'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+// From vitest/config, not vite: this file now owns the test config too, so the
+// two cannot drift. They already had — vitest.config.ts carried its own copy of
+// the alias, the plugin and the build-stamp defines, and a change to any of
+// them had to be made twice or silently apply to only one of build and test.
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   // React Compiler, via the Rust `oxc-transform-react` port rather than Babel:
@@ -32,11 +35,11 @@ export default defineConfig({
       ],
     },
   ],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
+  // Reads the `paths` in tsconfig.app.json rather than restating the alias.
+  // The old form used `__dirname`, which does not exist in a "type": "module"
+  // package — it worked only because Vite's bundling config loader injected a
+  // shim, and Vite 8 warns on every build that its native loader will not.
+  resolve: { tsconfigPaths: true },
   // Substituted into the bundle at build time. Cloud Build knows the commit
   // but never passed it to Vite, so nothing in the served page said which build
   // it was — see src/lib/buildInfo.ts for where these surface.
@@ -53,6 +56,11 @@ export default defineConfig({
     ),
   },
   build: {
+    // Stated rather than inherited from Vite's `baseline-widely-available`
+    // default, which moves between releases. This matches the ES2022 in
+    // tsconfig.app.json, so the type checker and the bundler agree on what
+    // syntax is allowed to survive.
+    target: 'es2022',
     // 'hidden' emits the maps but omits the //# sourceMappingURL comment, so a
     // browser never fetches them and a stack trace can still be symbolicated
     // from an archived copy. They are kept out of the served image by
@@ -122,10 +130,12 @@ export default defineConfig({
               entriesAwareMergeThreshold: 20_000,
             },
             {
-              // Only reachable behind the auth guard; kept together so it can be
-              // dropped in one go when SockJS goes away.
+              // Only reachable behind the auth guard. sockjs-client used to be
+              // matched here too; it went with the native-WebSocket change and
+              // the pattern went stale, which is the kind of thing that stops a
+              // reader trusting any of these.
               name: 'realtime',
-              test: /node_modules[\\/](@stomp|sockjs-client)[\\/]/,
+              test: /node_modules[\\/]@stomp[\\/]/,
               entriesAware: true,
               entriesAwareMergeThreshold: 20_000,
             },
@@ -133,6 +143,26 @@ export default defineConfig({
         },
       },
     },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // Reuse one jsdom per worker instead of building 38 of them, which was
+    // ~35% of wall time.
+    //
+    // NOT `isolate: false`: that shares the module graph across files too, and
+    // userApi.test.ts then resolves the real axios client instead of its
+    // vi.mock, hanging until the 5 s timeout. vmThreads keeps per-file module
+    // isolation and still avoids the per-file environment cost.
+    pool: 'vmThreads',
+    css: false,
+    restoreMocks: true,
+    reporters: process.env.GITHUB_ACTIONS ? ['default', 'github-actions'] : ['default'],
+    // e2e/ is Playwright's; without this vitest would collect the specs and
+    // fail on an import of @playwright/test.
+    exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
   },
   server: {
     port: 5173,

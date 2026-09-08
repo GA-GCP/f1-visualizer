@@ -13,7 +13,6 @@ vi.mock('../api/referenceApi', () => ({
     fetchSessionLaps: vi.fn(),
     fetchSessionDrivers: vi.fn(),
     fetchDriverStats: vi.fn(),
-    searchSessions: vi.fn(),
 }));
 // Stubbed so these tests are about the route tree and the auth guard, not about
 // what each page fetches on mount.

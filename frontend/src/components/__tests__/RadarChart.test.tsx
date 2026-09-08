@@ -1,11 +1,11 @@
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { DriverProfile } from '@/api/referenceApi';
 import RadarChart from '../versus/RadarChart';
-import type { DriverProfile } from '@/api/referenceApi.ts';
 
 // Track calls to text() to verify axis labels, style() for colors, datum() for data paths
 const textCalls: string[] = [];
-const styleCalls: Array<{ prop: string; value: string }> = [];
+const styleCalls: { prop: string; value: string }[] = [];
 let datumCallCount = 0;
 let appendCallCount = 0;
 

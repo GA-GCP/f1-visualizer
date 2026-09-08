@@ -1,8 +1,8 @@
 import { screen, waitFor } from '@testing-library/react';
-import { renderWithProviders } from '@/test/renderWithProviders';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fetchSessions, fetchSessionDrivers, fetchSessionLaps } from '@/api/referenceApi';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import HistoricalData from '../../pages/HistoricalData';
-import { fetchSessions, fetchSessionDrivers, fetchSessionLaps } from '@/api/referenceApi.ts';
 
 // Mock the reference API
 vi.mock('../../api/referenceApi', () => ({

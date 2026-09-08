@@ -1,5 +1,5 @@
-import { createProjection, type Bounds, type Projection } from './circuitProjection';
 import { BRAND_RED } from '../theme/tokens';
+import { createProjection, type Bounds, type Projection } from './circuitProjection';
 
 export type DriverHistory = Record<number, { x: number; y: number }[]>;
 

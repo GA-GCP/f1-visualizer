@@ -1,13 +1,13 @@
 import { screen, act, waitFor } from '@testing-library/react';
-import { renderWithProviders } from '@/test/renderWithProviders';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import RaceSimulator from '../RaceSimulator';
-import { useTelemetry } from '@/hooks/useTelemetry.ts';
-import { useLocation } from '@/hooks/useLocation.ts';
-import { useUser } from '../../context/UserContext';
-import { fetchDrivers, fetchSessionLaps } from '@/api/referenceApi.ts';
-import type { TelemetryPacket } from '@/types/telemetry.ts';
+import { fetchDrivers, fetchSessionLaps } from '@/api/referenceApi';
+import { useLocation } from '@/hooks/useLocation';
+import { useTelemetry } from '@/hooks/useTelemetry';
 import { setConnectionStatus, resetConnectionStatus } from '@/realtime/connectionStatus';
+import { renderWithProviders } from '@/test/renderWithProviders';
+import type { TelemetryPacket } from '@/types/telemetry';
+import { useUser } from '../../context/UserContext';
+import RaceSimulator from '../RaceSimulator';
 
 const mockRaceSession = {
     sessionKey: 9165,

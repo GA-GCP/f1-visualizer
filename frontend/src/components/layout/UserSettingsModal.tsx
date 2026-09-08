@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, CircularProgress, Alert , useMediaQuery, useTheme } from '@mui/material';
-import type { DialogProps } from '@mui/material';
-import { m } from 'framer-motion';
-import DriverSelector from '../selectors/DriverSelector';
 import { useQuery } from '@tanstack/react-query';
+import { m } from 'framer-motion';
+import React, { useState } from 'react';
 import { queries } from '../../api/queries';
-import type { DriverProfile } from '../../api/referenceApi';
 import { useUser } from '../../context/UserContext';
 import { createLogger } from '../../lib/logger';
 import { PAPER_BG } from '../../theme/tokens';
+import DriverSelector from '../selectors/DriverSelector';
+import type { DriverProfile } from '../../api/referenceApi';
+import type { DialogProps } from '@mui/material';
 
 const log = createLogger('settings');
 
@@ -99,7 +99,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ open, onClose }) 
             </DialogContent>
             <DialogActions sx={{ p: 2, borderTop: '1px solid #333' }}>
                 <Button onClick={onClose} color="inherit">Cancel</Button>
-                <Button onClick={handleSave} variant="contained" color="primary" disabled={isSaving || isLoading}>
+                <Button onClick={() => void handleSave()} variant="contained" color="primary" disabled={isSaving || isLoading}>
                     {isSaving ? 'SAVING...' : 'SAVE SETTINGS'}
                 </Button>
             </DialogActions>

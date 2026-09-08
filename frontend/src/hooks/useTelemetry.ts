@@ -1,11 +1,11 @@
-import { useEffect, useRef } from 'react';
 import { type IMessage } from '@stomp/stompjs';
+import { useEffect, useRef } from 'react';
 import * as z from 'zod/mini';
-import { stompClient } from '../api/stompClient';
 import { telemetryPacketSchema } from '../api/schemas';
-import { useConnectionStatus } from '../realtime/useConnectionStatus';
+import { stompClient } from '../api/stompClient';
 import { createLogger } from '../lib/logger';
 import { createFrameMonitor, MARK, mark, measureBetween } from '../lib/perf';
+import { useConnectionStatus } from '../realtime/useConnectionStatus';
 import type { TelemetryPacket } from '../types/telemetry';
 
 const log = createLogger('telemetry');

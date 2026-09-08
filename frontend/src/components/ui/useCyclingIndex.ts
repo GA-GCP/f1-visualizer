@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 
 /**
  * Steps through 0..length-1 on an interval.

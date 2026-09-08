@@ -1,9 +1,9 @@
 import { render, screen, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { DriverProfile } from '@/api/referenceApi';
+import type { LocationPacket } from '@/types/telemetry';
 import CircuitTrace from '../CircuitTrace';
-import type { DriverProfile } from '@/api/referenceApi.ts';
-import type { LocationPacket } from '@/types/telemetry.ts';
 
 // No d3 mock needed: projection is affine constants from utils/circuitProjection.
 

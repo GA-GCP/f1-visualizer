@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { LapDataRecord } from '@/types/telemetry';
 import LapTimeChart from '../LapTimeChart';
-import type { LapDataRecord } from '@/types/telemetry.ts';
 
 // Mock D3 with a functional subset that supports the chained API pattern
 vi.mock('d3', () => {

@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import axios from 'axios';
+import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { fetchCurrentUser, updateUserPreferences } from '../api/userApi';
-import type { UserProfile, UserPreferences } from '../types/user';
 import { createLogger } from '../lib/logger';
+import type { UserProfile, UserPreferences } from '../types/user';
 
 const log = createLogger('user');
 

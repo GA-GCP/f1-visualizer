@@ -1,8 +1,8 @@
-import React from 'react';
-import { m, useReducedMotion } from 'framer-motion';
-import CyclingStatusLabel from './ui/CyclingStatusLabel';
 import { Box, Typography } from '@mui/material';
+import { m, useReducedMotion } from 'framer-motion';
+import React from 'react';
 import { BRAND_RED, FONT_FAMILY, SHIMMER_GRADIENT } from '../theme/tokens';
+import CyclingStatusLabel from './ui/CyclingStatusLabel';
 
 const STATUS_MESSAGES = [
     'CONNECTING TO DATA FEED...',

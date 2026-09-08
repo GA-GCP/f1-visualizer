@@ -1,3 +1,4 @@
+import { useAuth0 } from '@auth0/auth0-react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Landing from '../Landing';
@@ -18,8 +19,6 @@ vi.mock('../../components/splash/SplashCircuit', () => ({
         <div data-testid="splash-circuit" data-continuous={continuous} />
     ),
 }));
-
-import { useAuth0 } from '@auth0/auth0-react';
 
 describe('Landing', () => {
     beforeEach(() => {

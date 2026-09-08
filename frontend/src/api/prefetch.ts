@@ -1,5 +1,5 @@
-import { queryClient } from './queryClient';
 import { queries } from './queries';
+import { queryClient } from './queryClient';
 
 /**
  * Warms the cache during the post-login splash.

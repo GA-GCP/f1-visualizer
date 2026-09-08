@@ -1,10 +1,10 @@
-import React, { memo, useEffect, useMemo, useState } from 'react';
-import { Box, Button, Typography, CircularProgress, Autocomplete, TextField } from '@mui/material';
-import { m, AnimatePresence } from 'framer-motion';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
-import { sendIngestionCommand } from '@/api/ingestionApi.ts';
+import { Box, Button, Typography, CircularProgress, Autocomplete, TextField } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
+import { m, AnimatePresence } from 'framer-motion';
+import React, { memo, useEffect, useMemo, useState } from 'react';
+import { sendIngestionCommand } from '@/api/ingestionApi';
 import { queries } from '@/api/queries';
 import type { RaceSession, RaceEntryRoster } from '@/api/referenceApi';
 import { createLogger } from '../../lib/logger';
@@ -127,7 +127,7 @@ const SessionControlPanel: React.FC<SessionControlPanelProps> = ({ onStreamStart
                         size="large"
                         fullWidth
                         startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
-                        onClick={handleStart}
+                        onClick={() => void handleStart()}
                         disabled={isLoading || !selectedSession || isSessionActive}
                         sx={{ fontWeight: 'bold', py: 1.5 }}
                     >

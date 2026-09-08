@@ -1,6 +1,6 @@
-import React from 'react';
-import { m, useReducedMotion } from 'framer-motion';
 import { Box } from '@mui/material';
+import { m, useReducedMotion } from 'framer-motion';
+import React from 'react';
 import { SHIMMER_GRADIENT } from '../../theme/tokens';
 
 interface ShimmerBarProps {

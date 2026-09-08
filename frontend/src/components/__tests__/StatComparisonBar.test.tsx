@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import StatComparisonBar from '../versus/StatComparisonBar';
 import { expect } from 'vitest';
+import StatComparisonBar from '../versus/StatComparisonBar';
 
 const mockDriverA = {
     id: 1, code: "VER", name: "Max Verstappen", team: "Red Bull Racing", teamColor: "#3671C6",

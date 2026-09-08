@@ -1,6 +1,6 @@
-import type { ReactElement } from 'react';
-import type { RenderOptions, RenderResult } from '@testing-library/react';
 import { renderWithProviders } from './renderWithProviders';
+import type { RenderOptions, RenderResult } from '@testing-library/react';
+import type { ReactElement } from 'react';
 
 interface Options extends Omit<RenderOptions, 'wrapper'> {
     route?: string;

@@ -1,4 +1,6 @@
+import * as z from 'zod/mini';
 import { apiClient } from './apiClient';
+import { parseResponse } from './parseResponse';
 import {
     driverProfileSchema,
     driverStatsSchema,
@@ -10,8 +12,6 @@ import {
     type RaceEntryRoster,
     type RaceSession,
 } from './schemas';
-import { parseResponse } from './parseResponse';
-import * as z from 'zod/mini';
 
 export type {
     DriverProfile,

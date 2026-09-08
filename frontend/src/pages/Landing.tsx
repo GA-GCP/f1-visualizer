@@ -1,7 +1,7 @@
-import React from 'react';
-import { m } from 'framer-motion';
-import { Box, Typography, Button } from '@mui/material';
 import { useAuth0 } from '@auth0/auth0-react';
+import { Box, Typography, Button } from '@mui/material';
+import { m } from 'framer-motion';
+import React from 'react';
 import SplashBackground from '../components/splash/SplashBackground';
 import SplashCircuit from '../components/splash/SplashCircuit';
 import { BRAND_GRADIENT, FONT_FAMILY } from '../theme/tokens';

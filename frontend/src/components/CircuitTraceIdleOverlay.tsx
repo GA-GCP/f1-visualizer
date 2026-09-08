@@ -1,7 +1,7 @@
-import React from 'react';
-import { m } from 'framer-motion';
-import { Box, Typography } from '@mui/material';
 import SpeedIcon from '@mui/icons-material/Speed';
+import { Box, Typography } from '@mui/material';
+import { m } from 'framer-motion';
+import React from 'react';
 import { BRAND_RED, FONT_FAMILY } from '../theme/tokens';
 
 /**

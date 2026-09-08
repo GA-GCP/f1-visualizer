@@ -1,18 +1,18 @@
+import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
+import { CssBaseline, ThemeProvider } from '@mui/material';
+import { AnimatePresence, LazyMotion, m, MotionConfig } from 'framer-motion';
 import React, { lazy, Suspense, useState } from 'react';
 import { Routes, Route, Outlet, BrowserRouter, useNavigate, Navigate } from 'react-router-dom';
-import { CssBaseline, ThemeProvider } from '@mui/material';
-import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
-import { AnimatePresence, LazyMotion, m, MotionConfig } from 'framer-motion';
-import ErrorBoundary from './components/ErrorBoundary';
 import { AxiosAuthInterceptor } from './auth/AuthHandler';
+import ErrorBoundary from './components/ErrorBoundary';
+import { isSplashSkipRemembered } from './components/splash/splashPreference';
 import SplashScreen from './components/splash/SplashScreen';
 import { useStartupPrefetch, type PrefetchTask } from './components/splash/useStartupPrefetch';
-import { isSplashSkipRemembered } from './components/splash/splashPreference';
 import RouteFallback from './components/ui/RouteFallback';
-import Landing from './pages/Landing';
-import { broadcastTheme } from './theme/theme';
-import { DUR, EASE } from './theme/motion';
 import { env } from './config/env';
+import Landing from './pages/Landing';
+import { DUR, EASE } from './theme/motion';
+import { broadcastTheme } from './theme/theme';
 
 // --- DEFERRED AUTHENTICATED CODE ---
 // None of this can render before login, yet all of it used to ship in the one
@@ -213,7 +213,10 @@ const Auth0ProviderWithNavigate: React.FC<{ children: React.ReactNode }> = ({ ch
         // Auth0 callback lands on /.  The flag survives the navigate() call
         // and is read (then cleared) when RequiredAuth mounts.
         sessionStorage.setItem('f1v:post-login', '1');
-        navigate(appState?.returnTo || '/dashboard');
+        // react-router 7's navigate returns a promise. Nothing here can act
+        // on a failed navigation, so the intent is fire-and-forget — said out
+        // loud rather than left as a floating promise.
+        void navigate(appState?.returnTo || '/dashboard');
     };
 
     return (

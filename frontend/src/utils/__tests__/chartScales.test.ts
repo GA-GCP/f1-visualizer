@@ -10,8 +10,8 @@ import {
     LAP_CHART_ASPECT_RATIO,
     LAP_CHART_MARGIN,
 } from '../chartScales';
-import type { LapDataRecord } from '../../types/telemetry';
 import type { SessionDriverEntry } from '../../api/referenceApi';
+import type { LapDataRecord } from '../../types/telemetry';
 
 describe('getDriverColor', () => {
     it('returns the color from the map when present', () => {

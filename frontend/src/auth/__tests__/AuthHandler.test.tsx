@@ -1,3 +1,4 @@
+import { useAuth0 } from '@auth0/auth0-react';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -19,12 +20,11 @@ vi.mock('../../api/apiClient', () => ({
     setAuthHandlers: vi.fn(),
 }));
 
-import { useAuth0 } from '@auth0/auth0-react';
 import { apiClient, setAuthHandlers } from '../../api/apiClient';
 import { AxiosAuthInterceptor } from '../AuthHandler';
 import { resetLoginRedirectGuard } from '../loginRedirectGuard';
 
-type Config = { headers: Record<string, string> };
+interface Config { headers: Record<string, string> }
 
 const mockAuth0 = (isAuthenticated: boolean) => {
     (useAuth0 as unknown as ReturnType<typeof vi.fn>).mockReturnValue({

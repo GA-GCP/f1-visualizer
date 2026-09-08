@@ -1,6 +1,8 @@
 import { useAuth0 } from '@auth0/auth0-react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderWithProviders } from '../../test/renderWithProviders';
 import Landing from '../Landing';
 
 // Mock @auth0/auth0-react
@@ -29,7 +31,7 @@ describe('Landing', () => {
     });
 
     it('renders the F1 VISUALIZER title letters', () => {
-        render(<Landing />);
+        renderWithProviders(<Landing />);
 
         // By heading role. getByText('F') collides with the first 'F' anywhere
         // on the page and says nothing about the title being a title.
@@ -40,7 +42,7 @@ describe('Landing', () => {
     });
 
     it('renders the tagline', () => {
-        render(<Landing />);
+        renderWithProviders(<Landing />);
 
         expect(
             screen.getByText('REAL-TIME TELEMETRY // HISTORICAL ANALYSIS // DRIVER COMPARISON'),
@@ -48,13 +50,43 @@ describe('Landing', () => {
     });
 
     it('renders the login button', () => {
-        render(<Landing />);
+        renderWithProviders(<Landing />);
 
         expect(screen.getByText('Login or Sign Up For An Account')).toBeInTheDocument();
     });
 
+    it('carries a deep link through the login round trip', () => {
+        // RequiredAuth puts the path the user actually asked for into the
+        // navigation state when it bounces them here. Without passing it to
+        // Auth0 as appState it is lost across the redirect, and someone who
+        // followed a link to /historical lands on the dashboard instead.
+        render(
+            <MemoryRouter
+                initialEntries={[
+                    { pathname: '/', state: { returnTo: '/historical?session=9001' } },
+                ]}
+            >
+                <Landing />
+            </MemoryRouter>,
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: /login or sign up/i }));
+
+        expect(mockLoginWithRedirect).toHaveBeenCalledWith({
+            appState: { returnTo: '/historical?session=9001' },
+        });
+    });
+
+    it('asks for no particular destination when there is no deep link', () => {
+        renderWithProviders(<Landing />);
+
+        fireEvent.click(screen.getByRole('button', { name: /login or sign up/i }));
+
+        expect(mockLoginWithRedirect).toHaveBeenCalledWith(undefined);
+    });
+
     it('calls loginWithRedirect when the login button is clicked', () => {
-        render(<Landing />);
+        renderWithProviders(<Landing />);
 
         fireEvent.click(screen.getByText('Login or Sign Up For An Account'));
 
@@ -62,13 +94,13 @@ describe('Landing', () => {
     });
 
     it('renders the footer text', () => {
-        render(<Landing />);
+        renderWithProviders(<Landing />);
 
         expect(screen.getByText('UNOFFICIAL TELEMETRY TOOL // F1 23-25')).toBeInTheDocument();
     });
 
     it('renders SplashBackground and SplashCircuit sub-components', () => {
-        render(<Landing />);
+        renderWithProviders(<Landing />);
 
         expect(screen.getByTestId('splash-background')).toBeInTheDocument();
         const circuit = screen.getByTestId('splash-circuit');

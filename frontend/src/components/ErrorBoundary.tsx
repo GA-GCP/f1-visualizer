@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography, Button, Stack } from '@mui/material';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { createLogger } from '../lib/logger';
 
 const log = createLogger('error-boundary');
@@ -106,7 +106,7 @@ class ErrorBoundary extends React.Component<React.PropsWithChildren, ErrorBounda
                     p: 4,
                     textAlign: 'center',
                 }}>
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.3 }}
@@ -115,14 +115,14 @@ class ErrorBoundary extends React.Component<React.PropsWithChildren, ErrorBounda
                             SYSTEM FAULT DETECTED
                         </Typography>
                         {isAutoRetrying ? (
-                            <motion.div
+                            <m.div
                                 animate={{ opacity: [0.3, 1, 0.3] }}
                                 transition={{ repeat: Infinity, duration: 1.5 }}
                             >
                                 <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
                                     {`Attempting automatic recovery... (${this.state.retryCount + 1}/${MAX_AUTO_RETRIES})`}
                                 </Typography>
-                            </motion.div>
+                            </m.div>
                         ) : (
                             <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
                                 An unexpected rendering error has occurred.
@@ -150,7 +150,7 @@ class ErrorBoundary extends React.Component<React.PropsWithChildren, ErrorBounda
                                 </Button>
                             </Stack>
                         )}
-                    </motion.div>
+                    </m.div>
                 </Box>
             );
         }

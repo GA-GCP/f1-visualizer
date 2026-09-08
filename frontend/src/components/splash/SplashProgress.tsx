@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { m, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Box, Typography } from '@mui/material';
 import { BRAND_RED, FONT_FAMILY, SHIMMER_GRADIENT } from '../../theme/tokens';
 
@@ -63,7 +63,7 @@ const SplashProgress: React.FC<SplashProgressProps> = ({ progress }) => {
                 }}
             >
                 {/* Fill (carries the progress width) */}
-                <motion.div
+                <m.div
                     style={{
                         height: '100%',
                         width: widthPercent,
@@ -78,7 +78,7 @@ const SplashProgress: React.FC<SplashProgressProps> = ({ progress }) => {
                         framer wrote the inline style from JS every frame. The
                         gradient repeats once across the 200% width, so
                         translating by -50% loops seamlessly. */}
-                    <motion.div
+                    <m.div
                         style={{
                             position: 'absolute',
                             top: 0,
@@ -95,13 +95,13 @@ const SplashProgress: React.FC<SplashProgressProps> = ({ progress }) => {
                             ease: 'linear',
                         }}
                     />
-                </motion.div>
+                </m.div>
             </Box>
 
             {/* Cycling status messages */}
             <Box sx={{ height: 20, mt: 1, position: 'relative' }}>
                 <AnimatePresence mode="wait">
-                    <motion.div
+                    <m.div
                         key={statusMessage}
                         initial={{ opacity: 0, y: 4 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -122,7 +122,7 @@ const SplashProgress: React.FC<SplashProgressProps> = ({ progress }) => {
                         >
                             {statusMessage}
                         </Typography>
-                    </motion.div>
+                    </m.div>
                 </AnimatePresence>
             </Box>
         </Box>

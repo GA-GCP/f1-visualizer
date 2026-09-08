@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { m, useReducedMotion } from 'framer-motion';
 import CyclingStatusLabel from './ui/CyclingStatusLabel';
 import { Box, Typography } from '@mui/material';
 import { BRAND_RED, FONT_FAMILY, SHIMMER_GRADIENT } from '../theme/tokens';
@@ -28,7 +28,7 @@ interface CircuitTraceLoadingOverlayProps {
 const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({ year, meetingName, driverCode }) => {
     const reduceMotion = useReducedMotion();
     return (
-        <motion.div
+        <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, y: -20 }}
@@ -88,7 +88,7 @@ const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({
             </Typography>
 
             {/* INITIALIZING text with pulse */}
-            <motion.div
+            <m.div
                 animate={{ opacity: [0.4, 1, 0.4] }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
             >
@@ -104,7 +104,7 @@ const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({
                 >
                     INITIALIZING
                 </Typography>
-            </motion.div>
+            </m.div>
 
             {/* Shimmer progress bar */}
             <Box sx={{ width: 240, mb: 2 }}>
@@ -122,7 +122,7 @@ const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({
                         framer wrote the inline style from JS every frame. The
                         gradient repeats once across the 200% width, so
                         translating by -50% loops seamlessly. */}
-                    <motion.div
+                    <m.div
                         style={{
                             position: 'absolute',
                             top: 0,
@@ -142,7 +142,7 @@ const CircuitTraceLoadingOverlay: React.FC<CircuitTraceLoadingOverlayProps> = ({
             <Box sx={{ height: 20, position: 'relative', width: 280 }}>
                 <CyclingStatusLabel messages={STATUS_MESSAGES} />
             </Box>
-        </motion.div>
+        </m.div>
     );
 };
 

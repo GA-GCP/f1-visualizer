@@ -1,7 +1,7 @@
 import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, Container, Button, IconButton, Tooltip } from '@mui/material';
 import { Link as RouterLink, useLocation, useOutlet } from 'react-router-dom';
-import { AnimatePresence, motion, LayoutGroup } from 'framer-motion';
+import { AnimatePresence, m, LayoutGroup } from 'framer-motion';
 import SpeedIcon from '@mui/icons-material/Speed';
 import StorageIcon from '@mui/icons-material/Storage';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
@@ -150,7 +150,7 @@ const LayoutMain: React.FC = () => {
                     that the AppBar's backdrop-filter then re-sampled on every
                     frame of the transition. */}
                 <AnimatePresence mode="popLayout" initial={false}>
-                    <motion.div
+                    <m.div
                         key={location.pathname}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -169,7 +169,7 @@ const LayoutMain: React.FC = () => {
                                 {outlet}
                             </Suspense>
                         </ErrorBoundary>
-                    </motion.div>
+                    </m.div>
                 </AnimatePresence>
             </Container>
 
@@ -229,7 +229,7 @@ const NavButton = ({ to, label, icon, currentPath }: { to: string, label: string
                 {label}
             </Box>
             {isActive && (
-                <motion.div
+                <m.div
                     layoutId="nav-underline"
                     style={{
                         position: 'absolute',

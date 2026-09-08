@@ -126,9 +126,12 @@ describe('AppRoutes', () => {
 
             renderAt('/dashboard');
 
+            // The screen no longer renders the raw Auth0 message or tells the
+            // user to check a dashboard they cannot open; it offers a way back.
             expect(
-                screen.getByRole('heading', { name: /authentication error/i }),
+                screen.getByRole('heading', { name: /sign-in could not be completed/i }),
             ).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /sign in again/i })).toBeInTheDocument();
             expect(screen.queryByTestId('page-home')).not.toBeInTheDocument();
         });
 

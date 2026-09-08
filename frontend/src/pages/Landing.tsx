@@ -2,6 +2,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { Box, Typography, Button } from '@mui/material';
 import { m } from 'framer-motion';
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import SplashBackground from '../components/splash/SplashBackground';
 import SplashCircuit from '../components/splash/SplashCircuit';
 import { BRAND_GRADIENT, FONT_FAMILY } from '../theme/tokens';
@@ -32,9 +33,15 @@ const letterVariants = {
 
 const Landing: React.FC = () => {
     const { loginWithRedirect } = useAuth0();
+    const location = useLocation();
 
     const handleLogin = () => {
-        void loginWithRedirect();
+        // RequiredAuth puts the path the user actually asked for in the
+        // navigation state when it bounces them here. Passing it through
+        // appState is what makes a deep link survive the round trip to Auth0;
+        // App.tsx narrows it to a same-origin path on the way back.
+        const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
+        void loginWithRedirect(returnTo ? { appState: { returnTo } } : undefined);
     };
 
     return (

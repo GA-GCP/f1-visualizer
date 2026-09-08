@@ -8,6 +8,13 @@ node_modules/
 build/
 coverage/
 
+# Source maps ARE built (vite.config.ts sets sourcemap: 'hidden') so a
+# production stack trace can be symbolicated, but they contain the original
+# TypeScript and must not reach the image. Excluded here rather than deleted
+# after the build, so the maps survive in the Cloud Build workspace for
+# archiving. nginx also refuses them, for any path that bypasses this.
+dist/**/*.map
+
 # IDE & Tools
 .idea/
 .vscode/

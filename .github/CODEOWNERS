@@ -1,0 +1,16 @@
+# Review routing. GitHub requests a review from the owner of every path a PR
+# touches; without this, review assignment was entirely manual.
+#
+# Paths are matched last-match-wins, so the specific entries below override the
+# catch-all above them.
+
+# Catch-all.
+*                       @GA-GCP
+
+# The frontend and the pipeline that ships it.
+/frontend/              @GA-GCP
+/cloudbuild/            @GA-GCP
+/.github/               @GA-GCP
+
+# Infrastructure changes are the ones that are hardest to undo.
+/infrastructure/        @GA-GCP

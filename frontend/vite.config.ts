@@ -15,13 +15,49 @@ export default defineConfig({
   // a build error instead of a stale render.
   //
   // `logDiagnostics` surfaces the components the compiler declined to compile.
-  plugins: [react({ compiler: { logDiagnostics: true } })],
+  plugins: [
+    react({ compiler: { logDiagnostics: true } }),
+    {
+      // The same version buildInfo.ts publishes to the console and
+      // window.__F1V__, in a form readable without running any JavaScript —
+      // `curl -s <url> | grep version` is what support and the deploy smoke
+      // test actually have to hand.
+      name: 'f1v:build-stamp-meta',
+      transformIndexHtml: () => [
+        {
+          tag: 'meta',
+          attrs: { name: 'version', content: process.env.APP_VERSION ?? 'local' },
+          injectTo: 'head' as const,
+        },
+      ],
+    },
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // Substituted into the bundle at build time. Cloud Build knows the commit
+  // but never passed it to Vite, so nothing in the served page said which build
+  // it was — see src/lib/buildInfo.ts for where these surface.
+  //
+  // SOURCE_DATE_EPOCH is the reproducible-builds convention: when the pipeline
+  // sets it from the commit timestamp, two builds of the same commit produce
+  // byte-identical output instead of differing only in this string.
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.APP_VERSION ?? 'local'),
+    __BUILD_TIME__: JSON.stringify(
+      process.env.SOURCE_DATE_EPOCH
+        ? new Date(Number(process.env.SOURCE_DATE_EPOCH) * 1000).toISOString()
+        : new Date().toISOString(),
+    ),
+  },
   build: {
+    // 'hidden' emits the maps but omits the //# sourceMappingURL comment, so a
+    // browser never fetches them and a stack trace can still be symbolicated
+    // from an archived copy. They are kept out of the served image by
+    // .dockerignore and refused by nginx as well — see nginx.conf.
+    sourcemap: 'hidden',
     rolldownOptions: {
       output: {
         // `entriesAware` names its subgroups `group~entry~entry~...`, which

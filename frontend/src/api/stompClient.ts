@@ -2,6 +2,7 @@ import { Client, ReconnectionTimeMode, TickerStrategy } from '@stomp/stompjs';
 import { env } from '../config/env';
 import { setConnectionStatus } from '../realtime/connectionStatus';
 import { createLogger } from '../lib/logger';
+import { MARK, mark } from '../lib/perf';
 
 const log = createLogger('stomp');
 
@@ -89,6 +90,10 @@ export const stompClient = new Client({
     onConnect: () => {
         consecutiveFailures = 0;
         setConnectionStatus('connected');
+        // The clock for time-to-first-packet starts here, not at activate():
+        // the interesting number is how long the broker takes to say something
+        // after the socket is up, not how long the handshake took.
+        mark(MARK.stompConnected);
     },
     onWebSocketClose: () => {
         consecutiveFailures++;

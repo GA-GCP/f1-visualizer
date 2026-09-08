@@ -1,0 +1,45 @@
+# ==========================================
+# Release Please — CHANGELOG and version tags from the commit history
+# ==========================================
+# The team already writes Conventional Commits, which is exactly the input this
+# needs, but nothing consumed them: no tag had ever been cut, package.json was
+# still on the template's 0.0.0, and the only artifact identity was a Cloud
+# Build short SHA. Support could not map a reported issue to a release, and a
+# UAT promotion PR had no human-readable description of what it contained.
+#
+# This opens (and keeps updating) a release PR. Merging that PR is what cuts the
+# release — nothing here publishes anything on its own.
+# ==========================================
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+
+# Least privilege: enough to write the CHANGELOG commit, open the release PR
+# and create the tag. Nothing else.
+permissions:
+  contents: write
+  pull-requests: write
+
+# A second push while a release run is in flight should update the same release
+# PR, not race another run editing the same branch.
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Propose a release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          # The default GITHUB_TOKEN is deliberate. It cannot trigger other
+          # workflows from the PRs it opens, which means the release PR does not
+          # start a second Release Please run — the trade for that is that
+          # pr-checks.yml does not run on the release PR either, and the release
+          # PR only ever touches CHANGELOG.md, package.json and the manifest.
+          token: ${{ secrets.GITHUB_TOKEN }}

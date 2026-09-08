@@ -6,10 +6,47 @@ import * as axeMatchers from 'vitest-axe/matchers';
 // axe assertions: `expect(await axe(container)).toHaveNoViolations()`
 expect.extend(axeMatchers);
 
-// ResizeObserver mock (jsdom doesn't support it)
-// Uses a real class so vi.clearAllMocks() in test files won't break construction
-class ResizeObserverMock {
-    observe() {}
+// ResizeObserver mock (jsdom doesn't support it).
+// A real class rather than vi.fn(), so vi.clearAllMocks() in a test file cannot
+// break construction.
+//
+// It delivers an initial observation, because a real one does. The previous
+// no-op version never called back, so any component that waits for a
+// measurement before rendering — which is the correct way to avoid building at
+// a guessed size — simply never rendered under test, and its code silently
+// left the coverage report. jsdom reports every element as 0x0, so a nominal
+// desktop size stands in.
+const RESIZE_OBSERVER_TEST_SIZE = { width: 800, height: 500 };
+
+class ResizeObserverMock implements ResizeObserver {
+    // A plain field, not a parameter property: tsconfig sets erasableSyntaxOnly.
+    private readonly callback: ResizeObserverCallback;
+
+    constructor(callback: ResizeObserverCallback) {
+        this.callback = callback;
+    }
+
+    observe(target: Element) {
+        // The target's own rect first, so a test that stubs
+        // getBoundingClientRect gets the size it asked for; the nominal size is
+        // only the fallback for jsdom's default 0x0.
+        const rect = target.getBoundingClientRect();
+        const width = rect.width > 0 ? rect.width : RESIZE_OBSERVER_TEST_SIZE.width;
+        const height = rect.height > 0 ? rect.height : RESIZE_OBSERVER_TEST_SIZE.height;
+        const contentRect = {
+            width,
+            height,
+            top: 0,
+            left: 0,
+            right: width,
+            bottom: height,
+            x: 0,
+            y: 0,
+            toJSON: () => ({}),
+        } as DOMRectReadOnly;
+        this.callback([{ target, contentRect } as ResizeObserverEntry], this);
+    }
+
     unobserve() {}
     disconnect() {}
 }

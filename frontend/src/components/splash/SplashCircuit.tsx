@@ -1,5 +1,5 @@
 import { Box } from '@mui/material';
-import { m, useMotionValue, animate, useMotionValueEvent } from 'framer-motion';
+import { m, useMotionValue, animate, useMotionValueEvent, useReducedMotion } from 'framer-motion';
 import React, { useRef, useState, useEffect } from 'react';
 import { BRAND_RED } from '../../theme/tokens';
 import type { SplashPhase } from './useSplashSequence';
@@ -41,6 +41,7 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase, continuous }) => {
     const dotX = useMotionValue(0);
     const dotY = useMotionValue(0);
     const dotProgress = useMotionValue(0);
+    const prefersReducedMotion = useReducedMotion();
 
     // Measure SVG path length on mount via the hidden measurement element.
     // The animated <m.path> is only rendered once pathLength > 0 so
@@ -56,6 +57,10 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase, continuous }) => {
     const circuitDrawn = continuous || phase !== 'background';
     useEffect(() => {
         if (!circuitDrawn || pathLength === 0) return;
+        // A dot that orbits forever is precisely the kind of motion the
+        // preference exists to stop, and this one runs for the life of the
+        // landing page. It stays visible, parked at the start of the lap.
+        if (prefersReducedMotion) return;
 
         let controls: ReturnType<typeof animate> | null = null;
 
@@ -74,7 +79,16 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase, continuous }) => {
             clearTimeout(timer);
             controls?.stop();
         };
-    }, [circuitDrawn, pathLength, phase, continuous, dotProgress]);
+    }, [circuitDrawn, pathLength, phase, continuous, dotProgress, prefersReducedMotion]);
+
+    // Without this the dot sits at (0,0) until the first progress change, which
+    // under reduced motion — where there is no progress change — is forever.
+    useEffect(() => {
+        if (!pathRef.current || pathLength === 0) return;
+        const start = pathRef.current.getPointAtLength(dotProgress.get() * pathLength);
+        dotX.set(start.x);
+        dotY.set(start.y);
+    }, [pathLength, dotProgress, dotX, dotY]);
 
     // Track dot position along the path
     useMotionValueEvent(dotProgress, 'change', (v) => {
@@ -101,6 +115,16 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase, continuous }) => {
                 width="100%"
                 style={{ display: 'block', overflow: 'visible' }}
             >
+                <defs>
+                    {/* Replaces the drop-shadow filters that used to sit on the
+                        orbiting dot. A gradient is rasterised once; a filter on
+                        a moving element is re-rendered every frame. */}
+                    <radialGradient id="f1v-dot-glow">
+                        <stop offset="0%" stopColor={BRAND_RED} stopOpacity="0.55" />
+                        <stop offset="45%" stopColor={BRAND_RED} stopOpacity="0.25" />
+                        <stop offset="100%" stopColor={BRAND_RED} stopOpacity="0" />
+                    </radialGradient>
+                </defs>
                 {/* Hidden path solely for getTotalLength() measurement.
                     Rendered unconditionally so the useEffect can measure on
                     mount, but invisible (no stroke, no fill). */}
@@ -145,18 +169,19 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase, continuous }) => {
 
                 {/* Orbiting racing dot */}
                 {showDot && (
-                    <m.circle
-                        cx={dotX}
-                        cy={dotY}
-                        r={5}
-                        fill="#ffffff"
+                    <m.g
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.3, delay: 2.0 }}
-                        style={{
-                            filter: `drop-shadow(0 0 6px ${BRAND_RED}) drop-shadow(0 0 12px rgba(225,6,0,0.4))`,
-                        }}
-                    />
+                    >
+                        {/* The glow was two chained drop-shadow filters on the
+                            moving dot, so the browser recomputed a filter
+                            region on every frame of a perpetual animation. A
+                            pre-blurred radial gradient is a single paint and
+                            costs nothing extra as the dot moves. */}
+                        <m.circle cx={dotX} cy={dotY} r={13} fill="url(#f1v-dot-glow)" />
+                        <m.circle cx={dotX} cy={dotY} r={5} fill="#ffffff" />
+                    </m.g>
                 )}
             </svg>
         </Box>

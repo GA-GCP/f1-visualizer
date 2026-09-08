@@ -1,12 +1,12 @@
-import React, { memo, useState, useEffect } from 'react';
-import { Box, IconButton, Slider, Typography, Paper, CircularProgress, Tooltip } from '@mui/material';
-import { useConnectionStatus } from '../realtime/useConnectionStatus';
-import { createLogger } from '../lib/logger';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import { Box, IconButton, Slider, Typography, Paper, CircularProgress, Tooltip } from '@mui/material';
 import { type StompSubscription } from '@stomp/stompjs';
+import React, { memo, useState, useEffect } from 'react';
 import { playSimulation, pauseSimulation, seekSimulation } from '../api/ingestionApi';
 import { stompClient } from '../api/stompClient';
+import { createLogger } from '../lib/logger';
+import { useConnectionStatus } from '../realtime/useConnectionStatus';
 import { BRAND_RED, PAPER_BG_RAISED } from '../theme/tokens';
 
 interface MediaControllerProps {
@@ -75,11 +75,21 @@ const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
         // This prevents in-flight STOMP packets (from the old position)
         // from contaminating the trace while the HTTP request is pending.
         onSeek?.();
-        await seekSimulation(newValue as number);
-        // Automatically resume playing if we seek
-        if (!isPlaying) {
-            await playSimulation();
-            setIsPlaying(true);
+        // Unlike the other two handlers this had no catch, so a seek against a
+        // failing ingestion service produced an unhandled rejection, left
+        // isPlaying disagreeing with the server, and told the user nothing.
+        // Found by no-misused-promises rather than by anyone using it.
+        try {
+            await seekSimulation(newValue as number);
+            // Automatically resume playing if we seek
+            if (!isPlaying) {
+                await playSimulation();
+                setIsPlaying(true);
+            }
+        } catch (error) {
+            log.error('Seek failed', error);
+            // The server's position is now unknown, so stop claiming to play.
+            setIsPlaying(false);
         }
     };
 
@@ -87,7 +97,7 @@ const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
         <Paper sx={{ p: 2, bgcolor: PAPER_BG_RAISED, borderTop: `2px solid ${BRAND_RED}`, display: 'flex', alignItems: 'center', gap: 3 }}>
             <Tooltip title={isPlaying ? 'Pause simulation' : 'Play simulation'}>
                 <IconButton
-                    onClick={handleTogglePlay}
+                    onClick={() => void handleTogglePlay()}
                     color="primary"
                     // The control is icon-only, so without an explicit name a
                     // screen reader announced it as just "button".
@@ -116,7 +126,7 @@ const MediaController: React.FC<MediaControllerProps> = ({ onSeek }) => {
                 <Slider
                     value={progress}
                     onChange={handleSeekChange}
-                    onChangeCommitted={handleSeekCommitted}
+                    onChangeCommitted={(event, value) => void handleSeekCommitted(event, value)}
                     aria-label="Simulation Timeline"
                     valueLabelDisplay="auto"
                     valueLabelFormat={(value) => `${value}%`}

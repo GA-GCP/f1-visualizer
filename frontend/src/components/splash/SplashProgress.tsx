@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
-import { m, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Box, Typography } from '@mui/material';
+import { m, AnimatePresence, useReducedMotion } from 'framer-motion';
+import React, { useMemo } from 'react';
 import { BRAND_RED, FONT_FAMILY, SHIMMER_GRADIENT } from '../../theme/tokens';
 
 const STATUS_MESSAGES: { max: number; label: string }[] = [

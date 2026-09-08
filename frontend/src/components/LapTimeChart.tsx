@@ -1,8 +1,7 @@
-import { PAPER_BG } from '../theme/tokens';
-import React, { useEffect, useRef, useState } from 'react';
-import * as d3 from 'd3';
 import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
-import type { LapDataRecord } from '../types/telemetry';
+import * as d3 from 'd3';
+import React, { useEffect, useRef, useState } from 'react';
+import { PAPER_BG } from '../theme/tokens';
 import {
     getDriverColor,
     computeInnerDimensions,
@@ -10,6 +9,7 @@ import {
     groupByDriver,
     LAP_CHART_MARGIN,
 } from '../utils/chartScales';
+import type { LapDataRecord } from '../types/telemetry';
 
 interface LapTimeChartProps {
     data: LapDataRecord[];

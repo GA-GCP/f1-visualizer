@@ -1,12 +1,12 @@
-import React, { useCallback, useState } from 'react';
-import { m } from 'framer-motion';
 import { Box, Button, Typography } from '@mui/material';
+import { m } from 'framer-motion';
+import React, { useCallback, useState } from 'react';
+import { FONT_FAMILY } from '../../theme/tokens';
 import SplashBackground from './SplashBackground';
 import SplashCircuit from './SplashCircuit';
+import { rememberSplashSkip } from './splashPreference';
 import SplashProgress from './SplashProgress';
 import { useSplashSequence } from './useSplashSequence';
-import { rememberSplashSkip } from './splashPreference';
-import { FONT_FAMILY } from '../../theme/tokens';
 
 // --- Per-letter stagger text reveal ---
 

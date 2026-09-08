@@ -1,16 +1,16 @@
-import React, { useCallback, useMemo } from 'react';
 import { Box, Typography, Container, Autocomplete, TextField } from '@mui/material';
-import { m, AnimatePresence } from 'framer-motion';
-import { useSearchParams } from 'react-router-dom';
-import LapTimeChart from '../components/LapTimeChart';
-import DataVaultLoader from '../components/DataVaultLoader';
-import ErrorState from '../components/ui/ErrorState';
-import EmptyState from '../components/ui/EmptyState';
 import { useQuery } from '@tanstack/react-query';
+import { m, AnimatePresence } from 'framer-motion';
+import React, { useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { queries } from '../api/queries';
-import type { RaceSession } from '../api/referenceApi';
-import { buildDriverColorMap, buildDriverLabelMap } from '../utils/chartScales';
+import DataVaultLoader from '../components/DataVaultLoader';
+import LapTimeChart from '../components/LapTimeChart';
+import EmptyState from '../components/ui/EmptyState';
+import ErrorState from '../components/ui/ErrorState';
 import { PAPER_BG_RAISED } from '../theme/tokens';
+import { buildDriverColorMap, buildDriverLabelMap } from '../utils/chartScales';
+import type { RaceSession } from '../api/referenceApi';
 const HistoricalData: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const sessionKeyParam = searchParams.get('session');

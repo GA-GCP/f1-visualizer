@@ -1,6 +1,6 @@
-import React from 'react';
 import { Box, Typography, Button, Stack } from '@mui/material';
 import { m } from 'framer-motion';
+import React from 'react';
 import { createLogger } from '../lib/logger';
 
 const log = createLogger('error-boundary');

@@ -1,9 +1,9 @@
-import React from 'react';
-import { AnimatePresence, m } from 'framer-motion';
 import { Typography } from '@mui/material';
-import { useCyclingIndex } from './useCyclingIndex';
+import { AnimatePresence, m } from 'framer-motion';
+import React from 'react';
 import { DUR } from '../../theme/motion';
 import { FONT_FAMILY, TEXT_DISABLED } from '../../theme/tokens';
+import { useCyclingIndex } from './useCyclingIndex';
 
 interface CyclingStatusLabelProps {
     messages: readonly string[];

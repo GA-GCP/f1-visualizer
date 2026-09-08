@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react';
 import { type IMessage } from '@stomp/stompjs';
+import { useEffect, useRef } from 'react';
 import * as z from 'zod/mini';
-import { stompClient } from '../api/stompClient';
 import { locationPacketSchema } from '../api/schemas';
-import { useConnectionStatus } from '../realtime/useConnectionStatus';
+import { stompClient } from '../api/stompClient';
 import { createLogger } from '../lib/logger';
+import { useConnectionStatus } from '../realtime/useConnectionStatus';
 import type { LocationPacket } from '../types/telemetry';
 
 const log = createLogger('gps');

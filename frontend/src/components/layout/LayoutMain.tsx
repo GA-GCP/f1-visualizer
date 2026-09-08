@@ -1,18 +1,18 @@
-import React, { Suspense, useEffect, useRef, useState } from 'react';
-import { Box, AppBar, Toolbar, Typography, Container, Button, IconButton, Tooltip } from '@mui/material';
-import { Link as RouterLink, useLocation, useOutlet } from 'react-router-dom';
-import { AnimatePresence, m, LayoutGroup } from 'framer-motion';
-import SpeedIcon from '@mui/icons-material/Speed';
-import StorageIcon from '@mui/icons-material/Storage';
+import {useAuth0} from "@auth0/auth0-react";
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
-import UserSettingsModal from './UserSettingsModal';
-import RouteFallback from '../ui/RouteFallback';
-import ErrorBoundary from '../ErrorBoundary';
+import SpeedIcon from '@mui/icons-material/Speed';
+import StorageIcon from '@mui/icons-material/Storage';
+import { Box, AppBar, Toolbar, Typography, Container, Button, IconButton, Tooltip } from '@mui/material';
+import { AnimatePresence, m, LayoutGroup } from 'framer-motion';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
+import { Link as RouterLink, useLocation, useOutlet } from 'react-router-dom';
 import { queryClient } from '../../api/queryClient';
-import {useAuth0} from "@auth0/auth0-react";
 import { BRAND_RED } from '../../theme/tokens';
+import ErrorBoundary from '../ErrorBoundary';
+import RouteFallback from '../ui/RouteFallback';
+import UserSettingsModal from './UserSettingsModal';
 
 const LayoutMain: React.FC = () => {
     const location = useLocation();
@@ -47,7 +47,9 @@ const LayoutMain: React.FC = () => {
         // Drop every cached response first: signing in as someone else on the
         // same machine must not read the previous user's data.
         queryClient.clear();
-        logout({ logoutParams: { returnTo: window.location.origin } });
+        // logout() returns a promise and then navigates the document away;
+        // there is nothing to await and nowhere for a rejection to surface.
+        void logout({ logoutParams: { returnTo: window.location.origin } });
     };
 
     return (

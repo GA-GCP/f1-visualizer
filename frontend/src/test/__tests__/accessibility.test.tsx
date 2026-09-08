@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { axe } from 'vitest-axe';
-import { renderWithTheme } from '../renderWithTheme';
 
 vi.mock('@auth0/auth0-react', () => ({
     useAuth0: () => ({
@@ -27,11 +26,12 @@ vi.mock('../../context/UserContext', () => ({
     useUser: () => ({ userProfile: null, isLoading: false, updatePreferences: vi.fn() }),
 }));
 
-import Landing from '../../pages/Landing';
 import LayoutMain from '../../components/layout/LayoutMain';
-import HistoricalData from '../../pages/HistoricalData';
-import ErrorState from '../../components/ui/ErrorState';
 import EmptyState from '../../components/ui/EmptyState';
+import ErrorState from '../../components/ui/ErrorState';
+import HistoricalData from '../../pages/HistoricalData';
+import Landing from '../../pages/Landing';
+import { renderWithTheme } from '../renderWithTheme';
 
 /**
  * axe assertions over the real theme.

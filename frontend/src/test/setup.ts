@@ -1,8 +1,7 @@
 import '@testing-library/jest-dom/vitest';
-import * as axeMatchers from 'vitest-axe/matchers';
-import { expect } from 'vitest';
-import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { expect, afterEach, vi  } from 'vitest';
+import * as axeMatchers from 'vitest-axe/matchers';
 
 // axe assertions: `expect(await axe(container)).toHaveNoViolations()`
 expect.extend(axeMatchers);
@@ -14,7 +13,7 @@ class ResizeObserverMock {
     unobserve() {}
     disconnect() {}
 }
-global.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
+global.ResizeObserver = ResizeObserverMock;
 
 // User Timing API (jsdom implements only performance.now). perf.ts guards every
 // call, so without this the mark/measure tests would pass by taking the
@@ -91,9 +90,9 @@ svgProto.getPointAtLength ??= () => ({ x: 100, y: 100 });
 // requestAnimationFrame / cancelAnimationFrame mock (consistent 60fps simulation)
 if (!global.requestAnimationFrame) {
     global.requestAnimationFrame = ((cb: FrameRequestCallback) =>
-        setTimeout(() => cb(Date.now()), 16) as unknown as number) as typeof global.requestAnimationFrame;
+        setTimeout(() => cb(Date.now()), 16) as unknown as number);
     global.cancelAnimationFrame = ((id: number) =>
-        clearTimeout(id)) as typeof global.cancelAnimationFrame;
+        clearTimeout(id));
 }
 
 // Automatically clean up after each test

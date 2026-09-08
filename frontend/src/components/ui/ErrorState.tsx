@@ -1,6 +1,6 @@
-import React from 'react';
-import { Alert, AlertTitle, Box, Button } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import { Alert, AlertTitle, Box, Button } from '@mui/material';
+import React from 'react';
 
 interface ErrorStateProps {
     title?: string;

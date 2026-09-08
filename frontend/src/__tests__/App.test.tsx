@@ -1,6 +1,7 @@
+import { useAuth0 } from '@auth0/auth0-react';
+import { ThemeProvider } from '@mui/material';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@auth0/auth0-react', () => ({ useAuth0: vi.fn() }));
@@ -34,18 +35,17 @@ vi.mock('../pages/Home', () => ({ default: () => <div data-testid="page-home" />
 vi.mock('../pages/HistoricalData', () => ({ default: () => <div data-testid="page-historical" /> }));
 vi.mock('../pages/VersusMode', () => ({ default: () => <div data-testid="page-versus" /> }));
 
-import { useAuth0 } from '@auth0/auth0-react';
+import { queryClient } from '../api/queryClient';
 import { fetchDrivers, fetchSessions } from '../api/referenceApi';
 import { AppRoutes } from '../App';
 import { forgetSplashSkip, rememberSplashSkip } from '../components/splash/splashPreference';
-import { queryClient } from '../api/queryClient';
 import { broadcastTheme } from '../theme/theme';
 
-type Auth0State = {
+interface Auth0State {
     isAuthenticated?: boolean;
     isLoading?: boolean;
     error?: Error;
-};
+}
 
 const mockAuth0 = ({ isAuthenticated = false, isLoading = false, error }: Auth0State) => {
     (useAuth0 as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -79,8 +79,6 @@ describe('AppRoutes', () => {
     afterEach(() => {
         vi.useRealTimers();
     });
-
-
 
     describe('the public landing route', () => {
         it('paints the landing page without waiting for Auth0', () => {

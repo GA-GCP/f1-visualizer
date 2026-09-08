@@ -1,10 +1,8 @@
-import React, { memo, useRef, useEffect, useLayoutEffect, useState } from 'react';
 import { Box, Paper, Typography } from '@mui/material';
 import { AnimatePresence, m } from 'framer-motion';
-import type { LocationPacket } from '../types/telemetry';
-import type { DriverProfile } from '../api/referenceApi';
-import CircuitTraceIdleOverlay from './CircuitTraceIdleOverlay';
-import CircuitTraceLoadingOverlay from './CircuitTraceLoadingOverlay';
+import React, { memo, useRef, useEffect, useLayoutEffect, useState } from 'react';
+import { createLogger } from '../lib/logger';
+import { CANVAS_BG, FONT_FAMILY, PAPER_BG } from '../theme/tokens';
 import {
     areBoundsValid,
     computeBounds,
@@ -13,8 +11,10 @@ import {
     type Bounds,
 } from '../utils/circuitProjection';
 import { drawCarDot, strokeTrace, type DriverHistory } from '../utils/circuitRenderer';
-import { createLogger } from '../lib/logger';
-import { CANVAS_BG, FONT_FAMILY, PAPER_BG } from '../theme/tokens';
+import CircuitTraceIdleOverlay from './CircuitTraceIdleOverlay';
+import CircuitTraceLoadingOverlay from './CircuitTraceLoadingOverlay';
+import type { DriverProfile } from '../api/referenceApi';
+import type { LocationPacket } from '../types/telemetry';
 
 const log = createLogger('trace');
 
@@ -216,7 +216,7 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
         /** Cached-layer canvas, created lazily and resized with the main one. */
         const ensureLayer = (width: number, height: number, dpr: number) => {
             let layer = layerRef.current;
-            if (!layer || layer.canvas.width !== width * dpr || layer.canvas.height !== height * dpr) {
+            if (layer?.canvas.width !== width * dpr || layer.canvas.height !== height * dpr) {
                 const offscreen = document.createElement('canvas');
                 offscreen.width = width * dpr;
                 offscreen.height = height * dpr;
@@ -285,7 +285,7 @@ const CircuitTrace: React.FC<CircuitTraceProps> = ({ locationQueueRef, selectedD
                     diagRef.current.driversSeenSet.add(driver_number);
 
                     // Update auto-scale bounds only for the SELECTED driver
-                    if (driver && driver_number === driver.id) {
+                    if (driver_number === driver?.id) {
                         const b = boundsRef.current;
                         b.minX = Math.min(b.minX, x);
                         b.maxX = Math.max(b.maxX, x);

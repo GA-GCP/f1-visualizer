@@ -1,8 +1,8 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useTelemetry } from '../useTelemetry';
-import { stompClient } from '@/api/stompClient.ts';
+import { stompClient } from '@/api/stompClient';
 import { setConnectionStatus, resetConnectionStatus } from '@/realtime/connectionStatus';
+import { useTelemetry } from '../useTelemetry';
 
 vi.mock('../../api/stompClient', () => ({
     stompClient: {

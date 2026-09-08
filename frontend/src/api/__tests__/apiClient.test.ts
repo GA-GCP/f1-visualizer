@@ -40,6 +40,14 @@ describe('apiClient', () => {
             let onRejected: ((err: unknown) => unknown) | undefined;
             const instance = vi.fn();
 
+            // The real AxiosHeaders, because apiClient imports it by name to
+            // normalise headers before setting the retry token. A mock that
+            // omits an export the module under test imports does not fail
+            // loudly — it makes the call throw inside apiClient's own
+            // try/catch, so the retry silently 'fails closed' and the test
+            // reports the wrong reason.
+            const { AxiosHeaders } = await vi.importActual<typeof import('axios')>('axios');
+
             vi.doMock('axios', () => {
                 const client = Object.assign(instance, {
                     defaults: { baseURL: '/api/v1' },
@@ -51,7 +59,7 @@ describe('apiClient', () => {
                         },
                     },
                 });
-                return { default: { create: () => client } };
+                return { default: { create: () => client }, AxiosHeaders };
             });
 
             const mod = await import('../apiClient');

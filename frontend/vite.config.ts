@@ -3,7 +3,19 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 export default defineConfig({
-  plugins: [react()],
+  // React Compiler, via the Rust `oxc-transform-react` port rather than Babel:
+  // the rolldown pipeline has no Babel in it, and adding one back for this would
+  // cost more build time than the compiler saves at runtime.
+  //
+  // It auto-memoises the render-identity churn that the manual useMemo/useCallback
+  // in RaceSimulator and VersusMode only partly covered — inline handlers, `sx`
+  // object literals, unmemoised children. Those manual memos are kept: the
+  // compiler validates them (`preserve-manual-memoization`) rather than ignoring
+  // them, so a hand-written dependency array that disagrees with the code is now
+  // a build error instead of a stale render.
+  //
+  // `logDiagnostics` surfaces the components the compiler declined to compile.
+  plugins: [react({ compiler: { logDiagnostics: true } })],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -57,6 +69,10 @@ export default defineConfig({
               entriesAwareMergeThreshold: 20_000,
             },
             {
+              // `entriesAware` is what makes the LazyMotion split in App.tsx
+              // real. Measured with it off: framer-motion collapses back into a
+              // single 43.8 kB gz chunk that the entry preloads, and the dynamic
+              // import of the feature bundle buys 1 kB instead of 14.
               name: 'motion',
               test: /node_modules[\\/](framer-motion|motion-dom|motion-utils)[\\/]/,
               entriesAware: true,

@@ -1,6 +1,6 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Typography, Paper, Grid, Chip } from '@mui/material';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { useTelemetry } from '../../hooks/useTelemetry';
 import { buildLapIndex, findCurrentLap, type CurrentLap } from './lapCorrelation';
 import type { DriverProfile } from '../../api/referenceApi';
@@ -135,9 +135,9 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
                 LIVE TELEMETRY
             </Typography>
             {lastTelemetry ? (
-                <motion.div variants={staggerContainer} initial="hidden" animate="visible">
+                <m.div variants={staggerContainer} initial="hidden" animate="visible">
                     {currentLap && (
-                        <motion.div variants={staggerItem}>
+                        <m.div variants={staggerItem}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
                                 <Typography variant="h6" component="p" sx={{
                                     fontFamily: FONT_FAMILY,
@@ -176,9 +176,9 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
                                     />
                                 )}
                             </Box>
-                        </motion.div>
+                        </m.div>
                     )}
-                    <motion.div variants={staggerItem}>
+                    <m.div variants={staggerItem}>
                         <Typography variant="h2" component="p" sx={{ fontWeight: 'bold', color: 'white' }}>
                             <Box component="span" sx={{
                                 ...numericSx,
@@ -191,36 +191,36 @@ const LiveTelemetryPanel: React.FC<LiveTelemetryPanelProps> = ({
                             {' '}
                             <span style={{ fontSize: '1.5rem', color: '#666' }}>KM/H</span>
                         </Typography>
-                    </motion.div>
+                    </m.div>
                     <Grid container component="dl" spacing={2} sx={{ mt: 2, mb: 0 }}>
                         <Grid size={3}>
-                            <motion.div variants={staggerItem}>
+                            <m.div variants={staggerItem}>
                                 <Typography variant="caption" component="dt" color="text.secondary">RPM</Typography>
                                 <Typography variant="h6" component="dd" sx={{ m: 0, ...numericSx }}>{lastTelemetry.rpm}</Typography>
-                            </motion.div>
+                            </m.div>
                         </Grid>
                         <Grid size={3}>
-                            <motion.div variants={staggerItem}>
+                            <m.div variants={staggerItem}>
                                 <Typography variant="caption" component="dt" color="text.secondary">GEAR</Typography>
                                 <Typography variant="h6" component="dd" sx={{ m: 0, ...numericSx }}>{lastTelemetry.gear}</Typography>
-                            </motion.div>
+                            </m.div>
                         </Grid>
                         <Grid size={3}>
-                            <motion.div variants={staggerItem}>
+                            <m.div variants={staggerItem}>
                                 <Typography variant="caption" component="dt" color="text.secondary">THROTTLE</Typography>
                                 <Typography variant="h6" component="dd" sx={{ m: 0, ...numericSx }}>{lastTelemetry.throttle}%</Typography>
-                            </motion.div>
+                            </m.div>
                         </Grid>
                         <Grid size={3}>
-                            <motion.div variants={staggerItem}>
+                            <m.div variants={staggerItem}>
                                 <Typography variant="caption" component="dt" color="text.secondary">BRAKE</Typography>
                                 <Typography variant="h6" component="dd" sx={{ m: 0, ...numericSx, color: lastTelemetry.brake > 0 ? '#ff4444' : 'white' }}>
                                     {lastTelemetry.brake}%
                                 </Typography>
-                            </motion.div>
+                            </m.div>
                         </Grid>
                     </Grid>
-                </motion.div>
+                </m.div>
             ) : (
                 <Typography color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>
                     {activeSession ? `Waiting for data from ${selectedDriver?.code}...` : 'Initialize a session to begin.'}

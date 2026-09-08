@@ -5,7 +5,7 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
 import { useConnectionStatus } from '../realtime/useConnectionStatus';
 import { describeConnectionStatus } from '../realtime/connectionStatus';
 import { retryStompConnection } from '../api/stompClient';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { useLocation } from '../hooks/useLocation';
 import CircuitTrace from './CircuitTrace';
 import DriverSelector from './selectors/DriverSelector';
@@ -156,7 +156,7 @@ const RaceSimulator: React.FC = () => {
 
                         <AnimatePresence>
                             {session.activeSession?.mode === 'SIMULATION' && (
-                                <motion.div
+                                <m.div
                                     key="media-controller"
                                     initial={{ opacity: 0, height: 0 }}
                                     animate={{ opacity: 1, height: 'auto' }}
@@ -164,7 +164,7 @@ const RaceSimulator: React.FC = () => {
                                     transition={{ duration: 0.35, ease: 'easeOut' }}
                                 >
                                     <MediaController onSeek={handleSeek} />
-                                </motion.div>
+                                </m.div>
                             )}
                         </AnimatePresence>
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { axe } from 'vitest-axe';
+import { fetchSessionLaps, fetchSessions, fetchYears } from '../../api/referenceApi';
 
 vi.mock('@auth0/auth0-react', () => ({
     useAuth0: () => ({
@@ -41,6 +42,13 @@ import { renderWithTheme } from '../renderWithTheme';
 describe('accessibility', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        // clearAllMocks clears recorded calls but keeps implementations, so a
+        // mockReturnValue set inside one test leaks into the next. Re-declared
+        // here so every test starts from the same place no matter what ran
+        // before it.
+        vi.mocked(fetchYears).mockResolvedValue([]);
+        vi.mocked(fetchSessions).mockResolvedValue([]);
+        vi.mocked(fetchSessionLaps).mockResolvedValue([]);
     });
 
     it('the public landing page has no violations', async () => {
@@ -59,6 +67,15 @@ describe('accessibility', () => {
         // Asserted separately from the settled state: whichever one the timing
         // happened to catch used to decide what this test checked, which is how
         // a heading-order violation in the loader went unnoticed.
+        //
+        // The fetchers never settle here, deliberately. With the default
+        // mockResolvedValue the queries resolved *after* this test returned and
+        // updated a component that had not unmounted yet, which React reports
+        // as an update outside act — now fatal, which is how it was found. A
+        // loading-state test whose data arrives is not testing a loading state.
+        vi.mocked(fetchYears).mockReturnValue(new Promise(() => {}));
+        vi.mocked(fetchSessions).mockReturnValue(new Promise(() => {}));
+
         const { container } = renderWithTheme(<HistoricalData />, { route: '/historical' });
 
         expect(await axe(container)).toHaveNoViolations();

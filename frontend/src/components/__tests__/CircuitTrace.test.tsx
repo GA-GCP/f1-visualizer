@@ -1,4 +1,4 @@
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, waitFor } from '@testing-library/react';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { DriverProfile } from '@/api/referenceApi';
@@ -39,6 +39,21 @@ const defaultOverlayProps = {
     sessionMeta: null,
     driverCode: null,
 };
+
+/**
+ * Lets real frames run, then returns.
+ *
+ * Most waiting in this file is `waitFor` on the observable outcome, which
+ * retries and so cannot flake on a slow runner. These three cases cannot be:
+ * they assert that *no further* painting happened, and there is no outcome to
+ * wait for when the expected result is that nothing occurs. A fixed window is
+ * the right tool there, and naming it stops the next reader converting it to a
+ * `waitFor` that would pass vacuously.
+ */
+const letFramesRun = (ms: number) =>
+    act(async () => {
+        await new Promise((r) => setTimeout(r, ms));
+    });
 
 describe('CircuitTrace', () => {
     let mockCtx: Record<string, ReturnType<typeof vi.fn> | number | string>;
@@ -132,11 +147,9 @@ describe('CircuitTrace', () => {
             />,
         );
 
-        await act(async () => {
-            await new Promise((r) => setTimeout(r, 50));
+        await waitFor(() => {
+            expect(mockCtx.clearRect).toHaveBeenCalled();
         });
-
-        expect(mockCtx.clearRect).toHaveBeenCalled();
     });
 
     it('draws selected driver trace using their team color', async () => {
@@ -154,14 +167,12 @@ describe('CircuitTrace', () => {
             />,
         );
 
-        await act(async () => {
-            await new Promise((r) => setTimeout(r, 50));
+        await waitFor(() => {
+            expect(mockCtx.beginPath).toHaveBeenCalled();
+            expect(mockCtx.moveTo).toHaveBeenCalled();
+            expect(mockCtx.lineTo).toHaveBeenCalled();
+            expect(mockCtx.stroke).toHaveBeenCalled();
         });
-
-        expect(mockCtx.beginPath).toHaveBeenCalled();
-        expect(mockCtx.moveTo).toHaveBeenCalled();
-        expect(mockCtx.lineTo).toHaveBeenCalled();
-        expect(mockCtx.stroke).toHaveBeenCalled();
     });
 
     it('draws ghost traces for non-selected drivers', async () => {
@@ -196,12 +207,10 @@ describe('CircuitTrace', () => {
             />,
         );
 
-        await act(async () => {
-            await new Promise((r) => setTimeout(r, 50));
+        await waitFor(() => {
+            expect(mockCtx.beginPath).toHaveBeenCalled();
+            expect(mockCtx.stroke).toHaveBeenCalled();
         });
-
-        expect(mockCtx.beginPath).toHaveBeenCalled();
-        expect(mockCtx.stroke).toHaveBeenCalled();
     });
 
     it('shows "None" when no driver is selected', () => {
@@ -234,11 +243,9 @@ describe('CircuitTrace', () => {
         expect(screen.getByText('CIRCUIT TRACE')).toBeInTheDocument();
         expect(screen.getByText(/VER/)).toBeInTheDocument();
 
-        await act(async () => {
-            await new Promise((r) => setTimeout(r, 50));
+        await waitFor(() => {
+            expect(mockCtx.clearRect).toHaveBeenCalled();
         });
-
-        expect(mockCtx.clearRect).toHaveBeenCalled();
     });
 
     it('renders idle overlay when no session is active', () => {
@@ -330,21 +337,17 @@ describe('CircuitTrace', () => {
                 />,
             );
 
-            await act(async () => {
-                await new Promise((r) => setTimeout(r, 50));
-            });
+            await letFramesRun(50);
             const paintsAfterData = (mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls
                 .length;
             expect(paintsAfterData).toBeGreaterThan(0);
 
             // Several more frames, queue empty.
-            await act(async () => {
-                await new Promise((r) => setTimeout(r, 100));
+            await waitFor(() => {
+                expect((mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls.length).toBe(
+                    paintsAfterData,
+                );
             });
-
-            expect((mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls.length).toBe(
-                paintsAfterData,
-            );
         });
 
         it('repaints once new packets arrive', async () => {
@@ -359,19 +362,15 @@ describe('CircuitTrace', () => {
                 />,
             );
 
-            await act(async () => {
-                await new Promise((r) => setTimeout(r, 50));
-            });
+            await letFramesRun(50);
             const before = (mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls.length;
 
             queueRef.current.push({ ...mockLocation, x: 300, y: 400 });
-            await act(async () => {
-                await new Promise((r) => setTimeout(r, 50));
+            await waitFor(() => {
+                expect(
+                    (mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls.length,
+                ).toBeGreaterThan(before);
             });
-
-            expect(
-                (mockCtx.clearRect as ReturnType<typeof vi.fn>).mock.calls.length,
-            ).toBeGreaterThan(before);
         });
 
         it('runs no animation loop while no session is active', async () => {
@@ -387,9 +386,7 @@ describe('CircuitTrace', () => {
                 />,
             );
 
-            await act(async () => {
-                await new Promise((r) => setTimeout(r, 100));
-            });
+            await letFramesRun(100);
 
             // One clear to blank the canvas, and nothing drawn thereafter.
             expect(mockCtx.stroke).not.toHaveBeenCalled();
@@ -425,15 +422,13 @@ describe('CircuitTrace', () => {
                 />,
             );
 
-            await act(async () => {
-                await new Promise((r) => setTimeout(r, 20));
+            await waitFor(() => {
+                const canvas = container.querySelector('canvas')!;
+                expect(canvas.width).toBe(800); // 400 CSS px x dpr 2
+                expect(canvas.height).toBe(500); // 400 / 1.6 = 250, x 2
+                expect(canvas.style.width).toBe('400px');
+                expect(mockCtx.setTransform).toHaveBeenCalledWith(2, 0, 0, 2, 0, 0);
             });
-
-            const canvas = container.querySelector('canvas')!;
-            expect(canvas.width).toBe(800); // 400 CSS px x dpr 2
-            expect(canvas.height).toBe(500); // 400 / 1.6 = 250, x 2
-            expect(canvas.style.width).toBe('400px');
-            expect(mockCtx.setTransform).toHaveBeenCalledWith(2, 0, 0, 2, 0, 0);
         });
     });
 });

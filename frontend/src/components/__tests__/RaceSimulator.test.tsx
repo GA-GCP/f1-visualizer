@@ -1,4 +1,4 @@
-import { screen, act, waitFor } from '@testing-library/react';
+import { screen, act, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fetchDrivers, fetchSessionLaps } from '@/api/referenceApi';
 import { useLocation } from '@/hooks/useLocation';
@@ -65,16 +65,24 @@ describe('RaceSimulator', () => {
         setConnectionStatus('reconnecting');
 
         renderWithProviders(<RaceSimulator />);
-        screen.getByText('Start Mock Stream').click();
+        await act(async () => {
+            fireEvent.click(screen.getByText('Start Mock Stream'));
+        });
 
-        expect(await screen.findByText(/RECONNECTING/i)).toBeInTheDocument();
+        // By role: 'RECONNECTING' appears in the status chip too, so the text
+        // query matched two elements once the update was flushed inside act.
+        // It passed before only because the chip had not re-rendered yet — the
+        // assertion was not checking the banner at all.
+        expect(await screen.findByRole('alert')).toHaveTextContent(/RECONNECTING/i);
     });
 
     it('offers a retry once the breaker has opened', async () => {
         setConnectionStatus('circuit-open');
 
         renderWithProviders(<RaceSimulator />);
-        screen.getByText('Start Mock Stream').click();
+        await act(async () => {
+            fireEvent.click(screen.getByText('Start Mock Stream'));
+        });
 
         expect(
             await screen.findByText(/FEED UNAVAILABLE AFTER REPEATED FAILURES/i),
@@ -88,7 +96,9 @@ describe('RaceSimulator', () => {
         setConnectionStatus('connecting');
 
         renderWithProviders(<RaceSimulator />);
-        screen.getByText('Start Mock Stream').click();
+        await act(async () => {
+            fireEvent.click(screen.getByText('Start Mock Stream'));
+        });
 
         await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
     });
@@ -150,7 +160,7 @@ describe('RaceSimulator', () => {
 
         // Start stream (sets activeSession)
         await act(async () => {
-            screen.getByText('Start Mock Stream').click();
+            fireEvent.click(screen.getByText('Start Mock Stream'));
         });
 
         // Now trigger telemetry callback — the latest callback has the correct closures
@@ -226,7 +236,7 @@ describe('RaceSimulator', () => {
         });
 
         await act(async () => {
-            screen.getByText('Start Mock Stream').click();
+            fireEvent.click(screen.getByText('Start Mock Stream'));
         });
 
         // Allow fetchSessionLaps to resolve
@@ -309,7 +319,7 @@ describe('RaceSimulator', () => {
             await new Promise((r) => setTimeout(r, 0));
         });
         await act(async () => {
-            screen.getByText('Start Mock Stream').click();
+            fireEvent.click(screen.getByText('Start Mock Stream'));
         });
         await act(async () => {
             await new Promise((r) => setTimeout(r, 0));
@@ -389,7 +399,7 @@ describe('RaceSimulator', () => {
             await new Promise((r) => setTimeout(r, 0));
         });
         await act(async () => {
-            screen.getByText('Start Mock Stream').click();
+            fireEvent.click(screen.getByText('Start Mock Stream'));
         });
         await act(async () => {
             await new Promise((r) => setTimeout(r, 0));
@@ -483,7 +493,7 @@ describe('RaceSimulator', () => {
             await new Promise((r) => setTimeout(r, 0));
         });
         await act(async () => {
-            screen.getByText('Start Mock Stream').click();
+            fireEvent.click(screen.getByText('Start Mock Stream'));
         });
         await act(async () => {
             await new Promise((r) => setTimeout(r, 0));

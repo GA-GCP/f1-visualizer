@@ -70,8 +70,15 @@ const Landing: React.FC = () => {
                     px: 2,
                 }}
             >
-                {/* Per-letter title reveal */}
+                {/* Per-letter title reveal.
+                    The page's title was twelve sibling spans with no heading
+                    role, so the document had no h1 and a screen reader spelled
+                    it out one letter at a time. The container carries the name
+                    and the level; the letters are decoration. */}
                 <m.div
+                    role="heading"
+                    aria-level={1}
+                    aria-label="F1 Visualizer"
                     variants={letterContainerVariants}
                     initial="hidden"
                     animate="visible"
@@ -87,6 +94,7 @@ const Landing: React.FC = () => {
                         return (
                             <m.span
                                 key={i}
+                                aria-hidden
                                 variants={letterVariants}
                                 style={{
                                     display: 'inline-block',

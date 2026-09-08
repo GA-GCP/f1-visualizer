@@ -7,7 +7,12 @@
 #
 # For local development builds, use the standard Dockerfile.
 # ==========================================
-FROM nginxinc/nginx-unprivileged:alpine
+# Pinned by digest, and must stay identical to NGINX_IMAGE in Dockerfile: this
+# is the image that actually serves production, and an unpinned `:alpine` tag
+# silently moves across nginx minors and Alpine releases between two builds of
+# the same commit.
+ARG NGINX_IMAGE=nginxinc/nginx-unprivileged:1.31.5-alpine@sha256:2ddec616f1cb58bcac057aa388f28cb81e35137641ef4226d321714499329bd1
+FROM ${NGINX_IMAGE}
 
 # SPA routing configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf

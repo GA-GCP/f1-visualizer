@@ -68,9 +68,13 @@ steps:
         echo "Validation passed: All placeholders resolved."
 
         # --- 5. Deploy API Gateway Config ---
+        # --backend-auth-service-account is what lets the gateway mint an ID
+        # token per backend. The REST services no longer carry an allUsers
+        # invoker binding, so without it every route returns 403 (S3).
         gcloud api-gateway api-configs create f1v-config-${_ENV}-${_SHORT_SHA} \
           --api=f1v-gateway-${_ENV} \
           --openapi-spec=infrastructure/openapi.yaml \
+          --backend-auth-service-account=sa-f1v-gateway-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com \
           --project=$PROJECT_ID --quiet
 
         echo "API Gateway config deployed: f1v-config-${_ENV}-${_SHORT_SHA}"
@@ -110,6 +114,8 @@ steps:
         # Test a real endpoint defined in the OpenAPI spec.
         # /api/v1/analysis/drivers requires auth but returns 401 (not 404)
         # when the route exists.  A 404 means the spec wasn't applied.
+        # A 403 here means the route resolved but the gateway could not invoke
+        # the backend — check the gateway service account's run.invoker binding.
         SMOKE_PATH="/api/v1/analysis/drivers"
         echo "Testing gateway: https://$$GATEWAY_URL$$SMOKE_PATH"
         HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$$GATEWAY_URL$$SMOKE_PATH" || true)

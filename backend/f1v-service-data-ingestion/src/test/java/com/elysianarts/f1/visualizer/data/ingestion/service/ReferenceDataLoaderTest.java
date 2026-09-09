@@ -1,121 +1,139 @@
 package com.elysianarts.f1.visualizer.data.ingestion.service;
 
-import com.elysianarts.f1.visualizer.commons.api.openf1.service.OpenF1AuthService;
-import com.google.cloud.bigquery.BigQuery;
-import com.google.cloud.bigquery.InsertAllRequest;
-import com.google.cloud.bigquery.InsertAllResponse;
-import com.google.cloud.bigquery.TableId;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
-import org.junit.jupiter.api.AfterEach;
+import com.elysianarts.f1.visualizer.commons.api.openf1.client.OpenF1Client;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Driver;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Meeting;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Session;
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryBatchWriter;
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryProperties;
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.reactive.function.client.WebClient;
 
-import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+/**
+ * C4: the loader used to build its own WebClient against the same API the typed
+ * client already wraps, and read every response as an untyped Map — so this test
+ * had to drive a MockWebServer and enqueue five responses in the right order.
+ */
 @ExtendWith(MockitoExtension.class)
 class ReferenceDataLoaderTest {
 
-    private MockWebServer mockWebServer;
+    @Mock
+    private OpenF1Client openF1Client;
 
     @Mock
-    private OpenF1AuthService authService;
+    private BigQueryQueryRunner queryRunner;
 
     @Mock
-    private BigQuery bigQuery;
+    private BigQueryBatchWriter batchWriter;
 
+    @InjectMocks
     private ReferenceDataLoader referenceDataLoader;
 
     @BeforeEach
-    void setUp() throws IOException {
-        mockWebServer = new MockWebServer();
-        mockWebServer.start();
-
-        // Build the WebClient here, pointing to the MockWebServer
-        WebClient mockWebClient = WebClient.builder()
-                .baseUrl(mockWebServer.url("/").toString())
-                .build();
-
-        // Inject the pre-built mock client!
-        referenceDataLoader = new ReferenceDataLoader(mockWebClient, authService, bigQuery);
+    void stubDataset() {
+        // C4: the dataset name is configuration now, not a constant per class.
+        lenient().when(queryRunner.properties()).thenReturn(BigQueryProperties.defaults());
     }
 
-    @AfterEach
-    void tearDown() throws IOException {
-        mockWebServer.shutdown();
+    private static OpenF1Session session(long key) {
+        OpenF1Session session = new OpenF1Session();
+        session.setSessionKey(key);
+        session.setMeetingKey(1219L);
+        session.setSessionName("Race");
+        session.setYear(2023);
+        session.setCountryName("Singapore");
+        session.setDateStart(OffsetDateTime.of(2023, 9, 17, 12, 0, 0, 0, ZoneOffset.UTC));
+        session.setDateEnd(OffsetDateTime.of(2023, 9, 17, 14, 0, 0, 0, ZoneOffset.UTC));
+        return session;
+    }
+
+    private static OpenF1Driver driver(int number) {
+        OpenF1Driver driver = new OpenF1Driver();
+        driver.setDriverNumber(number);
+        driver.setBroadcastName("M VERSTAPPEN");
+        driver.setNameAcronym("VER");
+        driver.setTeamName("Red Bull Racing");
+        driver.setTeamColour("3671C6");
+        driver.setCountryCode("NED");
+        return driver;
+    }
+
+    private static OpenF1Meeting meeting() {
+        OpenF1Meeting meeting = new OpenF1Meeting();
+        meeting.setMeetingKey(1219L);
+        meeting.setMeetingName("Singapore Grand Prix");
+        return meeting;
     }
 
     @Test
-    void loadReferenceData_FetchesAndInserts_SessionsAndDrivers() {
-        // Arrange
-        when(authService.getAccessToken()).thenReturn("test-token");
-        when(bigQuery.insertAll(any(InsertAllRequest.class))).thenReturn(mock(InsertAllResponse.class));
+    void loadReferenceData_LoadsSessionsDriversAndRosters() {
+        when(openF1Client.getMeetings(2023)).thenReturn(List.of(meeting()));
+        when(openF1Client.getSessionsForYear(2023)).thenReturn(List.of(session(9165)));
+        when(openF1Client.getDrivers("latest")).thenReturn(List.of(driver(1)));
+        when(openF1Client.getDrivers("9165")).thenReturn(List.of(driver(1)));
 
-        // Enqueue Mock Responses:
-        // 1st for /meetings (building the lookup)
-        mockWebServer.enqueue(new MockResponse()
-                .setBody("[{\"meeting_key\": 1219, \"meeting_name\": \"Singapore Grand Prix\"}]")
-                .addHeader("Content-Type", "application/json"));
-
-        // 2nd for /sessions
-        mockWebServer.enqueue(new MockResponse()
-                .setBody("[{\"session_key\": 9165, \"meeting_key\": 1219}]")
-                .addHeader("Content-Type", "application/json"));
-
-        // 3rd for /drivers (latest grid)
-        mockWebServer.enqueue(new MockResponse()
-                .setBody("[{\"driver_number\": 1, \"broadcast_name\": \"M VERSTAPPEN\", \"team_colour\": \"3671C6\"}]")
-                .addHeader("Content-Type", "application/json"));
-
-        // 4th for /sessions (re-fetched inside loadSessionDrivers)
-        mockWebServer.enqueue(new MockResponse()
-                .setBody("[{\"session_key\": 9165, \"meeting_key\": 1219}]")
-                .addHeader("Content-Type", "application/json"));
-
-        // 5th for /drivers?session_key=9165 (per-session roster)
-        mockWebServer.enqueue(new MockResponse()
-                .setBody("[{\"driver_number\": 1, \"broadcast_name\": \"M VERSTAPPEN\", \"name_acronym\": \"VER\", \"team_name\": \"Red Bull Racing\", \"team_colour\": \"3671C6\", \"country_code\": \"NED\"}]")
-                .addHeader("Content-Type", "application/json"));
-
-        // Act
         referenceDataLoader.loadReferenceData(2023);
 
-        // Assert
-        ArgumentCaptor<InsertAllRequest> requestCaptor = ArgumentCaptor.forClass(InsertAllRequest.class);
-        verify(bigQuery, times(3)).insertAll(requestCaptor.capture());
+        ArgumentCaptor<String> tableCaptor = ArgumentCaptor.captor();
+        ArgumentCaptor<List<Map<String, Object>>> rowsCaptor = ArgumentCaptor.captor();
+        verify(batchWriter, times(3)).append(eq("f1_dataset"), tableCaptor.capture(), rowsCaptor.capture());
 
-        // Validate Sessions Insert (First Call)
-        InsertAllRequest sessionsRequest = requestCaptor.getAllValues().get(0);
-        TableId sessionsTable = sessionsRequest.getTable();
-        assertEquals("f1_dataset", sessionsTable.getDataset());
-        assertEquals("sessions", sessionsTable.getTable());
-        assertEquals(1, sessionsRequest.getRows().size());
-        assertTrue(sessionsRequest.getRows().get(0).getContent().containsValue(9165));
+        assertEquals(List.of("sessions", "drivers", "session_drivers"), tableCaptor.getAllValues());
 
-        // Validate Drivers Insert (Second Call)
-        InsertAllRequest driversRequest = requestCaptor.getAllValues().get(1);
-        TableId driversTable = driversRequest.getTable();
-        assertEquals("f1_dataset", driversTable.getDataset());
-        assertEquals("drivers", driversTable.getTable());
-        assertEquals(1, driversRequest.getRows().size());
-        assertTrue(driversRequest.getRows().get(0).getContent().containsValue(1));
+        Map<String, Object> sessionRow = rowsCaptor.getAllValues().get(0).get(0);
+        assertEquals(9165L, sessionRow.get("session_key"));
+        // The meeting name comes from /meetings; /sessions does not carry it.
+        assertEquals("Singapore Grand Prix", sessionRow.get("meeting_name"));
+        // P2: the replay engine needs these to put a partition filter on telemetry.
+        assertNotNull(sessionRow.get("date_start"));
+        assertNotNull(sessionRow.get("date_end"));
 
-        // Validate Session Drivers Insert (Third Call)
-        InsertAllRequest sessionDriversRequest = requestCaptor.getAllValues().get(2);
-        TableId sessionDriversTable = sessionDriversRequest.getTable();
-        assertEquals("f1_dataset", sessionDriversTable.getDataset());
-        assertEquals("session_drivers", sessionDriversTable.getTable());
-        assertEquals(1, sessionDriversRequest.getRows().size());
-        assertTrue(sessionDriversRequest.getRows().get(0).getContent().containsValue(9165));
+        assertEquals(1, rowsCaptor.getAllValues().get(1).get(0).get("driver_number"));
+        assertEquals(9165L, rowsCaptor.getAllValues().get(2).get(0).get("session_key"));
+    }
+
+    /** R4: a re-run replaces the year's rows rather than adding a second set. */
+    @Test
+    void loadReferenceData_ClearsExistingRowsFirst() throws Exception {
+        when(openF1Client.getMeetings(2023)).thenReturn(List.of());
+        when(openF1Client.getSessionsForYear(2023)).thenReturn(List.of(session(9165)));
+        when(openF1Client.getDrivers("latest")).thenReturn(List.of(driver(1)));
+        when(openF1Client.getDrivers("9165")).thenReturn(List.of(driver(1)));
+
+        referenceDataLoader.loadReferenceData(2023);
+
+        ArgumentCaptor<String> sql = ArgumentCaptor.captor();
+        verify(queryRunner, times(3)).query(sql.capture());
+        assertTrue(sql.getAllValues().stream().allMatch(q -> q.startsWith("DELETE FROM")), sql.getAllValues().toString());
+    }
+
+    /** One session's roster failing must not abandon the rest of the season. */
+    @Test
+    void loadReferenceData_ContinuesPastAFailedRoster() {
+        when(openF1Client.getMeetings(2023)).thenReturn(List.of());
+        when(openF1Client.getSessionsForYear(2023)).thenReturn(List.of(session(9165), session(9166)));
+        when(openF1Client.getDrivers("latest")).thenReturn(List.of(driver(1)));
+        when(openF1Client.getDrivers("9165")).thenThrow(new IllegalStateException("OpenF1 is down"));
+        when(openF1Client.getDrivers("9166")).thenReturn(List.of(driver(44)));
+
+        referenceDataLoader.loadReferenceData(2023);
+
+        // sessions, drivers, and the one roster that succeeded.
+        verify(batchWriter, times(3)).append(eq("f1_dataset"), any(), any());
     }
 }

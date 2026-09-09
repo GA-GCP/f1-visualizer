@@ -17,6 +17,16 @@ resource "google_api_gateway_api_config" "config" {
     }
   }
 
+  # The identity the gateway assumes when calling a backend with
+  # `disable_auth: false`. Without it the gateway cannot mint an ID token and the
+  # now-private REST services answer 403 (S3). The pipeline passes the same
+  # account via --backend-auth-service-account when it publishes the real config.
+  gateway_config {
+    backend_config {
+      google_service_account = var.backend_auth_service_account
+    }
+  }
+
   lifecycle {
     create_before_destroy = true
   }

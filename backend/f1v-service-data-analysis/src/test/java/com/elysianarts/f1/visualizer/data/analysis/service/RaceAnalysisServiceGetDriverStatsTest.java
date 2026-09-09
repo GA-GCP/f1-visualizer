@@ -1,12 +1,13 @@
 package com.elysianarts.f1.visualizer.data.analysis.service;
 
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
 import com.elysianarts.f1.visualizer.data.analysis.model.DriverProfile;
 import com.google.cloud.bigquery.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -28,8 +29,14 @@ class RaceAnalysisServiceGetDriverStatsTest {
     @Mock
     private FieldValueList mockRow;
 
-    @InjectMocks
     private RaceAnalysisService raceAnalysisService;
+
+    @BeforeEach
+    void initService() {
+        // The runner applies the job timeout and byte ceiling (R6); the
+        // BigQuery mock underneath it is still what the tests stub.
+        raceAnalysisService = new RaceAnalysisService(BigQueryQueryRunner.withDefaults(bigQuery));
+    }
 
     @ParameterizedTest(name = "speed (avg position): avgPos={0} -> expected={1}")
     @CsvSource({
@@ -230,23 +237,29 @@ class RaceAnalysisServiceGetDriverStatsTest {
         assertEquals(List.of(), stats.getTeamsDrivenFor());
     }
 
+    /**
+     * R5: the old behaviour returned placeholder 50/50/50 scores on failure — and
+     * the drivers list cached those in Firestore as if they were real. A BigQuery
+     * outage now surfaces as an error rather than as plausible numbers.
+     */
     @Test
-    void getDriverStats_ReturnsFallbackDefaults_WhenBigQueryThrows() throws InterruptedException {
+    void getDriverStats_Throws_WhenBigQueryFails() throws InterruptedException {
         when(bigQuery.query(any(QueryJobConfiguration.class)))
                 .thenThrow(new BigQueryException(500, "Internal Error"));
+
+        assertThrows(IllegalStateException.class, () -> raceAnalysisService.getDriverStats(1));
+    }
+
+    /** A driver with no precomputed row is a real answer, not a failure (P2). */
+    @Test
+    void getDriverStats_ReturnsDefaults_WhenNoPrecomputedRowExists() throws InterruptedException {
+        when(tableResult.iterateAll()).thenReturn(List.of());
+        when(bigQuery.query(any(QueryJobConfiguration.class))).thenReturn(tableResult);
 
         DriverProfile.DriverStats stats = raceAnalysisService.getDriverStats(1);
 
         assertEquals(50, stats.getSpeed());
-        assertEquals(50, stats.getConsistency());
         assertEquals(30, stats.getExperience());
-        assertEquals(50, stats.getAggression());
-        assertEquals(50, stats.getTireMgmt());
-        assertEquals(0, stats.getWins());
-        assertEquals(0, stats.getPodiums());
-        assertEquals(0, stats.getTotalPoints());
-        assertEquals(0, stats.getBestChampionshipFinish());
-        assertEquals(0, stats.getTotalRaces());
         assertEquals(List.of(), stats.getTeamsDrivenFor());
     }
 

@@ -1,0 +1,117 @@
+# ==========================================
+# Pipeline: any backend service
+# ==========================================
+# O3: this replaced four near-identical pipelines that differed in five lines —
+# the module name, the image name and the Cloud Run service name. Each of them
+# also rebuilt every commons module with `-am`, so one commons change cost four
+# full builds; the triggers now share one file and the shared build cache below.
+#
+# Required substitutions: _MODULE, _IMAGE, _SERVICE.
+# ==========================================
+serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com'
+
+substitutions:
+  _ENV: 'dev'
+  _SHORT_SHA: 'manual-build'
+  _REGION: 'us-central1'
+  _MODULE: ''
+  _IMAGE: ''
+  _SERVICE: ''
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  # 1. Fail early and legibly if a trigger forgot a substitution, rather than
+  #    building `-pl ''` and producing a confusing Maven error.
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'check-substitutions'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        for pair in "_MODULE=${_MODULE}" "_IMAGE=${_IMAGE}" "_SERVICE=${_SERVICE}"; do
+          if [ -z "$${pair#*=}" ]; then
+            echo "ERROR: substitution $${pair%%=*} is required"
+            exit 1
+          fi
+        done
+        echo "Building ${_MODULE} -> ${_IMAGE} -> ${_SERVICE}-${_ENV}"
+
+  # 2. Scoped Maven build + verify (only this module and its dependencies).
+  #    `verify`, not `package`: coverage, formatting and the enforcer bind there,
+  #    and `package` stops short of all of them (T3).
+  - name: 'maven:3.9.16-eclipse-temurin-25'
+    id: 'build-and-test'
+    entrypoint: './mvnw'
+    args:
+      - '-B'
+      - 'clean'
+      - 'verify'
+      - '-pl'
+      - '${_MODULE}'
+      - '-am'
+      - '-Drevision=${_SHORT_SHA}'
+    dir: 'backend'
+
+  # 3. Extract Spring Boot JAR layers
+  - name: 'eclipse-temurin:25-jdk'
+    id: 'extract-layers'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        mkdir -p /workspace/staging
+        cd /workspace/staging
+        java -Djarmode=layertools -jar /workspace/backend/${_MODULE}/target/*.jar extract
+
+  # 4. Trivy filesystem security scan
+  - name: 'aquasec/trivy:0.74.0'
+    id: 'security-scan'
+    args:
+      - 'filesystem'
+      - '--exit-code'
+      - '1'
+      - '--severity'
+      - 'CRITICAL,HIGH'
+      - '--no-progress'
+      - '/workspace/staging'
+
+  # 5. Docker build + push (registry layer cache)
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-push-image'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/${_IMAGE}"
+
+        # A cold cache is not an error on the first build.
+        docker pull "$$IMAGE:latest" || true
+
+        docker build \
+          --cache-from "$$IMAGE:latest" \
+          -f /workspace/backend/Dockerfile.ci \
+          -t "$$IMAGE:${_SHORT_SHA}" \
+          -t "$$IMAGE:latest" \
+          /workspace/staging
+
+        docker push "$$IMAGE:${_SHORT_SHA}"
+        docker push "$$IMAGE:latest"
+
+  # 6. Deploy to Cloud Run (immutable SHA tag)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
+    id: 'deploy'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'update'
+      - '${_SERVICE}-${_ENV}'
+      - '--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/${_IMAGE}:${_SHORT_SHA}'
+      - '--region=${_REGION}'
+      - '--project=$PROJECT_ID'
+      - '--quiet'

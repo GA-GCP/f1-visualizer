@@ -34,8 +34,35 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      # `-am` is a no-op without `-pl`, and `package` stops short of `verify`,
+      # which is the phase every check binds to. This runs the whole reactor
+      # through verify so anything bound there actually gates the PR.
       - name: Build & Test
-        run: mvn clean package -am
+        run: mvn -B clean verify
+
+      # Trivy only ran in the post-merge deploy pipeline, so a dependency with a
+      # known critical advisory merged green and was caught after it was already
+      # on main. Scanning the source tree here catches it while the PR is open;
+      # the deploy pipeline still scans the built image (S8).
+      - name: Trivy dependency scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: backend
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          scanners: vuln
+
+      # The SBOM the build produced, kept with the run so a later advisory can be
+      # answered from what shipped rather than from what main looks like today.
+      - name: Upload SBOMs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: backend-sbom
+          path: backend/**/target/classes/META-INF/sbom/*.cdx.json
+          if-no-files-found: warn
+          retention-days: 14
 
   # -----------------------------------------
   # Frontend: Lint + Test

@@ -5,13 +5,17 @@ import com.elysianarts.f1.visualizer.data.analysis.model.RaceEntryRoster;
 import com.elysianarts.f1.visualizer.data.analysis.model.RaceSession;
 import com.elysianarts.f1.visualizer.data.analysis.model.SessionDriverEntry;
 import com.elysianarts.f1.visualizer.data.analysis.repository.ReferenceDataCacheRepository;
-import com.google.cloud.bigquery.BigQuery;
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
 import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.QueryJobConfiguration;
 import com.google.cloud.bigquery.TableResult;
-import jakarta.annotation.PostConstruct;
+import com.elysianarts.f1.visualizer.data.analysis.config.CacheConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.event.EventListener;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -24,19 +28,29 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReferenceDataService {
 
-    private final BigQuery bigQuery;
+    private final BigQueryQueryRunner queryRunner;
     private final ReferenceDataCacheRepository cacheRepository;
-    private static final String DATASET = "f1_dataset";
+    private final TaskExecutor taskExecutor;
 
     /**
-     * On service startup, asynchronously warm the Firestore cache from
-     * BigQuery so that the first user request is served instantly.
+     * Warms the Firestore cache from BigQuery after startup (R8).
+     *
+     * <p>This used to start a raw {@code new Thread} from {@code @PostConstruct}
+     * and unconditionally rewrite every driver and session document — on every
+     * deploy and every scale-out, with concurrent instances racing each other, on
+     * a thread invisible to Spring's lifecycle and metrics. It now runs on the
+     * managed executor after the context is ready, and skips entirely when another
+     * instance has already refreshed recently.</p>
      */
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     public void warmCache() {
-        new Thread(() -> {
+        taskExecutor.execute(() -> {
             try {
-                log.info("Warming Firestore reference-data cache from BigQuery...");
+                if (cacheRepository.isCacheFresh()) {
+                    log.info("reference cache warm-up skipped reason=already_fresh");
+                    return;
+                }
+                log.info("reference cache warm-up starting");
 
                 List<DriverProfile> drivers = queryDriversFromBigQuery();
                 if (!drivers.isEmpty()) {
@@ -48,16 +62,17 @@ public class ReferenceDataService {
                     cacheRepository.cacheSessions(sessions);
                 }
 
-                log.info("Firestore cache warm-up complete ({} drivers, {} sessions)",
-                        drivers.size(), sessions.size());
+                cacheRepository.markRefreshed();
+                log.info("reference cache warm-up complete drivers={} sessions={}", drivers.size(), sessions.size());
             } catch (Exception e) {
-                log.error("Cache warm-up failed (will fall back to BigQuery on requests)", e);
+                log.error("reference cache warm-up failed — requests will fall back to BigQuery", e);
             }
-        }, "cache-warmup").start();
+        });
     }
 
     // ── Public API (Firestore-first, BigQuery fallback) ──
 
+    @Cacheable(CacheConfig.DRIVERS)
     public List<DriverProfile> getMasterDriverList() {
         // Try the fast Firestore cache first
         List<DriverProfile> cached = cacheRepository.getCachedDrivers();
@@ -74,6 +89,7 @@ public class ReferenceDataService {
         return drivers;
     }
 
+    @Cacheable(CacheConfig.SESSIONS)
     public List<RaceSession> getAvailableSessions() {
         // Try the fast Firestore cache first
         List<RaceSession> cached = cacheRepository.getCachedSessions();
@@ -111,6 +127,7 @@ public class ReferenceDataService {
      * each driver's team and team color at the time of that race.
      * Firestore-first, BigQuery fallback.
      */
+    @Cacheable(cacheNames = CacheConfig.SESSION_DRIVERS, key = "#sessionKey")
     public RaceEntryRoster getDriversForSession(long sessionKey) {
         // Try Firestore cache first
         RaceEntryRoster cached = cacheRepository.getCachedRaceEntries(sessionKey);
@@ -141,6 +158,17 @@ public class ReferenceDataService {
     }
 
     /**
+     * Every session in a year, of any type. P5: lets {@code /sessions?year=} return
+     * one season instead of the whole catalog.
+     */
+    public List<RaceSession> getSessionsForYear(int year) {
+        return getAvailableSessions().stream()
+                .filter(s -> s.getYear() == year)
+                .sorted(Comparator.comparingLong(RaceSession::getSessionKey).reversed())
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Returns all Race sessions for a specific year, sorted by session key descending.
      */
     public List<RaceSession> getSessionsByYear(int year) {
@@ -160,14 +188,11 @@ public class ReferenceDataService {
             FROM `%s.sessions`
             WHERE LOWER(meeting_name) LIKE LOWER(@search) OR LOWER(country_name) LIKE LOWER(@search)
             ORDER BY year DESC, meeting_key DESC, session_key DESC
-            """, DATASET);
+            """, dataset());
 
         try {
-            QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(sql)
-                    .addNamedParameter("search", com.google.cloud.bigquery.QueryParameterValue.string("%" + query + "%"))
-                    .build();
-
-            TableResult result = bigQuery.query(queryConfig);
+            TableResult result = queryRunner.query(QueryJobConfiguration.newBuilder(sql)
+                    .addNamedParameter("search", com.google.cloud.bigquery.QueryParameterValue.string("%" + query + "%")));
             List<RaceSession> sessions = new ArrayList<>();
             for (FieldValueList row : result.iterateAll()) {
                 sessions.add(RaceSession.builder()
@@ -191,14 +216,11 @@ public class ReferenceDataService {
             FROM `%s.session_drivers`
             WHERE session_key = @sessionKey
             ORDER BY driver_number ASC
-            """, DATASET);
+            """, dataset());
 
         try {
-            QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(sql)
-                    .addNamedParameter("sessionKey", com.google.cloud.bigquery.QueryParameterValue.int64(sessionKey))
-                    .build();
-
-            TableResult result = bigQuery.query(queryConfig);
+            TableResult result = queryRunner.query(QueryJobConfiguration.newBuilder(sql)
+                    .addNamedParameter("sessionKey", com.google.cloud.bigquery.QueryParameterValue.int64(sessionKey)));
             List<SessionDriverEntry> drivers = new ArrayList<>();
             int year = 0;
 
@@ -228,16 +250,25 @@ public class ReferenceDataService {
     }
 
     private List<DriverProfile> queryDriversFromBigQuery() {
+        // C8: the list used to hand every driver the same 50/50/50/30 placeholder,
+        // which was then written to Firestore as though it were data, while
+        // /drivers/{id}/stats computed the real thing. Both now read the same
+        // precomputed table (P2).
         String sql = String.format("""
-            SELECT driver_number, broadcast_name, name_acronym, team_name, team_colour, country_code
-            FROM `%s.drivers`
-            GROUP BY driver_number, broadcast_name, name_acronym, team_name, team_colour, country_code
-            ORDER BY driver_number ASC
-            """, DATASET);
+            SELECT d.driver_number, d.broadcast_name, d.name_acronym, d.team_name, d.team_colour, d.country_code,
+                   s.avg_position, s.position_stddev, s.full_throttle_pct, s.avg_stint_length,
+                   s.total_races, s.wins, s.podiums, s.total_points, s.best_finish, s.teams_list
+            FROM (
+              SELECT driver_number, broadcast_name, name_acronym, team_name, team_colour, country_code
+              FROM `%1$s.drivers`
+              GROUP BY driver_number, broadcast_name, name_acronym, team_name, team_colour, country_code
+            ) d
+            LEFT JOIN `%1$s.driver_stats` s ON s.driver_number = d.driver_number
+            ORDER BY d.driver_number ASC
+            """, dataset());
 
         try {
-            QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(sql).build();
-            TableResult result = bigQuery.query(queryConfig);
+            TableResult result = queryRunner.query(sql);
             List<DriverProfile> drivers = new ArrayList<>();
 
             for (FieldValueList row : result.iterateAll()) {
@@ -254,10 +285,7 @@ public class ReferenceDataService {
                         .name(name)
                         .team(row.get("team_name").isNull() ? "Unknown" : row.get("team_name").getStringValue())
                         .teamColor("#" + teamColor)
-                        .stats(DriverProfile.DriverStats.builder()
-                                .speed(50).consistency(50).aggression(50).tireMgmt(50).experience(30)
-                                .wins(0).podiums(0).totalPoints(0).bestChampionshipFinish(0).totalRaces(0)
-                                .teamsDrivenFor(List.of()).build())
+                        .stats(RaceAnalysisService.toStats(row))
                         .build());
             }
             return drivers;
@@ -265,5 +293,10 @@ public class ReferenceDataService {
             log.error("Failed to fetch drivers from BigQuery", e);
             return List.of();
         }
+    }
+
+    /** C4: {@code "f1_dataset"} was a private constant in ten classes. */
+    private String dataset() {
+        return queryRunner.properties().dataset();
     }
 }

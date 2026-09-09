@@ -1,6 +1,6 @@
 package com.elysianarts.f1.visualizer.telemetry.service;
 
-import com.elysianarts.f1.visualizer.telemetry.config.RedisConfig;
+import com.elysianarts.f1.visualizer.commons.messaging.redis.RedisTopics;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -27,7 +27,7 @@ class TelemetryListenerTest {
         // Arrange
         String jsonPayload = "{\"driver\":\"VER\",\"speed\":320}";
         byte[] body = jsonPayload.getBytes(StandardCharsets.UTF_8);
-        byte[] channel = RedisConfig.TELEMETRY_TOPIC.getBytes(StandardCharsets.UTF_8);
+        byte[] channel = RedisTopics.TELEMETRY.getBytes(StandardCharsets.UTF_8);
 
         // Mock the Redis Message interface
         Message mockMessage = mock(Message.class);
@@ -48,7 +48,7 @@ class TelemetryListenerTest {
         // Arrange
         String jsonPayload = "{\"driver\":\"VER\",\"x\":100,\"y\":200}";
         byte[] body = jsonPayload.getBytes(StandardCharsets.UTF_8);
-        byte[] channel = RedisConfig.LOCATION_TOPIC.getBytes(StandardCharsets.UTF_8);
+        byte[] channel = RedisTopics.LOCATION.getBytes(StandardCharsets.UTF_8);
 
         // Mock the Redis Message interface
         Message mockMessage = mock(Message.class);
@@ -69,7 +69,7 @@ class TelemetryListenerTest {
         // Arrange
         String jsonPayload = "{\"progress\":75}";
         byte[] body = jsonPayload.getBytes(StandardCharsets.UTF_8);
-        byte[] channel = RedisConfig.PLAYBACK_TOPIC.getBytes(StandardCharsets.UTF_8);
+        byte[] channel = RedisTopics.PLAYBACK_STATUS.getBytes(StandardCharsets.UTF_8);
 
         Message mockMessage = mock(Message.class);
         when(mockMessage.getBody()).thenReturn(body);
@@ -104,7 +104,7 @@ class TelemetryListenerTest {
     void onMessage_HandlesEmptyPayload_WithoutThrowing() {
         // Arrange
         byte[] body = "".getBytes(StandardCharsets.UTF_8);
-        byte[] channel = RedisConfig.TELEMETRY_TOPIC.getBytes(StandardCharsets.UTF_8);
+        byte[] channel = RedisTopics.TELEMETRY.getBytes(StandardCharsets.UTF_8);
 
         Message mockMessage = mock(Message.class);
         when(mockMessage.getBody()).thenReturn(body);

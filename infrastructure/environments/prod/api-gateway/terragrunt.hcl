@@ -6,10 +6,19 @@ terraform {
   source = "../../../modules/api-gateway"
 }
 
+dependency "iam" {
+  config_path = "../iam-and-secrets"
+  mock_outputs = {
+    sa_gateway_email = "sa-f1v-gateway-prod@f1v-example-project.iam.gserviceaccount.com"
+  }
+}
+
 inputs = {
   project_id = "f1v-example-project"
   region     = "us-central1"
   gateway_id = "f1v-gateway-prod"
+
+  backend_auth_service_account = dependency.iam.outputs.sa_gateway_email
 
   # BOOTSTRAP CONFIGURATION:
   # We use this simple "Health Check" spec just to get the infrastructure created.

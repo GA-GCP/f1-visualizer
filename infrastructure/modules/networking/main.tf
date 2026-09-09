@@ -25,23 +25,37 @@ resource "google_compute_subnetwork" "f1v_subnet" {
 # ==============================================================================
 # 3. FIREWALL RULES
 # ==============================================================================
-# Allow internal traffic within the VPC (e.g., Cloud Run talking to Redis)
-resource "google_compute_firewall" "allow_internal" {
-  name    = "${var.network_name}-allow-internal"
-  project = var.project_id
-  network = google_compute_network.f1v_vpc.id
+# The only thing that crosses this VPC is Cloud Run reaching Redis through the
+# serverless connector, so that is the only thing the firewall allows. The rule
+# this replaced opened every TCP and UDP port to the whole subnet, which made
+# the VPC a flat trust zone around an unauthenticated cache (S2).
+resource "google_compute_firewall" "allow_redis_from_connector" {
+  name        = "${var.network_name}-allow-redis"
+  project     = var.project_id
+  network     = google_compute_network.f1v_vpc.id
+  description = "Serverless VPC Access connector -> Memorystore Redis"
 
   allow {
     protocol = "tcp"
+    ports    = ["6379"]
   }
-  allow {
-    protocol = "udp"
-  }
+
+  source_ranges = [var.connector_cidr]
+}
+
+# Health checks and connector management traffic originate from the connector
+# range as well; ICMP is kept for reachability diagnostics only.
+resource "google_compute_firewall" "allow_icmp_from_connector" {
+  name        = "${var.network_name}-allow-icmp"
+  project     = var.project_id
+  network     = google_compute_network.f1v_vpc.id
+  description = "Reachability diagnostics from the serverless connector"
+
   allow {
     protocol = "icmp"
   }
 
-  source_ranges = ["10.0.0.0/24"]
+  source_ranges = [var.connector_cidr]
 }
 
 # ==============================================================================

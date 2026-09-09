@@ -1,7 +1,6 @@
 package com.elysianarts.f1.visualizer.data.analysis.controller.v1;
 
 import com.elysianarts.f1.visualizer.commons.security.config.F1VisualizerSecurityConfig;
-import com.elysianarts.f1.visualizer.commons.service.config.JacksonObjectMapperConfig;
 import com.elysianarts.f1.visualizer.data.analysis.model.DriverProfile;
 import com.elysianarts.f1.visualizer.data.analysis.model.LapDataRecord;
 import com.elysianarts.f1.visualizer.data.analysis.service.RaceAnalysisService;
@@ -17,7 +16,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(AnalysisController.class)
 @AutoConfigureMockMvc
-@Import({F1VisualizerSecurityConfig.class, JacksonObjectMapperConfig.class})
+@Import(F1VisualizerSecurityConfig.class)
 class AnalysisControllerTest {
 
     @Autowired
@@ -62,14 +62,22 @@ class AnalysisControllerTest {
                 .andExpect(jsonPath("$.wins").value(50));
     }
 
+    /**
+     * S5: analysis had no advice and let the exception escape the dispatcher.
+     * It now answers in the same RFC 9457 shape as every other service, and the
+     * BigQuery client's message stays in the log rather than reaching the browser.
+     */
     @Test
-    void getSessionLaps_PropagatesException_WhenServiceThrows() {
+    void getSessionLaps_Returns500ProblemDetail_WhenServiceThrows() throws Exception {
         when(raceAnalysisService.getSessionLapTimes(9165L))
-                .thenThrow(new RuntimeException("BigQuery connection failed"));
+                .thenThrow(new RuntimeException("BigQuery connection failed for project f1v-example-project"));
 
-        assertThrows(Exception.class, () ->
-                mockMvc.perform(get("/api/v1/analysis/session/9165/laps")
-                        .with(jwt().jwt(jwt -> jwt.subject("auth0|user")))));
+        mockMvc.perform(get("/api/v1/analysis/session/9165/laps")
+                        .with(jwt().jwt(jwt -> jwt.subject("auth0|user"))))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print())
+                .andExpect(jsonPath("$.detail").value(not(containsString("BigQuery"))));
     }
 
     @Test

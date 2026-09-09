@@ -1,9 +1,13 @@
 # ==========================================
-# PR Checks — Lint, Test, and Plan on Pull Requests
+# PR Checks — Lint, Test, Scan and Plan on Pull Requests
 # ==========================================
-# Runs on every PR targeting main. Three independent jobs
-# execute in parallel: backend tests, frontend lint+test,
-# and infrastructure plan.
+# Runs on every PR targeting main. A `changes` job decides which areas a PR
+# actually touches, and the rest gate on it — an infrastructure-only PR does not
+# spend two minutes downloading a Playwright browser, and a docs-only PR does not
+# build a Docker image.
+#
+# Every action is pinned to a commit SHA, which is what stops a moved tag running
+# different code. Dependabot's github-actions ecosystem keeps them fresh.
 # ==========================================
 name: PR Checks
 
@@ -11,24 +15,114 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  contents: read
+# Deny by default; each job grants itself the minimum it needs. A workflow-wide
+# `contents: read` is inherited by every job including the ones that never check
+# anything out.
+permissions: {}
+
+# A force-push to a PR branch used to leave the superseded run going: two full
+# matrices competing for runners and reporting on a commit nobody is looking at
+# any more.
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
+  # -----------------------------------------
+  # Which areas does this PR actually touch?
+  # -----------------------------------------
+  # Read from the API rather than a `git diff`, so this needs no checkout and no
+  # full-history fetch. Anything that matches no known area turns everything on,
+  # so a new top-level file cannot silently skip a gate.
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      infrastructure: ${{ steps.filter.outputs.infrastructure }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+    steps:
+      - id: filter
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const paths = files.map((f) => f.filename);
+
+            const AREAS = {
+              backend: [/^backend\//, /^cloudbuild\/backend-service\.yaml$/],
+              frontend: [/^frontend\//, /^cloudbuild\/frontend\.yaml$/],
+              infrastructure: [
+                /^infrastructure\//,
+                /^cloudbuild\/infrastructure\.yaml$/,
+                /^\.mise\.toml$/,
+                /^\.pre-commit-config\.yaml$/,
+              ],
+              workflows: [/^\.github\//],
+              // Known, but consumed by no job: a prose-only PR runs nothing, and
+              // this is what keeps it from tripping the fail-open rule below.
+              // A .md inside a code directory still matches that directory's
+              // area, because a path may match more than one.
+              docs: [/\.md$/, /^resources\//, /^LICENSE$/, /^\.gitignore$/],
+            };
+
+            const matched = (p) =>
+              Object.values(AREAS).some((res) => res.some((re) => re.test(p)));
+
+            // A path in no known area, or any change to this workflow itself, runs
+            // everything. Failing open is the only safe default for a gate.
+            const unknown = paths.some((p) => !matched(p));
+            const workflowChanged = paths.some((p) =>
+              /^\.github\/workflows\//.test(p),
+            );
+            const runAll = unknown || workflowChanged;
+
+            for (const [area, res] of Object.entries(AREAS)) {
+              const hit = runAll || paths.some((p) => res.some((re) => re.test(p)));
+              core.setOutput(area, String(hit));
+              core.info(`${area}: ${hit}`);
+            }
+            if (runAll) {
+              core.notice(
+                unknown
+                  ? 'A changed path matches no known area — running every job.'
+                  : 'This workflow changed — running every job.',
+              );
+            }
+
   # -----------------------------------------
   # Backend: Compile + Test all modules
   # -----------------------------------------
   backend:
     name: Backend Build & Test
     runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Without this the job's GITHUB_TOKEN is written into .git/config and
+          # stays readable by every later step, including third-party ones.
+          persist-credentials: false
 
       - name: Set up JDK 25
-        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           java-version: '25'
           distribution: 'temurin'
@@ -124,14 +218,23 @@ jobs:
   frontend:
     name: Frontend Lint & Test
     runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Without this the job's GITHUB_TOKEN is written into .git/config and
+          # stays readable by every later step, including third-party ones.
+          persist-credentials: false
 
       - name: Set up Node 26
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '26'
           cache: 'yarn'
@@ -207,15 +310,23 @@ jobs:
   frontend-e2e:
     name: Frontend E2E
     runs-on: ubuntu-latest
-    needs: frontend
+    needs: [changes, frontend]
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    timeout-minutes: 25
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Without this the job's GITHUB_TOKEN is written into .git/config and
+          # stays readable by every later step, including third-party ones.
+          persist-credentials: false
 
       - name: Set up Node 26
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '26'
           cache: 'yarn'
@@ -263,31 +374,321 @@ jobs:
           retention-days: 7
 
   # -----------------------------------------
-  # Infrastructure: Security Scan + Plan
+  # Infrastructure: static checks
   # -----------------------------------------
+  # DLV-3: this job was named "Infrastructure Scan & Plan" and ran `tofu validate`
+  # per module and no plan, because GitHub Actions had no GCP credentials — while
+  # the README's PR table said "infrastructure plan". Formatting drift,
+  # undeclared inputs and environment wiring errors like REL-2 all reached main
+  # green. These four commands are what would have caught them.
   infrastructure:
-    name: Infrastructure Scan & Plan
+    name: Infrastructure Static Checks
     runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.infrastructure == 'true' }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Without this the job's GITHUB_TOKEN is written into .git/config and
+          # stays readable by every later step, including third-party ones.
+          persist-credentials: false
 
+      # DLV-5: the same versions .mise.toml and cloudbuild/infrastructure.yaml
+      # pin, so the PR check, the plan and the apply run one toolchain.
       - name: Install OpenTofu
-        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
         with:
           tofu_version: '1.12.6'
 
-      - name: Trivy IaC Security Scan
+      # DLV-2/DLV-5: the same version cloudbuild/infrastructure.yaml pins, verified
+      # against the checksums published with the release. gruntwork-io's action
+      # runs Terragrunt inside a container and leaves nothing on PATH, which is no
+      # use to the steps below.
+      - name: Install Terragrunt
+        env:
+          TG_VERSION: '1.1.4'
+        run: |
+          set -euo pipefail
+          cd /tmp
+          BASE="https://github.com/gruntwork-io/terragrunt/releases/download/v$TG_VERSION"
+          curl -fsSL -o terragrunt_linux_amd64 "$BASE/terragrunt_linux_amd64"
+          curl -fsSL -o SHA256SUMS            "$BASE/SHA256SUMS"
+          grep ' terragrunt_linux_amd64$' SHA256SUMS | sha256sum -c -
+          sudo install -m 0755 terragrunt_linux_amd64 /usr/local/bin/terragrunt
+          terragrunt --version
+
+      # Fails today on three files. `tofu fmt -recursive infrastructure/` fixes it.
+      - name: Format — OpenTofu
+        run: tofu fmt -check -recursive infrastructure/
+
+      - name: Format — Terragrunt HCL
+        run: terragrunt hcl fmt --check --diff --working-dir infrastructure
+
+      # Validates the modules in isolation.
+      - name: Validate modules
+        run: |
+          for dir in infrastructure/modules/*/; do
+            echo "=== $dir ==="
+            # DLV-5: readonly, so a run that would change the committed lock file
+            # fails here rather than silently resolving a different provider.
+            tofu -chdir="$dir" init -backend=false -lockfile=readonly
+            tofu -chdir="$dir" validate
+          done
+
+      # DLV-3 / REL-12: catches an input no variable declares — which is how
+      # `tier = "STANDARD_HA"` sat in the prod redis unit being silently ignored.
+      - name: Validate Terragrunt inputs
+        run: |
+          for env in dev uat prod; do
+            echo "=== $env ==="
+            terragrunt hcl validate --inputs --strict \
+              --working-dir "infrastructure/environments/$env" --non-interactive
+          done
+
+      # The Google ruleset is a ~40 MB download that `tflint --init` fetches on
+      # every run. v6 caches both the binary and the plugin directory.
+      - name: tflint
+        uses: terraform-linters/setup-tflint@1cf010d3c7aef302051ccdb68c14c5dc2efa34ef # v6.3.1
+        with:
+          tflint_version: v0.59.1
+          cache: true
+          tflint_config_path: infrastructure/.tflint.hcl
+
+      - name: tflint — modules and environments
+        env:
+          # Lets `tflint --init` authenticate to the GitHub API for the plugin
+          # release, instead of sharing the runner's anonymous rate limit.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd infrastructure
+          tflint --init
+          tflint --recursive --minimum-failure-severity=warning
+
+      # DLV-4: the module scan cannot see the values that matter — is_public,
+      # ingress, deletion_protection and every secret reference arrive as
+      # Terragrunt inputs, so every security-relevant decision was invisible to
+      # it. This is the fast first pass; the real one runs against a plan in
+      # cloudbuild/infrastructure.yaml, where credentials exist.
+      - name: Trivy IaC scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: config
-          scan-ref: infrastructure/modules
+          scan-ref: infrastructure
           severity: CRITICAL,HIGH
           exit-code: '1'
+          trivyignores: infrastructure/.trivyignore
 
-      - name: Validate OpenTofu Modules
+  # -----------------------------------------
+  # Infrastructure: plan against the real project
+  # -----------------------------------------
+  # DLV-1: nothing planned before merge. The first real plan lived inside the
+  # Cloud Build run that also applied it, seconds later — so reviewers approved
+  # promotion PRs to dev, uat and prod without ever seeing what would change, and
+  # destroys and replacements were discovered when they happened.
+  #
+  # Workload Identity Federation, so there is no service account key: the planner
+  # identity holds roles/viewer and read access to the state bucket, and nothing
+  # else. It cannot apply.
+  #
+  # Skipped on a fork PR, where the OIDC token cannot be issued.
+  infrastructure-plan:
+    name: Infrastructure Plan
+    runs-on: ubuntu-latest
+    needs: [changes, infrastructure]
+    # Three conditions, and all three are about not failing for reasons that are
+    # not the PR's fault:
+    #
+    #   - fork PRs cannot be issued an OIDC token, so `auth` would fail
+    #   - WIF_PROVIDER is empty until infrastructure/platform has been applied and
+    #     the repository variables set, and a red check for "not configured yet"
+    #     teaches people to ignore red checks
+    #   - no infrastructure changed, so there is nothing to plan
+    #
+    # A skipped job satisfies a required status check; a failed one does not.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      needs.changes.outputs.infrastructure == 'true' &&
+      vars.WIF_PROVIDER != ''
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [dev, uat, prod]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Without this the job's GITHUB_TOKEN is written into .git/config and
+          # stays readable by every later step, including third-party ones.
+          persist-credentials: false
+
+      - name: Install OpenTofu
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: '1.12.6'
+
+      - id: auth
+        name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.PLANNER_SERVICE_ACCOUNT }}
+
+      # DLV-2/DLV-5: the same version cloudbuild/infrastructure.yaml pins, verified
+      # against the checksums published with the release. gruntwork-io's action
+      # runs Terragrunt inside a container and leaves nothing on PATH, which is no
+      # use to the steps below.
+      - name: Install Terragrunt
+        env:
+          TG_VERSION: '1.1.4'
         run: |
-          for dir in infrastructure/modules/*/; do
-            echo "=== Validating $dir ==="
-            tofu -chdir="$dir" init -backend=false
-            tofu -chdir="$dir" validate
-          done
+          set -euo pipefail
+          cd /tmp
+          BASE="https://github.com/gruntwork-io/terragrunt/releases/download/v$TG_VERSION"
+          curl -fsSL -o terragrunt_linux_amd64 "$BASE/terragrunt_linux_amd64"
+          curl -fsSL -o SHA256SUMS            "$BASE/SHA256SUMS"
+          grep ' terragrunt_linux_amd64$' SHA256SUMS | sha256sum -c -
+          sudo install -m 0755 terragrunt_linux_amd64 /usr/local/bin/terragrunt
+          terragrunt --version
+
+      - name: Plan
+        id: plan
+        env:
+          TG_NON_INTERACTIVE: 'true'
+          # Through the environment rather than interpolated into the script.
+          # This value is a matrix key we control, so it is not an injection risk
+          # today — but a `${{ }}` inside a run block is the shape of one, and
+          # the pattern costs nothing.
+          ENVIRONMENT: ${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+          cd "infrastructure/environments/$ENVIRONMENT"
+          terragrunt run --all --parallelism 4 -- init -lockfile=readonly
+          terragrunt run --all --parallelism 4 -- plan -no-color 2>&1 | tee /tmp/plan.txt
+
+      # A plan nobody reads is the problem this solves, so it goes on the PR
+      # rather than into a log a reviewer has to go looking for.
+      #
+      # Updated in place rather than appended: a PR with six pushes used to end
+      # up with eighteen plan comments, and the newest one is the only one that
+      # is true.
+      - name: Comment the plan
+        if: ${{ always() }}
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          ENVIRONMENT: ${{ matrix.environment }}
+        with:
+          script: |
+            const fs = require('fs');
+            const env = process.env.ENVIRONMENT;
+            const marker = `<!-- terragrunt-plan:${env} -->`;
+
+            let body;
+            try {
+              const plan = fs.readFileSync('/tmp/plan.txt', 'utf8');
+              // A full run --all plan can exceed the 65536-byte comment limit.
+              const trimmed =
+                plan.length > 60000
+                  ? plan.slice(0, 30000) +
+                    '\n\n...trimmed, see the job log...\n\n' +
+                    plan.slice(-30000)
+                  : plan;
+              body =
+                `${marker}\n### Terragrunt plan — \`${env}\`\n\n` +
+                `<details><summary>Show plan</summary>\n\n` +
+                '```terraform\n' + trimmed + '\n```\n\n</details>';
+            } catch {
+              body =
+                `${marker}\n### Terragrunt plan — \`${env}\`\n\n` +
+                'The plan step produced no output. See the job log.';
+            }
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                per_page: 100,
+              },
+            );
+            const existing = comments.find((c) => c.body.startsWith(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  # -----------------------------------------
+  # The workflows themselves
+  # -----------------------------------------
+  # This file is now several hundred lines with a lot of shell in it, and nothing
+  # checked any of it. actionlint parses every `run:` block with shellcheck and
+  # validates every ${{ }} expression against the real context schema — it catches
+  # an unquoted variable or a typo'd `needs.` reference before a PR does.
+  #
+  # zizmor is the security half: template injection, over-broad permissions,
+  # unpinned actions, credential persistence. Everything it looks for is
+  # deliberately already true here, which is exactly why it is worth a gate.
+  workflows:
+    name: Workflow Lint
+    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.workflows == 'true' }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Downloaded and checksum-verified rather than run as an action, so this
+      # job adds no new action to the supply chain it is here to check.
+      - name: actionlint
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+        run: |
+          set -euo pipefail
+          cd /tmp
+          TARBALL="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          BASE="https://github.com/rhysd/actionlint/releases/download/v$ACTIONLINT_VERSION"
+          # -O, not -o: the checksum file names the release artifact, so the
+          # local filename has to match it for `sha256sum -c` to find it.
+          curl -fsSL -O "$BASE/$TARBALL"
+          curl -fsSL -O "$BASE/actionlint_${ACTIONLINT_VERSION}_checksums.txt"
+          grep " ${TARBALL}\$" "actionlint_${ACTIONLINT_VERSION}_checksums.txt" | sha256sum -c -
+          tar -xzf "$TARBALL" actionlint
+          cd "$GITHUB_WORKSPACE"
+          /tmp/actionlint -color
+
+      # Version-pinned rather than checksum-verified, unlike actionlint above:
+      # zizmor publishes no checksum file with its releases, so PyPI's pinned
+      # version is the available trust anchor. pinned-versions.yml watches both,
+      # so neither pin goes stale unnoticed.
+      - name: zizmor
+        env:
+          ZIZMOR_VERSION: 1.30.1
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          pipx install "zizmor==$ZIZMOR_VERSION"
+          zizmor --persona=regular --min-severity=medium --no-progress .github/workflows

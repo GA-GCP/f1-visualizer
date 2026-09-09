@@ -2,14 +2,15 @@ include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
-terraform {
-  source = "../../../modules/lb-frontend"
+# CPLX-3: the definition lives in _envcommon and the environment's facts live in
+# env.hcl. Anything below this is a real difference, not a copy.
+include "envcommon" {
+  path           = "${dirname(find_in_parent_folders("root.hcl"))}/_envcommon/lb-frontend.hcl"
+  merge_strategy = "deep"
+  expose         = true
 }
 
-inputs = {
-  project_id             = "f1-visualizer-488201"
-  region                 = "us-central1"
-  name_prefix            = "f1v-frontend-prod"
-  domain                 = "f1visualizer.com"
-  cloud_run_service_name = "f1v-webapp-prod"
-}
+# REL-8: a unit rename, a module path change or a stray `run --all destroy` all
+# plan a destroy without a prompt. Terragrunt refuses to run one here at all;
+# removing this line is the deliberate act that a production teardown should be.
+prevent_destroy = true

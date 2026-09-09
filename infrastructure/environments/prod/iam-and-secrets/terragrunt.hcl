@@ -1,15 +1,16 @@
-# 1. Inherit the root configuration (GCS State Bucket & Tofu Override)
 include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
-# 2. Point to the reusable OpenTofu module we just created
-terraform {
-  source = "../../../modules/iam-and-secrets"
+# CPLX-3: the definition lives in _envcommon and the environment's facts live in
+# env.hcl. Anything below this is a real difference, not a copy.
+include "envcommon" {
+  path           = "${dirname(find_in_parent_folders("root.hcl"))}/_envcommon/iam-and-secrets.hcl"
+  merge_strategy = "deep"
+  expose         = true
 }
 
-# 3. Pass in the PROD-specific variables
-inputs = {
-  environment = "prod"
-  project_id  = "f1-visualizer-488201"
-}
+# REL-8: a unit rename, a module path change or a stray `run --all destroy` all
+# plan a destroy without a prompt. Terragrunt refuses to run one here at all;
+# removing this line is the deliberate act that a production teardown should be.
+prevent_destroy = true

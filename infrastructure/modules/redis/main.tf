@@ -1,7 +1,10 @@
+# CPLX-5: the `env` label these resources used to set by hand now comes from the
+# provider's default_labels in root.hcl, which applies it to every labelable
+# resource in the estate rather than to the three that remembered.
 resource "google_redis_instance" "f1v_cache" {
   name           = "f1v-redis-${var.environment}"
-  tier           = var.environment == "prod" ? "STANDARD_HA" : "BASIC"
-  memory_size_gb = 1
+  tier           = var.tier
+  memory_size_gb = var.memory_size_gb
 
   region             = var.region
   authorized_network = var.network_id
@@ -18,9 +21,28 @@ resource "google_redis_instance" "f1v_cache" {
   redis_version = "REDIS_7_X"
   display_name  = "F1V Live Telemetry Cache (${var.environment})"
 
-  labels = {
-    env = var.environment
+  # REL-9: with no policy Google picks the window, which can land in the middle
+  # of a live session — a maintenance restart drops every WebSocket the telemetry
+  # service is fanning out to. Sunday early morning UTC is outside a race weekend
+  # session for every European and American round.
+  maintenance_policy {
+    weekly_maintenance_window {
+      day = "SUNDAY"
+      start_time {
+        hours   = var.maintenance_window_hour_utc
+        minutes = 0
+        seconds = 0
+        nanos   = 0
+      }
+    }
   }
+
+  # REL-9: persistence is deliberately off. Everything here is derived — the live
+  # feed, replay buffers and replay state can all be rebuilt from BigQuery or
+  # from OpenF1 — so RDB snapshots would buy recovery of data that is cheaper to
+  # regenerate, at a write-latency cost on the hottest path in the system. Stated
+  # rather than left to the default, which is the same but says nothing.
+
 }
 
 # ==============================================================================
@@ -38,12 +60,60 @@ resource "google_secret_manager_secret" "redis_auth" {
     auto {}
   }
 
-  labels = {
-    env = var.environment
-  }
 }
 
 resource "google_secret_manager_secret_version" "redis_auth" {
   secret      = google_secret_manager_secret.redis_auth.id
   secret_data = google_redis_instance.f1v_cache.auth_string
+}
+
+# SEC-3: roles/secretmanager.secretAccessor was a project-level binding, so every
+# environment's runtime identity could read every other environment's Redis
+# credential — sa-f1v-data-ingestion-dev could read f1v-redis-auth-prod. This
+# secret is granted to the accounts of the three services that connect to this
+# instance, and to nothing else.
+# ==============================================================================
+# SERVER CA DELIVERY
+# ==============================================================================
+# REL-3: transit_encryption_mode = "SERVER_AUTHENTICATION" makes Memorystore
+# present a certificate issued by its own per-instance CA. That CA is not in any
+# JVM's default trust store, and no service was ever given it — the applications
+# set `spring.data.redis.ssl.enabled: true` with no bundle, so Lettuce verified
+# against the default store and the handshake could only fail with
+# `PKIX path building failed`.
+#
+# Every certificate in the list is included, not just the first: Memorystore
+# rotates the CA and publishes the next one here before it starts using it, so a
+# truststore holding all of them survives the rotation without a deploy.
+resource "google_secret_manager_secret" "redis_ca" {
+  secret_id = "f1v-redis-ca-${var.environment}"
+  project   = var.project_id
+
+  replication {
+    auto {}
+  }
+
+}
+
+resource "google_secret_manager_secret_version" "redis_ca" {
+  secret      = google_secret_manager_secret.redis_ca.id
+  secret_data = join("\n", [for c in google_redis_instance.f1v_cache.server_ca_certs : c.cert])
+}
+
+resource "google_secret_manager_secret_iam_member" "ca_accessors" {
+  for_each = toset(var.auth_secret_accessors)
+
+  project   = var.project_id
+  secret_id = google_secret_manager_secret.redis_ca.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = each.value
+}
+
+resource "google_secret_manager_secret_iam_member" "auth_accessors" {
+  for_each = toset(var.auth_secret_accessors)
+
+  project   = var.project_id
+  secret_id = google_secret_manager_secret.redis_auth.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = each.value
 }

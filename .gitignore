@@ -50,7 +50,23 @@ crash.*.log
 *.tfvars.json
 
 # Lock files and local overrides
-.terraform.lock.hcl
+# DLV-5: .terraform.lock.hcl is deliberately NOT ignored. It was, so every `init`
+# re-resolved `~> 8.1` afresh and the PR validation, the Cloud Build plan and the
+# apply could each run a different provider build — a provider regression would
+# appear with no diff in this repository to bisect. The committed locks carry
+# hashes for linux_amd64 and darwin_arm64, so CI and a developer's Mac verify the
+# same artefacts; regenerate with:
+#
+#   tofu -chdir=modules/<m> providers lock -platform=linux_amd64 -platform=darwin_arm64
+
+# REL-11: Terragrunt generates backend.tf and provider.tf into each unit on every
+# run. Two of them were committed, so any local run showed them as modified.
+# The platform layer sits outside environments/, so it is matched separately.
+infrastructure/environments/**/backend.tf
+infrastructure/environments/**/provider.tf
+infrastructure/platform/backend.tf
+infrastructure/platform/provider.tf
+infrastructure/**/terragrunt.rendered.json
 override.tf
 override.tf.json
 *_override.tf

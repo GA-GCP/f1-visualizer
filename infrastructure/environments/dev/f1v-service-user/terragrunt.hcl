@@ -2,51 +2,10 @@ include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
-terraform {
-  source = "../../../modules/cloud-run-backend"
-}
-
-# 1. Dependency on IAM module
-dependency "iam" {
-  config_path = "../iam-and-secrets"
-  mock_outputs = {
-    sa_user_email = "sa-f1v-user-dev@f1-visualizer-488201.iam.gserviceaccount.com"
-    sa_gateway_email = "sa-f1v-gateway-dev@f1-visualizer-488201.iam.gserviceaccount.com"
-  }
-}
-
-inputs = {
-  project_id   = "f1-visualizer-488201"
-  region       = "us-central1"
-  service_name = "f1v-service-user-dev"
-  image_url    = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/user:latest"
-  service_account_email = dependency.iam.outputs.sa_user_email
-
-  # S3: the *.run.app URL no longer answers the internet. Only the API Gateway's
-  # service account can invoke this service, and it presents an ID token minted
-  # for the service's own URL. In-app JWT validation stays, as defence in depth.
-  is_public                = false
-  invoker_service_accounts = [dependency.iam.outputs.sa_gateway_email]
-
-  # Keep 1 instance warm to eliminate cold-start latency on /users/me.
-  # This endpoint is called immediately after splash; a cold-starting JVM
-  # adds seconds to the first authenticated request and compounds the
-  # rate-limit burst that triggers CORS preflight failures.
-  min_instance_count = 1
-
-  # P4: Firestore reads are short; this is the one service where the default
-  # is close to right, stated rather than inherited.
-  container_concurrency = 80
-
-  env_vars = {
-    "SPRING_PROFILES_ACTIVE" = "dev"
-
-    # --- NEW: Explicitly inject Security Properties ---
-    "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI" = "https://elysianarts-dev.us.auth0.com/"
-    "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_AUDIENCES"  = "dev.api.f1visualizer.com"
-
-    # --- NEW: Explicitly inject Firestore Properties ---
-    "SPRING_CLOUD_GCP_FIRESTORE_PROJECT_ID"  = "f1-visualizer-488201"
-    "SPRING_CLOUD_GCP_FIRESTORE_DATABASE_ID" = "f1v-db-dev"
-  }
+# CPLX-3: the definition lives in _envcommon and the environment's facts live in
+# env.hcl. Anything below this is a real difference, not a copy.
+include "envcommon" {
+  path           = "${dirname(find_in_parent_folders("root.hcl"))}/_envcommon/f1v-service-user.hcl"
+  merge_strategy = "deep"
+  expose         = true
 }

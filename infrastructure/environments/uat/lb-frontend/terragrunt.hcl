@@ -2,14 +2,10 @@ include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
-terraform {
-  source = "../../../modules/lb-frontend"
-}
-
-inputs = {
-  project_id             = "f1-visualizer-488201"
-  region                 = "us-east1"
-  name_prefix            = "f1v-frontend-uat"
-  domain                 = "uat.f1visualizer.com"
-  cloud_run_service_name = "f1v-webapp-uat"
+# CPLX-3: the definition lives in _envcommon and the environment's facts live in
+# env.hcl. Anything below this is a real difference, not a copy.
+include "envcommon" {
+  path           = "${dirname(find_in_parent_folders("root.hcl"))}/_envcommon/lb-frontend.hcl"
+  merge_strategy = "deep"
+  expose         = true
 }

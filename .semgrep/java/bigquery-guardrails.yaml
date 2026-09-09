@@ -1,0 +1,37 @@
+rules:
+  - id: f1v-bigquery-bypasses-guardrails
+    languages: [java]
+    severity: ERROR
+    message: >-
+      Use BigQueryQueryRunner.query(...) rather than calling the BigQuery client
+      directly. The runner applies setJobTimeoutMs and setMaximumBytesBilled to
+      every query (C4, P2); a direct call runs unbounded, which is how a single
+      missing date predicate billed its way through the largest table in the
+      project. If this genuinely needs the raw client, it belongs in
+      f1v-commons-gcp behind a guarded method.
+    paths:
+      exclude:
+        - "backend/f1v-commons-gcp/**"
+        - "**/src/test/**"
+    patterns:
+      - pattern: $BQ.query(...)
+      - metavariable-type:
+          metavariable: $BQ
+          type: BigQuery
+
+  - id: f1v-bigquery-hardcoded-dataset
+    languages: [java]
+    severity: ERROR
+    message: >-
+      Do not name the dataset in code. Read it from
+      BigQueryProperties.dataset(), which resolves F1V_BIGQUERY_DATASET —
+      CPLX-2 gave each environment its own dataset, and a literal here sends
+      dev writes into whichever dataset the string names.
+    paths:
+      exclude:
+        - "**/src/test/**"
+        - "backend/f1v-commons-gcp/**"
+    # A string-literal pattern rather than pattern-regex: the regex form matches
+    # raw file text, so it fired on ten Javadoc comments that describe this very
+    # rule. This form matches the literal in the syntax tree.
+    pattern: '"=~/^f1_dataset/"'

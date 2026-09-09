@@ -1,0 +1,29 @@
+rules:
+  - id: f1v-no-dangerously-set-inner-html
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      dangerouslySetInnerHTML writes unescaped HTML into the DOM. Everything this
+      app renders comes from the API — driver names, team names, session titles —
+      which ultimately comes from OpenF1, a third party. nginx.conf ships a CSP
+      that is the second line of defence here, not the first.
+    paths:
+      exclude:
+        - "**/__tests__/**"
+        - "**/*.test.tsx"
+    pattern: <$EL dangerouslySetInnerHTML={...} />
+
+  - id: f1v-no-target-blank-without-noopener
+    languages: [typescript]
+    severity: WARNING
+    message: >-
+      target="_blank" without rel="noopener" gives the opened page a
+      window.opener handle back to this one. React 19 adds it implicitly for
+      literal JSX, but not when the props are spread — state it.
+    paths:
+      exclude:
+        - "**/__tests__/**"
+        - "**/*.test.tsx"
+    patterns:
+      - pattern: <a target="_blank" ... />
+      - pattern-not: <a target="_blank" rel="=~/.*noopener.*/" ... />

@@ -84,7 +84,7 @@ resource "google_cloudbuild_trigger" "backend" {
     _SERVICE   = each.value.service
   }
 
-  service_account = "projects/${var.project_id}/serviceAccounts/sa-f1v-cloudbuild-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
+  service_account = "projects/${var.project_id}/serviceAccounts/${var.cloudbuild_service_account_email}"
 }
 
 # --- Frontend Trigger ---
@@ -117,7 +117,7 @@ resource "google_cloudbuild_trigger" "frontend" {
     _REGION    = var.region
   }
 
-  service_account = "projects/${var.project_id}/serviceAccounts/sa-f1v-cloudbuild-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
+  service_account = "projects/${var.project_id}/serviceAccounts/${var.cloudbuild_service_account_email}"
 }
 
 # --- Infrastructure Trigger ---
@@ -149,5 +149,5 @@ resource "google_cloudbuild_trigger" "infrastructure" {
     _REGION    = var.region
   }
 
-  service_account = "projects/${var.project_id}/serviceAccounts/sa-f1v-cloudbuild-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
+  service_account = "projects/${var.project_id}/serviceAccounts/${var.cloudbuild_service_account_email}"
 }

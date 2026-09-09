@@ -18,6 +18,17 @@ terraform {
   source = "../../../modules/cloudbuild-triggers"
 }
 
+dependency "iam" {
+  config_path = "../iam-and-secrets"
+  mock_outputs = {
+    sa_cloudbuild_email = "sa-f1v-cloudbuild-prod@f1-visualizer-488201.iam.gserviceaccount.com"
+  }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
+}
+
 inputs = {
   project_id     = "f1-visualizer-488201"
   region         = "us-central1"
@@ -25,4 +36,6 @@ inputs = {
   github_owner   = "GA-GCP"
   github_repo    = "f1-visualizer"
   branch_pattern = "^prod$"
+
+  cloudbuild_service_account_email = dependency.iam.outputs.sa_cloudbuild_email
 }

@@ -78,6 +78,20 @@
         -->
         <snakeyaml.version>2.6</snakeyaml.version>
         <jackson2-bom.version>2.22.1</jackson2-bom.version>
+
+        <!--
+          Boot 4.1.1 manages Tomcat 11.0.24, which carries three CRITICAL
+          advisories — CVE-2026-65182 (security constraint bypass),
+          CVE-2026-65905 (authentication bypass) and CVE-2026-68525. All three
+          are fixed in 11.0.25. Every service here is a Tomcat-backed resource
+          server whose only protection is its security constraints, so a
+          constraint bypass is not theoretical for us.
+
+          This is the pin to drop first: the next Boot patch that ships 11.0.25
+          or later makes it redundant, and Dependabot's maven ecosystem (S8) is
+          what will say so.
+        -->
+        <tomcat.version>11.0.25</tomcat.version>
         <eclipse-paho-mqtt3-client.version>1.2.5</eclipse-paho-mqtt3-client.version>
         <mockwebserver.version>5.5.0</mockwebserver.version>
         <flatten-maven-plugin.version>1.7.0</flatten-maven-plugin.version>

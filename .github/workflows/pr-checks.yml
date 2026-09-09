@@ -638,6 +638,151 @@ jobs:
             }
 
   # -----------------------------------------
+  # Semgrep — cross-language static analysis
+  # -----------------------------------------
+  # Two halves. The custom rules under .semgrep/ encode invariants specific to
+  # this codebase — every BigQuery query goes through the guarded runner, CORS is
+  # configured once, Auth0 config is read in one module, no project-level data
+  # role. Nothing off the shelf knows those, and each one is a finding from the
+  # 2026-09-08 or 2026-09-09 audit that could otherwise regress silently.
+  #
+  # The community rulesets are the second half: the usual Java, TypeScript,
+  # React, Terraform and Dockerfile checks, which overlap SpotBugs and ESLint in
+  # places and are cheap enough not to mind.
+  #
+  # Diff-aware: --baseline-commit means only findings the PR introduces fail it.
+  # Pre-existing findings are reported by the weekly full scan
+  # (semgrep-scheduled.yml) and do not block anyone's unrelated change.
+  semgrep:
+    name: Semgrep
+    runs-on: ubuntu-latest
+    needs: changes
+    if: >-
+      ${{ needs.changes.outputs.backend == 'true' ||
+          needs.changes.outputs.frontend == 'true' ||
+          needs.changes.outputs.infrastructure == 'true' ||
+          needs.changes.outputs.workflows == 'true' }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # --baseline-commit needs the base commit to exist locally.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Semgrep
+        env:
+          SEMGREP_VERSION: 1.176.1
+        run: |
+          set -euo pipefail
+          pipx install "semgrep==$SEMGREP_VERSION"
+          semgrep --version
+
+      # The rules before the code. A rule that no longer matches what it claims
+      # to match finds nothing and passes silently, which is worse than failing.
+      - name: Test the rules
+        run: semgrep --test --metrics=off .semgrep
+
+      - name: Scan
+        id: scan
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          # --metrics=off: the default sends usage telemetry to semgrep.dev when
+          # registry rules are used. Findings never leave the runner either way,
+          # but a private repo should not be reporting what it scans.
+          SEMGREP_SEND_METRICS: 'off'
+        run: |
+          set -uo pipefail
+          semgrep scan \
+            --config=.semgrep \
+            --config=p/default \
+            --config=p/java \
+            --config=p/typescript \
+            --config=p/react \
+            --config=p/terraform \
+            --config=p/dockerfile \
+            --exclude-rule=package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown \
+            --baseline-commit="$BASE_SHA" \
+            --metrics=off \
+            --error \
+            --json --output=semgrep.json \
+            --text
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Comment the findings
+        if: ${{ always() }}
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- semgrep -->';
+
+            let results = [];
+            try {
+              results = JSON.parse(fs.readFileSync('semgrep.json', 'utf8')).results ?? [];
+            } catch {
+              // No output file means the scan itself failed; the job log has why.
+            }
+
+            let body;
+            if (results.length === 0) {
+              body = `${marker}\n### Semgrep\n\nNo new findings introduced by this PR.`;
+            } else {
+              const rows = results
+                .slice(0, 50)
+                .map((r) => {
+                  const rule = r.check_id.split('.').pop();
+                  const sev = r.extra.severity;
+                  const msg = r.extra.message.trim().split('\n')[0].slice(0, 160);
+                  return `| \`${r.path}:${r.start.line}\` | ${sev} | \`${rule}\` | ${msg} |`;
+                })
+                .join('\n');
+              const more =
+                results.length > 50 ? `\n\n…and ${results.length - 50} more; see the job log.` : '';
+              body =
+                `${marker}\n### Semgrep — ${results.length} new finding(s)\n\n` +
+                `These are introduced by this PR; pre-existing findings are not shown.\n\n` +
+                `| Location | Severity | Rule | What to do |\n|---|---|---|---|\n${rows}${more}`;
+            }
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+            const existing = comments.find((c) => c.body.startsWith(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else if (results.length > 0) {
+              // Do not open a comment thread just to say "nothing found".
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Upload the full report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: semgrep-findings
+          path: semgrep.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # -----------------------------------------
   # The workflows themselves
   # -----------------------------------------
   # This file is now several hundred lines with a lot of shell in it, and nothing

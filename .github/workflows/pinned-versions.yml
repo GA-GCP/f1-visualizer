@@ -48,10 +48,25 @@ jobs:
 
           # Authenticated: the anonymous API allows 60 requests an hour per
           # runner IP, which is shared and frequently already exhausted.
+          #
+          # The fetch happens inside python rather than `curl | python3`. Piping a
+          # remote response into an interpreter is the curl-pipe-shell shape even
+          # when the script is local and the payload is only parsed — and
+          # Semgrep's gha-curl-pipe-shell rule flags it, correctly, as
+          # indistinguishable from the dangerous form.
           latest_release() {
-            curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
-              "https://api.github.com/repos/$1/releases/latest" \
-              | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'].lstrip('v'))"
+            python3 - "$1" <<'PY'
+          import json, os, sys, urllib.request
+          req = urllib.request.Request(
+              f"https://api.github.com/repos/{sys.argv[1]}/releases/latest",
+              headers={
+                  "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+                  "Accept": "application/vnd.github+json",
+              },
+          )
+          with urllib.request.urlopen(req, timeout=30) as resp:
+              print(json.load(resp)["tag_name"].lstrip("v"))
+          PY
           }
 
           current() {

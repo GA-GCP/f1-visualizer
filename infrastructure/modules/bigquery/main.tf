@@ -11,6 +11,28 @@ resource "google_bigquery_dataset" "f1_dataset" {
   }
 }
 
+# SEC-3: roles/bigquery.dataEditor and roles/bigquery.dataViewer were project
+# level, so every BigQuery identity could read and write every dataset. Granted
+# on the dataset instead. roles/bigquery.jobUser stays at project level, since
+# running a query job genuinely is a project-scoped permission.
+resource "google_bigquery_dataset_iam_member" "editors" {
+  for_each = toset(var.dataset_editors)
+
+  project    = var.project_id
+  dataset_id = google_bigquery_dataset.f1_dataset.dataset_id
+  role       = "roles/bigquery.dataEditor"
+  member     = each.value
+}
+
+resource "google_bigquery_dataset_iam_member" "viewers" {
+  for_each = toset(var.dataset_viewers)
+
+  project    = var.project_id
+  dataset_id = google_bigquery_dataset.f1_dataset.dataset_id
+  role       = "roles/bigquery.dataViewer"
+  member     = each.value
+}
+
 # 1. LAPS TABLE (Used by RaceAnalysisService)
 resource "google_bigquery_table" "laps" {
   dataset_id = google_bigquery_dataset.f1_dataset.dataset_id

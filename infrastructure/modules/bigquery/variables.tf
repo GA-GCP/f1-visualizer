@@ -13,3 +13,14 @@ variable "location" {
   type        = string
   default     = "US"
 }
+variable "dataset_editors" {
+  description = "Members granted roles/bigquery.dataEditor on this dataset, as fully-qualified IAM members."
+  type        = list(string)
+  default     = []
+}
+
+variable "dataset_viewers" {
+  description = "Members granted roles/bigquery.dataViewer on this dataset, as fully-qualified IAM members."
+  type        = list(string)
+  default     = []
+}

@@ -44,3 +44,9 @@ variable "memory_size_gb" {
     error_message = "memory_size_gb must be between 1 and 300."
   }
 }
+
+variable "auth_secret_accessors" {
+  description = "Members granted roles/secretmanager.secretAccessor on this instance's AUTH secret, as fully-qualified IAM members."
+  type        = list(string)
+  default     = []
+}

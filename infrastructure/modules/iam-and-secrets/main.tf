@@ -218,6 +218,13 @@ resource "google_service_account_iam_member" "infra_acts_as_runtime" {
 # ==============================================================================
 # 5. RUNTIME ROLE BINDINGS (Principle of Least Privilege)
 # ==============================================================================
+# SEC-3: what is left here is deliberately project-scoped. bigquery.jobUser is
+# the one BigQuery role that genuinely is — running a query job is a project
+# permission, not a dataset one. datastore.user carries an IAM condition pinning
+# it to this environment's database, because Firestore databases live in one
+# project and the binding is otherwise estate-wide. Secret and dataset access
+# moved onto the secrets, the Redis AUTH secret and the dataset themselves.
+#
 # SEC-8: roles/pubsub.publisher on ingestion and roles/pubsub.subscriber on
 # telemetry are gone. No module depends on Pub/Sub; messaging has been Redis
 # pub/sub and Redis streams since f1v-commons-messaging replaced it. An unused
@@ -225,16 +232,6 @@ resource "google_service_account_iam_member" "infra_acts_as_runtime" {
 # statement of intent.
 
 # -- Ingestion --
-resource "google_project_iam_member" "data_ingestion_secret_accessor" {
-  project = var.project_id
-  role    = "roles/secretmanager.secretAccessor"
-  member  = "serviceAccount:${google_service_account.data_ingestion.email}"
-}
-resource "google_project_iam_member" "data_ingestion_bq_editor" {
-  project = var.project_id
-  role    = "roles/bigquery.dataEditor"
-  member  = "serviceAccount:${google_service_account.data_ingestion.email}"
-}
 resource "google_project_iam_member" "data_ingestion_bq_job_user" {
   project = var.project_id
   role    = "roles/bigquery.jobUser"
@@ -247,42 +244,28 @@ resource "google_project_iam_member" "data_ingestion_datastore_user" {
   project = var.project_id
   role    = "roles/datastore.user"
   member  = "serviceAccount:${google_service_account.data_ingestion.email}"
+
+  condition {
+    title       = "only-this-environment-database"
+    description = "Restricts Firestore access to ${var.firestore_database_id}."
+    expression  = "resource.name.startsWith(\"projects/${var.project_id}/databases/${var.firestore_database_id}\")"
+  }
 }
 
 # -- Replay Worker --
 # R1: reads the telemetry and locations it replays, and needs the OpenF1
 # credentials for the MQTT bridge and the Redis AUTH string.
-resource "google_project_iam_member" "replay_worker_bq_viewer" {
-  project = var.project_id
-  role    = "roles/bigquery.dataViewer"
-  member  = "serviceAccount:${google_service_account.replay_worker.email}"
-}
 resource "google_project_iam_member" "replay_worker_bq_job_user" {
   project = var.project_id
   role    = "roles/bigquery.jobUser"
   member  = "serviceAccount:${google_service_account.replay_worker.email}"
 }
-resource "google_project_iam_member" "replay_worker_secret_accessor" {
-  project = var.project_id
-  role    = "roles/secretmanager.secretAccessor"
-  member  = "serviceAccount:${google_service_account.replay_worker.email}"
-}
 
 # -- Telemetry --
-# Needed to read the Memorystore AUTH string that Cloud Run mounts as
-# SPRING_DATA_REDIS_PASSWORD (S2).
-resource "google_project_iam_member" "telemetry_secret_accessor" {
-  project = var.project_id
-  role    = "roles/secretmanager.secretAccessor"
-  member  = "serviceAccount:${google_service_account.telemetry.email}"
-}
+# Nothing at project level. Its only privilege is reading the Memorystore AUTH
+# string, which the redis module now grants on that secret alone.
 
 # -- Analysis --
-resource "google_project_iam_member" "data_analysis_bq_viewer" {
-  project = var.project_id
-  role    = "roles/bigquery.dataViewer"
-  member  = "serviceAccount:${google_service_account.data_analysis.email}"
-}
 resource "google_project_iam_member" "data_analysis_bq_job_user" {
   project = var.project_id
   role    = "roles/bigquery.jobUser"
@@ -292,6 +275,12 @@ resource "google_project_iam_member" "data_analysis_datastore_user" {
   project = var.project_id
   role    = "roles/datastore.user"
   member  = "serviceAccount:${google_service_account.data_analysis.email}"
+
+  condition {
+    title       = "only-this-environment-database"
+    description = "Restricts Firestore access to ${var.firestore_database_id}."
+    expression  = "resource.name.startsWith(\"projects/${var.project_id}/databases/${var.firestore_database_id}\")"
+  }
 }
 
 # -- User --
@@ -299,4 +288,10 @@ resource "google_project_iam_member" "user_datastore_user" {
   project = var.project_id
   role    = "roles/datastore.user"
   member  = "serviceAccount:${google_service_account.user.email}"
+
+  condition {
+    title       = "only-this-environment-database"
+    description = "Restricts Firestore access to ${var.firestore_database_id}."
+    expression  = "resource.name.startsWith(\"projects/${var.project_id}/databases/${var.firestore_database_id}\")"
+  }
 }

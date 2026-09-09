@@ -47,3 +47,17 @@ resource "google_secret_manager_secret_version" "redis_auth" {
   secret      = google_secret_manager_secret.redis_auth.id
   secret_data = google_redis_instance.f1v_cache.auth_string
 }
+
+# SEC-3: roles/secretmanager.secretAccessor was a project-level binding, so every
+# environment's runtime identity could read every other environment's Redis
+# credential — sa-f1v-data-ingestion-dev could read f1v-redis-auth-prod. This
+# secret is granted to the accounts of the three services that connect to this
+# instance, and to nothing else.
+resource "google_secret_manager_secret_iam_member" "auth_accessors" {
+  for_each = toset(var.auth_secret_accessors)
+
+  project   = var.project_id
+  secret_id = google_secret_manager_secret.redis_auth.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = each.value
+}

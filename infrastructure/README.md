@@ -29,9 +29,19 @@ one-time, out-of-band step for a project that does not exist yet.
    repository. The triggers use the first-generation `github {}` block, whose
    connection is not a Terraform resource (CPLX-8).
 
-5. **Create the shared secrets.** `f1v-api-openf1-login-user-email` and
-   `f1v-api-openf1-login-user-password`. SEC-6 declares the containers in IaC;
-   the values are added out of band so they never enter state.
+5. **Add the OpenF1 credential values.** SEC-6 declares the two containers in
+   `modules/secrets`; the values are added out of band so they never enter state:
+
+       printf '%s' "$OPENF1_EMAIL"    | gcloud secrets versions add f1v-api-openf1-login-user-email    --data-file=-
+       printf '%s' "$OPENF1_PASSWORD" | gcloud secrets versions add f1v-api-openf1-login-user-password --data-file=-
+
+   **On an existing project the containers already exist**, created by hand
+   before they were declared. Import them once, per environment, or the first
+   apply of the `secrets` unit fails with `already exists`:
+
+       cd environments/<env>/secrets
+       terragrunt import google_secret_manager_secret.openf1_username projects/<project>/secrets/f1v-api-openf1-login-user-email
+       terragrunt import google_secret_manager_secret.openf1_password projects/<project>/secrets/f1v-api-openf1-login-user-password
 
 6. **Point DNS at the load balancers.** A Google-managed certificate stays in
    PROVISIONING until the domain resolves to the forwarding rule's address, so

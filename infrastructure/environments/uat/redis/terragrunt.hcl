@@ -22,6 +22,19 @@ dependency "networking" {
   mock_outputs_merge_strategy_with_state  = "shallow"
 }
 
+dependency "iam" {
+  config_path = "../iam-and-secrets"
+  mock_outputs = {
+    sa_data_ingestion_email = "sa-f1v-data-ingestion-uat@f1v-example-project.iam.gserviceaccount.com"
+    sa_replay_worker_email  = "sa-f1v-replay-worker-uat@f1v-example-project.iam.gserviceaccount.com"
+    sa_telemetry_email      = "sa-f1v-telemetry-uat@f1v-example-project.iam.gserviceaccount.com"
+  }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
+}
+
 inputs = {
   project_id  = "f1v-example-project"
   environment = "uat"
@@ -34,4 +47,13 @@ inputs = {
 
   # The mock output above allows this reference to resolve during the plan phase
   network_id = dependency.networking.outputs.network_id
+
+  # SEC-3: the three services that hold a Redis connection. Granted on this
+  # secret rather than through a project-level roles/secretmanager.secretAccessor,
+  # which let every environment read every other environment's AUTH string.
+  auth_secret_accessors = [
+    "serviceAccount:${dependency.iam.outputs.sa_data_ingestion_email}",
+    "serviceAccount:${dependency.iam.outputs.sa_replay_worker_email}",
+    "serviceAccount:${dependency.iam.outputs.sa_telemetry_email}",
+  ]
 }

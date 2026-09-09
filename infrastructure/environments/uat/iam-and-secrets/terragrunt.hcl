@@ -12,4 +12,7 @@ terraform {
 inputs = {
   environment = "uat"
   project_id  = "f1v-example-project"
+
+  # SEC-3: the database the conditioned roles/datastore.user binding allows.
+  firestore_database_id = "f1v-db-uat"
 }

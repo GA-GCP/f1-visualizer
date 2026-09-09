@@ -1,6 +1,6 @@
 package com.elysianarts.f1.visualizer.telemetry.service;
 
-import com.elysianarts.f1.visualizer.telemetry.config.RedisConfig;
+import com.elysianarts.f1.visualizer.commons.messaging.redis.RedisTopics;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
@@ -22,11 +22,11 @@ public class TelemetryListener implements MessageListener {
         String payload = new String(message.getBody(), StandardCharsets.UTF_8);
         String channel = new String(message.getChannel(), StandardCharsets.UTF_8);
 
-        if (RedisConfig.TELEMETRY_TOPIC.equals(channel)) {
+        if (RedisTopics.TELEMETRY.equals(channel)) {
             messagingTemplate.convertAndSend("/topic/race-data", payload);
-        } else if (RedisConfig.LOCATION_TOPIC.equals(channel)) {
+        } else if (RedisTopics.LOCATION.equals(channel)) {
             messagingTemplate.convertAndSend("/topic/race-location", payload);
-        } else if (RedisConfig.PLAYBACK_TOPIC.equals(channel)) {
+        } else if (RedisTopics.PLAYBACK_STATUS.equals(channel)) {
             messagingTemplate.convertAndSend("/topic/playback-status", payload);
         }
     }

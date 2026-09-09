@@ -1,22 +1,24 @@
 package com.elysianarts.f1.visualizer.data.ingestion.service;
 
 import com.elysianarts.f1.visualizer.commons.api.openf1.client.OpenF1Client;
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryBatchWriter;
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryProperties;
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Session;
-import com.google.cloud.bigquery.BigQuery;
-import com.google.cloud.bigquery.InsertAllRequest;
-import com.google.cloud.bigquery.InsertAllResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -31,10 +33,21 @@ class HistoricalDataLoaderTest {
     private OpenF1Client openF1Client;
 
     @Mock
-    private BigQuery bigQuery;
+    private BigQueryBatchWriter batchWriter;
 
-    @InjectMocks
+    @Mock
+    private BigQueryQueryRunner queryRunner;
+
     private HistoricalDataLoader historicalDataLoader;
+
+    @BeforeEach
+    void initLoader() {
+        // C4: the dataset name is configuration now, not a constant per class.
+        lenient().when(queryRunner.properties()).thenReturn(BigQueryProperties.defaults());
+        // T2: the production 500 ms courtesy delay is configuration, not a
+        // literal, so it does not run for real once per window in the suite.
+        historicalDataLoader = new HistoricalDataLoader(openF1Client, batchWriter, queryRunner, Duration.ZERO);
+    }
 
     @Test
     void loadSessionIntoBigQuery_FetchesAndInsertsData() {
@@ -54,30 +67,25 @@ class HistoricalDataLoaderTest {
         mockCarData.setSpeed(300);
         mockCarData.setDate(startTime.plusMinutes(1));
 
-        when(openF1Client.getSession(sessionKey)).thenReturn(Mono.just(mockSession));
-        when(openF1Client.getCarData(eq(sessionKey), any(), any())).thenReturn(Flux.just(mockCarData));
-        when(bigQuery.insertAll(any(InsertAllRequest.class))).thenReturn(mock(InsertAllResponse.class));
+        when(openF1Client.getSession(sessionKey)).thenReturn(Optional.of(mockSession));
+        when(openF1Client.getCarData(eq(sessionKey), any(), any())).thenReturn(List.of(mockCarData));
 
         // Act
         historicalDataLoader.loadSessionIntoBigQuery(sessionKey);
 
         // Assert
-        ArgumentCaptor<InsertAllRequest> captor = ArgumentCaptor.forClass(InsertAllRequest.class);
-        verify(bigQuery, times(1)).insertAll(captor.capture());
-
-        InsertAllRequest request = captor.getValue();
-        assertEquals("f1_dataset", request.getTable().getDataset());
-        assertEquals("telemetry", request.getTable().getTable());
-        assertEquals(1, request.getRows().size());
+        ArgumentCaptor<List<Map<String, Object>>> captor = ArgumentCaptor.captor();
+        verify(batchWriter, times(1)).append(eq("f1_dataset"), eq("telemetry"), captor.capture());
+        assertEquals(1, captor.getValue().size());
     }
 
     @Test
     void loadSessionIntoBigQuery_ReturnsEarly_WhenSessionMetaIsNull() {
-        when(openF1Client.getSession(9165L)).thenReturn(Mono.empty());
+        when(openF1Client.getSession(9165L)).thenReturn(Optional.empty());
 
         historicalDataLoader.loadSessionIntoBigQuery(9165L);
 
-        verify(bigQuery, never()).insertAll(any(InsertAllRequest.class));
+        verify(batchWriter, never()).append(any(), any(), any());
     }
 
     @Test
@@ -89,8 +97,8 @@ class HistoricalDataLoaderTest {
         mockSession.setDateStart(startTime);
         mockSession.setDateEnd(null); // No end date
 
-        when(openF1Client.getSession(sessionKey)).thenReturn(Mono.just(mockSession));
-        when(openF1Client.getCarData(eq(sessionKey), any(), any())).thenReturn(Flux.empty());
+        when(openF1Client.getSession(sessionKey)).thenReturn(Optional.of(mockSession));
+        when(openF1Client.getCarData(eq(sessionKey), any(), any())).thenReturn(List.of());
 
         historicalDataLoader.loadSessionIntoBigQuery(sessionKey);
 
@@ -127,48 +135,15 @@ class HistoricalDataLoaderTest {
         pkt3.setSpeed(310);
         pkt3.setDate(startTime.plusMinutes(3));
 
-        when(openF1Client.getSession(sessionKey)).thenReturn(Mono.just(mockSession));
-        when(openF1Client.getCarData(eq(sessionKey), any(), any())).thenReturn(Flux.just(pkt1, pkt2, pkt3));
-        when(bigQuery.insertAll(any(InsertAllRequest.class))).thenReturn(mock(InsertAllResponse.class));
+        when(openF1Client.getSession(sessionKey)).thenReturn(Optional.of(mockSession));
+        when(openF1Client.getCarData(eq(sessionKey), any(), any())).thenReturn(List.of(pkt1, pkt2, pkt3));
 
         historicalDataLoader.loadSessionIntoBigQuery(sessionKey);
 
         // The partial batch of 3 should still be flushed
-        ArgumentCaptor<InsertAllRequest> captor = ArgumentCaptor.forClass(InsertAllRequest.class);
-        verify(bigQuery, atLeastOnce()).insertAll(captor.capture());
-
-        InsertAllRequest request = captor.getValue();
-        assertEquals(3, request.getRows().size());
-    }
-
-    @Test
-    void loadSessionIntoBigQuery_LogsBigQueryErrors_WhenResponseHasErrors() {
-        long sessionKey = 9165L;
-        OffsetDateTime startTime = OffsetDateTime.of(2023, 1, 1, 12, 0, 0, 0, ZoneOffset.UTC);
-        OffsetDateTime endTime = startTime.plusMinutes(10);
-
-        OpenF1Session mockSession = new OpenF1Session();
-        mockSession.setDateStart(startTime);
-        mockSession.setDateEnd(endTime);
-
-        OpenF1CarData mockCarData = new OpenF1CarData();
-        mockCarData.setSessionKey(sessionKey);
-        mockCarData.setDriverNumber(1);
-        mockCarData.setSpeed(300);
-        mockCarData.setDate(startTime.plusMinutes(1));
-
-        InsertAllResponse errorResponse = mock(InsertAllResponse.class);
-        when(errorResponse.hasErrors()).thenReturn(true);
-        when(errorResponse.getInsertErrors()).thenReturn(Collections.emptyMap());
-
-        when(openF1Client.getSession(sessionKey)).thenReturn(Mono.just(mockSession));
-        when(openF1Client.getCarData(eq(sessionKey), any(), any())).thenReturn(Flux.just(mockCarData));
-        when(bigQuery.insertAll(any(InsertAllRequest.class))).thenReturn(errorResponse);
-
-        // Should not throw - just logs errors
-        historicalDataLoader.loadSessionIntoBigQuery(sessionKey);
-
-        verify(bigQuery, atLeastOnce()).insertAll(any(InsertAllRequest.class));
+        ArgumentCaptor<List<Map<String, Object>>> captor = ArgumentCaptor.captor();
+        verify(batchWriter, atLeastOnce()).append(any(), any(), captor.capture());
+        assertEquals(3, captor.getValue().size());
     }
 
     @Test
@@ -181,12 +156,12 @@ class HistoricalDataLoaderTest {
         mockSession.setDateStart(startTime);
         mockSession.setDateEnd(endTime);
 
-        when(openF1Client.getSession(sessionKey)).thenReturn(Mono.just(mockSession));
-        when(openF1Client.getCarData(eq(sessionKey), any(), any())).thenReturn(Flux.empty());
+        when(openF1Client.getSession(sessionKey)).thenReturn(Optional.of(mockSession));
+        when(openF1Client.getCarData(eq(sessionKey), any(), any())).thenReturn(List.of());
 
         historicalDataLoader.loadSessionIntoBigQuery(sessionKey);
 
-        verify(bigQuery, never()).insertAll(any(InsertAllRequest.class));
+        verify(batchWriter, never()).append(any(), any(), any());
     }
 
     @Test
@@ -205,19 +180,18 @@ class HistoricalDataLoaderTest {
         mockCarData.setSpeed(300);
         mockCarData.setDate(startTime.plusMinutes(16));
 
-        when(openF1Client.getSession(sessionKey)).thenReturn(Mono.just(mockSession));
+        when(openF1Client.getSession(sessionKey)).thenReturn(Optional.of(mockSession));
 
         // First window throws, second window succeeds
         when(openF1Client.getCarData(eq(sessionKey), any(), any()))
                 .thenThrow(new RuntimeException("API Error"))
-                .thenReturn(Flux.just(mockCarData));
+                .thenReturn(List.of(mockCarData));
 
-        when(bigQuery.insertAll(any(InsertAllRequest.class))).thenReturn(mock(InsertAllResponse.class));
 
         historicalDataLoader.loadSessionIntoBigQuery(sessionKey);
 
         // Despite first window failing, second window should still process
         verify(openF1Client, times(2)).getCarData(eq(sessionKey), any(), any());
-        verify(bigQuery, times(1)).insertAll(any(InsertAllRequest.class));
+        verify(batchWriter, times(1)).append(any(), any(), any());
     }
 }

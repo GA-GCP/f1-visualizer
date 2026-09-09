@@ -1,7 +1,6 @@
 package com.elysianarts.f1.visualizer.data.analysis.controller.v1;
 
 import com.elysianarts.f1.visualizer.commons.security.config.F1VisualizerSecurityConfig;
-import com.elysianarts.f1.visualizer.commons.service.config.JacksonObjectMapperConfig;
 import com.elysianarts.f1.visualizer.data.analysis.model.DriverProfile;
 import com.elysianarts.f1.visualizer.data.analysis.model.RaceSession;
 import com.elysianarts.f1.visualizer.data.analysis.service.ReferenceDataService;
@@ -26,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(ReferenceDataController.class)
 @AutoConfigureMockMvc
-@Import({F1VisualizerSecurityConfig.class, JacksonObjectMapperConfig.class})
+@Import(F1VisualizerSecurityConfig.class)
 class ReferenceDataControllerTest {
 
     @Autowired

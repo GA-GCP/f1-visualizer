@@ -1,7 +1,7 @@
 package com.elysianarts.f1.visualizer.user.controller.v1;
 
 import com.elysianarts.f1.visualizer.commons.security.config.F1VisualizerSecurityConfig;
-import com.elysianarts.f1.visualizer.commons.service.config.JacksonObjectMapperConfig;
+import com.elysianarts.f1.visualizer.commons.web.error.ProblemDetailExceptionHandler;
 import com.elysianarts.f1.visualizer.user.exception.GlobalExceptionHandler;
 import com.elysianarts.f1.visualizer.user.exception.UserNotFoundException;
 import com.elysianarts.f1.visualizer.user.firestore.document.F1VUserDocument;
@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(F1VUserController.class)
 @AutoConfigureMockMvc
-@Import({F1VisualizerSecurityConfig.class, JacksonObjectMapperConfig.class, GlobalExceptionHandler.class})
+@Import({F1VisualizerSecurityConfig.class, GlobalExceptionHandler.class, ProblemDetailExceptionHandler.class})
 class F1VUserControllerTest {
 
     @Autowired

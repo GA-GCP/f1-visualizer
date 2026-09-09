@@ -1,10 +1,11 @@
 package com.elysianarts.f1.visualizer.data.analysis.service;
 
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
 import com.elysianarts.f1.visualizer.data.analysis.model.LapDataRecord;
 import com.google.cloud.bigquery.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -28,8 +29,14 @@ class RaceAnalysisServiceTest {
     @Mock
     private FieldValue mockValue;
 
-    @InjectMocks
     private RaceAnalysisService raceAnalysisService;
+
+    @BeforeEach
+    void initService() {
+        // The runner applies the job timeout and byte ceiling (R6); the
+        // BigQuery mock underneath it is still what the tests stub.
+        raceAnalysisService = new RaceAnalysisService(BigQueryQueryRunner.withDefaults(bigQuery));
+    }
 
     @Test
     void getSessionLapTimes_ReturnsMappedRecords_WhenQuerySucceeds() throws InterruptedException {

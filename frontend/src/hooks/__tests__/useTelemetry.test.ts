@@ -130,4 +130,72 @@ describe('useTelemetry Hook', () => {
         await waitFor(() => expect(mockCallback).toHaveBeenCalled());
         expect(mockCallback.mock.calls.length).toBeLessThanOrEqual(20);
     });
+
+    // ── P1: one message per channel per tick ──
+
+    it('forwards every driver in a batched message', async () => {
+        const mockCallback = vi.fn();
+        let stompCallback: (message: { body: string }) => void = () => {};
+
+        vi.mocked(stompClient.subscribe).mockImplementation((_topic, cb) => {
+            stompCallback = cb as typeof stompCallback;
+            return { id: '1', unsubscribe: vi.fn() };
+        });
+
+        renderHook(() => useTelemetry(mockCallback));
+
+        // A tick's worth of packets now arrives as a single JSON array.
+        stompCallback({
+            body: JSON.stringify([
+                packet({ driver_number: 1, speed: 300 }),
+                packet({ driver_number: 44, speed: 310 }),
+                packet({ driver_number: 16, speed: 290 }),
+            ]),
+        });
+
+        await waitFor(() => expect(mockCallback).toHaveBeenCalledTimes(3));
+        const forwarded = mockCallback.mock.calls
+            .map(([p]) => p.driver_number)
+            .sort((a, b) => a - b);
+        expect(forwarded).toEqual([1, 16, 44]);
+    });
+
+    it('keeps the rest of a batch when one packet is malformed', async () => {
+        const mockCallback = vi.fn();
+        let stompCallback: (message: { body: string }) => void = () => {};
+
+        vi.mocked(stompClient.subscribe).mockImplementation((_topic, cb) => {
+            stompCallback = cb as typeof stompCallback;
+            return { id: '1', unsubscribe: vi.fn() };
+        });
+
+        renderHook(() => useTelemetry(mockCallback));
+
+        stompCallback({
+            body: JSON.stringify([
+                packet({ driver_number: 1 }),
+                { driver_number: 'not-a-number' },
+                packet({ driver_number: 44 }),
+            ]),
+        });
+
+        await waitFor(() => expect(mockCallback).toHaveBeenCalledTimes(2));
+    });
+
+    it('still accepts a single packet, for the window where a rolling deploy overlaps', async () => {
+        const mockCallback = vi.fn();
+        let stompCallback: (message: { body: string }) => void = () => {};
+
+        vi.mocked(stompClient.subscribe).mockImplementation((_topic, cb) => {
+            stompCallback = cb as typeof stompCallback;
+            return { id: '1', unsubscribe: vi.fn() };
+        });
+
+        renderHook(() => useTelemetry(mockCallback));
+
+        stompCallback({ body: JSON.stringify(packet({ driver_number: 55 })) });
+
+        await waitFor(() => expect(mockCallback).toHaveBeenCalledTimes(1));
+        expect(mockCallback.mock.calls[0][0].driver_number).toBe(55);
+    });
 });

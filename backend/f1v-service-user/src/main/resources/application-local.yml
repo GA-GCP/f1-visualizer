@@ -10,5 +10,11 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: https://elysianarts-dev.us.auth0.com/.well-known/jwks.json
+          # issuer-uri, not jwk-set-uri: the latter validates the signature
+          # but never checks who issued the token (C6).
+          issuer-uri: https://elysianarts-dev.us.auth0.com/
           audiences: dev.api.f1visualizer.com
+
+f1v:
+  cors:
+    allowed-origins: http://localhost:5173,https://f1visualizer.com,https://*.f1visualizer.com

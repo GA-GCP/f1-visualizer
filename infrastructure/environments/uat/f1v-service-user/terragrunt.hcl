@@ -11,6 +11,7 @@ dependency "iam" {
   config_path = "../iam-and-secrets"
   mock_outputs = {
     sa_user_email = "sa-f1v-user-uat@f1-visualizer-488201.iam.gserviceaccount.com"
+    sa_gateway_email = "sa-f1v-gateway-uat@f1-visualizer-488201.iam.gserviceaccount.com"
   }
 }
 
@@ -21,7 +22,15 @@ inputs = {
   image_url    = "us-east1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/user:latest"
   service_account_email = dependency.iam.outputs.sa_user_email
 
-  is_public    = true
+  # S3: the *.run.app URL no longer answers the internet. Only the API Gateway's
+  # service account can invoke this service, and it presents an ID token minted
+  # for the service's own URL. In-app JWT validation stays, as defence in depth.
+  is_public                = false
+  invoker_service_accounts = [dependency.iam.outputs.sa_gateway_email]
+
+  # P4: Firestore reads are short; this is the one service where the default
+  # is close to right, stated rather than inherited.
+  container_concurrency = 80
 
   env_vars = {
     "SPRING_PROFILES_ACTIVE" = "uat"

@@ -12,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,6 +30,66 @@ public class ReferenceDataCacheRepository {
     private static final String DRIVERS_COLLECTION = "reference_drivers";
     private static final String SESSIONS_COLLECTION = "reference_sessions";
     private static final String RACE_ENTRIES_COLLECTION = "reference_race_entries";
+    private static final String META_COLLECTION = "reference_meta";
+    private static final String LAST_REFRESHED_DOCUMENT = "lastRefreshed";
+
+    /** Firestore's hard limit is 500 writes per batch; the catalog grows past that. */
+    private static final int BATCH_LIMIT = 400;
+
+    /**
+     * R8: how recent a refresh has to be for a starting instance to leave the
+     * cache alone. Every deploy and every scale-out used to rewrite the entire
+     * catalog, with concurrent instances racing each other to do it.
+     */
+    private static final Duration FRESH_FOR = Duration.ofHours(6);
+
+    public boolean isCacheFresh() {
+        try {
+            DocumentSnapshot document = firestore.collection(META_COLLECTION)
+                    .document(LAST_REFRESHED_DOCUMENT).get().get();
+            if (!document.exists() || document.getString("at") == null) {
+                return false;
+            }
+            Instant at = Instant.parse(document.getString("at"));
+            return at.isAfter(Instant.now().minus(FRESH_FOR));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (Exception e) {
+            log.warn("reference freshness check failed — warming anyway", e);
+            return false;
+        }
+    }
+
+    public void markRefreshed() {
+        try {
+            firestore.collection(META_COLLECTION).document(LAST_REFRESHED_DOCUMENT)
+                    .set(Map.of("at", Instant.now().toString())).get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+            log.warn("reference refresh marker not written", e);
+        }
+    }
+
+    /**
+     * Commits writes in chunks. A single {@code WriteBatch} that grows with the
+     * catalog eventually exceeds Firestore's 500-write limit and fails the whole
+     * warm-up (R8).
+     */
+    private <T> void commitInChunks(List<T> items, String collection,
+                                    java.util.function.Function<T, String> id,
+                                    java.util.function.Function<T, Map<String, Object>> toMap)
+            throws InterruptedException, ExecutionException {
+        for (int start = 0; start < items.size(); start += BATCH_LIMIT) {
+            List<T> chunk = items.subList(start, Math.min(items.size(), start + BATCH_LIMIT));
+            WriteBatch batch = firestore.batch();
+            for (T item : chunk) {
+                batch.set(firestore.collection(collection).document(id.apply(item)), toMap.apply(item));
+            }
+            batch.commit().get();
+        }
+    }
 
     // ── Drivers ──
 
@@ -50,15 +112,8 @@ public class ReferenceDataCacheRepository {
 
     public void cacheDrivers(List<DriverProfile> drivers) {
         try {
-            WriteBatch batch = firestore.batch();
-            for (DriverProfile driver : drivers) {
-                batch.set(
-                        firestore.collection(DRIVERS_COLLECTION).document(String.valueOf(driver.getId())),
-                        driverToMap(driver)
-                );
-            }
-            batch.commit().get();
-            log.info("Cached {} drivers in Firestore", drivers.size());
+            commitInChunks(drivers, DRIVERS_COLLECTION, d -> String.valueOf(d.getId()), this::driverToMap);
+            log.info("reference drivers cached count={}", drivers.size());
         } catch (InterruptedException | ExecutionException e) {
             log.error("Failed to cache drivers in Firestore", e);
         }
@@ -86,15 +141,8 @@ public class ReferenceDataCacheRepository {
 
     public void cacheSessions(List<RaceSession> sessions) {
         try {
-            WriteBatch batch = firestore.batch();
-            for (RaceSession session : sessions) {
-                batch.set(
-                        firestore.collection(SESSIONS_COLLECTION).document(String.valueOf(session.getSessionKey())),
-                        sessionToMap(session)
-                );
-            }
-            batch.commit().get();
-            log.info("Cached {} sessions in Firestore", sessions.size());
+            commitInChunks(sessions, SESSIONS_COLLECTION, s -> String.valueOf(s.getSessionKey()), this::sessionToMap);
+            log.info("reference sessions cached count={}", sessions.size());
         } catch (InterruptedException | ExecutionException e) {
             log.error("Failed to cache sessions in Firestore", e);
         }
@@ -148,15 +196,8 @@ public class ReferenceDataCacheRepository {
 
     public void cacheRaceEntriesBatch(List<RaceEntryRoster> rosters) {
         try {
-            WriteBatch batch = firestore.batch();
-            for (RaceEntryRoster roster : rosters) {
-                batch.set(
-                        firestore.collection(RACE_ENTRIES_COLLECTION).document(String.valueOf(roster.getSessionKey())),
-                        raceEntryRosterToMap(roster)
-                );
-            }
-            batch.commit().get();
-            log.info("Cached {} race entry rosters in Firestore", rosters.size());
+            commitInChunks(rosters, RACE_ENTRIES_COLLECTION, r -> String.valueOf(r.getSessionKey()), this::raceEntryRosterToMap);
+            log.info("reference rosters cached count={}", rosters.size());
         } catch (InterruptedException | ExecutionException e) {
             log.error("Failed to batch cache race entries in Firestore", e);
         }

@@ -1,9 +1,18 @@
 server:
   port: 8080
 spring:
+  data:
+    redis:
+      # A local Redis has no certificate.
+      ssl:
+        enabled: false
   security:
     oauth2:
       resourceserver:
         jwt:
           issuer-uri: https://elysianarts-dev.us.auth0.com/
           audiences: dev.api.f1visualizer.com
+
+f1v:
+  cors:
+    allowed-origins: http://localhost:5173,https://f1visualizer.com,https://*.f1visualizer.com

@@ -1,12 +1,13 @@
 package com.elysianarts.f1.visualizer.data.analysis.service;
 
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
 import com.elysianarts.f1.visualizer.data.analysis.model.DriverProfile;
 import com.elysianarts.f1.visualizer.data.analysis.model.RaceSession;
 import com.elysianarts.f1.visualizer.data.analysis.repository.ReferenceDataCacheRepository;
 import com.google.cloud.bigquery.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -31,8 +32,15 @@ class ReferenceDataServiceTest {
     @Mock
     private FieldValueList mockRow;
 
-    @InjectMocks
     private ReferenceDataService referenceDataService;
+
+    @BeforeEach
+    void initService() {
+        // The runner applies the job timeout and byte ceiling (R6); the
+        // BigQuery mock underneath it is still what the tests stub.
+        referenceDataService = new ReferenceDataService(BigQueryQueryRunner.withDefaults(bigQuery), cacheRepository,
+                new org.springframework.core.task.SyncTaskExecutor());
+    }
 
     @Test
     void searchSessions_MapsBigQueryResultsCorrectly() throws InterruptedException {
@@ -92,6 +100,13 @@ class ReferenceDataServiceTest {
         FieldValue defaultNull = mock(FieldValue.class);
         when(defaultNull.isNull()).thenReturn(true);
         when(mockRow.get("team_name")).thenReturn(defaultNull);
+        // C8: the list carries the same precomputed stats as /drivers/{id}/stats
+        // rather than a 50/50/50/30 placeholder that was then cached as data.
+        for (String statsColumn : new String[]{"avg_position", "position_stddev", "full_throttle_pct",
+                "avg_stint_length", "total_races", "wins", "podiums", "total_points",
+                "best_finish", "teams_list"}) {
+            when(mockRow.get(statsColumn)).thenReturn(defaultNull);
+        }
 
         when(tableResult.iterateAll()).thenReturn(List.of(mockRow));
         when(bigQuery.query(any(QueryJobConfiguration.class))).thenReturn(tableResult);

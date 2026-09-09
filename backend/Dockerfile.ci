@@ -8,7 +8,13 @@
 #
 # For local development builds, use the standard Dockerfile.
 # ==========================================
-FROM gcr.io/distroless/java25-debian13
+# Pinned by digest, and must stay identical to RUNTIME_IMAGE in Dockerfile: this
+# is the image that actually serves production, and an unpinned tag silently
+# moves across JDK patches and Debian releases between two builds of the same
+# commit. The :nonroot variant runs as uid 65532 (S8).
+ARG RUNTIME_IMAGE=gcr.io/distroless/java25-debian13:nonroot@sha256:fce4a1d66284e8866c46113d9bdc286c46fb8c3c3f0a098f877034349e88debe
+
+FROM ${RUNTIME_IMAGE}
 
 WORKDIR /app
 
@@ -17,6 +23,19 @@ COPY dependencies/ ./
 COPY spring-boot-loader/ ./
 COPY snapshot-dependencies/ ./
 COPY application/ ./
+
+# ==========================================
+# JVM options (P4)
+# ==========================================
+# The entrypoint passed none, so the heap was capped at the default 25% of
+# container memory — about 128 MB on the 512Mi services — and an OutOfMemoryError
+# left a wedged instance that still answered health checks instead of a restart
+# Cloud Run could act on.
+#
+# AutoCreateSharedArchive writes a CDS archive on first start and reuses it on
+# every later start of the same container, so a restart does not re-pay the full
+# class-loading cost that startup_cpu_boost is there to mask.
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError -XX:+AutoCreateSharedArchive -XX:SharedArchiveFile=/tmp/f1v-app.jsa"
 
 EXPOSE 8080
 

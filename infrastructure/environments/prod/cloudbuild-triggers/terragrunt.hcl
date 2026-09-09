@@ -21,7 +21,8 @@ terraform {
 dependency "iam" {
   config_path = "../iam-and-secrets"
   mock_outputs = {
-    sa_cloudbuild_email = "sa-f1v-cloudbuild-prod@f1v-example-project.iam.gserviceaccount.com"
+    sa_deploy_email = "sa-f1v-deploy-prod@f1v-example-project.iam.gserviceaccount.com"
+    sa_infra_email  = "sa-f1v-infra-prod@f1v-example-project.iam.gserviceaccount.com"
   }
 
   # REL-7: mocks are for planning, never for applying.
@@ -37,5 +38,6 @@ inputs = {
   github_repo    = "f1-visualizer"
   branch_pattern = "^prod$"
 
-  cloudbuild_service_account_email = dependency.iam.outputs.sa_cloudbuild_email
+  deploy_service_account_email = dependency.iam.outputs.sa_deploy_email
+  infra_service_account_email  = dependency.iam.outputs.sa_infra_email
 }

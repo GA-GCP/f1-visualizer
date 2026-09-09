@@ -1,5 +1,11 @@
-output "sa_cloudbuild_email" {
-  value = google_service_account.cloudbuild.email
+output "sa_deploy_email" {
+  description = "Identity the backend and frontend pipelines run as (SEC-1)."
+  value       = google_service_account.deploy.email
+}
+
+output "sa_infra_email" {
+  description = "Identity the infrastructure pipeline runs as (SEC-1)."
+  value       = google_service_account.infra.email
 }
 
 output "sa_data_ingestion_email" {
@@ -25,4 +31,3 @@ output "sa_user_email" {
 output "sa_frontend_email" {
   value = google_service_account.frontend.email
 }
-

@@ -31,11 +31,16 @@ variable "branch_pattern" {
 
 
 
-# REL-6: this used to be assembled from project_id and environment inside the
-# module, so the triggers unit had no `dependency` on iam-and-secrets and
-# Terragrunt could apply it before the account existed. Passing the real output
-# makes the edge visible in the dependency graph.
-variable "cloudbuild_service_account_email" {
-  description = "Email of the service account each trigger runs as"
+# REL-6: these used to be one email assembled from project_id and environment
+# inside the module, so the triggers unit had no `dependency` on iam-and-secrets
+# and Terragrunt could apply it before the account existed. SEC-1 then split the
+# one account in two.
+variable "deploy_service_account_email" {
+  description = "Identity the backend and frontend triggers run as. Runs third-party build code; holds no IAM or network administration."
+  type        = string
+}
+
+variable "infra_service_account_email" {
+  description = "Identity the infrastructure trigger runs as. Runs only code from this repository."
   type        = string
 }

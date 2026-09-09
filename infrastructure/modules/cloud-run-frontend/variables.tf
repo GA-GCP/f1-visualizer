@@ -45,3 +45,32 @@ variable "max_instance_count" {
   type        = number
   default     = 3 # Lower than backend — static SPA serving needs fewer instances
 }
+
+# PERF-8: neither module stated this, so the platform chose. Services with
+# `cpu_idle = false` and work on background threads — the replay tick, the MQTT
+# callbacks, the Redis subscriber — are the documented case for gen2, and gen2 is
+# also required for direct VPC egress (PERF-1).
+variable "execution_environment" {
+  description = "Cloud Run execution environment. GEN2 gives a full Linux kernel and is required for direct VPC egress."
+  type        = string
+  default     = "EXECUTION_ENVIRONMENT_GEN2"
+
+  validation {
+    condition     = contains(["EXECUTION_ENVIRONMENT_GEN1", "EXECUTION_ENVIRONMENT_GEN2"], var.execution_environment)
+    error_message = "execution_environment must be EXECUTION_ENVIRONMENT_GEN1 or EXECUTION_ENVIRONMENT_GEN2."
+  }
+}
+
+variable "cpu" {
+  description = "CPU limit. nginx serving static files from memory is not CPU bound; the boost covers cold start."
+  type        = string
+  default     = "1000m"
+}
+
+# PERF-8: 512Mi for nginx serving a ~300 kB bundle from disk, and with Cloud CDN
+# in front (PERF-2) most requests no longer reach the container at all.
+variable "memory" {
+  description = "Memory limit for the nginx container"
+  type        = string
+  default     = "256Mi"
+}

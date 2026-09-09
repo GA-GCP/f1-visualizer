@@ -76,6 +76,40 @@ resource "google_compute_backend_service" "rest" {
   # this is the ceiling rather than the whole story.
   timeout_sec = 60
 
+  # PERF-7: only the analysis service. /analysis/drivers, /sessions, /years and
+  # /sessions/year/{year} return the same bytes for every caller, and
+  # ReferenceDataController already marks them `Cache-Control: public,
+  # max-age=3600` (P5) — the origin half of this finding was done. USE_ORIGIN_HEADERS
+  # means the CDN caches exactly what the origin says is cacheable, so
+  # /session/{key}/laps and /drivers/{id}/stats, which carry no public directive,
+  # are not cached.
+  #
+  # Trade-off, stated because it is a real change and not only a speed-up: a
+  # response the origin marks `public` is served from the edge on the cache key
+  # alone, and the default key does not include Authorization. Those six
+  # reference endpoints therefore answer without a token once warm. The data is
+  # public F1 reference data from OpenF1 and the application already declares it
+  # public — but if that is not wanted, the fix is `cache_key_policy {
+  # include_http_headers = ["Authorization"] }` here, which keeps the token in
+  # the key at the cost of a per-user cache.
+  dynamic "cdn_policy" {
+    for_each = each.key == "analysis" ? [1] : []
+    content {
+      cache_mode        = "USE_ORIGIN_HEADERS"
+      negative_caching  = true
+      serve_while_stale = 0
+    }
+  }
+  enable_cdn = each.key == "analysis"
+
+  # OPS-2: 4xx and 5xx rates, latency and client IPs at the edge could not be
+  # queried at all. Full sampling on the REST paths — the volume is low and these
+  # are the requests that matter. Cloud Armor decisions (SEC-4) land here too.
+  log_config {
+    enable      = true
+    sample_rate = 1.0
+  }
+
   backend {
     group = google_compute_region_network_endpoint_group.rest_neg[each.key].id
   }
@@ -101,6 +135,12 @@ resource "google_compute_backend_service" "telemetry_backend" {
   port_name             = "http"
   load_balancing_scheme = "EXTERNAL_MANAGED"
   project               = var.project_id
+
+  # OPS-2: the WebSocket backend had no signal at the edge at all.
+  log_config {
+    enable      = true
+    sample_rate = 1.0
+  }
 
   backend {
     group = google_compute_region_network_endpoint_group.telemetry_neg.id

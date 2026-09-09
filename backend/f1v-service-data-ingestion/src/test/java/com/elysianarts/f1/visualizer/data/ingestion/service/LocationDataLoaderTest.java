@@ -1,39 +1,49 @@
 package com.elysianarts.f1.visualizer.data.ingestion.service;
 
-import com.elysianarts.f1.visualizer.commons.api.openf1.client.OpenF1Client;
-import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1LocationData;
-import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Session;
-import com.google.cloud.bigquery.BigQuery;
-import com.google.cloud.bigquery.InsertAllRequest;
-import com.google.cloud.bigquery.InsertAllResponse;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import com.elysianarts.f1.visualizer.commons.api.openf1.client.OpenF1Client;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1LocationData;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Session;
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryBatchWriter;
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryProperties;
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
+import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 @ExtendWith(MockitoExtension.class)
 class LocationDataLoaderTest {
 
-    @Mock
-    private OpenF1Client openF1Client;
+    @Mock private OpenF1Client openF1Client;
 
-    @Mock
-    private BigQuery bigQuery;
+    @Mock private BigQueryBatchWriter batchWriter;
 
-    @InjectMocks
+    @Mock private BigQueryQueryRunner queryRunner;
+
     private LocationDataLoader locationDataLoader;
+
+    @BeforeEach
+    void initLoader() {
+        // C4: the dataset name is configuration now, not a constant per class.
+        lenient().when(queryRunner.properties()).thenReturn(BigQueryProperties.defaults());
+        // T2: the production 500 ms courtesy delay is configuration, not a
+        // literal, so it does not run for real once per window in the suite.
+        locationDataLoader =
+                new LocationDataLoader(openF1Client, batchWriter, queryRunner, Duration.ZERO);
+    }
 
     private OpenF1Session buildSession(long key, OffsetDateTime start, OffsetDateTime end) {
         OpenF1Session session = new OpenF1Session();
@@ -43,7 +53,8 @@ class LocationDataLoaderTest {
         return session;
     }
 
-    private OpenF1LocationData buildLocationPacket(long sessionKey, int driverNumber, int x, int y, int z) {
+    private OpenF1LocationData buildLocationPacket(
+            long sessionKey, int driverNumber, int x, int y, int z) {
         OpenF1LocationData packet = new OpenF1LocationData();
         packet.setSessionKey(sessionKey);
         packet.setMeetingKey(1219L);
@@ -61,33 +72,26 @@ class LocationDataLoaderTest {
         OffsetDateTime end = start.plusMinutes(10); // Short race for fast test
 
         OpenF1Session session = buildSession(9165, start, end);
-        when(openF1Client.getSession(9165)).thenReturn(Mono.just(session));
+        when(openF1Client.getSession(9165)).thenReturn(Optional.of(session));
 
         OpenF1LocationData packet = buildLocationPacket(9165, 1, 100, 200, 10);
-        when(openF1Client.getLocationData(eq(9165L), any(), any()))
-                .thenReturn(Flux.just(packet));
-
-        InsertAllResponse response = mock(InsertAllResponse.class);
-        when(response.hasErrors()).thenReturn(false);
-        when(bigQuery.insertAll(any(InsertAllRequest.class))).thenReturn(response);
+        when(openF1Client.getLocationData(eq(9165L), any(), any())).thenReturn(List.of(packet));
 
         locationDataLoader.loadLocationsIntoBigQuery(9165);
 
-        ArgumentCaptor<InsertAllRequest> captor = ArgumentCaptor.forClass(InsertAllRequest.class);
-        verify(bigQuery, atLeastOnce()).insertAll(captor.capture());
-
-        InsertAllRequest captured = captor.getValue();
-        assertEquals("f1_dataset", captured.getTable().getDataset());
-        assertEquals("locations", captured.getTable().getTable());
+        ArgumentCaptor<List<Map<String, Object>>> captor = ArgumentCaptor.captor();
+        verify(batchWriter, atLeastOnce())
+                .append(eq("f1_dataset"), eq("locations"), captor.capture());
+        assertEquals(1, captor.getValue().size());
     }
 
     @Test
     void loadLocationsIntoBigQuery_SkipsIngestion_WhenSessionMetadataIsNull() {
-        when(openF1Client.getSession(9999)).thenReturn(Mono.empty());
+        when(openF1Client.getSession(9999)).thenReturn(Optional.empty());
 
         locationDataLoader.loadLocationsIntoBigQuery(9999);
 
-        verify(bigQuery, never()).insertAll(any(InsertAllRequest.class));
+        verify(batchWriter, never()).append(any(), any(), any());
     }
 
     @Test
@@ -95,11 +99,11 @@ class LocationDataLoaderTest {
         OpenF1Session session = new OpenF1Session();
         session.setSessionKey(9999L);
         session.setDateStart(null);
-        when(openF1Client.getSession(9999)).thenReturn(Mono.just(session));
+        when(openF1Client.getSession(9999)).thenReturn(Optional.of(session));
 
         locationDataLoader.loadLocationsIntoBigQuery(9999);
 
-        verify(bigQuery, never()).insertAll(any(InsertAllRequest.class));
+        verify(batchWriter, never()).append(any(), any(), any());
     }
 
     @Test
@@ -108,14 +112,13 @@ class LocationDataLoaderTest {
         OffsetDateTime end = start.plusMinutes(10);
 
         OpenF1Session session = buildSession(9165, start, end);
-        when(openF1Client.getSession(9165)).thenReturn(Mono.just(session));
+        when(openF1Client.getSession(9165)).thenReturn(Optional.of(session));
 
-        when(openF1Client.getLocationData(eq(9165L), any(), any()))
-                .thenReturn(Flux.empty());
+        when(openF1Client.getLocationData(eq(9165L), any(), any())).thenReturn(List.of());
 
         locationDataLoader.loadLocationsIntoBigQuery(9165);
 
-        verify(bigQuery, never()).insertAll(any(InsertAllRequest.class));
+        verify(batchWriter, never()).append(any(), any(), any());
     }
 
     @Test
@@ -123,11 +126,10 @@ class LocationDataLoaderTest {
         OffsetDateTime start = OffsetDateTime.of(2024, 3, 2, 15, 0, 0, 0, ZoneOffset.UTC);
 
         OpenF1Session session = buildSession(9165, start, null);
-        when(openF1Client.getSession(9165)).thenReturn(Mono.just(session));
+        when(openF1Client.getSession(9165)).thenReturn(Optional.of(session));
 
         // The method should default to start + 2 hours when dateEnd is null
-        when(openF1Client.getLocationData(eq(9165L), any(), any()))
-                .thenReturn(Flux.empty());
+        when(openF1Client.getLocationData(eq(9165L), any(), any())).thenReturn(List.of());
 
         locationDataLoader.loadLocationsIntoBigQuery(9165);
 
@@ -141,7 +143,7 @@ class LocationDataLoaderTest {
         OffsetDateTime end = start.plusMinutes(10);
 
         OpenF1Session session = buildSession(9165, start, end);
-        when(openF1Client.getSession(9165)).thenReturn(Mono.just(session));
+        when(openF1Client.getSession(9165)).thenReturn(Optional.of(session));
 
         when(openF1Client.getLocationData(eq(9165L), any(), any()))
                 .thenThrow(new RuntimeException("API timeout"));

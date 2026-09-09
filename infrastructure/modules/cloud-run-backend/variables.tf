@@ -69,3 +69,43 @@ variable "timeout" {
   type        = string
   default     = null
 }
+
+variable "cpu_idle" {
+  description = "true = CPU is throttled between requests (Cloud Run's default). Set false for services that do work off the request thread — the replay tick, MQTT callbacks, the Redis subscriber."
+  type        = bool
+  default     = true
+}
+variable "secret_env_vars" {
+  description = <<-EOT
+    Environment variables sourced from Secret Manager, as env var name => { secret, version }.
+    The service account needs roles/secretmanager.secretAccessor on each secret.
+    `version` defaults to "latest"; pin it for credentials that should only change
+    through a deliberate deploy, and leave it on "latest" for values GCP rotates
+    for us (the Memorystore AUTH string).
+  EOT
+  type = map(object({
+    secret  = string
+    version = optional(string, "latest")
+  }))
+  default = {}
+}
+
+variable "ingress" {
+  description = "Which callers may reach the service directly. INGRESS_TRAFFIC_INTERNAL_AND_CLOUD_LOAD_BALANCING keeps the *.run.app URL from answering the internet."
+  type        = string
+  default     = "INGRESS_TRAFFIC_ALL"
+
+  validation {
+    condition = contains([
+      "INGRESS_TRAFFIC_ALL",
+      "INGRESS_TRAFFIC_INTERNAL_ONLY",
+      "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+    ], var.ingress)
+    error_message = "ingress must be one of INGRESS_TRAFFIC_ALL, INGRESS_TRAFFIC_INTERNAL_ONLY or INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER."
+  }
+}
+variable "invoker_service_accounts" {
+  description = "Service account emails granted roles/run.invoker. Used to give the API Gateway private access once allUsers is removed."
+  type        = list(string)
+  default     = []
+}

@@ -255,4 +255,51 @@ describe('useLocation Hook', () => {
             configurable: true,
         });
     });
+
+    // ── P1: one message per channel per tick ──
+
+    it('queues every point in a batched message', async () => {
+        const queueRef = makeQueueRef();
+        let stompCallback: (message: { body: string }) => void = () => {};
+
+        vi.mocked(stompClient.subscribe).mockImplementation((_topic, cb) => {
+            stompCallback = cb as typeof stompCallback;
+            return { id: '1', unsubscribe: vi.fn() };
+        });
+
+        renderHook(() => useLocation(queueRef));
+
+        stompCallback({
+            body: JSON.stringify([
+                packet({ driver_number: 1, x: 10 }),
+                packet({ driver_number: 44, x: 20 }),
+                packet({ driver_number: 16, x: 30 }),
+            ]),
+        });
+
+        await waitFor(() => expect(queueRef.current).toHaveLength(3));
+        expect(queueRef.current.map((p) => p.x)).toEqual([10, 20, 30]);
+    });
+
+    it('keeps the rest of a batch when one point is malformed', async () => {
+        const queueRef = makeQueueRef();
+        let stompCallback: (message: { body: string }) => void = () => {};
+
+        vi.mocked(stompClient.subscribe).mockImplementation((_topic, cb) => {
+            stompCallback = cb as typeof stompCallback;
+            return { id: '1', unsubscribe: vi.fn() };
+        });
+
+        renderHook(() => useLocation(queueRef));
+
+        stompCallback({
+            body: JSON.stringify([
+                packet({ driver_number: 1 }),
+                { x: 'left a bit' },
+                packet({ driver_number: 44 }),
+            ]),
+        });
+
+        await waitFor(() => expect(queueRef.current).toHaveLength(2));
+    });
 });

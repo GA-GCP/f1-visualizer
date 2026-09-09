@@ -104,6 +104,11 @@ pom.xml.versionsBackup
 pom.xml.next
 release.properties
 dependency-reduced-pom.xml
+
+# Written by flatten-maven-plugin at process-resources so that ${revision}
+# resolves in the installed POMs, and removed again by `mvn clean`. A build that
+# stops short of clean leaves them behind, where `git add -A` picks them up.
+.flattened-pom.xml
 buildNumber.properties
 .mvn/timing.properties
 

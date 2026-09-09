@@ -6,6 +6,10 @@ output "sa_data_ingestion_email" {
   value = google_service_account.data_ingestion.email
 }
 
+output "sa_replay_worker_email" {
+  value = google_service_account.replay_worker.email
+}
+
 output "sa_telemetry_email" {
   value = google_service_account.telemetry.email
 }
@@ -20,4 +24,9 @@ output "sa_user_email" {
 
 output "sa_frontend_email" {
   value = google_service_account.frontend.email
+}
+
+output "sa_gateway_email" {
+  description = "Identity the API Gateway uses to call the private REST services (S3)."
+  value       = google_service_account.gateway.email
 }

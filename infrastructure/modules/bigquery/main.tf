@@ -41,6 +41,12 @@ resource "google_bigquery_table" "telemetry" {
   table_id   = "telemetry"
   project    = var.project_id
 
+  # P2: the driver-stats query used to scan this table end to end on every
+  # /drivers/{id}/stats call because it carried no date predicate. Stats are
+  # precomputed now, and this makes the same mistake fail at query time rather
+  # than quietly bill its way through the largest table in the dataset.
+  require_partition_filter = true
+
   time_partitioning {
     type  = "DAY"
     field = "date"
@@ -95,7 +101,9 @@ resource "google_bigquery_table" "sessions" {
   { "name": "meeting_key", "type": "INTEGER", "mode": "NULLABLE" },
   { "name": "meeting_name", "type": "STRING", "mode": "NULLABLE" },
   { "name": "year", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "country_name", "type": "STRING", "mode": "NULLABLE" }
+  { "name": "country_name", "type": "STRING", "mode": "NULLABLE" },
+  { "name": "date_start", "type": "TIMESTAMP", "mode": "NULLABLE" },
+  { "name": "date_end", "type": "TIMESTAMP", "mode": "NULLABLE" }
 ]
 EOF
 }
@@ -105,6 +113,10 @@ resource "google_bigquery_table" "locations" {
   dataset_id = google_bigquery_dataset.f1_dataset.dataset_id
   table_id   = "locations"
   project    = var.project_id
+
+  # Every read of this table is a replay window, which is a date range by
+  # construction; the constraint costs nothing and closes the same hole (P2).
+  require_partition_filter = true
 
   time_partitioning {
     type  = "DAY"
@@ -160,3 +172,37 @@ resource "google_bigquery_table" "session_drivers" {
 ]
 EOF
 }
+
+# 8. DRIVER_STATS TABLE (Precomputed radar and career figures)
+#
+# P2: these numbers change only when a session is loaded, but the ten-CTE query
+# behind them ran per request — including COUNTIF(throttle > 95) across the whole
+# telemetry table — and the head-to-head page issues two per comparison. The
+# ingestion run that changes the inputs now writes the answers here, and the
+# analysis service reads a table of ~20 rows.
+resource "google_bigquery_table" "driver_stats" {
+  dataset_id = google_bigquery_dataset.f1_dataset.dataset_id
+  table_id   = "driver_stats"
+  project    = var.project_id
+
+  schema = <<EOF
+[
+  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
+  { "name": "avg_position", "type": "FLOAT", "mode": "NULLABLE" },
+  { "name": "position_stddev", "type": "FLOAT", "mode": "NULLABLE" },
+  { "name": "full_throttle_pct", "type": "FLOAT", "mode": "NULLABLE" },
+  { "name": "avg_stint_length", "type": "FLOAT", "mode": "NULLABLE" },
+  { "name": "total_races", "type": "INTEGER", "mode": "NULLABLE" },
+  { "name": "wins", "type": "INTEGER", "mode": "NULLABLE" },
+  { "name": "podiums", "type": "INTEGER", "mode": "NULLABLE" },
+  { "name": "total_points", "type": "INTEGER", "mode": "NULLABLE" },
+  { "name": "best_finish", "type": "INTEGER", "mode": "NULLABLE" },
+  { "name": "teams_list", "type": "STRING", "mode": "NULLABLE" },
+  { "name": "computed_at", "type": "TIMESTAMP", "mode": "REQUIRED" }
+]
+EOF
+}
+
+# 9. INGESTION_JOBS TABLE is deliberately absent: job status lives in Firestore,
+#    which is already the services' low-latency store and does not carry
+#    BigQuery's streaming-buffer semantics (R3).

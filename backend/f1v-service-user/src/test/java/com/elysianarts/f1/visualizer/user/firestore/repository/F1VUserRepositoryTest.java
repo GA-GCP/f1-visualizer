@@ -1,38 +1,34 @@
 package com.elysianarts.f1.visualizer.user.firestore.repository;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.elysianarts.f1.visualizer.user.firestore.document.F1VUserDocument;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
+import java.util.concurrent.ExecutionException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.concurrent.ExecutionException;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 @ExtendWith(MockitoExtension.class)
 class F1VUserRepositoryTest {
 
-    @Mock
-    private Firestore firestore;
+    @Mock private Firestore firestore;
 
-    @InjectMocks
-    private F1VUserRepository f1VUserRepository;
+    @InjectMocks private F1VUserRepository f1VUserRepository;
 
     @SuppressWarnings("unchecked")
     @Test
     void findById_ReturnsUser_WhenDocumentExists() throws Exception {
-        F1VUserDocument expectedUser = F1VUserDocument.builder()
-                .authSubId("auth0|user_123")
-                .email("leclerc@ferrari.com")
-                .build();
+        F1VUserDocument expectedUser =
+                F1VUserDocument.builder()
+                        .authSubId("auth0|user_123")
+                        .email("leclerc@ferrari.com")
+                        .build();
 
         DocumentSnapshot snapshot = mock(DocumentSnapshot.class);
         when(snapshot.exists()).thenReturn(true);
@@ -82,7 +78,8 @@ class F1VUserRepositoryTest {
     @Test
     void findById_ThrowsRuntimeException_WhenFirestoreFails() throws Exception {
         ApiFuture<DocumentSnapshot> future = mock(ApiFuture.class);
-        when(future.get()).thenThrow(new ExecutionException("Firestore unavailable", new RuntimeException()));
+        when(future.get())
+                .thenThrow(new ExecutionException("Firestore unavailable", new RuntimeException()));
 
         DocumentReference docRef = mock(DocumentReference.class);
         when(docRef.get()).thenReturn(future);
@@ -92,7 +89,6 @@ class F1VUserRepositoryTest {
 
         when(firestore.collection("users")).thenReturn(collRef);
 
-        assertThrows(RuntimeException.class, () ->
-                f1VUserRepository.findById("auth0|user_123"));
+        assertThrows(RuntimeException.class, () -> f1VUserRepository.findById("auth0|user_123"));
     }
 }

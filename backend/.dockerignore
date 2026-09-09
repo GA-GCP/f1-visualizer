@@ -5,6 +5,10 @@ target/
 *.war
 *.ear
 
+# The Maven wrapper must reach the builder stage (O1). It uses
+# distributionType=only-script, so there is no wrapper jar for *.jar to catch.
+!.mvn/wrapper/maven-wrapper.properties
+
 # IDE & Tools
 .idea/
 .vscode/
@@ -22,5 +26,9 @@ logs/
 # Secrets & Configs
 .env
 .env.local
-**/application-dev.yml
-**/application-local.yml
+
+# NOTE: application-*.yml is deliberately NOT excluded. Stripping the profile
+# files made a locally built image behave differently from the CI image unless
+# every environment variable happened to be set, which is why those variables
+# were duplicated into Terraform in the first place (C6). There is one deployed
+# configuration file now — application.yml — and it carries defaults only.

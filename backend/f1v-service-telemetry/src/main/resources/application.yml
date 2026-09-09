@@ -1,5 +1,85 @@
 spring:
+  # S5: framework errors answer as RFC 9457 ProblemDetail, matching the shared
+  # advice in commons, so every service returns one error shape.
+  mvc:
+    problemdetails:
+      enabled: true
   application:
     name: f1v-service-telemetry
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
+
+  # C6: connection details arrive as SPRING_DATA_REDIS_* environment variables
+  # from Terraform, and the password from Secret Manager (S2). Only the settings
+  # that are the same everywhere are declared here.
+  data:
+    redis:
+      ssl:
+        enabled: true
+      timeout: 10000ms
+
+  # P4: every I/O path here blocks — BigQuery, Firestore, MQTT and every .block()
+  # on the OpenF1 client — which is exactly what virtual threads serve, and they
+  # were switched off. JDK 24 removed the monitor-pinning that used to make this
+  # risky for synchronized sections.
+  threads:
+    virtual:
+      enabled: true
+  # R10: Cloud Run sends SIGTERM and waits 10 seconds. Tomcat used to drop
+  # in-flight requests, WebSocket sessions and pending publishes immediately.
+  lifecycle:
+    timeout-per-shutdown-phase: 8s
+
+server:
+  shutdown: graceful
+  # P5: about 1,200 lap rows per race and the full session catalog went out
+  # uncompressed on every call.
+  compression:
+    enabled: true
+    mime-types: application/json,application/problem+json,text/plain
+    min-response-size: 2KB
+
+management:
+  endpoint:
+    health:
+      # R10: Cloud Run only learned a container was alive when the port opened, so
+      # a service whose Redis or BigQuery client was broken kept taking traffic.
+      probes:
+        enabled: true
+      show-details: never
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  info:
+    build:
+      enabled: true
+
+  # O2: trace and span ids are put in the MDC, so the ECS-formatted log lines
+  # above carry them and a request can be followed across services. Exporting the
+  # spans themselves needs a collector endpoint — set
+  # MANAGEMENT_OTLP_TRACING_ENDPOINT to one (a sidecar collector, or Google's OTLP
+  # endpoint) and raise the sampling probability. Until then the ids still
+  # correlate the logs, which is most of the value and none of the cost.
+  #
+  # Note: this honours W3C `traceparent`. Cloud Trace's own
+  # `X-Cloud-Trace-Context` header needs spring-cloud-gcp-starter-trace, which is
+  # deliberately not pulled in here.
+  tracing:
+    sampling:
+      probability: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:0.1}
+    propagation:
+      type: w3c
+
+# O2: Cloud Logging received unstructured text, so severity and trace correlation
+# were lost, and Actuator's metrics never left the container.
+logging:
+  structured:
+    format:
+      console: ecs
+
+# S7: one source for the browser origin list, feeding both the HTTP CORS
+# configuration and the STOMP endpoint. Deployed images do not carry localhost.
+f1v:
+  cors:
+    allowed-origins: https://f1visualizer.com,https://*.f1visualizer.com

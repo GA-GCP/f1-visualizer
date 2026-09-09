@@ -2,6 +2,11 @@ include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
+# REL-8: a unit rename, a module path change or a stray `run --all destroy` all
+# plan a destroy without a prompt. Terragrunt refuses to run one here at all;
+# removing this line is the deliberate act that a production teardown should be.
+prevent_destroy = true
+
 terraform {
   source = "../../../modules/cloud-run-frontend"
 }
@@ -18,6 +23,10 @@ inputs = {
   region       = "us-central1"
   service_name = "f1v-webapp-prod"
   image_url    = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/frontend:latest-prod"
+
+  # REL-8: the five prod backend services and prod Firestore set this; the prod
+  # webapp never did, and the module defaults it to false for dev/uat agility.
+  deletion_protection = true
 
   # SEC-2: the isolated frontend identity, which holds no IAM bindings anywhere.
   # Without it Cloud Run falls back to the default compute service account.

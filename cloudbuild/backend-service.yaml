@@ -83,6 +83,12 @@ steps:
       - '/workspace/staging'
 
   # 5. Docker build + push (registry layer cache)
+  #
+  # REL-1: the floating tag carries the environment. dev and prod are both in
+  # us-central1 and therefore share one f1v-repo, so a bare `:latest` was one tag
+  # per service across all three environments — a dev build was the newest
+  # `:latest` that a prod infrastructure apply would pick up. The frontend was
+  # given `latest-<env>` in fc84fa2; this is the backend half of the same fix.
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build-push-image'
     entrypoint: 'bash'
@@ -93,17 +99,17 @@ steps:
         IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/f1v-repo/${_IMAGE}"
 
         # A cold cache is not an error on the first build.
-        docker pull "$$IMAGE:latest" || true
+        docker pull "$$IMAGE:latest-${_ENV}" || true
 
         docker build \
-          --cache-from "$$IMAGE:latest" \
+          --cache-from "$$IMAGE:latest-${_ENV}" \
           -f /workspace/backend/Dockerfile.ci \
           -t "$$IMAGE:${_SHORT_SHA}" \
-          -t "$$IMAGE:latest" \
+          -t "$$IMAGE:latest-${_ENV}" \
           /workspace/staging
 
         docker push "$$IMAGE:${_SHORT_SHA}"
-        docker push "$$IMAGE:latest"
+        docker push "$$IMAGE:latest-${_ENV}"
 
   # 6. Deploy to Cloud Run (immutable SHA tag)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'

@@ -38,7 +38,7 @@ inputs = {
 
   # O3: prod inherited the module's DEV/UAT default of false.
   deletion_protection = true
-  image_url    = get_env("TF_VAR_image_url", "us-central1-docker.pkg.dev/f1v-example-project/f1v-repo/data-ingestion:latest")
+  image_url    = "us-central1-docker.pkg.dev/f1v-example-project/f1v-repo/data-ingestion:latest-prod"
 
   # S3: the *.run.app URL no longer answers the internet. Only the API Gateway's
   # service account can invoke this service, and it presents an ID token minted

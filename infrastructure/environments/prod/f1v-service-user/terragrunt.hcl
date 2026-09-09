@@ -19,7 +19,7 @@ inputs = {
   project_id   = "f1v-example-project"
   region       = "us-central1"
   service_name = "f1v-service-user-prod"
-  image_url    = "us-central1-docker.pkg.dev/f1v-example-project/f1v-repo/user:latest"
+  image_url    = "us-central1-docker.pkg.dev/f1v-example-project/f1v-repo/user:latest-prod"
   service_account_email = dependency.iam.outputs.sa_user_email
 
   # O3: prod inherited the module's DEV/UAT default of false.

@@ -46,7 +46,7 @@ inputs = {
   region                = "us-central1"
   service_name          = "f1v-service-replay-worker-uat"
   service_account_email = dependency.iam.outputs.sa_replay_worker_email
-  image_url             = get_env("TF_VAR_image_url", "us-central1-docker.pkg.dev/f1v-example-project/f1v-repo/replay-worker:latest")
+  image_url             = "us-central1-docker.pkg.dev/f1v-example-project/f1v-repo/replay-worker:latest-uat"
 
   # No callers: not public, and unreachable from the internet.
   is_public = false

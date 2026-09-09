@@ -59,6 +59,27 @@ resource "google_cloud_run_v2_service" "service" {
       }
     }
   }
+
+  # REL-1: the pipeline owns which image is live and how traffic is split; this
+  # module owns everything else about the service.
+  #
+  # Without this, an infrastructure apply reads `:<sha>` from the refreshed state,
+  # sees `:latest-<env>` in configuration, and creates a revision from whatever
+  # was built last — then the v2 API's absent `traffic` block sends 100% to it.
+  # A routine prod infrastructure change was therefore also an unreviewed
+  # application deploy of an image nobody chose.
+  #
+  # `client` and `client_version` are optional, non-computed attributes that
+  # gcloud stamps on every deploy, so they would otherwise show a
+  # `"gcloud" -> null` diff on every plan.
+  lifecycle {
+    ignore_changes = [
+      template[0].containers[0].image,
+      traffic,
+      client,
+      client_version,
+    ]
+  }
 }
 
 # Public Access Binding — frontend is always internet-facing

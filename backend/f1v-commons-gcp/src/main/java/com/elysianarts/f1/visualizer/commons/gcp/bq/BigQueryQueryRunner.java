@@ -73,9 +73,4 @@ public class BigQueryQueryRunner {
         return builder.setJobTimeoutMs(properties.jobTimeoutMs())
                 .setMaximumBytesBilled(properties.maximumBytesBilled());
     }
-
-    /** The underlying client, for the streaming-insert paths that are not queries. */
-    public BigQuery client() {
-        return bigQuery;
-    }
 }

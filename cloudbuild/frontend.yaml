@@ -4,7 +4,7 @@
 # Install, lint, test, build in Cloud Build, then
 # Kaniko cached image build and Cloud Run deployment.
 # ==========================================
-serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com'
+serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-deploy-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com'
 
 substitutions:
   _ENV: 'dev'

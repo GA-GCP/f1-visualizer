@@ -2,16 +2,20 @@ include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
-terraform {
-  source = "../../../modules/cloud-run-frontend"
+# CPLX-3: the definition lives in _envcommon and the environment's facts live in
+# env.hcl. Anything below this is a real difference, not a copy.
+include "envcommon" {
+  path           = "${dirname(find_in_parent_folders("root.hcl"))}/_envcommon/f1v-webapp.hcl"
+  merge_strategy = "deep"
+  expose         = true
 }
 
-inputs = {
-  project_id   = "f1v-example-project"
-  region       = "us-central1"
-  service_name = "f1v-webapp-prod"
-  image_url    = "us-central1-docker.pkg.dev/f1v-example-project/f1v-repo/frontend:latest-prod"
+# REL-8: a unit rename, a module path change or a stray `run --all destroy` all
+# plan a destroy without a prompt. Terragrunt refuses to run one here at all;
+# removing this line is the deliberate act that a production teardown should be.
+prevent_destroy = true
 
-  # IMPORTANT: This makes the React app accessible to the internet
-  is_public    = true
+# REL-8: the one module variable no environment ever set.
+inputs = {
+  deletion_protection = true
 }

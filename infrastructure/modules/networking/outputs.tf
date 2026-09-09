@@ -13,7 +13,10 @@ output "subnetwork_id" {
   value       = google_compute_subnetwork.f1v_subnet.id
 }
 
-output "vpc_access_connector_id" {
-  description = "The ID of the VPC Access Connector"
-  value       = google_vpc_access_connector.connector.id
+# PERF-1: what a Cloud Run service attaches to, in place of
+# vpc_access_connector_id. The v2 API's network_interfaces block takes names or
+# self-links; names are what the units read most clearly.
+output "subnetwork_name" {
+  description = "Name of the subnet Cloud Run attaches to with direct VPC egress"
+  value       = google_compute_subnetwork.f1v_subnet.name
 }

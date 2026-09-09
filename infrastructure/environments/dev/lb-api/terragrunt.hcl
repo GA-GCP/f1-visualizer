@@ -2,23 +2,10 @@ include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
-terraform {
-  source = "../../../modules/lb-api"
-}
-
-dependency "api_gateway" {
-  config_path = "../api-gateway"
-  mock_outputs = {
-    default_hostname = "f1v-gateway-dev-placeholder.uc.gateway.dev"
-  }
-}
-
-inputs = {
-  project_id             = "f1v-example-project"
-  region                 = "us-central1"
-  name_prefix            = "f1v-api-dev"
-  domain                 = "dev.api.f1visualizer.com"
-  api_gateway_fqdn       = dependency.api_gateway.outputs.default_hostname
-  telemetry_service_name = "f1v-service-telemetry-dev"
-  frontend_origin        = "https://dev.f1visualizer.com"
+# CPLX-3: the definition lives in _envcommon and the environment's facts live in
+# env.hcl. Anything below this is a real difference, not a copy.
+include "envcommon" {
+  path           = "${dirname(find_in_parent_folders("root.hcl"))}/_envcommon/lb-api.hcl"
+  merge_strategy = "deep"
+  expose         = true
 }

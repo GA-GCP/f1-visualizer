@@ -1,27 +1,11 @@
-# ==========================================
-# Cloud Build Triggers — Dev Environment
-# ==========================================
-# Creates path-filtered triggers for all 7 pipelines.
-# Auth0 configuration is centralized here and passed
-# to the API Gateway trigger via substitution variables.
-# ==========================================
 include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
-terraform {
-  source = "../../../modules/cloudbuild-triggers"
-}
-
-inputs = {
-  project_id     = "f1v-example-project"
-  region         = "us-central1"
-  environment    = "dev"
-  github_owner   = "GA-GCP"
-  github_repo    = "f1-visualizer"
-  branch_pattern = "^dev$"
-
-  # Auth0 configuration for dev environment
-  auth0_issuer   = "https://elysianarts-dev.us.auth0.com"
-  auth0_audience = "dev.api.f1visualizer.com"
+# CPLX-3: the definition lives in _envcommon and the environment's facts live in
+# env.hcl. Anything below this is a real difference, not a copy.
+include "envcommon" {
+  path           = "${dirname(find_in_parent_folders("root.hcl"))}/_envcommon/cloudbuild-triggers.hcl"
+  merge_strategy = "deep"
+  expose         = true
 }

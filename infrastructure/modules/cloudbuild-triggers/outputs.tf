@@ -4,7 +4,6 @@ output "trigger_ids" {
     { for name, trigger in google_cloudbuild_trigger.backend : "backend_${name}" => trigger.trigger_id },
     {
       frontend       = google_cloudbuild_trigger.frontend.trigger_id
-      api_gateway    = google_cloudbuild_trigger.api_gateway.trigger_id
       infrastructure = google_cloudbuild_trigger.infrastructure.trigger_id
     }
   )

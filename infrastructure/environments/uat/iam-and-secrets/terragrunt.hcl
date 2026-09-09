@@ -1,15 +1,11 @@
-# 1. Inherit the root configuration (GCS State Bucket & Tofu Override)
 include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
-# 2. Point to the reusable OpenTofu module we just created
-terraform {
-  source = "../../../modules/iam-and-secrets"
-}
-
-# 3. Pass in the UAT-specific variables
-inputs = {
-  environment = "uat"
-  project_id  = "f1v-example-project"
+# CPLX-3: the definition lives in _envcommon and the environment's facts live in
+# env.hcl. Anything below this is a real difference, not a copy.
+include "envcommon" {
+  path           = "${dirname(find_in_parent_folders("root.hcl"))}/_envcommon/iam-and-secrets.hcl"
+  merge_strategy = "deep"
+  expose         = true
 }

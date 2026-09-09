@@ -48,12 +48,30 @@ resource "google_cloudbuild_trigger" "backend" {
   project     = var.project_id
   location    = var.region
 
-  github {
-    owner = var.github_owner
-    name  = var.github_repo
+  # CPLX-8: the first generation names the repository and relies on a connection
+  # created by hand in the console. The second makes that connection a resource,
+  # declared in infrastructure/platform. Both are here so the cutover is a value
+  # rather than a rewrite of seven triggers.
+  dynamic "github" {
+    for_each = var.cloudbuild_repository_id == "" ? [1] : []
+    content {
+      owner = var.github_owner
+      name  = var.github_repo
 
-    push {
-      branch = var.branch_pattern
+      push {
+        branch = var.branch_pattern
+      }
+    }
+  }
+
+  dynamic "repository_event_config" {
+    for_each = var.cloudbuild_repository_id == "" ? [] : [1]
+    content {
+      repository = var.cloudbuild_repository_id
+
+      push {
+        branch = var.branch_pattern
+      }
     }
   }
 
@@ -84,7 +102,7 @@ resource "google_cloudbuild_trigger" "backend" {
     _SERVICE   = each.value.service
   }
 
-  service_account = "projects/${var.project_id}/serviceAccounts/sa-f1v-cloudbuild-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
+  service_account = "projects/${var.project_id}/serviceAccounts/${var.deploy_service_account_email}"
 }
 
 # --- Frontend Trigger ---
@@ -95,12 +113,30 @@ resource "google_cloudbuild_trigger" "frontend" {
   project     = var.project_id
   location    = var.region
 
-  github {
-    owner = var.github_owner
-    name  = var.github_repo
+  # CPLX-8: the first generation names the repository and relies on a connection
+  # created by hand in the console. The second makes that connection a resource,
+  # declared in infrastructure/platform. Both are here so the cutover is a value
+  # rather than a rewrite of seven triggers.
+  dynamic "github" {
+    for_each = var.cloudbuild_repository_id == "" ? [1] : []
+    content {
+      owner = var.github_owner
+      name  = var.github_repo
 
-    push {
-      branch = var.branch_pattern
+      push {
+        branch = var.branch_pattern
+      }
+    }
+  }
+
+  dynamic "repository_event_config" {
+    for_each = var.cloudbuild_repository_id == "" ? [] : [1]
+    content {
+      repository = var.cloudbuild_repository_id
+
+      push {
+        branch = var.branch_pattern
+      }
     }
   }
 
@@ -117,43 +153,7 @@ resource "google_cloudbuild_trigger" "frontend" {
     _REGION    = var.region
   }
 
-  service_account = "projects/${var.project_id}/serviceAccounts/sa-f1v-cloudbuild-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
-}
-
-# --- API Gateway Trigger ---
-
-resource "google_cloudbuild_trigger" "api_gateway" {
-  name        = "f1v-api-gateway-${var.environment}"
-  description = "Deploys the API Gateway configuration on push to main"
-  project     = var.project_id
-  location    = var.region
-
-  github {
-    owner = var.github_owner
-    name  = var.github_repo
-
-    push {
-      branch = var.branch_pattern
-    }
-  }
-
-  included_files = [
-    "infrastructure/openapi.yaml",
-    "infrastructure/modules/**",
-    "cloudbuild/api-gateway.yaml",
-  ]
-
-  filename = "cloudbuild/api-gateway.yaml"
-
-  substitutions = {
-    _ENV            = var.environment
-    _SHORT_SHA      = "$SHORT_SHA"
-    _REGION         = var.region
-    _AUTH0_ISSUER   = var.auth0_issuer
-    _AUTH0_AUDIENCE = var.auth0_audience
-  }
-
-  service_account = "projects/${var.project_id}/serviceAccounts/sa-f1v-cloudbuild-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
+  service_account = "projects/${var.project_id}/serviceAccounts/${var.deploy_service_account_email}"
 }
 
 # --- Infrastructure Trigger ---
@@ -164,12 +164,30 @@ resource "google_cloudbuild_trigger" "infrastructure" {
   project     = var.project_id
   location    = var.region
 
-  github {
-    owner = var.github_owner
-    name  = var.github_repo
+  # CPLX-8: the first generation names the repository and relies on a connection
+  # created by hand in the console. The second makes that connection a resource,
+  # declared in infrastructure/platform. Both are here so the cutover is a value
+  # rather than a rewrite of seven triggers.
+  dynamic "github" {
+    for_each = var.cloudbuild_repository_id == "" ? [1] : []
+    content {
+      owner = var.github_owner
+      name  = var.github_repo
 
-    push {
-      branch = var.branch_pattern
+      push {
+        branch = var.branch_pattern
+      }
+    }
+  }
+
+  dynamic "repository_event_config" {
+    for_each = var.cloudbuild_repository_id == "" ? [] : [1]
+    content {
+      repository = var.cloudbuild_repository_id
+
+      push {
+        branch = var.branch_pattern
+      }
     }
   }
 
@@ -177,12 +195,21 @@ resource "google_cloudbuild_trigger" "infrastructure" {
     "infrastructure/**",
   ]
 
-  # Exclude openapi.yaml — handled by the API Gateway trigger
-  ignored_files = [
-    "infrastructure/openapi.yaml",
-  ]
-
   filename = "cloudbuild/infrastructure.yaml"
+
+  # REL-5: a merge to `prod` touching any file under infrastructure/ used to
+  # apply within minutes with nobody looking at the plan — including destroys —
+  # while the README's branch table said prod "requires approval". The plan runs
+  # either way; this holds the apply until a human has read it.
+  #
+  # Deliberately not on the backend and frontend triggers. The frontend pipeline
+  # already gates itself: it deploys with no traffic, smoke tests the revision on
+  # its own tag URL and only then promotes. A backend deploy is reversible by
+  # re-running the pipeline at an earlier SHA. Neither can destroy a Redis
+  # instance or a VPC, which is what this gate is actually for.
+  approval_config {
+    approval_required = var.environment == "prod"
+  }
 
   substitutions = {
     _ENV       = var.environment
@@ -190,5 +217,7 @@ resource "google_cloudbuild_trigger" "infrastructure" {
     _REGION    = var.region
   }
 
-  service_account = "projects/${var.project_id}/serviceAccounts/sa-f1v-cloudbuild-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
+  # SEC-1: the only trigger that runs the infrastructure identity. Everything
+  # else here executes third-party build code and must not be able to change IAM.
+  service_account = "projects/${var.project_id}/serviceAccounts/${var.infra_service_account_email}"
 }

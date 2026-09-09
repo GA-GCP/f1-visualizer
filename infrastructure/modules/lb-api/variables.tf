@@ -1,19 +1,67 @@
-variable "project_id" { type = string }
-variable "name_prefix" { type = string }
+variable "project_id" {
+  description = "The GCP Project ID"
+  type        = string
+}
+
+variable "name_prefix" {
+  description = "Prefix for every resource this module creates (e.g. f1v-api-dev)"
+  type        = string
+}
+
 variable "region" {
-  description = "GCP region for regional resources (serverless NEG)"
+  description = "GCP region of the Cloud Run services the serverless NEGs point at. Must match the services' own region."
   type        = string
 }
-variable "domain" { type = string }
-variable "api_gateway_fqdn" {
-  description = "The default hostname of the API Gateway (e.g., my-gateway-xxx.uc.gateway.dev)"
+
+variable "domain" {
+  description = "Domain the managed certificate is issued for (e.g. dev.api.f1visualizer.com)"
   type        = string
 }
-variable "telemetry_service_name" {
-  description = "The Cloud Run service name for telemetry to bypass API Gateway for WebSockets"
-  type        = string
-}
+
 variable "frontend_origin" {
-  description = "The frontend origin for CORS headers (e.g., https://dev.f1visualizer.com)"
+  description = "Origin allowed by the edge CORS policy (e.g. https://dev.f1visualizer.com)"
   type        = string
+
+  validation {
+    condition     = startswith(var.frontend_origin, "https://")
+    error_message = "frontend_origin must be a full https:// origin, since it is compared against the browser's Origin header verbatim."
+  }
+}
+
+variable "user_service_name" {
+  description = "Cloud Run service name serving /api/v1/users"
+  type        = string
+}
+
+variable "analysis_service_name" {
+  description = "Cloud Run service name serving /api/v1/analysis"
+  type        = string
+}
+
+variable "ingestion_service_name" {
+  description = "Cloud Run service name serving /api/v1/ingestion"
+  type        = string
+}
+
+variable "telemetry_service_name" {
+  description = "Cloud Run service name serving the /ws WebSocket route"
+  type        = string
+}
+
+variable "enable_adaptive_protection" {
+  description = "Cloud Armor Adaptive Protection (layer 7 DDoS defence). Requires Cloud Armor Enterprise, which is billed separately."
+  type        = bool
+  default     = false
+}
+
+variable "dns_zone_name" {
+  description = "Cloud DNS managed zone this edge adds its records to, from the platform layer. Empty means DNS is managed elsewhere and no records or Certificate Manager resources are created."
+  type        = string
+  default     = ""
+}
+
+variable "use_certificate_manager" {
+  description = "Serve from the Certificate Manager map instead of the classic managed certificate. Flip only once the certificate reports ACTIVE (SEC-5)."
+  type        = bool
+  default     = false
 }

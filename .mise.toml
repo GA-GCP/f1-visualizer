@@ -1,0 +1,9 @@
+# DLV-5: there was no .tool-versions and no mise.toml, so a contributor's
+# OpenTofu and Terragrunt were whatever they had installed — and Terragrunt was
+# not installed at all on the machine the audit ran on. These are the versions
+# cloudbuild/infrastructure.yaml pins, in one place both it and a developer read.
+#
+#   mise install
+[tools]
+opentofu = "1.12.6"
+terragrunt = "1.1.4"

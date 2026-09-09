@@ -2,16 +2,10 @@ include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
-terraform {
-  source = "../../../modules/cloud-run-frontend"
-}
-
-inputs = {
-  project_id   = "f1v-example-project"
-  region       = "us-central1"
-  service_name = "f1v-webapp-dev"
-  image_url    = "us-central1-docker.pkg.dev/f1v-example-project/f1v-repo/frontend:latest-dev"
-
-  # IMPORTANT: This makes the React app accessible to the internet
-  is_public    = true
+# CPLX-3: the definition lives in _envcommon and the environment's facts live in
+# env.hcl. Anything below this is a real difference, not a copy.
+include "envcommon" {
+  path           = "${dirname(find_in_parent_folders("root.hcl"))}/_envcommon/f1v-webapp.hcl"
+  merge_strategy = "deep"
+  expose         = true
 }

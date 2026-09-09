@@ -1,14 +1,61 @@
+# CPLX-6: the eight table schemas were JSON heredocs inside HCL, which no JSON
+# tool could read and no editor could check. They are files under schemas/ now,
+# loaded with file() — which also means the Java tests can assert against the
+# same definitions the tables are created from, rather than a transcription.
 resource "google_bigquery_dataset" "f1_dataset" {
-  dataset_id                  = "f1_dataset" # Hardcoded to match Java constant
+  # CPLX-2: this was hard-coded to "f1_dataset", declared only in
+  # environments/dev, and read and written by all three environments — so a UAT
+  # historical load wrote into the tables prod reads. The backend has honoured
+  # F1V_BIGQUERY_DATASET since C4; nothing ever set it.
+  dataset_id                  = var.dataset_id
   friendly_name               = "F1 Telemetry Data (${var.environment})"
   description                 = "Storage for historical lap times and telemetry for F1 Visualizer"
   location                    = var.location
   project                     = var.project_id
   default_table_expiration_ms = null # Data persists forever
 
-  labels = {
-    env = var.environment
-  }
+  # PERF-6: seven days of time travel on tables that only ever grow by append.
+  # Two days still covers "undo the load that just went wrong", which is the only
+  # recovery this data needs, and stops paying to keep five more days of a
+  # snapshot of the largest table in the project.
+  max_time_travel_hours = var.max_time_travel_hours
+
+  # PERF-6: telemetry and locations rows compress hard, and logical billing bills
+  # the uncompressed size. PHYSICAL is usually the cheaper of the two here — but
+  # it is a 14-day commitment once set, so it stays off until the ratio is
+  # measured rather than assumed:
+  #
+  #   SELECT table_name,
+  #          SUM(total_logical_bytes)  AS logical,
+  #          SUM(total_physical_bytes) AS physical
+  #   FROM `<project>.<dataset>.INFORMATION_SCHEMA.TABLE_STORAGE`
+  #   GROUP BY table_name ORDER BY logical DESC
+  #
+  # Switch when logical is comfortably more than physical across the dataset.
+  storage_billing_model = var.storage_billing_model
+
+}
+
+# SEC-3: roles/bigquery.dataEditor and roles/bigquery.dataViewer were project
+# level, so every BigQuery identity could read and write every dataset. Granted
+# on the dataset instead. roles/bigquery.jobUser stays at project level, since
+# running a query job genuinely is a project-scoped permission.
+resource "google_bigquery_dataset_iam_member" "editors" {
+  for_each = toset(var.dataset_editors)
+
+  project    = var.project_id
+  dataset_id = google_bigquery_dataset.f1_dataset.dataset_id
+  role       = "roles/bigquery.dataEditor"
+  member     = each.value
+}
+
+resource "google_bigquery_dataset_iam_member" "viewers" {
+  for_each = toset(var.dataset_viewers)
+
+  project    = var.project_id
+  dataset_id = google_bigquery_dataset.f1_dataset.dataset_id
+  role       = "roles/bigquery.dataViewer"
+  member     = each.value
 }
 
 # 1. LAPS TABLE (Used by RaceAnalysisService)
@@ -17,22 +64,14 @@ resource "google_bigquery_table" "laps" {
   table_id   = "laps"
   project    = var.project_id
 
+  # PERF-6: read by session_key on every request and scanned end to end, because
+  # this table is neither partitioned nor clustered. There is no date column to
+  # partition on, so clustering is what bounds the scan. telemetry and locations
+  # have had this since P2.
+  clustering = ["session_key", "driver_number"]
+
   # Schema matching LapDataRecord.java + OpenF1 fields
-  schema = <<EOF
-[
-  { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "meeting_key", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "lap_number", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "lap_duration", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "sector_1_duration", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "sector_2_duration", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "sector_3_duration", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "compound", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "date_start", "type": "TIMESTAMP", "mode": "NULLABLE" },
-  { "name": "is_pit_out_lap", "type": "BOOLEAN", "mode": "NULLABLE" }
-]
-EOF
+  schema = file("${path.module}/schemas/laps.json")
 }
 
 # 2. TELEMETRY TABLE (For detailed historical replays)
@@ -54,20 +93,7 @@ resource "google_bigquery_table" "telemetry" {
 
   clustering = ["session_key", "driver_number"]
 
-  schema = <<EOF
-[
-  { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "meeting_key", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "date", "type": "TIMESTAMP", "mode": "REQUIRED" },
-  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "speed", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "rpm", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "gear", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "throttle", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "brake", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "drs", "type": "INTEGER", "mode": "NULLABLE" }
-]
-EOF
+  schema = file("${path.module}/schemas/telemetry.json")
 }
 
 # 3. DRIVERS TABLE (Reference Data)
@@ -76,16 +102,7 @@ resource "google_bigquery_table" "drivers" {
   table_id   = "drivers"
   project    = var.project_id
 
-  schema = <<EOF
-[
-  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "broadcast_name", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "name_acronym", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "team_name", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "team_colour", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "country_code", "type": "STRING", "mode": "NULLABLE" }
-]
-EOF
+  schema = file("${path.module}/schemas/drivers.json")
 }
 
 # 4. SESSIONS TABLE (Reference Data)
@@ -94,18 +111,7 @@ resource "google_bigquery_table" "sessions" {
   table_id   = "sessions"
   project    = var.project_id
 
-  schema = <<EOF
-[
-  { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "session_name", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "meeting_key", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "meeting_name", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "year", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "country_name", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "date_start", "type": "TIMESTAMP", "mode": "NULLABLE" },
-  { "name": "date_end", "type": "TIMESTAMP", "mode": "NULLABLE" }
-]
-EOF
+  schema = file("${path.module}/schemas/sessions.json")
 }
 
 # 5. LOCATIONS TABLE (For Circuit Trace Replay)
@@ -125,17 +131,7 @@ resource "google_bigquery_table" "locations" {
 
   clustering = ["session_key", "driver_number"]
 
-  schema = <<EOF
-[
-  { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "meeting_key", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "date", "type": "TIMESTAMP", "mode": "REQUIRED" },
-  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "x", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "y", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "z", "type": "INTEGER", "mode": "NULLABLE" }
-]
-EOF
+  schema = file("${path.module}/schemas/locations.json")
 }
 
 # 6. RESULTS TABLE (For Versus Mode Stats)
@@ -144,13 +140,13 @@ resource "google_bigquery_table" "results" {
   table_id   = "results"
   project    = var.project_id
 
-  schema = <<EOF
-[
-  { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "position", "type": "INTEGER", "mode": "NULLABLE" }
-]
-EOF
+  # PERF-6: read by session_key on every request and scanned end to end, because
+  # this table is neither partitioned nor clustered. There is no date column to
+  # partition on, so clustering is what bounds the scan. telemetry and locations
+  # have had this since P2.
+  clustering = ["session_key", "driver_number"]
+
+  schema = file("${path.module}/schemas/results.json")
 }
 
 # 7. SESSION_DRIVERS TABLE (Per-race driver rosters with team at time of race)
@@ -159,18 +155,13 @@ resource "google_bigquery_table" "session_drivers" {
   table_id   = "session_drivers"
   project    = var.project_id
 
-  schema = <<EOF
-[
-  { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "year", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "broadcast_name", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "name_acronym", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "team_name", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "team_colour", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "country_code", "type": "STRING", "mode": "NULLABLE" }
-]
-EOF
+  # PERF-6: read by session_key on every request and scanned end to end, because
+  # this table is neither partitioned nor clustered. There is no date column to
+  # partition on, so clustering is what bounds the scan. telemetry and locations
+  # have had this since P2.
+  clustering = ["session_key", "year"]
+
+  schema = file("${path.module}/schemas/session_drivers.json")
 }
 
 # 8. DRIVER_STATS TABLE (Precomputed radar and career figures)
@@ -185,22 +176,7 @@ resource "google_bigquery_table" "driver_stats" {
   table_id   = "driver_stats"
   project    = var.project_id
 
-  schema = <<EOF
-[
-  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "avg_position", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "position_stddev", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "full_throttle_pct", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "avg_stint_length", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "total_races", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "wins", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "podiums", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "total_points", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "best_finish", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "teams_list", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "computed_at", "type": "TIMESTAMP", "mode": "REQUIRED" }
-]
-EOF
+  schema = file("${path.module}/schemas/driver_stats.json")
 }
 
 # 9. INGESTION_JOBS TABLE is deliberately absent: job status lives in Firestore,

@@ -8,7 +8,7 @@
 #
 # Required substitutions: _MODULE, _IMAGE, _SERVICE.
 # ==========================================
-serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com'
+serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-deploy-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com'
 
 substitutions:
   _ENV: 'dev'

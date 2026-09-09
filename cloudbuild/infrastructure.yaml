@@ -4,7 +4,7 @@
 # Installs and verifies its toolchain, scans the IaC, plans every unit to a
 # saved plan file, then applies exactly those plans.
 # ==========================================
-serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com'
+serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-infra-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com'
 
 # REL-10: no timeout was set, so Cloud Build's 10 minute default applied to a run
 # that downloads a toolchain and applies up to sixteen units — one of which can

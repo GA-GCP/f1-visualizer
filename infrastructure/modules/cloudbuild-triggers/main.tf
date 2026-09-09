@@ -84,7 +84,7 @@ resource "google_cloudbuild_trigger" "backend" {
     _SERVICE   = each.value.service
   }
 
-  service_account = "projects/${var.project_id}/serviceAccounts/${var.cloudbuild_service_account_email}"
+  service_account = "projects/${var.project_id}/serviceAccounts/${var.deploy_service_account_email}"
 }
 
 # --- Frontend Trigger ---
@@ -117,7 +117,7 @@ resource "google_cloudbuild_trigger" "frontend" {
     _REGION    = var.region
   }
 
-  service_account = "projects/${var.project_id}/serviceAccounts/${var.cloudbuild_service_account_email}"
+  service_account = "projects/${var.project_id}/serviceAccounts/${var.deploy_service_account_email}"
 }
 
 # --- Infrastructure Trigger ---
@@ -163,5 +163,7 @@ resource "google_cloudbuild_trigger" "infrastructure" {
     _REGION    = var.region
   }
 
-  service_account = "projects/${var.project_id}/serviceAccounts/${var.cloudbuild_service_account_email}"
+  # SEC-1: the only trigger that runs the infrastructure identity. Everything
+  # else here executes third-party build code and must not be able to change IAM.
+  service_account = "projects/${var.project_id}/serviceAccounts/${var.infra_service_account_email}"
 }

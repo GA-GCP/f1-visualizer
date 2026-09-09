@@ -18,7 +18,9 @@
 - [ ] `yarn size` is within budget, or the budget change is justified in the diff
 - [ ] UI changes include a before/after screenshot
 - [ ] Commit messages are Conventional Commits — they become the CHANGELOG
-- [ ] Infrastructure changes include the `tofu plan` output
+- [ ] Infrastructure changes: the plan CI posted has been read, and anything it
+      destroys or replaces is called out below
+- [ ] Breaking changes are marked `!` and the migration is written down
 - [ ] Anything deliberately left out is called out below
 
 ## Notes for the reviewer

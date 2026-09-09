@@ -8,25 +8,23 @@
 # Dependabot uses a different permission model than GitHub Actions, so it is not
 # affected by the "Actions is not permitted to create pull requests" setting.
 #
-# -----------------------------------------------------------------------------
-# TEMPORARY: interval is `daily` while we confirm this config actually runs.
-# -----------------------------------------------------------------------------
-# It was added on a Tuesday with `interval: weekly, day: monday`, so the first
-# scheduled run was six days out and the Dependabot job page had no rows — and
-# therefore no per-ecosystem "Check for updates" button to press. Daily gets a
-# definitive answer within 24 hours instead of an inference from an empty page.
+# The `daily` interval this carried was explicitly temporary — it was there to
+# confirm the config ran at all, because the first weekly run was six days out
+# and the job page had no rows to press "Check for updates" on. It has since run:
+# PRs #148 through #151 are merged Dependabot updates. Back to the intended
+# weekly cadence.
 #
-# Revert to weekly once a run has appeared at
-# https://github.com/GA-GCP/f1-visualizer/network/updates
-# by changing each `interval: daily` back to:
-#
-#     interval: weekly
-#     day: monday
-#
-# Leaving it on daily is not harmful — the grouping and the PR limits below cap
-# the volume either way — but weekly is the intended cadence, and a daily poll
-# on a project this size is noise for no extra signal.
+# `cooldown` is the other change. Dependabot would otherwise open a PR for a
+# release published minutes ago, which is precisely the window in which a
+# compromised or broken release is still unnoticed. Waiting a few days costs
+# nothing on a project this size and takes us out of the blast radius of the
+# npm-style attacks that depend on being merged fast.
 version: 2
+
+# Applies to every ecosystem below.
+cooldown:
+  default-days: 5
+  semver-major-days: 14
 
 updates:
   # ---------------------------------------------------------------------------
@@ -38,10 +36,8 @@ updates:
   - package-ecosystem: npm
     directory: /frontend
     schedule:
-      # TEMPORARY — see the note at the top of this file. Revert to:
-      #   interval: weekly
-      #   day: monday
-      interval: daily
+      interval: weekly
+      day: monday
       time: '06:00'
       timezone: America/New_York
     open-pull-requests-limit: 5
@@ -67,10 +63,8 @@ updates:
   - package-ecosystem: docker
     directory: /frontend
     schedule:
-      # TEMPORARY — see the note at the top of this file. Revert to:
-      #   interval: weekly
-      #   day: monday
-      interval: daily
+      interval: weekly
+      day: monday
       time: '06:00'
       timezone: America/New_York
     open-pull-requests-limit: 3
@@ -88,10 +82,8 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      # TEMPORARY — see the note at the top of this file. Revert to:
-      #   interval: weekly
-      #   day: monday
-      interval: daily
+      interval: weekly
+      day: monday
       time: '06:00'
       timezone: America/New_York
     open-pull-requests-limit: 3
@@ -112,10 +104,8 @@ updates:
   - package-ecosystem: maven
     directory: /backend
     schedule:
-      # TEMPORARY — see the note at the top of this file. Revert to:
-      #   interval: weekly
-      #   day: monday
-      interval: daily
+      interval: weekly
+      day: monday
       time: '06:00'
       timezone: America/New_York
     open-pull-requests-limit: 5
@@ -136,10 +126,8 @@ updates:
   - package-ecosystem: docker
     directory: /backend
     schedule:
-      # TEMPORARY — see the note at the top of this file. Revert to:
-      #   interval: weekly
-      #   day: monday
-      interval: daily
+      interval: weekly
+      day: monday
       time: '06:00'
       timezone: America/New_York
     open-pull-requests-limit: 3
@@ -164,10 +152,8 @@ updates:
     directories:
       - /infrastructure/modules/*
     schedule:
-      # TEMPORARY — see the note at the top of this file. Revert to:
-      #   interval: weekly
-      #   day: monday
-      interval: daily
+      interval: weekly
+      day: monday
       time: '06:00'
       timezone: America/New_York
     open-pull-requests-limit: 3

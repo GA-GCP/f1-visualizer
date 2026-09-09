@@ -17,25 +17,40 @@ on:
     - cron: '0 11 * * 1'
   workflow_dispatch:
 
-permissions:
-  contents: read
-  issues: write
+permissions: {}
+
+# One run at a time. A manual dispatch during the scheduled run would otherwise
+# race it and could open the issue twice.
+concurrency:
+  group: pinned-versions
+  cancel-in-progress: false
 
 jobs:
   check:
     name: Check pinned tool and image versions
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - id: check
         name: Compare pins against latest releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           report=""
 
+          # Authenticated: the anonymous API allows 60 requests an hour per
+          # runner IP, which is shared and frequently already exhausted.
           latest_release() {
-            curl -fsSL "https://api.github.com/repos/$1/releases/latest" \
+            curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/$1/releases/latest" \
               | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'].lstrip('v'))"
           }
 
@@ -48,6 +63,18 @@ jobs:
             have="$(current "$key")"
             want="$(latest_release "$repo")"
             if [ "$have" != "$want" ]; then
+              report="${report}- \`${key}\`: ${have} → **${want}** (${repo})"$'\n'
+            fi
+          done
+
+          # The two workflow linters in pr-checks.yml. Neither is a Dependabot
+          # ecosystem: actionlint is a release download and zizmor is a pinned
+          # pipx install, so nothing else would notice them going stale.
+          for pair in "rhysd/actionlint:ACTIONLINT_VERSION" "zizmorcore/zizmor:ZIZMOR_VERSION"; do
+            repo="${pair%%:*}"; key="${pair##*:}"
+            have="$(grep -oE "$key: [0-9.]+" .github/workflows/pr-checks.yml | head -1 | awk '{print $2}')"
+            want="$(latest_release "$repo")"
+            if [ -n "$have" ] && [ "$have" != "$want" ]; then
               report="${report}- \`${key}\`: ${have} → **${want}** (${repo})"$'\n'
             fi
           done
@@ -69,7 +96,7 @@ jobs:
 
       - name: Open or update the issue
         if: steps.check.outputs.report != ''
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           REPORT: ${{ steps.check.outputs.report }}
         with:

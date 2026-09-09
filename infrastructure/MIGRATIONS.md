@@ -142,7 +142,45 @@ whose certificate is still PROVISIONING takes HTTPS down for that domain.
 
 ---
 
-## 4. Switch the CI identities
+## 4. Move Cloud Build to a managed repository connection
+
+**Why:** CPLX-8. The triggers use the first-generation `github {}` block, whose
+repository connection was created by hand in the console. It is unmanaged state
+that nothing in this repository records, and a new project cannot reproduce it.
+
+**Both generations are implemented.** The triggers keep the first-generation
+block while `cloudbuild_repository_id` is empty, which it is.
+
+```bash
+P=f1-visualizer-488201
+
+# 1. Install the Cloud Build GitHub App on the repository and note the
+#    installation id from the URL of the app's settings page.
+#    https://github.com/settings/installations
+
+# 2. Put a PAT with `repo` scope in Secret Manager and grant the Cloud Build
+#    service agent access to it.
+printf '%s' "$GITHUB_PAT" | gcloud secrets create f1v-github-token --data-file=- --project="$P"
+gcloud secrets add-iam-policy-binding f1v-github-token --project="$P" \
+  --member="serviceAccount:service-$(gcloud projects describe "$P" --format='value(projectNumber)')@gcp-sa-cloudbuild.iam.gserviceaccount.com" \
+  --role=roles/secretmanager.secretAccessor
+
+# 3. Set both values in infrastructure/platform/terragrunt.hcl and apply:
+#      github_app_installation_id  = "<installation id>"
+#      github_token_secret_version = "projects/<number>/secrets/f1v-github-token/versions/1"
+cd infrastructure/platform && terragrunt apply
+
+# 4. Take the repository id and set cloudbuild_repository_id in
+#    _envcommon/cloudbuild-triggers.hcl, then apply one environment at a time.
+terragrunt output -raw cloudbuild_repository_id
+```
+
+Applying step 4 replaces every trigger, because the event source is not an
+in-place change. Do dev first and confirm a push still builds before promoting.
+
+---
+
+## 5. Switch the CI identities
 
 See **Migrating an existing environment** in `README.md`. `sa-f1v-cloudbuild-<env>`
 is deleted by the same apply that creates `sa-f1v-deploy-<env>` and

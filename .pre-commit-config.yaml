@@ -1,0 +1,67 @@
+# DLV-8: nothing ran tofu fmt, terragrunt hcl fmt, tflint or trivy before a push.
+# The frontend has Prettier and the backend binds its checks to `verify`; the
+# infrastructure had neither, so the three formatting failures the audit found
+# were only ever going to be noticed in review — and reviewers spent time on
+# whitespace instead of on the change.
+#
+#   pip install pre-commit && pre-commit install
+#
+# Everything here also runs in CI (DLV-3); this is about finding it in a second
+# rather than in five minutes.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: end-of-file-fixer
+        files: ^infrastructure/
+      - id: trailing-whitespace
+        files: ^infrastructure/
+      - id: check-yaml
+        files: ^(cloudbuild/|\.github/)
+      - id: check-merge-conflict
+
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.99.5
+    hooks:
+      # OpenTofu is a drop-in for these; the hooks shell out to `terraform` by
+      # name, so set TERRAFORM_BINARY=tofu or keep a `terraform` shim on PATH.
+      - id: terraform_fmt
+        files: ^infrastructure/.*\.tf$
+
+      - id: terraform_validate
+        files: ^infrastructure/modules/.*\.tf$
+        args:
+          - --tf-init-args=-backend=false
+          - --tf-init-args=-lockfile=readonly
+
+      - id: terraform_tflint
+        files: ^infrastructure/modules/.*\.tf$
+        args:
+          - --args=--config=__GIT_WORKING_DIR__/infrastructure/.tflint.hcl
+
+      # CPLX-6: regenerates the inputs and outputs table between the
+      # BEGIN_TF_DOCS markers, so module READMEs cannot drift from their
+      # variables the way README.md drifted from the code (OPS-5).
+      - id: terraform_docs
+        files: ^infrastructure/modules/
+        args:
+          - --hook-config=--path-to-file=README.md
+          - --hook-config=--add-to-existing-file=true
+
+      # Scans the source, which is the fast pass. The one that sees resolved
+      # values runs against a plan in cloudbuild/infrastructure.yaml (DLV-4).
+      - id: terraform_trivy
+        files: ^infrastructure/
+        args:
+          - --args=--severity=CRITICAL,HIGH
+          - --args=--ignorefile=__GIT_WORKING_DIR__/infrastructure/.trivyignore
+
+  - repo: local
+    hooks:
+      # No upstream hook covers Terragrunt's own HCL, and it is most of this tree.
+      - id: terragrunt-hcl-fmt
+        name: terragrunt hcl fmt
+        entry: terragrunt hcl fmt --working-dir infrastructure
+        language: system
+        pass_filenames: false
+        files: ^infrastructure/.*\.hcl$

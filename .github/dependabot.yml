@@ -147,3 +147,34 @@ updates:
       prefix: build
       include: scope
 
+  # ---------------------------------------------------------------------------
+  # OpenTofu provider constraints (DLV-5, DLV-6).
+  # ---------------------------------------------------------------------------
+  # There was nothing for Dependabot to update here until DLV-5 stopped ignoring
+  # .terraform.lock.hcl. Now that the locks are committed, this is what keeps
+  # `~> 8.1` from freezing at whatever 8.x it resolved on the day it was written.
+  #
+  # Dependabot updates the constraint in versions.tf and the lock alongside it.
+  # The locks carry hashes for linux_amd64 and darwin_arm64; if a bump arrives
+  # with one platform only, regenerate with:
+  #
+  #   tofu -chdir=infrastructure/modules/<m> providers lock \
+  #     -platform=linux_amd64 -platform=darwin_arm64
+  - package-ecosystem: terraform
+    directories:
+      - /infrastructure/modules/*
+    schedule:
+      # TEMPORARY — see the note at the top of this file. Revert to:
+      #   interval: weekly
+      #   day: monday
+      interval: daily
+      time: '06:00'
+      timezone: America/New_York
+    open-pull-requests-limit: 3
+    groups:
+      terraform-providers:
+        patterns: ['*']
+        update-types: [minor, patch]
+    commit-message:
+      prefix: build
+      include: scope

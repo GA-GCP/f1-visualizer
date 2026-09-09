@@ -35,4 +35,10 @@ inputs = {
   # cannot change IAM; the one that runs terragrunt does not run third-party code.
   deploy_service_account_email = dependency.iam.outputs.sa_deploy_email
   infra_service_account_email  = dependency.iam.outputs.sa_infra_email
+
+  # CPLX-8: empty keeps the 1st-gen github block. When the platform layer creates
+  # the connection, set this to its `cloudbuild_repository_id` output — it is
+  # written out rather than read from a dependency, because depending across the
+  # layer boundary would pull the platform unit into an environment's `run --all`.
+  cloudbuild_repository_id = ""
 }

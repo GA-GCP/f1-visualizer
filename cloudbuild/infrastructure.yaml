@@ -33,6 +33,10 @@ options:
     # provider cache server serves all of them from one copy.
     - 'TG_PROVIDER_CACHE=1'
     - 'TG_PROVIDER_CACHE_DIR=/workspace/.tg-provider-cache'
+    # DLV-7: --non-interactive is passed on each command line below; this covers
+    # anything that forgets to, and anything Terragrunt prompts for that is not a
+    # command flag.
+    - 'TG_NON_INTERACTIVE=true'
 
 steps:
   # 1. Install OpenTofu + Terragrunt into /workspace/bin (persists across steps),

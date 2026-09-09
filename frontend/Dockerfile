@@ -66,4 +66,8 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 8080
 
 # 4. Start Nginx
+# The base is nginxinc/nginx-unprivileged, which runs as uid 101 and listens on
+# 8080 for exactly that reason. Semgrep cannot resolve a base image's default
+# USER; the unprivileged variant is the whole point of choosing it.
+# nosemgrep: dockerfile.security.missing-user.missing-user
 CMD ["nginx", "-g", "daemon off;"]

@@ -1,0 +1,155 @@
+# ==========================================
+# Semgrep — full scan
+# ==========================================
+# The PR job is diff-aware: it fails only on findings a PR introduces, so nobody
+# is blocked by something that was already there. That is the right trade for a
+# gate, but it means a pre-existing finding is never reported by anyone.
+#
+# This is where they are reported. A full scan, weekly, with the result kept in a
+# single issue that is updated rather than reopened — so the count is visible and
+# a regression in the baseline is a diff on one issue, not a new notification.
+#
+# It also catches drift in the community rulesets, which are fetched from the
+# registry at run time and are the one unpinned input in this pipeline.
+name: Semgrep full scan
+
+on:
+  schedule:
+    - cron: '0 12 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: semgrep-full
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    name: Full repository scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Semgrep
+        env:
+          SEMGREP_VERSION: 1.176.1
+        run: |
+          set -euo pipefail
+          pipx install "semgrep==$SEMGREP_VERSION"
+          semgrep --version
+
+      - name: Test the rules
+        run: semgrep --test --metrics=off .semgrep
+
+      # No --error: a full scan reports, it does not gate. Nobody is mid-change
+      # when this runs, so failing the job would only produce a red mark on a
+      # schedule with no PR to attach it to.
+      - name: Scan
+        run: |
+          set -uo pipefail
+          semgrep scan \
+            --config=.semgrep \
+            --config=p/default \
+            --config=p/java \
+            --config=p/typescript \
+            --config=p/react \
+            --config=p/terraform \
+            --config=p/dockerfile \
+            --exclude-rule=package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown \
+            --metrics=off \
+            --json --output=semgrep-full.json \
+            --text
+
+      - name: Report
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const title = 'Semgrep: full scan findings';
+
+            let results = [];
+            try {
+              results = JSON.parse(fs.readFileSync('semgrep-full.json', 'utf8')).results ?? [];
+            } catch {
+              core.setFailed('Semgrep produced no output — see the scan step.');
+              return;
+            }
+
+            const byRule = new Map();
+            for (const r of results) {
+              const rule = r.check_id.split('.').pop();
+              if (!byRule.has(rule)) byRule.set(rule, { sev: r.extra.severity, hits: [] });
+              byRule.get(rule).hits.push(`${r.path}:${r.start.line}`);
+            }
+
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'semgrep',
+            });
+            const existing = open.find((i) => i.title === title);
+
+            if (results.length === 0) {
+              core.info('No findings.');
+              if (existing) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  state: 'closed',
+                });
+              }
+              return;
+            }
+
+            const sections = [...byRule.entries()]
+              .sort((a, b) => b[1].hits.length - a[1].hits.length)
+              .map(([rule, { sev, hits }]) => {
+                const shown = hits.slice(0, 20).map((h) => `- \`${h}\``).join('\n');
+                const more = hits.length > 20 ? `\n- …and ${hits.length - 20} more` : '';
+                return `### \`${rule}\` — ${sev}, ${hits.length} finding(s)\n\n${shown}${more}`;
+              })
+              .join('\n\n');
+
+            const body = [
+              `${results.length} finding(s) across ${byRule.size} rule(s), as of ${new Date().toISOString().slice(0, 10)}.`,
+              '',
+              'The PR gate is diff-aware, so none of these block a change. They are',
+              'here to be triaged: fixed, or suppressed with a reason next to the code.',
+              '',
+              sections,
+            ].join('\n');
+
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['semgrep'],
+              });
+            }
+
+      - name: Upload the full report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: semgrep-full-findings
+          path: semgrep-full.json
+          if-no-files-found: ignore
+          retention-days: 90

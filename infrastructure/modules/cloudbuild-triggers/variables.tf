@@ -30,3 +30,12 @@ variable "branch_pattern" {
 }
 
 
+
+# REL-6: this used to be assembled from project_id and environment inside the
+# module, so the triggers unit had no `dependency` on iam-and-secrets and
+# Terragrunt could apply it before the account existed. Passing the real output
+# makes the edge visible in the dependency graph.
+variable "cloudbuild_service_account_email" {
+  description = "Email of the service account each trigger runs as"
+  type        = string
+}

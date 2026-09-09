@@ -16,6 +16,10 @@ dependency "iam" {
   mock_outputs = {
     sa_replay_worker_email = "sa-f1v-replay-worker-prod@f1v-example-project.iam.gserviceaccount.com"
   }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
 }
 
 dependency "networking" {
@@ -23,6 +27,10 @@ dependency "networking" {
   mock_outputs = {
     vpc_access_connector_id = "projects/f1v-example-project/locations/us-central1/connectors/f1v-vpc-prod-conn-MOCK"
   }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
 }
 
 dependency "redis" {
@@ -32,6 +40,10 @@ dependency "redis" {
     redis_port           = 6379
     redis_auth_secret_id = "f1v-redis-auth-MOCK"
   }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
 }
 
 # ==============================================================================

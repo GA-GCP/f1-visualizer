@@ -14,6 +14,10 @@ dependency "user" {
   mock_outputs = {
     service_name = "f1v-service-user-uat"
   }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
 }
 
 dependency "analysis" {
@@ -21,6 +25,10 @@ dependency "analysis" {
   mock_outputs = {
     service_name = "f1v-service-data-analysis-uat"
   }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
 }
 
 dependency "ingestion" {
@@ -28,6 +36,10 @@ dependency "ingestion" {
   mock_outputs = {
     service_name = "f1v-service-data-ingestion-uat"
   }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
 }
 
 dependency "telemetry" {
@@ -35,6 +47,10 @@ dependency "telemetry" {
   mock_outputs = {
     service_name = "f1v-service-telemetry-uat"
   }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
 }
 
 inputs = {

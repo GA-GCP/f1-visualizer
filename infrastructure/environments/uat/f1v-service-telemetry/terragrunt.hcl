@@ -12,6 +12,10 @@ dependency "iam" {
   mock_outputs = {
     sa_telemetry_email = "sa-f1v-telemetry-uat@f1v-example-project.iam.gserviceaccount.com"
   }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
 }
 
 # 2. Dependency on Networking (For VPC Access Connector)
@@ -20,6 +24,10 @@ dependency "networking" {
   mock_outputs = {
     vpc_access_connector_id = "projects/f1v-example-project/locations/us-east1/connectors/f1v-vpc-uat-conn-MOCK"
   }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
 }
 
 # 3. Dependency on Redis (For Host/Port Environment Variables)
@@ -30,6 +38,10 @@ dependency "redis" {
     redis_port           = 6379
     redis_auth_secret_id = "f1v-redis-auth-MOCK"
   }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
 }
 
 inputs = {

@@ -17,6 +17,10 @@ dependency "iam" {
   mock_outputs = {
     sa_data_analysis_email = "sa-f1v-data-analysis-prod@f1v-example-project.iam.gserviceaccount.com"
   }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
 }
 
 inputs = {

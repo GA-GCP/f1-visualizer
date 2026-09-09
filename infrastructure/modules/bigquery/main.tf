@@ -10,6 +10,26 @@ resource "google_bigquery_dataset" "f1_dataset" {
   project                     = var.project_id
   default_table_expiration_ms = null # Data persists forever
 
+  # PERF-6: seven days of time travel on tables that only ever grow by append.
+  # Two days still covers "undo the load that just went wrong", which is the only
+  # recovery this data needs, and stops paying to keep five more days of a
+  # snapshot of the largest table in the project.
+  max_time_travel_hours = var.max_time_travel_hours
+
+  # PERF-6: telemetry and locations rows compress hard, and logical billing bills
+  # the uncompressed size. PHYSICAL is usually the cheaper of the two here — but
+  # it is a 14-day commitment once set, so it stays off until the ratio is
+  # measured rather than assumed:
+  #
+  #   SELECT table_name,
+  #          SUM(total_logical_bytes)  AS logical,
+  #          SUM(total_physical_bytes) AS physical
+  #   FROM `<project>.<dataset>.INFORMATION_SCHEMA.TABLE_STORAGE`
+  #   GROUP BY table_name ORDER BY logical DESC
+  #
+  # Switch when logical is comfortably more than physical across the dataset.
+  storage_billing_model = var.storage_billing_model
+
 }
 
 # SEC-3: roles/bigquery.dataEditor and roles/bigquery.dataViewer were project
@@ -39,6 +59,12 @@ resource "google_bigquery_table" "laps" {
   dataset_id = google_bigquery_dataset.f1_dataset.dataset_id
   table_id   = "laps"
   project    = var.project_id
+
+  # PERF-6: read by session_key on every request and scanned end to end, because
+  # this table is neither partitioned nor clustered. There is no date column to
+  # partition on, so clustering is what bounds the scan. telemetry and locations
+  # have had this since P2.
+  clustering = ["session_key", "driver_number"]
 
   # Schema matching LapDataRecord.java + OpenF1 fields
   schema = <<EOF
@@ -167,6 +193,12 @@ resource "google_bigquery_table" "results" {
   table_id   = "results"
   project    = var.project_id
 
+  # PERF-6: read by session_key on every request and scanned end to end, because
+  # this table is neither partitioned nor clustered. There is no date column to
+  # partition on, so clustering is what bounds the scan. telemetry and locations
+  # have had this since P2.
+  clustering = ["session_key", "driver_number"]
+
   schema = <<EOF
 [
   { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
@@ -181,6 +213,12 @@ resource "google_bigquery_table" "session_drivers" {
   dataset_id = google_bigquery_dataset.f1_dataset.dataset_id
   table_id   = "session_drivers"
   project    = var.project_id
+
+  # PERF-6: read by session_key on every request and scanned end to end, because
+  # this table is neither partitioned nor clustered. There is no date column to
+  # partition on, so clustering is what bounds the scan. telemetry and locations
+  # have had this since P2.
+  clustering = ["session_key", "year"]
 
   schema = <<EOF
 [

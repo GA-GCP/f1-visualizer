@@ -53,8 +53,12 @@ locals {
   # same-environment reference goes through a dependency output.
   deploy_service_account = "sa-f1v-deploy-uat@f1-visualizer-488201.iam.gserviceaccount.com"
 
-  # --- Sizing ---------------------------------------------------------------
-  # PERF-4 is where these stop being the same in every environment.
-  rest_min_instances = 1
-  worker_enabled     = true
+  # --- Sizing (PERF-4) -------------------------------------------------------
+  # The REST services scale to zero; a cold start on a release rehearsal is
+  # acceptable. The replay worker stays at one instance because a replay is
+  # exactly what uat exists to rehearse, and telemetry stays warm with it —
+  # a cold WebSocket backend is the failure they would be testing for.
+  rest_min_instances  = 0
+  telemetry_warm      = true
+  worker_enabled      = true
 }

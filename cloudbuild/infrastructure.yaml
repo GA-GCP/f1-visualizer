@@ -1,52 +1,82 @@
 # ==========================================
 # Pipeline: Infrastructure (OpenTofu + Terragrunt)
 # ==========================================
-# Installs tooling, runs a Trivy IaC security scan,
-# then plans and applies infrastructure changes.
+# Installs and verifies its toolchain, scans the IaC, plans every unit to a
+# saved plan file, then applies exactly those plans.
 # ==========================================
 serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/sa-f1v-cloudbuild-${_ENV}@$PROJECT_ID.iam.gserviceaccount.com'
+
+# REL-10: no timeout was set, so Cloud Build's 10 minute default applied to a run
+# that downloads a toolchain and applies up to sixteen units — one of which can
+# be a STANDARD_HA Memorystore instance (10-15 minutes to create) or a managed
+# certificate. A first apply in a new environment timed out half-applied.
+timeout: 3600s
 
 substitutions:
   _ENV: 'dev'
   _SHORT_SHA: 'manual-build'
   _TOFU_VERSION: '1.12.6'
   _TERRAGRUNT_VERSION: '1.1.4'
+  # DLV-2: step images pinned by digest, the way cloudbuild/frontend.yaml has
+  # pinned its four since fc84fa2. `alpine:3.24` and `aquasec/trivy:0.74.0` were
+  # tag-pinned only, so a moved tag would execute under the most privileged
+  # identity in the project and two runs of the same commit could differ.
+  # The tag is kept beside the digest for readability; the digest resolves.
+  _ALPINE_IMAGE: 'alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b'
+  _TRIVY_IMAGE: 'aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969'
 
 options:
   logging: CLOUD_LOGGING_ONLY
+  env:
+    # PERF-5: `run --all -- init` initialised sixteen units, each with its own
+    # .terragrunt-cache and its own ~100 MB Google provider download. Terragrunt's
+    # provider cache server serves all of them from one copy.
+    - 'TG_PROVIDER_CACHE=1'
+    - 'TG_PROVIDER_CACHE_DIR=/workspace/.tg-provider-cache'
 
 steps:
-  # 1. Install OpenTofu + Terragrunt into /workspace/bin (persists across steps)
-  - name: 'alpine:3.24'
+  # 1. Install OpenTofu + Terragrunt into /workspace/bin (persists across steps),
+  #    verifying each download against the checksums published with the release.
+  #
+  #    DLV-2: both were fetched with `curl -sL` from GitHub releases with no
+  #    verification at all. A substituted release asset would have run as the
+  #    identity that manages the whole estate.
+  - name: '${_ALPINE_IMAGE}'
     id: 'install-tools'
     entrypoint: 'sh'
     args:
       - '-c'
       - |
-        set -e
+        set -eu
         apk add --no-cache curl unzip
 
-        mkdir -p /workspace/bin
+        mkdir -p /workspace/bin /workspace/.tg-provider-cache
+        cd /tmp
 
-        # Install OpenTofu
         echo "Installing OpenTofu v${_TOFU_VERSION}..."
-        curl -sL "https://github.com/opentofu/opentofu/releases/download/v${_TOFU_VERSION}/tofu_${_TOFU_VERSION}_linux_amd64.zip" -o /tmp/tofu.zip
-        unzip -o /tmp/tofu.zip -d /workspace/bin/
+        TOFU_ZIP="tofu_${_TOFU_VERSION}_linux_amd64.zip"
+        TOFU_BASE="https://github.com/opentofu/opentofu/releases/download/v${_TOFU_VERSION}"
+        curl -fsSL -o "$$TOFU_ZIP"  "$$TOFU_BASE/$$TOFU_ZIP"
+        curl -fsSL -o tofu.sums     "$$TOFU_BASE/tofu_${_TOFU_VERSION}_SHA256SUMS"
+        grep " $$TOFU_ZIP\$" tofu.sums | sha256sum -c -
+        unzip -o "$$TOFU_ZIP" -d /workspace/bin/
         chmod +x /workspace/bin/tofu
 
-        # Install Terragrunt
         echo "Installing Terragrunt v${_TERRAGRUNT_VERSION}..."
-        curl -sL "https://github.com/gruntwork-io/terragrunt/releases/download/v${_TERRAGRUNT_VERSION}/terragrunt_linux_amd64" -o /workspace/bin/terragrunt
-        chmod +x /workspace/bin/terragrunt
+        TG_BASE="https://github.com/gruntwork-io/terragrunt/releases/download/v${_TERRAGRUNT_VERSION}"
+        curl -fsSL -o terragrunt_linux_amd64 "$$TG_BASE/terragrunt_linux_amd64"
+        curl -fsSL -o tg.sums                "$$TG_BASE/SHA256SUMS"
+        grep " terragrunt_linux_amd64\$" tg.sums | sha256sum -c -
+        install -m 0755 terragrunt_linux_amd64 /workspace/bin/terragrunt
 
-        echo "Tools installed:"
+        echo "Tools installed and verified:"
         /workspace/bin/tofu version
         /workspace/bin/terragrunt --version
 
   # 2. Trivy IaC Security Scan on All Modules
   #    tfsec is retired and folded into Trivy; this matches the scanner used
   #    by the GitHub Actions PR checks.
-  - name: 'aquasec/trivy:0.74.0'
+  - name: '${_TRIVY_IMAGE}'
     id: 'security-scan'
     args:
       - 'config'
@@ -58,37 +88,63 @@ steps:
       - 'infrastructure/modules/'
 
   # 3. Terragrunt Init
-  - name: 'alpine:3.24'
+  - name: '${_ALPINE_IMAGE}'
     id: 'terragrunt-init'
     entrypoint: 'sh'
     args:
       - '-c'
       - |
-        set -e
+        set -eu
         export PATH=/workspace/bin:$$PATH
         cd infrastructure/environments/${_ENV}
-        terragrunt run --all --non-interactive -- init
+        terragrunt run --all --non-interactive --parallelism 4 -- init
 
-  # 4. Terragrunt Plan
-  - name: 'alpine:3.24'
+  # 4. Terragrunt Plan, written to files
+  #
+  #    REL-5: the pipeline used to plan and then `apply -auto-approve`, which
+  #    re-plans. The apply could therefore differ from the plan that was logged,
+  #    and the logged plan was the only record anyone had. These are the plans
+  #    step 5 applies — nothing is recomputed.
+  - name: '${_ALPINE_IMAGE}'
     id: 'terragrunt-plan'
     entrypoint: 'sh'
     args:
       - '-c'
       - |
-        set -e
+        set -eu
         export PATH=/workspace/bin:$$PATH
+        rm -f /workspace/no-changes
         cd infrastructure/environments/${_ENV}
-        terragrunt run --all --non-interactive -- plan
 
-  # 5. Terragrunt Apply
-  - name: 'alpine:3.24'
+        set +e
+        terragrunt run --all --non-interactive --parallelism 4 \
+          --out-dir /workspace/plans -- plan -out=tfplan -detailed-exitcode
+        code=$$?
+        set -e
+
+        # -detailed-exitcode: 0 = no changes, 2 = changes planned, 1 = error.
+        # Anything else is unexpected and fails rather than defaulting to apply.
+        case "$$code" in
+          0) echo "No changes. Skipping apply." ; touch /workspace/no-changes ;;
+          2) echo "Changes planned." ;;
+          *) echo "ERROR: plan exited $$code" ; exit "$$code" ;;
+        esac
+
+  # 5. Terragrunt Apply — the saved plans, and only those
+  - name: '${_ALPINE_IMAGE}'
     id: 'terragrunt-apply'
     entrypoint: 'sh'
     args:
       - '-c'
       - |
-        set -e
+        set -eu
         export PATH=/workspace/bin:$$PATH
+
+        if [ -f /workspace/no-changes ]; then
+          echo "Plan reported no changes; nothing to apply."
+          exit 0
+        fi
+
         cd infrastructure/environments/${_ENV}
-        terragrunt run --all --non-interactive -- apply -auto-approve
+        terragrunt run --all --non-interactive --parallelism 4 \
+          --out-dir /workspace/plans -- apply tfplan

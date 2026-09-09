@@ -66,14 +66,24 @@ variable "max_instance_count" {
   default     = 5
 }
 variable "cpu" {
-  description = "CPU limit for the Cloud Run container (e.g., '1000m' = 1 vCPU, '2000m' = 2 vCPUs)"
+  description = "CPU limit (e.g. '1000m' = 1 vCPU, '2000m' = 2 vCPUs)"
   type        = string
   default     = "1000m"
+
+  validation {
+    condition     = can(regex("^[0-9]+m?$", var.cpu))
+    error_message = "cpu must be a millicore value like \"1000m\" or a whole number of vCPUs."
+  }
 }
 variable "memory" {
-  description = "Memory limit for the Cloud Run container (e.g., '512Mi', '1024Mi', '2Gi')"
+  description = "Memory limit (e.g. '256Mi', '1024Mi', '2Gi')"
   type        = string
   default     = "512Mi"
+
+  validation {
+    condition     = can(regex("^[0-9]+(Mi|Gi)$", var.memory))
+    error_message = "memory must be a value like \"512Mi\" or \"2Gi\"."
+  }
 }
 variable "timeout" {
   description = "Maximum request duration (e.g., '300s', '3600s'). Defaults to Cloud Run's 300s."

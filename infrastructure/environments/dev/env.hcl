@@ -57,7 +57,7 @@ locals {
   # Always-on compute in dev and uat cost about as much as prod: roughly $400 a
   # month across the estate for latency in environments with no users overnight.
   # Nothing here is user-facing, so nothing here stays warm.
-  rest_min_instances  = 0
-  telemetry_warm      = false
-  worker_enabled      = false
+  rest_min_instances = 0
+  telemetry_warm     = false
+  worker_enabled     = false
 }

@@ -1,11 +1,20 @@
+# CPLX-6: prod must not be able to lose this by accident, and a module that lets
+# a caller forget is a module that will eventually be asked why.
 resource "google_firestore_database" "database" {
+  lifecycle {
+    precondition {
+      condition     = var.environment != "prod" || var.delete_protection
+      error_message = "prod requires delete_protection = true."
+    }
+  }
+
   project     = var.project_id
   name        = var.database_name
-  location_id = var.location_id
+  location_id = var.region
   type        = "FIRESTORE_NATIVE"
 
   # Important for non-prod environments to allow teardowns
-  delete_protection_state = var.delete_protection
+  delete_protection_state = var.delete_protection ? "DELETE_PROTECTION_ENABLED" : "DELETE_PROTECTION_DISABLED"
 
   # REL-9: without this, a bad write to user preferences or reference data is
   # unrecoverable — there is no undo and no earlier copy. PITR gives a seven-day

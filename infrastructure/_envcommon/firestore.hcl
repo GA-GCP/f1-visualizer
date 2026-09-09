@@ -15,9 +15,9 @@ terraform {
 inputs = {
   environment   = local.env.environment
   database_name = local.env.firestore_database_id
-  location_id   = local.env.region
+  region        = local.env.region
 
-  delete_protection = local.env.is_production ? "DELETE_PROTECTION_ENABLED" : "DELETE_PROTECTION_DISABLED"
+  delete_protection = local.env.is_production
 
   # REL-9: prod holds the only data here that is not derived from anything.
   point_in_time_recovery = local.env.is_production

@@ -9,8 +9,13 @@ variable "region" {
 }
 
 variable "environment" {
-  description = "Environment name (e.g., dev, uat, prod)"
+  description = "Environment name (dev, uat, prod)"
   type        = string
+
+  validation {
+    condition     = contains(["dev", "uat", "prod"], var.environment)
+    error_message = "environment must be dev, uat or prod."
+  }
 }
 
 variable "github_owner" {
@@ -24,9 +29,14 @@ variable "github_repo" {
 }
 
 variable "branch_pattern" {
-  description = "Regex pattern for branch to trigger on"
+  description = "Regex the pushed branch must match. One branch per environment: ^dev$, ^uat$, ^prod$."
   type        = string
   default     = "^main$"
+
+  validation {
+    condition     = can(regex("^\\^.*\\$$", var.branch_pattern))
+    error_message = "branch_pattern must be anchored with ^ and $, or it will match branches it was not meant to."
+  }
 }
 
 

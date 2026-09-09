@@ -18,6 +18,28 @@ resource "google_redis_instance" "f1v_cache" {
   redis_version = "REDIS_7_X"
   display_name  = "F1V Live Telemetry Cache (${var.environment})"
 
+  # REL-9: with no policy Google picks the window, which can land in the middle
+  # of a live session — a maintenance restart drops every WebSocket the telemetry
+  # service is fanning out to. Sunday early morning UTC is outside a race weekend
+  # session for every European and American round.
+  maintenance_policy {
+    weekly_maintenance_window {
+      day = "SUNDAY"
+      start_time {
+        hours   = var.maintenance_window_hour_utc
+        minutes = 0
+        seconds = 0
+        nanos   = 0
+      }
+    }
+  }
+
+  # REL-9: persistence is deliberately off. Everything here is derived — the live
+  # feed, replay buffers and replay state can all be rebuilt from BigQuery or
+  # from OpenF1 — so RDB snapshots would buy recovery of data that is cheaper to
+  # regenerate, at a write-latency cost on the hottest path in the system. Stated
+  # rather than left to the default, which is the same but says nothing.
+
   labels = {
     env = var.environment
   }

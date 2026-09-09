@@ -18,4 +18,10 @@ inputs = {
   location_id       = "us-central1"
 
   delete_protection = "DELETE_PROTECTION_ENABLED"
+
+  # REL-9: user preferences and reference data live here and are not derived
+  # from anything. Seven days of point-in-time recovery plus fourteen days of
+  # daily backups.
+  point_in_time_recovery = true
+  backup_retention_days  = 14
 }

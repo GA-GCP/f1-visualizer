@@ -11,19 +11,46 @@ terraform {
   source = "../../../modules/lb-api"
 }
 
-dependency "api_gateway" {
-  config_path = "../api-gateway"
+# CPLX-1 / REL-6: the NEGs used to name their Cloud Run services as bare strings,
+# so Terragrunt saw no edge between this unit and the services and could apply the
+# load balancer before they existed. These are real dependencies now.
+dependency "user" {
+  config_path = "../f1v-service-user"
   mock_outputs = {
-    default_hostname = "f1v-gateway-prod-placeholder.uc.gateway.dev"
+    service_name = "f1v-service-user-prod"
+  }
+}
+
+dependency "analysis" {
+  config_path = "../f1v-service-data-analysis"
+  mock_outputs = {
+    service_name = "f1v-service-data-analysis-prod"
+  }
+}
+
+dependency "ingestion" {
+  config_path = "../f1v-service-data-ingestion"
+  mock_outputs = {
+    service_name = "f1v-service-data-ingestion-prod"
+  }
+}
+
+dependency "telemetry" {
+  config_path = "../f1v-service-telemetry"
+  mock_outputs = {
+    service_name = "f1v-service-telemetry-prod"
   }
 }
 
 inputs = {
-  project_id             = "f1v-example-project"
-  region                 = "us-central1"
-  name_prefix            = "f1v-api-prod"
-  domain                 = "api.f1visualizer.com"
-  api_gateway_fqdn       = dependency.api_gateway.outputs.default_hostname
-  telemetry_service_name = "f1v-service-telemetry-prod"
-  frontend_origin        = "https://f1visualizer.com"
+  project_id      = "f1v-example-project"
+  region          = "us-central1"
+  name_prefix     = "f1v-api-prod"
+  domain          = "api.f1visualizer.com"
+  frontend_origin = "https://f1visualizer.com"
+
+  user_service_name      = dependency.user.outputs.service_name
+  analysis_service_name  = dependency.analysis.outputs.service_name
+  ingestion_service_name = dependency.ingestion.outputs.service_name
+  telemetry_service_name = dependency.telemetry.outputs.service_name
 }

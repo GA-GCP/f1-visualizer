@@ -38,12 +38,6 @@ resource "google_service_account" "user" {
   display_name = "F1V User Management Service Account (${var.environment})"
 }
 
-# API Gateway (mints ID tokens for the private Cloud Run backends)
-resource "google_service_account" "gateway" {
-  account_id   = "sa-f1v-gateway-${var.environment}"
-  display_name = "F1V API Gateway Backend Auth Service Account (${var.environment})"
-}
-
 # Frontend Webapp (Isolated)
 resource "google_service_account" "frontend" {
   account_id   = "sa-f1v-frontend-${var.environment}"
@@ -164,13 +158,6 @@ resource "google_project_iam_member" "user_datastore_user" {
 }
 
 # (Note: Frontend gets ZERO bindings, effectively isolating it completely)
-
-# -- API Gateway: Allow Cloud Build to Create/Update Gateways & Configs --
-resource "google_project_iam_member" "cloudbuild_apigateway_admin" {
-  project = var.project_id
-  role    = "roles/apigateway.admin"
-  member  = "serviceAccount:${google_service_account.cloudbuild.email}"
-}
 
 # -- Cloud Run: Ensure it can "Describe" services to get URLs --
 resource "google_project_iam_member" "cloudbuild_run_viewer" {

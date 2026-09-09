@@ -16,7 +16,6 @@ dependency "iam" {
   config_path = "../iam-and-secrets"
   mock_outputs = {
     sa_user_email = "sa-f1v-user-prod@f1v-example-project.iam.gserviceaccount.com"
-    sa_gateway_email = "sa-f1v-gateway-prod@f1v-example-project.iam.gserviceaccount.com"
   }
 }
 
@@ -30,11 +29,14 @@ inputs = {
   # O3: prod inherited the module's DEV/UAT default of false.
   deletion_protection = true
 
-  # S3: the *.run.app URL no longer answers the internet. Only the API Gateway's
-  # service account can invoke this service, and it presents an ID token minted
-  # for the service's own URL. In-app JWT validation stays, as defence in depth.
-  is_public                = false
-  invoker_service_accounts = [dependency.iam.outputs.sa_gateway_email]
+  # CPLX-1: reached through the API load balancer's serverless NEG, which
+  # cannot present an ID token — so the invoker binding is allUsers and the
+  # *.run.app URL is closed off with ingress instead. This is the arrangement
+  # telemetry has used since it started bypassing the gateway for WebSockets.
+  # The service still validates the Auth0 JWT itself, which is now the only
+  # place that happens rather than the second.
+  is_public = true
+  ingress   = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 
   # P4: Firestore reads are short; this is the one service where the default
   # is close to right, stated rather than inherited.

@@ -2,7 +2,18 @@ resource "google_cloud_run_v2_service" "service" {
   name     = var.service_name
   location = var.region
   project  = var.project_id
-  ingress  = "INGRESS_TRAFFIC_ALL"
+  # SEC-10, accepted rather than fixed. INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER
+  # would close the second public origin on *.run.app — the one that lets Cloud
+  # Armor, the CDN and the custom domain be walked around, and that nginx.conf
+  # carries three extra CSP branches for. It would also break the deploy gate:
+  # cloudbuild/frontend.yaml deploys with --no-traffic --tag, smoke tests the
+  # revision on its own tag URL, and only then promotes. That URL is reachable
+  # only because ingress is open, and a gate that runs before any user sees the
+  # revision is worth more than closing a duplicate origin on a static SPA.
+  #
+  # Revisit if the smoke test can be routed through the load balancer, for
+  # example by selecting the tag with a header rule in the URL map.
+  ingress = "INGRESS_TRAFFIC_ALL"
 
   deletion_protection = var.deletion_protection
 

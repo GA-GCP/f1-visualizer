@@ -1,31 +1,95 @@
+# ==============================================================================
+# API load balancer
+# ==============================================================================
+# CPLX-1 / PERF-3: this used to front an internet NEG pointing at API Gateway,
+# which then called the REST services over their public *.run.app URLs. Two extra
+# TLS terminations and a public hop in front of services that already validate the
+# same Auth0 JWT. The gateway's routing was seventeen operations of openapi.yaml
+# maintained by a pipeline that rewrote the spec with sed; the same routing is
+# four path prefixes here, because the load balancer matches on prefix.
+#
+# What went with it: the beta-only provider, the placeholder spec applied by IaC
+# and then ignored with `ignore_changes`, the Host-rewrite header, the gateway
+# service account and its per-service invoker bindings, and the reason the REST
+# services had to keep INGRESS_TRAFFIC_ALL.
+#
+# What we gave up: unlisted paths are no longer refused at the edge — they now
+# reach a service, where Spring's `anyRequest().authenticated()` answers 401 —
+# and per-route gateway metrics are replaced by load-balancer request logs
+# (OPS-2). Rate limiting moves to Cloud Armor (SEC-4).
+
+locals {
+  # The prefix each REST service owns. Both forms are listed because a URL map
+  # path rule matches the literal path or the prefix, not both from one entry.
+  rest_backends = {
+    users = {
+      service_name = var.user_service_name
+      paths        = ["/api/v1/users", "/api/v1/users/*"]
+    }
+    analysis = {
+      service_name = var.analysis_service_name
+      paths        = ["/api/v1/analysis", "/api/v1/analysis/*"]
+    }
+    ingestion = {
+      service_name = var.ingestion_service_name
+      paths        = ["/api/v1/ingestion", "/api/v1/ingestion/*"]
+    }
+  }
+}
+
 # Reserve a Global Static IP
 resource "google_compute_global_address" "default" {
   name    = "${var.name_prefix}-ip"
   project = var.project_id
 }
 
-# Internet NEG pointing to API Gateway
-resource "google_compute_global_network_endpoint_group" "internet_neg" {
-  name                  = "${var.name_prefix}-neg"
-  network_endpoint_type = "INTERNET_FQDN_PORT"
-  default_port          = 443
+# ==============================================================================
+# REST backends — one serverless NEG and one backend service per service
+# ==============================================================================
+resource "google_compute_region_network_endpoint_group" "rest_neg" {
+  for_each = local.rest_backends
+
+  name                  = "${var.name_prefix}-${each.key}-neg"
+  network_endpoint_type = "SERVERLESS"
+  region                = var.region
   project               = var.project_id
+
+  cloud_run {
+    service = each.value.service_name
+  }
 }
 
-resource "google_compute_global_network_endpoint" "api_gateway_endpoint" {
-  global_network_endpoint_group = google_compute_global_network_endpoint_group.internet_neg.name
-  project                       = var.project_id
-  fqdn                          = var.api_gateway_fqdn
-  port                          = 443
+resource "google_compute_backend_service" "rest" {
+  for_each = local.rest_backends
+
+  name                  = "${var.name_prefix}-${each.key}-backend"
+  protocol              = "HTTPS"
+  port_name             = "http"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+  project               = var.project_id
+
+  # REL-10: the gateway declared `deadline: 60.0` on every operation while the
+  # backend service in front of it left `timeout_sec` at its default of 30, so a
+  # slow BigQuery query returned a 504 from the edge while the gateway was still
+  # waiting. Stated here at the value the application was written against. For a
+  # serverless NEG the Cloud Run request timeout is the binding constraint, so
+  # this is the ceiling rather than the whole story.
+  timeout_sec = 60
+
+  backend {
+    group = google_compute_region_network_endpoint_group.rest_neg[each.key].id
+  }
 }
 
-
-# --- Serverless NEG for WebSocket Bypass ---
+# ==============================================================================
+# Telemetry backend — the WebSocket route, which has always bypassed the gateway
+# ==============================================================================
 resource "google_compute_region_network_endpoint_group" "telemetry_neg" {
   name                  = "${var.name_prefix}-telemetry-neg"
   network_endpoint_type = "SERVERLESS"
   region                = var.region
   project               = var.project_id
+
   cloud_run {
     service = var.telemetry_service_name
   }
@@ -38,49 +102,27 @@ resource "google_compute_backend_service" "telemetry_backend" {
   load_balancing_scheme = "EXTERNAL_MANAGED"
   project               = var.project_id
 
-  # CPLX-7: this backend used to carry a full set of Access-Control-Allow-*
-  # response headers. A browser does not apply CORS to a WebSocket handshake — it
-  # sends Origin and lets the server decide — and the SockJS XHR fallback that
-  # did need them was removed (frontend/src/config/env.ts; the client now opens
-  # /ws/websocket natively). They were answering nobody.
-
   backend {
     group = google_compute_region_network_endpoint_group.telemetry_neg.id
   }
 }
 
-# Backend Service (CRUCIAL: Host Header Rewrite)
-# NOTE: CORS response headers for this backend are handled by the URL Map's
-# cors_policy (see below), NOT by custom_response_headers here.  This avoids
-# duplicate Access-Control-Allow-* headers and — critically — lets the LB
-# respond to OPTIONS preflight requests directly (HTTP 204) without ever
-# forwarding them to the API Gateway, which eliminates the cascade:
-#   cold-start / rate-limit → non-2xx OPTIONS → CORS block → retry storm.
-resource "google_compute_backend_service" "default" {
-  name                  = "${var.name_prefix}-backend"
-  protocol              = "HTTPS"
-  load_balancing_scheme = "EXTERNAL_MANAGED"
-  project               = var.project_id
-
-  # API Gateway WILL REJECT the request if the Host header is our custom domain.
-  # We MUST rewrite it to the default gateway FQDN.
-  custom_request_headers = ["Host: ${var.api_gateway_fqdn}"]
-
-  backend {
-    group = google_compute_global_network_endpoint_group.internet_neg.id
-  }
-}
-
-# URL Map
-# The cors_policy on default_route_action makes the LB handle OPTIONS preflight
-# requests at the edge, responding with 204 + CORS headers WITHOUT forwarding
-# to the API Gateway.  This is essential because preflight failures cascade:
-# a non-2xx OPTIONS (from cold-start, rate-limit, or gateway misconfiguration)
-# causes the browser to block the real request, triggering retries that compound
-# the problem.  Handling CORS at the LB eliminates this entire failure mode.
+# ==============================================================================
+# URL map
+# ==============================================================================
+# Every REST rule carries its own cors_policy. That is not decoration: handling
+# OPTIONS at the edge with a 204 is what removed a documented cascade — a non-2xx
+# preflight (from a cold start or a rate limit) makes the browser block the real
+# request, whose retries then compound the cause. cors_policy does not inherit
+# into a path_rule from default_route_action, so it is stated per rule.
 resource "google_compute_url_map" "default" {
-  name            = "${var.name_prefix}-url-map"
-  default_service = google_compute_backend_service.default.id
+  name = "${var.name_prefix}-url-map"
+
+  # An unmatched path reaches the user service, which is the smallest of the
+  # three, and answers 401 or 404. The gateway used to refuse these at the edge;
+  # Cloud Armor's throttle rule (SEC-4) is what keeps that from being an
+  # amplification route.
+  default_service = google_compute_backend_service.rest["users"].id
   project         = var.project_id
 
   host_rule {
@@ -91,7 +133,6 @@ resource "google_compute_url_map" "default" {
   path_matcher {
     name = "api-paths"
 
-    # REST API routes → API Gateway, with LB-level CORS handling
     default_route_action {
       cors_policy {
         allow_origins     = [var.frontend_origin]
@@ -102,14 +143,40 @@ resource "google_compute_url_map" "default" {
       }
 
       weighted_backend_services {
-        backend_service = google_compute_backend_service.default.id
+        backend_service = google_compute_backend_service.rest["users"].id
         weight          = 100
       }
     }
 
-    # Route WebSockets directly to the Telemetry Cloud Run service.
-    # CORS for this path is handled by custom_response_headers on the
-    # telemetry backend service (cors_policy doesn't apply to path_rules).
+    dynamic "path_rule" {
+      for_each = local.rest_backends
+
+      content {
+        paths = path_rule.value.paths
+
+        route_action {
+          cors_policy {
+            # Required inside a path_rule's route_action, unlike in
+            # default_route_action where the provider defaults it.
+            disabled          = false
+            allow_origins     = [var.frontend_origin]
+            allow_methods     = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
+            allow_headers     = ["Authorization", "Cache-Control", "Content-Type"]
+            allow_credentials = true
+            max_age           = 3600
+          }
+
+          weighted_backend_services {
+            backend_service = google_compute_backend_service.rest[path_rule.key].id
+            weight          = 100
+          }
+        }
+      }
+    }
+
+    # WebSockets go straight to the telemetry service. No cors_policy: a browser
+    # does not apply CORS to a WebSocket handshake, and the SockJS XHR fallback
+    # that would have needed it is gone.
     path_rule {
       paths   = ["/ws", "/ws/*"]
       service = google_compute_backend_service.telemetry_backend.id

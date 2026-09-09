@@ -120,42 +120,6 @@ resource "google_cloudbuild_trigger" "frontend" {
   service_account = "projects/${var.project_id}/serviceAccounts/sa-f1v-cloudbuild-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
 }
 
-# --- API Gateway Trigger ---
-
-resource "google_cloudbuild_trigger" "api_gateway" {
-  name        = "f1v-api-gateway-${var.environment}"
-  description = "Deploys the API Gateway configuration on push to main"
-  project     = var.project_id
-  location    = var.region
-
-  github {
-    owner = var.github_owner
-    name  = var.github_repo
-
-    push {
-      branch = var.branch_pattern
-    }
-  }
-
-  included_files = [
-    "infrastructure/openapi.yaml",
-    "infrastructure/modules/**",
-    "cloudbuild/api-gateway.yaml",
-  ]
-
-  filename = "cloudbuild/api-gateway.yaml"
-
-  substitutions = {
-    _ENV            = var.environment
-    _SHORT_SHA      = "$SHORT_SHA"
-    _REGION         = var.region
-    _AUTH0_ISSUER   = var.auth0_issuer
-    _AUTH0_AUDIENCE = var.auth0_audience
-  }
-
-  service_account = "projects/${var.project_id}/serviceAccounts/sa-f1v-cloudbuild-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
-}
-
 # --- Infrastructure Trigger ---
 
 resource "google_cloudbuild_trigger" "infrastructure" {
@@ -175,11 +139,6 @@ resource "google_cloudbuild_trigger" "infrastructure" {
 
   included_files = [
     "infrastructure/**",
-  ]
-
-  # Exclude openapi.yaml — handled by the API Gateway trigger
-  ignored_files = [
-    "infrastructure/openapi.yaml",
   ]
 
   filename = "cloudbuild/infrastructure.yaml"

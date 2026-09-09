@@ -3,7 +3,7 @@
 # ==========================================
 # This Dockerfile is used exclusively by Cloud Build pipelines.
 # It receives pre-extracted Spring Boot JAR layers from the
-# build step (via java -Djarmode=layertools) and produces
+# build step (via java -Djarmode=tools extract --layers) and produces
 # a minimal distroless production image.
 #
 # For local development builds, use the standard Dockerfile.

@@ -20,6 +20,17 @@
             <groupId>com.elysianarts.f1.visualizer.commons</groupId>
             <artifactId>f1v-commons-web</artifactId>
         </dependency>
+        <!--
+          The auto-configuration that supplies RestClient.Builder. Boot 4 splits
+          this out of the web starter, so replacing WebClient with RestClient (C3)
+          removed the builder's provider along with WebFlux and left both services
+          unable to construct OpenF1Client at startup. Nothing caught it: the tests
+          build the client from a RestClient directly, never from the builder.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-restclient</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>mockwebserver</artifactId>

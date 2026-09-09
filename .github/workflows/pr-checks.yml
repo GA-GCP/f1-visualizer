@@ -76,7 +76,9 @@ jobs:
           STAGING=/tmp/f1v-image-staging
           mkdir -p "$STAGING"
           cd "$STAGING"
-          java -Djarmode=layertools -jar "$GITHUB_WORKSPACE/backend/$MODULE/target/"*.jar extract
+          # jarmode=tools, not layertools: Boot 4 removed the layertools jarmode.
+          java -Djarmode=tools -jar "$GITHUB_WORKSPACE/backend/$MODULE/target/"*.jar \
+            extract --layers --launcher --destination "$STAGING"
           docker build \
             -f "$GITHUB_WORKSPACE/backend/Dockerfile.ci" \
             -t f1v-backend:pr \

@@ -48,8 +48,9 @@ RUN --mount=type=cache,target=/root/.m2 \
     ./mvnw -B clean package -pl ${MODULE} -am -DskipTests
 
 # Extract the JAR layers
+# jarmode=tools, not layertools: Boot 4 removed the layertools jarmode.
 WORKDIR /app/${MODULE}
-RUN java -Djarmode=layertools -jar target/*.jar extract
+RUN java -Djarmode=tools -jar target/*.jar extract --layers --launcher --destination .
 
 # ==========================================
 # STAGE 2: Run in Distroless (Production)

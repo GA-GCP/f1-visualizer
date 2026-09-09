@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -31,6 +32,8 @@ import tools.jackson.databind.json.JsonMapper;
  * inserts are billed per byte.
  */
 @Slf4j
+/** Built only where a dataset is configured; see {@link BigQueryConfig}. */
+@ConditionalOnProperty(name = "f1v.bigquery.dataset")
 @Component
 public class BigQueryBatchWriter {
 

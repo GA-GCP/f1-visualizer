@@ -2,6 +2,7 @@ package com.elysianarts.f1.visualizer.commons.gcp.bq;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
@@ -13,6 +14,8 @@ import org.springframework.validation.annotation.Validated;
  * C6: this is validated, so a missing or blank value fails at startup rather than at the first
  * query.
  */
+/** Bound only where a dataset is configured; see {@link BigQueryConfig}. */
+@ConditionalOnProperty(name = "f1v.bigquery.dataset")
 @Validated
 @ConfigurationProperties("f1v.bigquery")
 public record BigQueryProperties(

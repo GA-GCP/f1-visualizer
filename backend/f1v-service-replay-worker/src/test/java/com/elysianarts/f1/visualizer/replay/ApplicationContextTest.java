@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.elysianarts.f1.visualizer.commons.api.openf1.client.OpenF1Client;
 import com.elysianarts.f1.visualizer.commons.api.openf1.service.OpenF1AuthService;
+import com.google.cloud.firestore.Firestore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,8 +22,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
  * the unit tests construct the client from a {@code RestClient} directly and the slice tests mock
  * it. The first thing to run the real artifact found it.
  *
- * <p>The GCP clients are mocked: they are built from {@code getDefaultInstance()} and would need
- * real credentials, which is a property of the environment rather than of the wiring this asserts.
+ * <p>BigQuery is mocked: it is built from {@code getDefaultInstance()} and would need real
+ * credentials, which is a property of the environment rather than of the wiring this asserts.
  */
 @SpringBootTest(
         properties = {
@@ -49,5 +50,19 @@ class ApplicationContextTest {
     void theOpenF1ClientAndItsAuthServiceAreWired() {
         assertThat(context.getBean(OpenF1Client.class)).isNotNull();
         assertThat(context.getBean(OpenF1AuthService.class)).isNotNull();
+    }
+
+    /**
+     * No Firestore client, because this service does not use Firestore.
+     *
+     * <p>Not housekeeping: Terraform gives the worker no Firestore settings, so when {@code
+     * commons-gcp} built one unconditionally the worker could not start on Cloud Run at all —
+     * {@code Could not resolve placeholder 'spring.cloud.gcp.firestore.project-id'}. Asserting the
+     * bean's absence catches that on any machine; asserting the context merely starts would not,
+     * since a developer with application-default credentials sees it pass either way.
+     */
+    @Test
+    void noFirestoreClientIsBuilt() {
+        assertThat(context.getBeanNamesForType(Firestore.class)).isEmpty();
     }
 }

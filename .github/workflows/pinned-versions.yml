@@ -80,13 +80,19 @@ jobs:
           done
 
           # Digest-pinned step images across all three pipelines.
-          for image in $(grep -ohE "[a-z0-9./-]+:[a-zA-Z0-9._-]+@sha256:[0-9a-f]{64}" cloudbuild/*.yaml | sort -u); do
+          #
+          # `while read` fed by process substitution, not `for ... in $(...)`:
+          # an image reference is a line, not a word (SC2013). Process
+          # substitution rather than a pipe so the loop runs in this shell and
+          # the `report` it appends to survives it.
+          while IFS= read -r image; do
+            [ -n "$image" ] || continue
             ref="${image%@*}"; have="${image##*@}"
             want="$(docker buildx imagetools inspect "$ref" --format '{{.Manifest.Digest}}' 2>/dev/null || echo "")"
             if [ -n "$want" ] && [ "$want" != "$have" ]; then
               report="${report}- \`${ref}\`: digest moved to \`${want}\`"$'\n'
             fi
-          done
+          done < <(grep -ohE "[a-z0-9./-]+:[a-zA-Z0-9._-]+@sha256:[0-9a-f]{64}" cloudbuild/*.yaml | sort -u)
 
           {
             echo "report<<EOF"

@@ -463,6 +463,7 @@ jobs:
           # release, instead of sharing the runner's anonymous rate limit.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           cd infrastructure
           tflint --init
           tflint --recursive --minimum-failure-severity=warning
@@ -561,9 +562,14 @@ jobs:
         id: plan
         env:
           TG_NON_INTERACTIVE: 'true'
+          # Through the environment rather than interpolated into the script.
+          # This value is a matrix key we control, so it is not an injection risk
+          # today — but a `${{ }}` inside a run block is the shape of one, and
+          # the pattern costs nothing.
+          ENVIRONMENT: ${{ matrix.environment }}
         run: |
-          set -o pipefail
-          cd "infrastructure/environments/${{ matrix.environment }}"
+          set -euo pipefail
+          cd "infrastructure/environments/$ENVIRONMENT"
           terragrunt run --all --parallelism 4 -- init -lockfile=readonly
           terragrunt run --all --parallelism 4 -- plan -no-color 2>&1 | tee /tmp/plan.txt
 

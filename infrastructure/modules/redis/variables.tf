@@ -50,3 +50,14 @@ variable "auth_secret_accessors" {
   type        = list(string)
   default     = []
 }
+
+variable "maintenance_window_hour_utc" {
+  description = "Hour (UTC) of the Sunday maintenance window."
+  type        = number
+  default     = 5
+
+  validation {
+    condition     = var.maintenance_window_hour_utc >= 0 && var.maintenance_window_hour_utc <= 23
+    error_message = "maintenance_window_hour_utc must be between 0 and 23."
+  }
+}

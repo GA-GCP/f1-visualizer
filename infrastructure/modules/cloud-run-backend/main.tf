@@ -16,11 +16,21 @@ resource "google_cloud_run_v2_service" "service" {
     }
 
     # VPC Access (Critical for Redis)
+    #
+    # PERF-1: this was `connector = <serverless VPC access connector>`. Each
+    # environment ran one with 2 to 3 always-on e2-micro instances — a fixed
+    # monthly floor and a shared bandwidth ceiling sitting on the hottest path in
+    # the system, the Redis pub/sub fan-out to the WebSocket broadcaster. Direct
+    # VPC egress puts the instance on the subnet itself: one hop fewer, no
+    # standing cost, and the throughput is the instance's own.
     dynamic "vpc_access" {
-      for_each = var.vpc_connector_id != null ? [1] : []
+      for_each = var.vpc_network != null ? [1] : []
       content {
-        connector = var.vpc_connector_id
-        egress    = "PRIVATE_RANGES_ONLY"
+        egress = "PRIVATE_RANGES_ONLY"
+        network_interfaces {
+          network    = var.vpc_network
+          subnetwork = var.vpc_subnetwork
+        }
       }
     }
 

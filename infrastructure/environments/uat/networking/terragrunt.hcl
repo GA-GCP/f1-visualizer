@@ -13,6 +13,9 @@ inputs = {
   environment  = "uat"
   project_id   = "f1v-example-project"
   region       = "us-east1"
-  network_name   = "f1v-vpc-uat"
-  connector_cidr = "10.8.0.16/28"
+  network_name = "f1v-vpc-uat"
+
+  # PERF-1: the range Cloud Run instances take an address on. Each environment
+  # has its own VPC, so all three can use the same range.
+  subnet_cidr = "10.0.0.0/24"
 }

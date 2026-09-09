@@ -14,8 +14,16 @@ variable "image_url" {
   description = "Docker image URL (e.g., us-central1-docker.pkg.dev/...)"
   type        = string
 }
-variable "vpc_connector_id" {
-  description = "VPC Connector ID for Redis access"
+# PERF-1: replaced vpc_connector_id. Both must be set, or neither — a service
+# with no private dependency (user, analysis) attaches to no network at all.
+variable "vpc_network" {
+  description = "VPC network name for direct egress. Null for services with no private dependency."
+  type        = string
+  default     = null
+}
+
+variable "vpc_subnetwork" {
+  description = "Subnet name the instance takes an address on. Required when vpc_network is set."
   type        = string
   default     = null
 }

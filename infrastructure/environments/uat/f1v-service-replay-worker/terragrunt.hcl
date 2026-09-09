@@ -20,7 +20,8 @@ dependency "iam" {
 dependency "networking" {
   config_path = "../networking"
   mock_outputs = {
-    vpc_access_connector_id = "projects/f1v-example-project/locations/us-east1/connectors/f1v-vpc-uat-conn-MOCK"
+    network_name    = "f1v-vpc-uat"
+    subnetwork_name = "f1v-vpc-uat-subnet"
   }
 
   # REL-7: mocks are for planning, never for applying.
@@ -90,7 +91,8 @@ inputs = {
   memory = "1024Mi"
 
   # Redis is the command channel, the state store and the packet destination.
-  vpc_connector_id = dependency.networking.outputs.vpc_access_connector_id
+  vpc_network    = dependency.networking.outputs.network_name
+  vpc_subnetwork = dependency.networking.outputs.subnetwork_name
 
   env_vars = {
     "SPRING_DATA_REDIS_HOST" = dependency.redis.outputs.redis_host

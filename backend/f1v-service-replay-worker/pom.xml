@@ -34,9 +34,12 @@
         <!-- T1: the command stream and state store are how the API and this
              worker communicate at all; a mocked RedisTemplate would assert
              nothing about whether a Redis stream behaves as assumed. -->
+        <!-- testcontainers-junit-jupiter, not junit-jupiter: Testcontainers 2.0
+             prefixed every module with the project name, so the 1.x coordinate
+             is not in the 2.x BOM and resolves to no version at all. -->
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

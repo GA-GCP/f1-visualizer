@@ -69,4 +69,13 @@ inputs = {
   analysis_service_name  = dependency.analysis.outputs.service_name
   ingestion_service_name = dependency.ingestion.outputs.service_name
   telemetry_service_name = dependency.telemetry.outputs.service_name
+
+  # OPS-3 / SEC-5: the zone from infrastructure/platform. The A and AAAA records
+  # and the Certificate Manager DNS authorization are created here, where the
+  # addresses are.
+  dns_zone_name = "f1visualizer-com"
+
+  # SEC-5: flip to true per environment once
+  # `gcloud certificate-manager certificates describe` reports ACTIVE. dev first.
+  use_certificate_manager = false
 }

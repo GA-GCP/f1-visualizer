@@ -29,17 +29,6 @@ dependency "networking" {
   mock_outputs_merge_strategy_with_state  = "shallow"
 }
 
-dependency "secrets" {
-  config_path = "../secrets"
-  mock_outputs = {
-    openf1_username_secret_id = "f1v-api-openf1-login-user-email"
-    openf1_password_secret_id = "f1v-api-openf1-login-user-password"
-  }
-
-  # REL-7: mocks are for planning, never for applying.
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
-  mock_outputs_merge_strategy_with_state  = "shallow"
-}
 
 dependency "redis" {
   config_path = "../redis"
@@ -48,6 +37,17 @@ dependency "redis" {
     redis_port           = 6379
     redis_auth_secret_id = "f1v-redis-auth-MOCK"
     redis_ca_secret_id   = "f1v-redis-ca-MOCK"
+  }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
+}
+
+dependency "bigquery" {
+  config_path = "../bigquery"
+  mock_outputs = {
+    dataset_id = "f1_dataset_dev"
   }
 
   # REL-7: mocks are for planning, never for applying.
@@ -96,6 +96,10 @@ inputs = {
     "SPRING_DATA_REDIS_PORT" = dependency.redis.outputs.redis_port
     "SPRING_PROFILES_ACTIVE" = "dev"
 
+    # CPLX-2: the backend has read this since C4 and nothing ever set it, so
+    # every environment fell through to the shared "f1_dataset".
+    "F1V_BIGQUERY_DATASET" = dependency.bigquery.outputs.dataset_id
+
     # R3: ingestion job status
     "SPRING_CLOUD_GCP_FIRESTORE_PROJECT_ID"  = "f1v-example-project"
     "SPRING_CLOUD_GCP_FIRESTORE_DATABASE_ID" = "f1v-db-dev"
@@ -118,19 +122,22 @@ inputs = {
     # S6: read by Cloud Run at deploy time instead of by a hand-rolled Secret
     # Manager client at startup, which pinned nothing and pulled the client,
     # protobuf and gRPC stack into every ingestion image.
-    # SEC-6: the secret ids come from the unit that declares the containers, so a
-    # rename cannot leave a service pointing at a secret that no longer exists.
+    # SEC-6: one credential for all three environments, because OpenF1 issues
+    # one account. Declared and granted in infrastructure/platform, and named
+    # here by id rather than read from a dependency — depending across the layer
+    # boundary would pull the platform unit into an environment's `run --all`,
+    # which is the coupling CPLX-2 removes.
     #
     # `version` is stated rather than left to the module's "latest" default. It
     # is still "latest" today, because the current version numbers are live state
-    # this repository does not know — but changing it is now a one-line reviewed
-    # diff rather than an edit to a default nobody sees.
+    # this repository does not know — but changing it is a one-line reviewed diff
+    # rather than an edit to a default nobody sees.
     "F1V_OPENF1_USERNAME" = {
-      secret  = dependency.secrets.outputs.openf1_username_secret_id
+      secret  = "f1v-api-openf1-login-user-email"
       version = "latest"
     }
     "F1V_OPENF1_PASSWORD" = {
-      secret  = dependency.secrets.outputs.openf1_password_secret_id
+      secret  = "f1v-api-openf1-login-user-password"
       version = "latest"
     }
   }

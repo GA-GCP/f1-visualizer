@@ -8,13 +8,14 @@ include "root" {
 prevent_destroy = true
 
 terraform {
-  source = "../../../modules/secrets"
+  source = "../../../modules/bigquery"
 }
 
 dependency "iam" {
   config_path = "../iam-and-secrets"
   mock_outputs = {
     sa_data_ingestion_email = "sa-f1v-data-ingestion-prod@f1v-example-project.iam.gserviceaccount.com"
+    sa_data_analysis_email  = "sa-f1v-data-analysis-prod@f1v-example-project.iam.gserviceaccount.com"
     sa_replay_worker_email  = "sa-f1v-replay-worker-prod@f1v-example-project.iam.gserviceaccount.com"
   }
 
@@ -24,13 +25,23 @@ dependency "iam" {
 }
 
 inputs = {
-  project_id = "f1v-example-project"
+  project_id  = "f1v-example-project"
+  environment = "prod"
+  location    = "US"
 
-  # SEC-3: granted on these two secrets rather than through a project-level
-  # roles/secretmanager.secretAccessor. Ingestion runs the OpenF1 client; the
-  # replay worker runs the MQTT bridge.
-  openf1_accessors = [
+  # CPLX-2: one dataset per environment. The single shared "f1_dataset" is what
+  # let a UAT historical load write into the tables prod reads. The services take
+  # this from F1V_BIGQUERY_DATASET, which their units now set.
+  dataset_id = "f1_dataset_prod"
+
+  # SEC-3: granted on the dataset. This list is now one environment's identities,
+  # rather than all three, which is the point of splitting the dataset.
+  dataset_editors = [
     "serviceAccount:${dependency.iam.outputs.sa_data_ingestion_email}",
+  ]
+
+  dataset_viewers = [
+    "serviceAccount:${dependency.iam.outputs.sa_data_analysis_email}",
     "serviceAccount:${dependency.iam.outputs.sa_replay_worker_email}",
   ]
 }

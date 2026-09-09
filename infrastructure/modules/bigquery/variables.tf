@@ -8,6 +8,16 @@ variable "environment" {
   type        = string
 }
 
+variable "dataset_id" {
+  description = "BigQuery dataset id. Per environment: the services read it from F1V_BIGQUERY_DATASET."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_]+$", var.dataset_id))
+    error_message = "dataset_id may contain only letters, numbers and underscores."
+  }
+}
+
 variable "location" {
   description = "The location for the BigQuery Dataset"
   type        = string

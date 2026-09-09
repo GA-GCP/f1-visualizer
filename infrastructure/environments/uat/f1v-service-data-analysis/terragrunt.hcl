@@ -18,6 +18,17 @@ dependency "iam" {
   mock_outputs_merge_strategy_with_state  = "shallow"
 }
 
+dependency "bigquery" {
+  config_path = "../bigquery"
+  mock_outputs = {
+    dataset_id = "f1_dataset_uat"
+  }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
+}
+
 inputs = {
   project_id   = "f1v-example-project"
   region       = "us-east1"
@@ -47,6 +58,10 @@ inputs = {
 
   env_vars = {
     "SPRING_PROFILES_ACTIVE" = "uat"
+
+    # CPLX-2: the backend has read this since C4 and nothing ever set it, so
+    # every environment fell through to the shared "f1_dataset".
+    "F1V_BIGQUERY_DATASET" = dependency.bigquery.outputs.dataset_id
 
     # --- NEW: Explicitly inject Auth0 Security Properties ---
     "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI" = "https://elysianarts-uat.us.auth0.com/"

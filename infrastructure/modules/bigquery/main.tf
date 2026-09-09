@@ -1,5 +1,9 @@
 resource "google_bigquery_dataset" "f1_dataset" {
-  dataset_id                  = "f1_dataset" # Hardcoded to match Java constant
+  # CPLX-2: this was hard-coded to "f1_dataset", declared only in
+  # environments/dev, and read and written by all three environments — so a UAT
+  # historical load wrote into the tables prod reads. The backend has honoured
+  # F1V_BIGQUERY_DATASET since C4; nothing ever set it.
+  dataset_id                  = var.dataset_id
   friendly_name               = "F1 Telemetry Data (${var.environment})"
   description                 = "Storage for historical lap times and telemetry for F1 Visualizer"
   location                    = var.location

@@ -1,0 +1,17 @@
+[
+  {
+    "name": "session_key",
+    "type": "INTEGER",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "driver_number",
+    "type": "INTEGER",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "position",
+    "type": "INTEGER",
+    "mode": "NULLABLE"
+  }
+]

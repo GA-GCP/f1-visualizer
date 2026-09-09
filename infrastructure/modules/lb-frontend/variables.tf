@@ -1,8 +1,27 @@
-variable "project_id" { type = string }
-variable "region" { type = string }
-variable "name_prefix" { type = string }
-variable "domain" { type = string }
-variable "cloud_run_service_name" { type = string }
+variable "project_id" {
+  description = "The GCP Project ID"
+  type        = string
+}
+
+variable "region" {
+  description = "Region of the Cloud Run service the serverless NEG points at. Must match the service's own region."
+  type        = string
+}
+
+variable "name_prefix" {
+  description = "Prefix for every resource this module creates (e.g. f1v-frontend-dev)"
+  type        = string
+}
+
+variable "domain" {
+  description = "Domain the certificate is issued for and the A record is created at"
+  type        = string
+}
+
+variable "cloud_run_service_name" {
+  description = "Cloud Run service the serverless NEG points at"
+  type        = string
+}
 variable "enable_adaptive_protection" {
   description = "Cloud Armor Adaptive Protection (layer 7 DDoS defence). Requires Cloud Armor Enterprise, which is billed separately."
   type        = bool

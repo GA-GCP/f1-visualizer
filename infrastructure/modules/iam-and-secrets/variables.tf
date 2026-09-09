@@ -4,8 +4,13 @@ variable "project_id" {
 }
 
 variable "environment" {
-  description = "The environment environment (e.g., dev, uat, prod)"
+  description = "The environment (dev, uat, prod)"
   type        = string
+
+  validation {
+    condition     = contains(["dev", "uat", "prod"], var.environment)
+    error_message = "environment must be dev, uat or prod."
+  }
 }
 # SEC-3: dev, uat and prod share one project, so a project-level
 # roles/datastore.user let sa-f1v-user-dev write to f1v-db-prod. The binding is

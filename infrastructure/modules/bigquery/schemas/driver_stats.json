@@ -1,0 +1,62 @@
+[
+  {
+    "name": "driver_number",
+    "type": "INTEGER",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "avg_position",
+    "type": "FLOAT",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "position_stddev",
+    "type": "FLOAT",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "full_throttle_pct",
+    "type": "FLOAT",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "avg_stint_length",
+    "type": "FLOAT",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "total_races",
+    "type": "INTEGER",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "wins",
+    "type": "INTEGER",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "podiums",
+    "type": "INTEGER",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "total_points",
+    "type": "INTEGER",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "best_finish",
+    "type": "INTEGER",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "teams_list",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "computed_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  }
+]

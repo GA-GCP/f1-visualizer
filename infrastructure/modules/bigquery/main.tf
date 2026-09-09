@@ -1,3 +1,7 @@
+# CPLX-6: the eight table schemas were JSON heredocs inside HCL, which no JSON
+# tool could read and no editor could check. They are files under schemas/ now,
+# loaded with file() — which also means the Java tests can assert against the
+# same definitions the tables are created from, rather than a transcription.
 resource "google_bigquery_dataset" "f1_dataset" {
   # CPLX-2: this was hard-coded to "f1_dataset", declared only in
   # environments/dev, and read and written by all three environments — so a UAT
@@ -67,21 +71,7 @@ resource "google_bigquery_table" "laps" {
   clustering = ["session_key", "driver_number"]
 
   # Schema matching LapDataRecord.java + OpenF1 fields
-  schema = <<EOF
-[
-  { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "meeting_key", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "lap_number", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "lap_duration", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "sector_1_duration", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "sector_2_duration", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "sector_3_duration", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "compound", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "date_start", "type": "TIMESTAMP", "mode": "NULLABLE" },
-  { "name": "is_pit_out_lap", "type": "BOOLEAN", "mode": "NULLABLE" }
-]
-EOF
+  schema = file("${path.module}/schemas/laps.json")
 }
 
 # 2. TELEMETRY TABLE (For detailed historical replays)
@@ -103,20 +93,7 @@ resource "google_bigquery_table" "telemetry" {
 
   clustering = ["session_key", "driver_number"]
 
-  schema = <<EOF
-[
-  { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "meeting_key", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "date", "type": "TIMESTAMP", "mode": "REQUIRED" },
-  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "speed", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "rpm", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "gear", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "throttle", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "brake", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "drs", "type": "INTEGER", "mode": "NULLABLE" }
-]
-EOF
+  schema = file("${path.module}/schemas/telemetry.json")
 }
 
 # 3. DRIVERS TABLE (Reference Data)
@@ -125,16 +102,7 @@ resource "google_bigquery_table" "drivers" {
   table_id   = "drivers"
   project    = var.project_id
 
-  schema = <<EOF
-[
-  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "broadcast_name", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "name_acronym", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "team_name", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "team_colour", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "country_code", "type": "STRING", "mode": "NULLABLE" }
-]
-EOF
+  schema = file("${path.module}/schemas/drivers.json")
 }
 
 # 4. SESSIONS TABLE (Reference Data)
@@ -143,18 +111,7 @@ resource "google_bigquery_table" "sessions" {
   table_id   = "sessions"
   project    = var.project_id
 
-  schema = <<EOF
-[
-  { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "session_name", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "meeting_key", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "meeting_name", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "year", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "country_name", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "date_start", "type": "TIMESTAMP", "mode": "NULLABLE" },
-  { "name": "date_end", "type": "TIMESTAMP", "mode": "NULLABLE" }
-]
-EOF
+  schema = file("${path.module}/schemas/sessions.json")
 }
 
 # 5. LOCATIONS TABLE (For Circuit Trace Replay)
@@ -174,17 +131,7 @@ resource "google_bigquery_table" "locations" {
 
   clustering = ["session_key", "driver_number"]
 
-  schema = <<EOF
-[
-  { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "meeting_key", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "date", "type": "TIMESTAMP", "mode": "REQUIRED" },
-  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "x", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "y", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "z", "type": "INTEGER", "mode": "NULLABLE" }
-]
-EOF
+  schema = file("${path.module}/schemas/locations.json")
 }
 
 # 6. RESULTS TABLE (For Versus Mode Stats)
@@ -199,13 +146,7 @@ resource "google_bigquery_table" "results" {
   # have had this since P2.
   clustering = ["session_key", "driver_number"]
 
-  schema = <<EOF
-[
-  { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "position", "type": "INTEGER", "mode": "NULLABLE" }
-]
-EOF
+  schema = file("${path.module}/schemas/results.json")
 }
 
 # 7. SESSION_DRIVERS TABLE (Per-race driver rosters with team at time of race)
@@ -220,18 +161,7 @@ resource "google_bigquery_table" "session_drivers" {
   # have had this since P2.
   clustering = ["session_key", "year"]
 
-  schema = <<EOF
-[
-  { "name": "session_key", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "year", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "broadcast_name", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "name_acronym", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "team_name", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "team_colour", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "country_code", "type": "STRING", "mode": "NULLABLE" }
-]
-EOF
+  schema = file("${path.module}/schemas/session_drivers.json")
 }
 
 # 8. DRIVER_STATS TABLE (Precomputed radar and career figures)
@@ -246,22 +176,7 @@ resource "google_bigquery_table" "driver_stats" {
   table_id   = "driver_stats"
   project    = var.project_id
 
-  schema = <<EOF
-[
-  { "name": "driver_number", "type": "INTEGER", "mode": "REQUIRED" },
-  { "name": "avg_position", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "position_stddev", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "full_throttle_pct", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "avg_stint_length", "type": "FLOAT", "mode": "NULLABLE" },
-  { "name": "total_races", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "wins", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "podiums", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "total_points", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "best_finish", "type": "INTEGER", "mode": "NULLABLE" },
-  { "name": "teams_list", "type": "STRING", "mode": "NULLABLE" },
-  { "name": "computed_at", "type": "TIMESTAMP", "mode": "REQUIRED" }
-]
-EOF
+  schema = file("${path.module}/schemas/driver_stats.json")
 }
 
 # 9. INGESTION_JOBS TABLE is deliberately absent: job status lives in Firestore,

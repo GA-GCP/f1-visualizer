@@ -58,7 +58,7 @@ locals {
   # acceptable. The replay worker stays at one instance because a replay is
   # exactly what uat exists to rehearse, and telemetry stays warm with it —
   # a cold WebSocket backend is the failure they would be testing for.
-  rest_min_instances  = 0
-  telemetry_warm      = true
-  worker_enabled      = true
+  rest_min_instances = 0
+  telemetry_warm     = true
+  worker_enabled     = true
 }

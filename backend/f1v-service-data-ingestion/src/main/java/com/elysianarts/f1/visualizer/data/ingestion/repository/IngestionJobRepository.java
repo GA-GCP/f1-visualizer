@@ -3,19 +3,18 @@ package com.elysianarts.f1.visualizer.data.ingestion.repository;
 import com.elysianarts.f1.visualizer.data.ingestion.model.IngestionJob;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Repository;
-
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Repository;
 
 /**
- * Job status in Firestore, so it survives the restart that a deploy causes and
- * can be read back by whoever started the load (R3).
+ * Job status in Firestore, so it survives the restart that a deploy causes and can be read back by
+ * whoever started the load (R3).
  */
 @Slf4j
 @Repository
@@ -49,18 +48,20 @@ public class IngestionJobRepository {
 
     public Optional<IngestionJob> find(String jobId) {
         try {
-            DocumentSnapshot document = firestore.collection(COLLECTION).document(jobId).get().get();
+            DocumentSnapshot document =
+                    firestore.collection(COLLECTION).document(jobId).get().get();
             if (!document.exists()) {
                 return Optional.empty();
             }
-            return Optional.of(new IngestionJob(
-                    document.getString("id"),
-                    IngestionJob.Type.valueOf(document.getString("type")),
-                    document.getString("target"),
-                    IngestionJob.Status.valueOf(document.getString("status")),
-                    Instant.parse(document.getString("createdAt")),
-                    Instant.parse(document.getString("updatedAt")),
-                    document.getString("detail")));
+            return Optional.of(
+                    new IngestionJob(
+                            document.getString("id"),
+                            IngestionJob.Type.valueOf(document.getString("type")),
+                            document.getString("target"),
+                            IngestionJob.Status.valueOf(document.getString("status")),
+                            Instant.parse(document.getString("createdAt")),
+                            Instant.parse(document.getString("updatedAt")),
+                            document.getString("detail")));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return Optional.empty();

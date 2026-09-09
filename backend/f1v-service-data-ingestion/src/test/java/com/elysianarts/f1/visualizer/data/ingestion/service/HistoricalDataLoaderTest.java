@@ -1,11 +1,22 @@
 package com.elysianarts.f1.visualizer.data.ingestion.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
 import com.elysianarts.f1.visualizer.commons.api.openf1.client.OpenF1Client;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Session;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryBatchWriter;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryProperties;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
-import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
-import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Session;
+import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,30 +24,14 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Duration;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Collections;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class HistoricalDataLoaderTest {
 
-    @Mock
-    private OpenF1Client openF1Client;
+    @Mock private OpenF1Client openF1Client;
 
-    @Mock
-    private BigQueryBatchWriter batchWriter;
+    @Mock private BigQueryBatchWriter batchWriter;
 
-    @Mock
-    private BigQueryQueryRunner queryRunner;
+    @Mock private BigQueryQueryRunner queryRunner;
 
     private HistoricalDataLoader historicalDataLoader;
 
@@ -46,7 +41,8 @@ class HistoricalDataLoaderTest {
         lenient().when(queryRunner.properties()).thenReturn(BigQueryProperties.defaults());
         // T2: the production 500 ms courtesy delay is configuration, not a
         // literal, so it does not run for real once per window in the suite.
-        historicalDataLoader = new HistoricalDataLoader(openF1Client, batchWriter, queryRunner, Duration.ZERO);
+        historicalDataLoader =
+                new HistoricalDataLoader(openF1Client, batchWriter, queryRunner, Duration.ZERO);
     }
 
     @Test
@@ -68,7 +64,8 @@ class HistoricalDataLoaderTest {
         mockCarData.setDate(startTime.plusMinutes(1));
 
         when(openF1Client.getSession(sessionKey)).thenReturn(Optional.of(mockSession));
-        when(openF1Client.getCarData(eq(sessionKey), any(), any())).thenReturn(List.of(mockCarData));
+        when(openF1Client.getCarData(eq(sessionKey), any(), any()))
+                .thenReturn(List.of(mockCarData));
 
         // Act
         historicalDataLoader.loadSessionIntoBigQuery(sessionKey);
@@ -136,7 +133,8 @@ class HistoricalDataLoaderTest {
         pkt3.setDate(startTime.plusMinutes(3));
 
         when(openF1Client.getSession(sessionKey)).thenReturn(Optional.of(mockSession));
-        when(openF1Client.getCarData(eq(sessionKey), any(), any())).thenReturn(List.of(pkt1, pkt2, pkt3));
+        when(openF1Client.getCarData(eq(sessionKey), any(), any()))
+                .thenReturn(List.of(pkt1, pkt2, pkt3));
 
         historicalDataLoader.loadSessionIntoBigQuery(sessionKey);
 
@@ -186,7 +184,6 @@ class HistoricalDataLoaderTest {
         when(openF1Client.getCarData(eq(sessionKey), any(), any()))
                 .thenThrow(new RuntimeException("API Error"))
                 .thenReturn(List.of(mockCarData));
-
 
         historicalDataLoader.loadSessionIntoBigQuery(sessionKey);
 

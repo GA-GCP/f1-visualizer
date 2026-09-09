@@ -1,6 +1,9 @@
 package com.elysianarts.f1.visualizer.data.ingestion.config;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -8,10 +11,6 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.time.Duration;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class PlaybackRateLimitInterceptorTest {
 
@@ -32,10 +31,9 @@ class PlaybackRateLimitInterceptorTest {
     }
 
     /**
-     * S1: play, pause and seek change what every other viewer is watching, and
-     * every seek costs a synchronous BigQuery query. They stay open to any
-     * authenticated user, so this is what stops one client driving the replay for
-     * everyone.
+     * S1: play, pause and seek change what every other viewer is watching, and every seek costs a
+     * synchronous BigQuery query. They stay open to any authenticated user, so this is what stops
+     * one client driving the replay for everyone.
      */
     @Test
     void rejectsOnceThePermitsInTheWindowAreSpent() {
@@ -44,11 +42,15 @@ class PlaybackRateLimitInterceptorTest {
         authenticateAs("auth0|viewer");
 
         for (int i = 0; i < 3; i++) {
-            assertTrue(interceptor.preHandle(request(), response, null), "permit " + (i + 1) + " should pass");
+            assertTrue(
+                    interceptor.preHandle(request(), response, null),
+                    "permit " + (i + 1) + " should pass");
         }
 
-        ResponseStatusException rejected = assertThrows(ResponseStatusException.class,
-                () -> interceptor.preHandle(request(), response, null));
+        ResponseStatusException rejected =
+                assertThrows(
+                        ResponseStatusException.class,
+                        () -> interceptor.preHandle(request(), response, null));
         assertEquals(429, rejected.getStatusCode().value());
     }
 
@@ -60,7 +62,9 @@ class PlaybackRateLimitInterceptorTest {
 
         authenticateAs("auth0|first");
         assertTrue(interceptor.preHandle(request(), response, null));
-        assertThrows(ResponseStatusException.class, () -> interceptor.preHandle(request(), response, null));
+        assertThrows(
+                ResponseStatusException.class,
+                () -> interceptor.preHandle(request(), response, null));
 
         authenticateAs("auth0|second");
         assertTrue(interceptor.preHandle(request(), response, null));
@@ -73,7 +77,9 @@ class PlaybackRateLimitInterceptorTest {
         authenticateAs("auth0|viewer");
 
         assertTrue(interceptor.preHandle(request(), response, null));
-        assertThrows(ResponseStatusException.class, () -> interceptor.preHandle(request(), response, null));
+        assertThrows(
+                ResponseStatusException.class,
+                () -> interceptor.preHandle(request(), response, null));
 
         Thread.sleep(60);
         assertTrue(interceptor.preHandle(request(), response, null));

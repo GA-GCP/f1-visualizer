@@ -1,29 +1,27 @@
 package com.elysianarts.f1.visualizer.replay.repository;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1LocationData;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryAccessException;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
-import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1LocationData;
 import com.google.cloud.bigquery.*;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 @ExtendWith(MockitoExtension.class)
 class HistoricalLocationRepositoryTest {
 
-    @Mock
-    private BigQuery bigQuery;
+    @Mock private BigQuery bigQuery;
 
     private HistoricalLocationRepository historicalLocationRepository;
 
@@ -31,7 +29,8 @@ class HistoricalLocationRepositoryTest {
     void initService() {
         // The runner applies the job timeout and byte ceiling (R6); the
         // BigQuery mock underneath it is still what the tests stub.
-        historicalLocationRepository = new HistoricalLocationRepository(BigQueryQueryRunner.withDefaults(bigQuery));
+        historicalLocationRepository =
+                new HistoricalLocationRepository(BigQueryQueryRunner.withDefaults(bigQuery));
     }
 
     private FieldValue longFieldValue(long value) {
@@ -59,8 +58,8 @@ class HistoricalLocationRepositoryTest {
         return fv;
     }
 
-    private FieldValueList mockLocationRow(long meetingKey, int driverNumber,
-                                            int x, int y, int z, long epochMicros) {
+    private FieldValueList mockLocationRow(
+            long meetingKey, int driverNumber, int x, int y, int z, long epochMicros) {
         // Pre-create FieldValue mocks to avoid nested when() calls
         FieldValue meetingKeyFv = nullableLongFieldValue(meetingKey);
         FieldValue driverNumberFv = longFieldValue(driverNumber);
@@ -94,7 +93,8 @@ class HistoricalLocationRepositoryTest {
         OffsetDateTime from = OffsetDateTime.of(2023, 9, 17, 12, 0, 0, 0, ZoneOffset.UTC);
         OffsetDateTime to = OffsetDateTime.of(2023, 9, 17, 12, 1, 0, 0, ZoneOffset.UTC);
 
-        List<OpenF1LocationData> result = historicalLocationRepository.fetchLocationWindow(9165, from, to);
+        List<OpenF1LocationData> result =
+                historicalLocationRepository.fetchLocationWindow(9165, from, to);
 
         assertEquals(1, result.size());
         assertEquals(1200, result.get(0).getX());
@@ -109,7 +109,8 @@ class HistoricalLocationRepositoryTest {
         OffsetDateTime from = OffsetDateTime.of(2023, 9, 17, 12, 0, 0, 0, ZoneOffset.UTC);
         OffsetDateTime to = OffsetDateTime.of(2023, 9, 17, 12, 1, 0, 0, ZoneOffset.UTC);
 
-        assertThrows(BigQueryAccessException.class,
+        assertThrows(
+                BigQueryAccessException.class,
                 () -> historicalLocationRepository.fetchLocationWindow(9165, from, to));
     }
 }

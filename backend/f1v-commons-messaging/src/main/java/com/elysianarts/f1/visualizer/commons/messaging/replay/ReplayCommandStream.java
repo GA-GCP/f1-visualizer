@@ -10,9 +10,8 @@ import org.springframework.stereotype.Component;
 /**
  * The command channel between the API and the replay worker (R1).
  *
- * <p>A stream rather than pub/sub: a command issued while the worker is
- * restarting — every deploy — would be dropped by pub/sub and is replayed from
- * the stream instead.</p>
+ * <p>A stream rather than pub/sub: a command issued while the worker is restarting — every deploy —
+ * would be dropped by pub/sub and is replayed from the stream instead.
  */
 @Slf4j
 @Component
@@ -31,10 +30,15 @@ public class ReplayCommandStream {
     }
 
     public RecordId publish(ReplayCommand command) {
-        RecordId id = redis.opsForStream().add(StreamRecords.mapBacked(command.toFields()).withStreamKey(KEY));
+        RecordId id =
+                redis.opsForStream()
+                        .add(StreamRecords.mapBacked(command.toFields()).withStreamKey(KEY));
         redis.opsForStream().trim(KEY, MAX_LENGTH, true);
-        log.info("replay command published type={} session_key={} record_id={}",
-                command.type(), command.sessionKey(), id);
+        log.info(
+                "replay command published type={} session_key={} record_id={}",
+                command.type(),
+                command.sessionKey(),
+                id);
         return id;
     }
 

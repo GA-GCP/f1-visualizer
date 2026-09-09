@@ -1,15 +1,19 @@
 package com.elysianarts.f1.visualizer.data.analysis.service;
 
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
+import com.elysianarts.f1.visualizer.data.analysis.config.CacheConfig;
 import com.elysianarts.f1.visualizer.data.analysis.model.DriverProfile;
 import com.elysianarts.f1.visualizer.data.analysis.model.RaceEntryRoster;
 import com.elysianarts.f1.visualizer.data.analysis.model.RaceSession;
 import com.elysianarts.f1.visualizer.data.analysis.model.SessionDriverEntry;
 import com.elysianarts.f1.visualizer.data.analysis.repository.ReferenceDataCacheRepository;
-import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
 import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.QueryJobConfiguration;
 import com.google.cloud.bigquery.TableResult;
-import com.elysianarts.f1.visualizer.data.analysis.config.CacheConfig;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -17,11 +21,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -35,39 +34,44 @@ public class ReferenceDataService {
     /**
      * Warms the Firestore cache from BigQuery after startup (R8).
      *
-     * <p>This used to start a raw {@code new Thread} from {@code @PostConstruct}
-     * and unconditionally rewrite every driver and session document — on every
-     * deploy and every scale-out, with concurrent instances racing each other, on
-     * a thread invisible to Spring's lifecycle and metrics. It now runs on the
-     * managed executor after the context is ready, and skips entirely when another
-     * instance has already refreshed recently.</p>
+     * <p>This used to start a raw {@code new Thread} from {@code @PostConstruct} and
+     * unconditionally rewrite every driver and session document — on every deploy and every
+     * scale-out, with concurrent instances racing each other, on a thread invisible to Spring's
+     * lifecycle and metrics. It now runs on the managed executor after the context is ready, and
+     * skips entirely when another instance has already refreshed recently.
      */
     @EventListener(ApplicationReadyEvent.class)
     public void warmCache() {
-        taskExecutor.execute(() -> {
-            try {
-                if (cacheRepository.isCacheFresh()) {
-                    log.info("reference cache warm-up skipped reason=already_fresh");
-                    return;
-                }
-                log.info("reference cache warm-up starting");
+        taskExecutor.execute(
+                () -> {
+                    try {
+                        if (cacheRepository.isCacheFresh()) {
+                            log.info("reference cache warm-up skipped reason=already_fresh");
+                            return;
+                        }
+                        log.info("reference cache warm-up starting");
 
-                List<DriverProfile> drivers = queryDriversFromBigQuery();
-                if (!drivers.isEmpty()) {
-                    cacheRepository.cacheDrivers(drivers);
-                }
+                        List<DriverProfile> drivers = queryDriversFromBigQuery();
+                        if (!drivers.isEmpty()) {
+                            cacheRepository.cacheDrivers(drivers);
+                        }
 
-                List<RaceSession> sessions = querySessionsFromBigQuery("");
-                if (!sessions.isEmpty()) {
-                    cacheRepository.cacheSessions(sessions);
-                }
+                        List<RaceSession> sessions = querySessionsFromBigQuery("");
+                        if (!sessions.isEmpty()) {
+                            cacheRepository.cacheSessions(sessions);
+                        }
 
-                cacheRepository.markRefreshed();
-                log.info("reference cache warm-up complete drivers={} sessions={}", drivers.size(), sessions.size());
-            } catch (Exception e) {
-                log.error("reference cache warm-up failed — requests will fall back to BigQuery", e);
-            }
-        });
+                        cacheRepository.markRefreshed();
+                        log.info(
+                                "reference cache warm-up complete drivers={} sessions={}",
+                                drivers.size(),
+                                sessions.size());
+                    } catch (Exception e) {
+                        log.error(
+                                "reference cache warm-up failed — requests will fall back to BigQuery",
+                                e);
+                    }
+                });
     }
 
     // ── Public API (Firestore-first, BigQuery fallback) ──
@@ -115,17 +119,18 @@ public class ReferenceDataService {
         }
         String lower = query.toLowerCase();
         return all.stream()
-                .filter(s -> s.getMeetingName().toLowerCase().contains(lower)
-                        || s.getCountryName().toLowerCase().contains(lower)
-                        || String.valueOf(s.getYear()).contains(lower)
-                        || s.getSessionName().toLowerCase().contains(lower))
+                .filter(
+                        s ->
+                                s.getMeetingName().toLowerCase().contains(lower)
+                                        || s.getCountryName().toLowerCase().contains(lower)
+                                        || String.valueOf(s.getYear()).contains(lower)
+                                        || s.getSessionName().toLowerCase().contains(lower))
                 .toList();
     }
 
     /**
-     * Returns the exact driver roster for a specific race session, including
-     * each driver's team and team color at the time of that race.
-     * Firestore-first, BigQuery fallback.
+     * Returns the exact driver roster for a specific race session, including each driver's team and
+     * team color at the time of that race. Firestore-first, BigQuery fallback.
      */
     @Cacheable(cacheNames = CacheConfig.SESSION_DRIVERS, key = "#sessionKey")
     public RaceEntryRoster getDriversForSession(long sessionKey) {
@@ -136,7 +141,9 @@ public class ReferenceDataService {
         }
 
         // Cache miss — query BigQuery and populate cache
-        log.info("Firestore cache miss for session drivers (session={}), querying BigQuery", sessionKey);
+        log.info(
+                "Firestore cache miss for session drivers (session={}), querying BigQuery",
+                sessionKey);
         RaceEntryRoster roster = querySessionDriversFromBigQuery(sessionKey);
         if (roster != null && !roster.getDrivers().isEmpty()) {
             cacheRepository.cacheRaceEntries(roster);
@@ -145,8 +152,7 @@ public class ReferenceDataService {
     }
 
     /**
-     * Returns the distinct years available in the sessions data,
-     * sorted descending (newest first).
+     * Returns the distinct years available in the sessions data, sorted descending (newest first).
      */
     public List<Integer> getAvailableYears() {
         List<RaceSession> allSessions = getAvailableSessions();
@@ -158,8 +164,8 @@ public class ReferenceDataService {
     }
 
     /**
-     * Every session in a year, of any type. P5: lets {@code /sessions?year=} return
-     * one season instead of the whole catalog.
+     * Every session in a year, of any type. P5: lets {@code /sessions?year=} return one season
+     * instead of the whole catalog.
      */
     public List<RaceSession> getSessionsForYear(int year) {
         return getAvailableSessions().stream()
@@ -168,9 +174,7 @@ public class ReferenceDataService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Returns all Race sessions for a specific year, sorted by session key descending.
-     */
+    /** Returns all Race sessions for a specific year, sorted by session key descending. */
     public List<RaceSession> getSessionsByYear(int year) {
         List<RaceSession> allSessions = getAvailableSessions();
         return allSessions.stream()
@@ -183,25 +187,46 @@ public class ReferenceDataService {
     // ── BigQuery Queries (source-of-truth) ──
 
     private List<RaceSession> querySessionsFromBigQuery(String query) {
-        String sql = String.format("""
+        String sql =
+                String.format(
+                        """
             SELECT session_key, session_name, meeting_name, year, country_name
             FROM `%s.sessions`
             WHERE LOWER(meeting_name) LIKE LOWER(@search) OR LOWER(country_name) LIKE LOWER(@search)
             ORDER BY year DESC, meeting_key DESC, session_key DESC
-            """, dataset());
+            """,
+                        dataset());
 
         try {
-            TableResult result = queryRunner.query(QueryJobConfiguration.newBuilder(sql)
-                    .addNamedParameter("search", com.google.cloud.bigquery.QueryParameterValue.string("%" + query + "%")));
+            TableResult result =
+                    queryRunner.query(
+                            QueryJobConfiguration.newBuilder(sql)
+                                    .addNamedParameter(
+                                            "search",
+                                            com.google.cloud.bigquery.QueryParameterValue.string(
+                                                    "%" + query + "%")));
             List<RaceSession> sessions = new ArrayList<>();
             for (FieldValueList row : result.iterateAll()) {
-                sessions.add(RaceSession.builder()
-                        .sessionKey(row.get("session_key").getLongValue())
-                        .sessionName(row.get("session_name").isNull() ? "Unknown" : row.get("session_name").getStringValue())
-                        .meetingName(row.get("meeting_name").isNull() ? "Unknown" : row.get("meeting_name").getStringValue())
-                        .year(row.get("year").isNull() ? 2023 : (int) row.get("year").getLongValue())
-                        .countryName(row.get("country_name").isNull() ? "" : row.get("country_name").getStringValue())
-                        .build());
+                sessions.add(
+                        RaceSession.builder()
+                                .sessionKey(row.get("session_key").getLongValue())
+                                .sessionName(
+                                        row.get("session_name").isNull()
+                                                ? "Unknown"
+                                                : row.get("session_name").getStringValue())
+                                .meetingName(
+                                        row.get("meeting_name").isNull()
+                                                ? "Unknown"
+                                                : row.get("meeting_name").getStringValue())
+                                .year(
+                                        row.get("year").isNull()
+                                                ? 2023
+                                                : (int) row.get("year").getLongValue())
+                                .countryName(
+                                        row.get("country_name").isNull()
+                                                ? ""
+                                                : row.get("country_name").getStringValue())
+                                .build());
             }
             return sessions;
         } catch (Exception e) {
@@ -211,16 +236,24 @@ public class ReferenceDataService {
     }
 
     private RaceEntryRoster querySessionDriversFromBigQuery(long sessionKey) {
-        String sql = String.format("""
+        String sql =
+                String.format(
+                        """
             SELECT session_key, year, driver_number, broadcast_name, name_acronym, team_name, team_colour, country_code
             FROM `%s.session_drivers`
             WHERE session_key = @sessionKey
             ORDER BY driver_number ASC
-            """, dataset());
+            """,
+                        dataset());
 
         try {
-            TableResult result = queryRunner.query(QueryJobConfiguration.newBuilder(sql)
-                    .addNamedParameter("sessionKey", com.google.cloud.bigquery.QueryParameterValue.int64(sessionKey)));
+            TableResult result =
+                    queryRunner.query(
+                            QueryJobConfiguration.newBuilder(sql)
+                                    .addNamedParameter(
+                                            "sessionKey",
+                                            com.google.cloud.bigquery.QueryParameterValue.int64(
+                                                    sessionKey)));
             List<SessionDriverEntry> drivers = new ArrayList<>();
             int year = 0;
 
@@ -228,14 +261,30 @@ public class ReferenceDataService {
                 if (year == 0) {
                     year = row.get("year").isNull() ? 2023 : (int) row.get("year").getLongValue();
                 }
-                drivers.add(SessionDriverEntry.builder()
-                        .driverNumber((int) row.get("driver_number").getLongValue())
-                        .broadcastName(row.get("broadcast_name").isNull() ? "Unknown" : row.get("broadcast_name").getStringValue())
-                        .nameAcronym(row.get("name_acronym").isNull() ? null : row.get("name_acronym").getStringValue())
-                        .teamName(row.get("team_name").isNull() ? "Unknown" : row.get("team_name").getStringValue())
-                        .teamColour(row.get("team_colour").isNull() ? "ffffff" : row.get("team_colour").getStringValue())
-                        .countryCode(row.get("country_code").isNull() ? "" : row.get("country_code").getStringValue())
-                        .build());
+                drivers.add(
+                        SessionDriverEntry.builder()
+                                .driverNumber((int) row.get("driver_number").getLongValue())
+                                .broadcastName(
+                                        row.get("broadcast_name").isNull()
+                                                ? "Unknown"
+                                                : row.get("broadcast_name").getStringValue())
+                                .nameAcronym(
+                                        row.get("name_acronym").isNull()
+                                                ? null
+                                                : row.get("name_acronym").getStringValue())
+                                .teamName(
+                                        row.get("team_name").isNull()
+                                                ? "Unknown"
+                                                : row.get("team_name").getStringValue())
+                                .teamColour(
+                                        row.get("team_colour").isNull()
+                                                ? "ffffff"
+                                                : row.get("team_colour").getStringValue())
+                                .countryCode(
+                                        row.get("country_code").isNull()
+                                                ? ""
+                                                : row.get("country_code").getStringValue())
+                                .build());
             }
 
             return RaceEntryRoster.builder()
@@ -244,8 +293,13 @@ public class ReferenceDataService {
                     .drivers(drivers)
                     .build();
         } catch (Exception e) {
-            log.error("Failed to fetch session drivers from BigQuery for session {}", sessionKey, e);
-            return RaceEntryRoster.builder().sessionKey(sessionKey).year(0).drivers(List.of()).build();
+            log.error(
+                    "Failed to fetch session drivers from BigQuery for session {}", sessionKey, e);
+            return RaceEntryRoster.builder()
+                    .sessionKey(sessionKey)
+                    .year(0)
+                    .drivers(List.of())
+                    .build();
         }
     }
 
@@ -254,7 +308,9 @@ public class ReferenceDataService {
         // which was then written to Firestore as though it were data, while
         // /drivers/{id}/stats computed the real thing. Both now read the same
         // precomputed table (P2).
-        String sql = String.format("""
+        String sql =
+                String.format(
+                        """
             SELECT d.driver_number, d.broadcast_name, d.name_acronym, d.team_name, d.team_colour, d.country_code,
                    s.avg_position, s.position_stddev, s.full_throttle_pct, s.avg_stint_length,
                    s.total_races, s.wins, s.podiums, s.total_points, s.best_finish, s.teams_list
@@ -265,7 +321,8 @@ public class ReferenceDataService {
             ) d
             LEFT JOIN `%1$s.driver_stats` s ON s.driver_number = d.driver_number
             ORDER BY d.driver_number ASC
-            """, dataset());
+            """,
+                        dataset());
 
         try {
             TableResult result = queryRunner.query(sql);
@@ -273,20 +330,38 @@ public class ReferenceDataService {
 
             for (FieldValueList row : result.iterateAll()) {
                 int driverNum = (int) row.get("driver_number").getLongValue();
-                String teamColor = row.get("team_colour").isNull() ? "ffffff" : row.get("team_colour").getStringValue();
-                String name = row.get("broadcast_name").isNull() ? "Unknown" : row.get("broadcast_name").getStringValue();
+                String teamColor =
+                        row.get("team_colour").isNull()
+                                ? "ffffff"
+                                : row.get("team_colour").getStringValue();
+                String name =
+                        row.get("broadcast_name").isNull()
+                                ? "Unknown"
+                                : row.get("broadcast_name").getStringValue();
 
-                String acronym = row.get("name_acronym").isNull() ? null : row.get("name_acronym").getStringValue();
-                String code = acronym != null ? acronym : (name.length() >= 3 ? name.substring(0, 3).toUpperCase() : String.valueOf(driverNum));
+                String acronym =
+                        row.get("name_acronym").isNull()
+                                ? null
+                                : row.get("name_acronym").getStringValue();
+                String code =
+                        acronym != null
+                                ? acronym
+                                : (name.length() >= 3
+                                        ? name.substring(0, 3).toUpperCase()
+                                        : String.valueOf(driverNum));
 
-                drivers.add(DriverProfile.builder()
-                        .id(driverNum)
-                        .code(code)
-                        .name(name)
-                        .team(row.get("team_name").isNull() ? "Unknown" : row.get("team_name").getStringValue())
-                        .teamColor("#" + teamColor)
-                        .stats(RaceAnalysisService.toStats(row))
-                        .build());
+                drivers.add(
+                        DriverProfile.builder()
+                                .id(driverNum)
+                                .code(code)
+                                .name(name)
+                                .team(
+                                        row.get("team_name").isNull()
+                                                ? "Unknown"
+                                                : row.get("team_name").getStringValue())
+                                .teamColor("#" + teamColor)
+                                .stats(RaceAnalysisService.toStats(row))
+                                .build());
             }
             return drivers;
         } catch (Exception e) {

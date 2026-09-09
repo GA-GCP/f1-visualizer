@@ -4,14 +4,10 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 
 /**
- * Immutable time bounds for a historical session.
- * Used to calculate time-based progress and chunk boundaries.
+ * Immutable time bounds for a historical session. Used to calculate time-based progress and chunk
+ * boundaries.
  */
-public record SessionBounds(
-    long sessionKey,
-    OffsetDateTime startTime,
-    OffsetDateTime endTime
-) {
+public record SessionBounds(long sessionKey, OffsetDateTime startTime, OffsetDateTime endTime) {
     public boolean isEmpty() {
         return startTime == null || endTime == null;
     }

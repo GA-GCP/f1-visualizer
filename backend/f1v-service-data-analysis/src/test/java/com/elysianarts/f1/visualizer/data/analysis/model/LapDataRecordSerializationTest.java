@@ -1,10 +1,10 @@
 package com.elysianarts.f1.visualizer.data.analysis.model;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class LapDataRecordSerializationTest {
 
@@ -17,15 +17,16 @@ class LapDataRecordSerializationTest {
 
     @Test
     void lapDataRecord_SerializesAllFields_Correctly() throws Exception {
-        LapDataRecord record = LapDataRecord.builder()
-                .driverNumber(1)
-                .lapNumber(5)
-                .lapDuration(85.5)
-                .sector1(28.1)
-                .sector2(30.2)
-                .sector3(27.2)
-                .compound("SOFT")
-                .build();
+        LapDataRecord record =
+                LapDataRecord.builder()
+                        .driverNumber(1)
+                        .lapNumber(5)
+                        .lapDuration(85.5)
+                        .sector1(28.1)
+                        .sector2(30.2)
+                        .sector3(27.2)
+                        .compound("SOFT")
+                        .build();
 
         String json = mapper.writeValueAsString(record);
 
@@ -37,11 +38,8 @@ class LapDataRecordSerializationTest {
 
     @Test
     void lapDataRecord_SerializesNullSectors_AsNull() throws Exception {
-        LapDataRecord record = LapDataRecord.builder()
-                .driverNumber(44)
-                .lapNumber(10)
-                .lapDuration(92.456)
-                .build();
+        LapDataRecord record =
+                LapDataRecord.builder().driverNumber(44).lapNumber(10).lapDuration(92.456).build();
 
         String json = mapper.writeValueAsString(record);
 

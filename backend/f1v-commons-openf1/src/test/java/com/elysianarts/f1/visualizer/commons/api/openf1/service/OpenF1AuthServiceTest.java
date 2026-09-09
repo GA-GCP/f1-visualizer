@@ -1,6 +1,11 @@
 package com.elysianarts.f1.visualizer.commons.api.openf1.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+
 import com.elysianarts.f1.visualizer.commons.api.openf1.config.OpenF1CredentialsConfig.OpenF1Credentials;
+import java.io.IOException;
+import java.time.Duration;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -10,17 +15,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.web.client.RestClient;
 
-import java.io.IOException;
-import java.time.Duration;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-
 /**
- * C3, T1: this used to mock the WebClient fluent chain six objects deep and build
- * the private {@code AuthResponse} by reflection, which meant the test asserted
- * the shape of the mocks rather than the behaviour of the service. Against a real
- * HTTP server it can assert what is actually sent and what is actually parsed.
+ * C3, T1: this used to mock the WebClient fluent chain six objects deep and build the private
+ * {@code AuthResponse} by reflection, which meant the test asserted the shape of the mocks rather
+ * than the behaviour of the service. Against a real HTTP server it can assert what is actually sent
+ * and what is actually parsed.
  */
 class OpenF1AuthServiceTest {
 
@@ -49,9 +48,11 @@ class OpenF1AuthServiceTest {
 
     @Test
     void refreshToken_SetsAccessToken_AndPostsTheCredentialsAsAForm() throws Exception {
-        server.enqueue(new MockResponse()
-                .setBody("{\"access_token\":\"mock-openf1-jwt-token\",\"token_type\":\"bearer\",\"expires_in\":3600}")
-                .addHeader("Content-Type", "application/json"));
+        server.enqueue(
+                new MockResponse()
+                        .setBody(
+                                "{\"access_token\":\"mock-openf1-jwt-token\",\"token_type\":\"bearer\",\"expires_in\":3600}")
+                        .addHeader("Content-Type", "application/json"));
 
         OpenF1AuthService authService = service();
         authService.refreshToken();
@@ -60,15 +61,17 @@ class OpenF1AuthServiceTest {
 
         RecordedRequest request = server.takeRequest();
         assertEquals("/token", request.getPath());
-        assertTrue(request.getHeader("Content-Type").startsWith("application/x-www-form-urlencoded"));
+        assertTrue(
+                request.getHeader("Content-Type").startsWith("application/x-www-form-urlencoded"));
         assertTrue(request.getBody().readUtf8().contains("username=test-user%40email.com"));
     }
 
     @Test
     void refreshToken_DoesNotSetToken_WhenResponseHasNoToken() {
-        server.enqueue(new MockResponse()
-                .setBody("{\"token_type\":\"bearer\"}")
-                .addHeader("Content-Type", "application/json"));
+        server.enqueue(
+                new MockResponse()
+                        .setBody("{\"token_type\":\"bearer\"}")
+                        .addHeader("Content-Type", "application/json"));
 
         OpenF1AuthService authService = service();
         authService.refreshToken();
@@ -109,12 +112,14 @@ class OpenF1AuthServiceTest {
 
     @Test
     void refreshToken_UpdatesToken_OnSubsequentCalls() {
-        server.enqueue(new MockResponse()
-                .setBody("{\"access_token\":\"token-v1\",\"expires_in\":3600}")
-                .addHeader("Content-Type", "application/json"));
-        server.enqueue(new MockResponse()
-                .setBody("{\"access_token\":\"token-v2\",\"expires_in\":3600}")
-                .addHeader("Content-Type", "application/json"));
+        server.enqueue(
+                new MockResponse()
+                        .setBody("{\"access_token\":\"token-v1\",\"expires_in\":3600}")
+                        .addHeader("Content-Type", "application/json"));
+        server.enqueue(
+                new MockResponse()
+                        .setBody("{\"access_token\":\"token-v2\",\"expires_in\":3600}")
+                        .addHeader("Content-Type", "application/json"));
 
         OpenF1AuthService authService = service();
 
@@ -128,9 +133,10 @@ class OpenF1AuthServiceTest {
     /** R7: the next refresh is scheduled from what the server returned, not a fixed 50 minutes. */
     @Test
     void refreshToken_SchedulesFromExpiresIn() {
-        server.enqueue(new MockResponse()
-                .setBody("{\"access_token\":\"t\",\"expires_in\":3600}")
-                .addHeader("Content-Type", "application/json"));
+        server.enqueue(
+                new MockResponse()
+                        .setBody("{\"access_token\":\"t\",\"expires_in\":3600}")
+                        .addHeader("Content-Type", "application/json"));
 
         // 3600s lifetime minus the 5 minute safety margin.
         assertEquals(Duration.ofMinutes(55), service().refreshToken());

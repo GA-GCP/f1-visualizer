@@ -1,30 +1,28 @@
 package com.elysianarts.f1.visualizer.replay.repository;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryAccessException;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
-import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
 import com.elysianarts.f1.visualizer.replay.model.SessionBounds;
 import com.google.cloud.bigquery.*;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 @ExtendWith(MockitoExtension.class)
 class HistoricalRepositoryTest {
 
-    @Mock
-    private BigQuery bigQuery;
+    @Mock private BigQuery bigQuery;
 
     private HistoricalRepository historicalRepository;
 
@@ -60,8 +58,16 @@ class HistoricalRepositoryTest {
         return fv;
     }
 
-    private FieldValueList mockTelemetryRow(long meetingKey, int driverNumber, int speed, int rpm,
-                                             int gear, int throttle, int brake, int drs, long epochMicros) {
+    private FieldValueList mockTelemetryRow(
+            long meetingKey,
+            int driverNumber,
+            int speed,
+            int rpm,
+            int gear,
+            int throttle,
+            int brake,
+            int drs,
+            long epochMicros) {
         // Create mock FieldValues BEFORE setting up row stubs to avoid nested when() calls
         FieldValue meetingKeyFv = nullableLongFieldValue(meetingKey);
         FieldValue driverNumberFv = longFieldValue(driverNumber);
@@ -87,10 +93,9 @@ class HistoricalRepositoryTest {
     }
 
     /**
-     * P2: bounds is two queries now — the session's advertised window from the
-     * small unpartitioned `sessions` table, then an exact MIN/MAX inside it. The
-     * old single query had no date predicate at all, which the telemetry table no
-     * longer permits.
+     * P2: bounds is two queries now — the session's advertised window from the small unpartitioned
+     * `sessions` table, then an exact MIN/MAX inside it. The old single query had no date predicate
+     * at all, which the telemetry table no longer permits.
      */
     private TableResult sessionWindowResult() {
         FieldValueList row = mock(FieldValueList.class);
@@ -98,7 +103,7 @@ class HistoricalRepositoryTest {
         when(start.getTimestampValue()).thenReturn(1694948400000000L); // 2023-09-17T11:00:00Z
         FieldValue end = mock(FieldValue.class);
         when(end.isNull()).thenReturn(false);
-        when(end.getTimestampValue()).thenReturn(1694962800000000L);   // 2023-09-17T15:00:00Z
+        when(end.getTimestampValue()).thenReturn(1694962800000000L); // 2023-09-17T15:00:00Z
         when(row.get("date_start")).thenReturn(start);
         when(row.get("date_end")).thenReturn(end);
 
@@ -127,13 +132,15 @@ class HistoricalRepositoryTest {
         TableResult tableResult = mock(TableResult.class);
         when(tableResult.iterateAll()).thenReturn(List.of(row));
         TableResult windowResult = sessionWindowResult();
-        when(bigQuery.query(any(QueryJobConfiguration.class))).thenReturn(windowResult, tableResult);
+        when(bigQuery.query(any(QueryJobConfiguration.class)))
+                .thenReturn(windowResult, tableResult);
 
         SessionBounds bounds = historicalRepository.fetchTelemetryBounds(9165);
 
         assertNotNull(bounds);
         assertEquals(9165, bounds.sessionKey());
-        assertEquals(OffsetDateTime.of(2023, 9, 17, 12, 0, 0, 0, ZoneOffset.UTC), bounds.startTime());
+        assertEquals(
+                OffsetDateTime.of(2023, 9, 17, 12, 0, 0, 0, ZoneOffset.UTC), bounds.startTime());
         assertEquals(OffsetDateTime.of(2023, 9, 17, 14, 0, 0, 0, ZoneOffset.UTC), bounds.endTime());
         assertFalse(bounds.isEmpty());
     }
@@ -149,7 +156,8 @@ class HistoricalRepositoryTest {
         TableResult tableResult = mock(TableResult.class);
         when(tableResult.iterateAll()).thenReturn(List.of(row));
         TableResult windowResult = sessionWindowResult();
-        when(bigQuery.query(any(QueryJobConfiguration.class))).thenReturn(windowResult, tableResult);
+        when(bigQuery.query(any(QueryJobConfiguration.class)))
+                .thenReturn(windowResult, tableResult);
 
         SessionBounds bounds = historicalRepository.fetchTelemetryBounds(9999);
 
@@ -161,7 +169,9 @@ class HistoricalRepositoryTest {
         when(bigQuery.query(any(QueryJobConfiguration.class)))
                 .thenThrow(new InterruptedException("Query interrupted"));
 
-        assertThrows(BigQueryAccessException.class, () -> historicalRepository.fetchTelemetryBounds(9165));
+        assertThrows(
+                BigQueryAccessException.class,
+                () -> historicalRepository.fetchTelemetryBounds(9165));
     }
 
     // --- fetchTelemetryWindow tests ---
@@ -192,7 +202,8 @@ class HistoricalRepositoryTest {
         OffsetDateTime from = OffsetDateTime.of(2023, 9, 17, 12, 0, 0, 0, ZoneOffset.UTC);
         OffsetDateTime to = OffsetDateTime.of(2023, 9, 17, 12, 1, 0, 0, ZoneOffset.UTC);
 
-        assertThrows(BigQueryAccessException.class,
+        assertThrows(
+                BigQueryAccessException.class,
                 () -> historicalRepository.fetchTelemetryWindow(9165, from, to));
     }
 }

@@ -1,11 +1,19 @@
 package com.elysianarts.f1.visualizer.data.ingestion.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
 import com.elysianarts.f1.visualizer.commons.api.openf1.client.OpenF1Client;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1LapData;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1StintData;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryBatchWriter;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryProperties;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
-import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1LapData;
-import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1StintData;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,29 +22,16 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class LapDataLoaderTest {
 
-    @Mock
-    private OpenF1Client openF1Client;
+    @Mock private OpenF1Client openF1Client;
 
-    @Mock
-    private BigQueryBatchWriter batchWriter;
+    @Mock private BigQueryBatchWriter batchWriter;
 
-    @Mock
-    private BigQueryQueryRunner queryRunner;
+    @Mock private BigQueryQueryRunner queryRunner;
 
-    @InjectMocks
-    private LapDataLoader lapDataLoader;
+    @InjectMocks private LapDataLoader lapDataLoader;
 
     @BeforeEach
     void stubDataset() {

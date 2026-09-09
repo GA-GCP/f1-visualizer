@@ -1,11 +1,11 @@
 package com.elysianarts.f1.visualizer.user.exception;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.elysianarts.f1.visualizer.commons.web.error.ProblemDetailExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class GlobalExceptionHandlerTest {
 
@@ -14,7 +14,8 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleUserNotFound_Returns404ProblemDetail() {
-        ProblemDetail problem = handler.handleUserNotFound(new UserNotFoundException("auth0|user_123"));
+        ProblemDetail problem =
+                handler.handleUserNotFound(new UserNotFoundException("auth0|user_123"));
 
         assertEquals(HttpStatus.NOT_FOUND.value(), problem.getStatus());
         assertEquals("User Not Found", problem.getTitle());
@@ -23,7 +24,8 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleUserNotFound_DetailContainsAuthId() {
-        ProblemDetail problem = handler.handleUserNotFound(new UserNotFoundException("google-oauth2|456"));
+        ProblemDetail problem =
+                handler.handleUserNotFound(new UserNotFoundException("google-oauth2|456"));
 
         assertTrue(problem.getDetail().contains("google-oauth2|456"));
     }
@@ -31,8 +33,10 @@ class GlobalExceptionHandlerTest {
     /** S5: a 5xx body must not echo the GCP client's message back to the browser. */
     @Test
     void handleUnexpected_Returns500_WithoutLeakingTheExceptionMessage() {
-        ProblemDetail problem = sharedHandler.handleUnexpected(
-                new RuntimeException("Firestore connection failed for project f1v-example-project"));
+        ProblemDetail problem =
+                sharedHandler.handleUnexpected(
+                        new RuntimeException(
+                                "Firestore connection failed for project f1v-example-project"));
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), problem.getStatus());
         assertFalse(problem.getDetail().contains("Firestore"));

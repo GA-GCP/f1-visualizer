@@ -10,13 +10,13 @@ import org.springframework.stereotype.Service;
 /**
  * Applies commands from the Redis stream to the engine (R1).
  *
- * <p>These used to be direct method calls from an HTTP handler in the same JVM,
- * which is the coupling that forced the API and the engine to share a
- * deployment.</p>
+ * <p>These used to be direct method calls from an HTTP handler in the same JVM, which is the
+ * coupling that forced the API and the engine to share a deployment.
  */
 @Slf4j
 @Service
-public class ReplayCommandListener implements StreamListener<String, MapRecord<String, String, String>> {
+public class ReplayCommandListener
+        implements StreamListener<String, MapRecord<String, String, String>> {
 
     private final ReplayTicker ticker;
 
@@ -31,7 +31,11 @@ public class ReplayCommandListener implements StreamListener<String, MapRecord<S
             command = ReplayCommandStream.parse(record);
         } catch (RuntimeException e) {
             // A malformed command is not worth stalling the stream over.
-            log.error("replay command unparseable record_id={} fields={}", record.getId(), record.getValue(), e);
+            log.error(
+                    "replay command unparseable record_id={} fields={}",
+                    record.getId(),
+                    record.getValue(),
+                    e);
             return;
         }
 
@@ -39,7 +43,11 @@ public class ReplayCommandListener implements StreamListener<String, MapRecord<S
         try {
             apply(command);
         } catch (RuntimeException e) {
-            log.error("replay command failed type={} session_key={}", command.type(), command.sessionKey(), e);
+            log.error(
+                    "replay command failed type={} session_key={}",
+                    command.type(),
+                    command.sessionKey(),
+                    e);
         }
     }
 

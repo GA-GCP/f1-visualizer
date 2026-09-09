@@ -7,12 +7,11 @@ import org.springframework.context.annotation.Configuration;
 /**
  * OpenF1 sponsor-tier credentials.
  *
- * <p>These used to be read at version {@code latest} by a hand-rolled Secret
- * Manager client, which pulled the Secret Manager, protobuf and gRPC stack into
- * every ingestion image and hardcoded a project id as its default. Cloud Run
- * mounts the same two secrets as environment variables instead, so the
- * credential path is one platform feature rather than one client library and a
- * bean that fails at startup (S6).</p>
+ * <p>These used to be read at version {@code latest} by a hand-rolled Secret Manager client, which
+ * pulled the Secret Manager, protobuf and gRPC stack into every ingestion image and hardcoded a
+ * project id as its default. Cloud Run mounts the same two secrets as environment variables
+ * instead, so the credential path is one platform feature rather than one client library and a bean
+ * that fails at startup (S6).
  */
 @Configuration
 public class OpenF1CredentialsConfig {

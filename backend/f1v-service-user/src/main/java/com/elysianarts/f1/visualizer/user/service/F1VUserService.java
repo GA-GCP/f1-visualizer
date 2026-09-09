@@ -19,16 +19,18 @@ public class F1VUserService {
         if (existing != null) {
             return existing;
         }
-        F1VUserDocument newUser = F1VUserDocument.builder()
-                .authSubId(authSubId)
-                .email(email)
-                .createdAt(Timestamp.now())
-                .preferences(new F1VUserDocument.UserPreferences())
-                .build();
+        F1VUserDocument newUser =
+                F1VUserDocument.builder()
+                        .authSubId(authSubId)
+                        .email(email)
+                        .createdAt(Timestamp.now())
+                        .preferences(new F1VUserDocument.UserPreferences())
+                        .build();
         return userRepository.save(newUser);
     }
 
-    public F1VUserDocument updatePreferences(String authSubId, F1VUserDocument.UserPreferences newPreferences) {
+    public F1VUserDocument updatePreferences(
+            String authSubId, F1VUserDocument.UserPreferences newPreferences) {
         F1VUserDocument existingUser = userRepository.findById(authSubId);
         if (existingUser != null) {
             existingUser.setPreferences(newPreferences);

@@ -12,10 +12,9 @@ import org.springframework.stereotype.Service;
 /**
  * Drives the replay clock and publishes what it is doing (R1).
  *
- * <p>Mode used to be a field on this class in the same JVM as the HTTP handlers
- * that set it. It is written to Redis after every tick now, which is what lets
- * any API instance answer a status query and lets this worker resume the session
- * it was replaying before a deploy restarted it.</p>
+ * <p>Mode used to be a field on this class in the same JVM as the HTTP handlers that set it. It is
+ * written to Redis after every tick now, which is what lets any API instance answer a status query
+ * and lets this worker resume the session it was replaying before a deploy restarted it.
  */
 @Slf4j
 @Service
@@ -26,12 +25,14 @@ public class ReplayTicker {
     private final ReplayStateStore stateStore;
 
     private volatile IngestionMode currentMode = IngestionMode.SIMULATION;
+
     /** Redis is written once a second, not four times: the tick itself is the hot path. */
     private long lastStatePublishMillis;
 
-    public ReplayTicker(ReplayEngine replayEngine,
-                        LiveStreamService liveStreamService,
-                        ReplayStateStore stateStore) {
+    public ReplayTicker(
+            ReplayEngine replayEngine,
+            LiveStreamService liveStreamService,
+            ReplayStateStore stateStore) {
         this.replayEngine = replayEngine;
         this.liveStreamService = liveStreamService;
         this.stateStore = stateStore;
@@ -77,8 +78,8 @@ public class ReplayTicker {
     }
 
     /**
-     * Picks up whatever this worker was replaying before it restarted. A deploy
-     * used to end the session silently (R1).
+     * Picks up whatever this worker was replaying before it restarted. A deploy used to end the
+     * session silently (R1).
      */
     @EventListener(ApplicationReadyEvent.class)
     public void resumeFromLastKnownState() {
@@ -88,8 +89,11 @@ public class ReplayTicker {
             return;
         }
 
-        log.info("replay resuming session_key={} progress={} was_running={}",
-                previous.sessionKey(), previous.progress(), previous.running());
+        log.info(
+                "replay resuming session_key={} progress={} was_running={}",
+                previous.sessionKey(),
+                previous.progress(),
+                previous.running());
         try {
             startSimulation(previous.sessionKey());
             if (previous.progress() > 0) {
@@ -114,13 +118,16 @@ public class ReplayTicker {
     void publishState() {
         try {
             ReplayEngine.Snapshot snapshot = replayEngine.snapshot();
-            stateStore.save(new ReplayState(
-                    modeFor(snapshot),
-                    snapshot.sessionKey(),
-                    snapshot.virtualClock() == null ? null : snapshot.virtualClock().toString(),
-                    snapshot.running(),
-                    snapshot.progress(),
-                    java.time.Instant.now().toString()));
+            stateStore.save(
+                    new ReplayState(
+                            modeFor(snapshot),
+                            snapshot.sessionKey(),
+                            snapshot.virtualClock() == null
+                                    ? null
+                                    : snapshot.virtualClock().toString(),
+                            snapshot.running(),
+                            snapshot.progress(),
+                            java.time.Instant.now().toString()));
         } catch (RuntimeException e) {
             // Losing a status update must not stop the replay it describes.
             log.warn("replay state publish failed", e);

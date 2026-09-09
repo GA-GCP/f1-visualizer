@@ -1,19 +1,18 @@
 package com.elysianarts.f1.visualizer.replay.repository;
 
+import static com.elysianarts.f1.visualizer.replay.repository.HistoricalRepository.microsToOffsetDateTime;
+import static com.elysianarts.f1.visualizer.replay.repository.HistoricalRepository.offsetDateTimeToMicros;
+
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1LocationData;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryAccessException;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
 import com.google.cloud.bigquery.*;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Repository;
-
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.elysianarts.f1.visualizer.replay.repository.HistoricalRepository.microsToOffsetDateTime;
-import static com.elysianarts.f1.visualizer.replay.repository.HistoricalRepository.offsetDateTimeToMicros;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Repository;
 
 @Slf4j
 @Repository
@@ -24,21 +23,25 @@ public class HistoricalLocationRepository {
     private static final String TABLE = "locations";
 
     /**
-     * Fetches location rows within [from, to] inclusive, ordered by date ASC.
-     * No LIMIT — the time window itself bounds the result set.
+     * Fetches location rows within [from, to] inclusive, ordered by date ASC. No LIMIT — the time
+     * window itself bounds the result set.
      */
-    public List<OpenF1LocationData> fetchLocationWindow(long sessionKey, OffsetDateTime from, OffsetDateTime to) {
+    public List<OpenF1LocationData> fetchLocationWindow(
+            long sessionKey, OffsetDateTime from, OffsetDateTime to) {
         long fromMicros = offsetDateTimeToMicros(from);
         long toMicros = offsetDateTimeToMicros(to);
 
-        String query = String.format("""
+        String query =
+                String.format(
+                        """
             SELECT session_key, meeting_key, date, driver_number, x, y, z
             FROM `%s.%s`
             WHERE session_key = %d
               AND date >= TIMESTAMP_MICROS(%d)
               AND date <= TIMESTAMP_MICROS(%d)
             ORDER BY date ASC
-            """, dataset(), TABLE, sessionKey, fromMicros, toMicros);
+            """,
+                        dataset(), TABLE, sessionKey, fromMicros, toMicros);
 
         try {
             TableResult result = queryRunner.query(query);
@@ -50,7 +53,8 @@ public class HistoricalLocationRepository {
             log.debug("Loaded {} location rows for window [{} -> {}]", locations.size(), from, to);
             return locations;
         } catch (Exception e) {
-            throw new BigQueryAccessException("Failed to read the location window for session " + sessionKey, e);
+            throw new BigQueryAccessException(
+                    "Failed to read the location window for session " + sessionKey, e);
         }
     }
 

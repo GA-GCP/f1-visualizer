@@ -9,9 +9,9 @@ import org.springframework.web.filter.ShallowEtagHeaderFilter;
 public class WebConfig {
 
     /**
-     * P5: reference data carried no validator, so a client that already had the
-     * current catalog re-downloaded it in full. With an ETag the same request
-     * becomes a 304 and no body crosses the wire.
+     * P5: reference data carried no validator, so a client that already had the current catalog
+     * re-downloaded it in full. With an ETag the same request becomes a 304 and no body crosses the
+     * wire.
      */
     @Bean
     public FilterRegistrationBean<ShallowEtagHeaderFilter> etagFilter() {

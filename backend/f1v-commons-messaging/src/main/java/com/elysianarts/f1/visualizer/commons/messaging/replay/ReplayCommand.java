@@ -5,10 +5,10 @@ import java.util.Map;
 /**
  * An instruction for the replay worker (R1).
  *
- * <p>Playback used to be driven by calling the engine directly from an HTTP
- * handler, which only worked while the engine lived in the same JVM as the
- * handler — and Cloud Run was free to run five of them. Commands travel over a
- * Redis stream now, so the API can scale and exactly one worker acts on them.</p>
+ * <p>Playback used to be driven by calling the engine directly from an HTTP handler, which only
+ * worked while the engine lived in the same JVM as the handler — and Cloud Run was free to run five
+ * of them. Commands travel over a Redis stream now, so the API can scale and exactly one worker
+ * acts on them.
  */
 public record ReplayCommand(Type type, Long sessionKey, Integer percentage) {
 

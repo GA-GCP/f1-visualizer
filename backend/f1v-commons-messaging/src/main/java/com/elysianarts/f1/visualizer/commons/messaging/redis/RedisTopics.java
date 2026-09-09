@@ -3,9 +3,8 @@ package com.elysianarts.f1.visualizer.commons.messaging.redis;
 /**
  * The channel names ingestion publishes on and telemetry subscribes to.
  *
- * <p>C4: these were declared twice, as constants on two near-identical
- * {@code RedisConfig} classes in two services — a producer/consumer contract
- * where each side held its own copy of the names.</p>
+ * <p>C4: these were declared twice, as constants on two near-identical {@code RedisConfig} classes
+ * in two services — a producer/consumer contract where each side held its own copy of the names.
  */
 public final class RedisTopics {
 

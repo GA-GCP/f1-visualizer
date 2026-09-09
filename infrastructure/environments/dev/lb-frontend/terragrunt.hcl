@@ -27,4 +27,13 @@ inputs = {
   name_prefix            = "f1v-frontend-dev"
   domain                 = "dev.f1visualizer.com"
   cloud_run_service_name = dependency.webapp.outputs.service_name
+
+  # OPS-3 / SEC-5: the zone from infrastructure/platform. The A and AAAA records
+  # and the Certificate Manager DNS authorization are created here, where the
+  # addresses are.
+  dns_zone_name = "f1visualizer-com"
+
+  # SEC-5: flip to true per environment once
+  # `gcloud certificate-manager certificates describe` reports ACTIVE. dev first.
+  use_certificate_manager = false
 }

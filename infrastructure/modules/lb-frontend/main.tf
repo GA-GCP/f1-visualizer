@@ -88,10 +88,14 @@ resource "google_compute_managed_ssl_certificate" "default" {
 
 # 6. Target HTTPS Proxy
 resource "google_compute_target_https_proxy" "default" {
-  name             = "${var.name_prefix}-https-proxy"
-  url_map          = google_compute_url_map.default.id
-  ssl_certificates = [google_compute_managed_ssl_certificate.default.id]
-  project          = var.project_id
+  name    = "${var.name_prefix}-https-proxy"
+  url_map = google_compute_url_map.default.id
+  project = var.project_id
+
+  # SEC-5: exactly one of these is set. The classic certificate stays until the
+  # Certificate Manager one is ACTIVE; see the cutover note below.
+  ssl_certificates = var.use_certificate_manager ? null : [google_compute_managed_ssl_certificate.default.id]
+  certificate_map  = var.use_certificate_manager ? google_certificate_manager_certificate_map.default[0].id : null
 
   # SEC-5: TLS 1.2 and the MODERN cipher profile, instead of the default policy's
   # TLS 1.0 and COMPATIBLE.
@@ -235,4 +239,99 @@ resource "google_compute_security_policy" "frontend" {
       enable = var.enable_adaptive_protection
     }
   }
+}
+
+# ==============================================================================
+# OPS-3: DNS records
+# ==============================================================================
+# The A records the managed certificate depends on were never in the repository,
+# which is why the certificates' bootstrap failure — stuck in PROVISIONING until
+# the domain resolves to this address — had no codified answer. The zone lives in
+# infrastructure/platform; the records live here, with the addresses they point
+# at, so an environment's apply stays self-contained.
+resource "google_dns_record_set" "a" {
+  count = var.dns_zone_name == "" ? 0 : 1
+
+  project      = var.project_id
+  managed_zone = var.dns_zone_name
+  name         = "${var.domain}."
+  type         = "A"
+  ttl          = 300
+  rrdatas      = [google_compute_global_address.default.address]
+}
+
+resource "google_dns_record_set" "aaaa" {
+  count = var.dns_zone_name == "" ? 0 : 1
+
+  project      = var.project_id
+  managed_zone = var.dns_zone_name
+  name         = "${var.domain}."
+  type         = "AAAA"
+  ttl          = 300
+  rrdatas      = [google_compute_global_address.ipv6.address]
+}
+
+# ==============================================================================
+# SEC-5: Certificate Manager
+# ==============================================================================
+# google_compute_managed_ssl_certificate is the classic type: one domain per
+# certificate, no way to add `www` without a second certificate and a second
+# proxy slot, and a renewal path with no visibility. Certificate Manager
+# validates through DNS instead of through the load balancer answering on the
+# domain, so a certificate can be issued and confirmed ACTIVE *before* anything
+# routes through it.
+#
+# Both paths exist on purpose. The resources below are created either way, so the
+# certificate can validate while the classic one is still serving; flipping
+# `use_certificate_manager` is the cutover, and it is one line per environment.
+# Pointing a live proxy at a certificate map before the certificate is ACTIVE
+# takes HTTPS down, which is why this is not a single-step change.
+resource "google_certificate_manager_dns_authorization" "default" {
+  count = var.dns_zone_name == "" ? 0 : 1
+
+  project = var.project_id
+  name    = "${var.name_prefix}-dnsauth"
+  domain  = var.domain
+}
+
+# The CNAME the authorization needs. In the zone, so validation completes without
+# anyone copying a record out of the console.
+resource "google_dns_record_set" "dns_auth" {
+  count = var.dns_zone_name == "" ? 0 : 1
+
+  project      = var.project_id
+  managed_zone = var.dns_zone_name
+  name         = google_certificate_manager_dns_authorization.default[0].dns_resource_record[0].name
+  type         = google_certificate_manager_dns_authorization.default[0].dns_resource_record[0].type
+  ttl          = 300
+  rrdatas      = [google_certificate_manager_dns_authorization.default[0].dns_resource_record[0].data]
+}
+
+resource "google_certificate_manager_certificate" "default" {
+  count = var.dns_zone_name == "" ? 0 : 1
+
+  project = var.project_id
+  name    = "${var.name_prefix}-cert-managed"
+
+  managed {
+    domains            = [var.domain]
+    dns_authorizations = [google_certificate_manager_dns_authorization.default[0].id]
+  }
+}
+
+resource "google_certificate_manager_certificate_map" "default" {
+  count = var.dns_zone_name == "" ? 0 : 1
+
+  project = var.project_id
+  name    = "${var.name_prefix}-cert-map"
+}
+
+resource "google_certificate_manager_certificate_map_entry" "default" {
+  count = var.dns_zone_name == "" ? 0 : 1
+
+  project      = var.project_id
+  name         = "${var.name_prefix}-cert-entry"
+  map          = google_certificate_manager_certificate_map.default[0].name
+  certificates = [google_certificate_manager_certificate.default[0].id]
+  matcher      = "PRIMARY"
 }

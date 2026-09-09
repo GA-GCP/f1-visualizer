@@ -9,9 +9,9 @@ terraform {
 dependency "iam" {
   config_path = "../iam-and-secrets"
   mock_outputs = {
-    sa_data_ingestion_email = "sa-f1v-data-ingestion-dev@f1-visualizer-488201.iam.gserviceaccount.com"
-    sa_data_analysis_email  = "sa-f1v-data-analysis-dev@f1-visualizer-488201.iam.gserviceaccount.com"
-    sa_replay_worker_email  = "sa-f1v-replay-worker-dev@f1-visualizer-488201.iam.gserviceaccount.com"
+    sa_data_ingestion_email = "sa-f1v-data-ingestion-uat@f1-visualizer-488201.iam.gserviceaccount.com"
+    sa_data_analysis_email  = "sa-f1v-data-analysis-uat@f1-visualizer-488201.iam.gserviceaccount.com"
+    sa_replay_worker_email  = "sa-f1v-replay-worker-uat@f1-visualizer-488201.iam.gserviceaccount.com"
   }
 
   # REL-7: mocks are for planning, never for applying.
@@ -21,13 +21,13 @@ dependency "iam" {
 
 inputs = {
   project_id  = "f1-visualizer-488201"
-  environment = "dev"
+  environment = "uat"
   location    = "US"
 
   # CPLX-2: one dataset per environment. The single shared "f1_dataset" is what
   # let a UAT historical load write into the tables prod reads. The services take
   # this from F1V_BIGQUERY_DATASET, which their units now set.
-  dataset_id = "f1_dataset_dev"
+  dataset_id = "f1_dataset_uat"
 
   # SEC-3: granted on the dataset. This list is now one environment's identities,
   # rather than all three, which is the point of splitting the dataset.

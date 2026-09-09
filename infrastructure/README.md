@@ -4,6 +4,19 @@ OpenTofu modules under `modules/`, one Terragrunt unit per resource per
 environment under `environments/<env>/`. `cloudbuild/infrastructure.yaml` plans
 and applies an environment on a push to that environment's branch.
 
+`platform/` is the exception: it holds what dev, uat and prod share — the state
+bucket, the Artifact Registry repositories, the OpenF1 secret containers, the
+enabled APIs, the DNS zone and the audit configuration. It sits outside
+`environments/` deliberately, so `terragrunt run --all` in one environment cannot
+apply or destroy resources another depends on (CPLX-2, REL-8). Apply it directly,
+and rarely:
+
+    cd infrastructure/platform && terragrunt apply
+
+Changes that need a step beyond an apply — imports, the BigQuery dataset split,
+the Certificate Manager cutover, the CI identity switch — are in
+[MIGRATIONS.md](MIGRATIONS.md).
+
 ## Bootstrap order
 
 REL-4: the pipeline identity cannot create everything the code declares, and it
@@ -11,14 +24,15 @@ never could — a human with Owner created the first copy of each of these, and
 that was written down nowhere. This is that order. Everything below is a
 one-time, out-of-band step for a project that does not exist yet.
 
-1. **Enable the APIs.** `run`, `artifactregistry`, `cloudbuild`, `compute`,
-   `redis`, `bigquery`, `firestore`, `secretmanager`, `vpcaccess`, `iam`,
-   `cloudresourcemanager`, `monitoring`, `logging`, `dns`, `storage`.
-   OPS-3 moves these into a platform layer; until then they are console state.
+1. **Enable two APIs by hand.** `cloudresourcemanager` and `serviceusage`.
+   The platform layer enables the other seventeen, but it cannot enable the ones
+   it needs in order to run.
 
-2. **Create the state bucket.** `gs://<project>-tfstate`, with versioning on,
-   uniform bucket-level access, and `public_access_prevention = enforced`.
-   `root.hcl` expects it to exist. SEC-7 covers what it should be configured as.
+2. **Create the state bucket.** `gs://<project>-tfstate`. `root.hcl` expects it
+   to exist before any unit can store state, including the platform unit that
+   declares it. Versioning on, uniform bucket-level access,
+   `public_access_prevention = enforced` — then import it, so the settings stop
+   being a matter of trust (SEC-7, MIGRATIONS.md).
 
 3. **Apply the `iam-and-secrets` unit as a human with Owner.** It creates the two
    CI identities that everything else runs as, so it cannot create itself:
@@ -55,7 +69,12 @@ one-time, out-of-band step for a project that does not exist yet.
    at it; until one does, IPv6-only clients simply cannot reach the site, which
    is the state before this change.
 
-7. **Apply the rest.** `terragrunt run --all apply` from `environments/<env>`.
+7. **Apply the platform layer.** `cd platform && terragrunt apply`. This enables
+   the remaining APIs, creates the registries and the DNS zone, and turns on Data
+   Access audit logging.
+
+8. **Apply the environment.** `terragrunt run --all apply` from
+   `environments/<env>`.
 
 ## Identities
 

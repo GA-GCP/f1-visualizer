@@ -29,17 +29,6 @@ dependency "networking" {
   mock_outputs_merge_strategy_with_state  = "shallow"
 }
 
-dependency "secrets" {
-  config_path = "../secrets"
-  mock_outputs = {
-    openf1_username_secret_id = "f1v-api-openf1-login-user-email"
-    openf1_password_secret_id = "f1v-api-openf1-login-user-password"
-  }
-
-  # REL-7: mocks are for planning, never for applying.
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
-  mock_outputs_merge_strategy_with_state  = "shallow"
-}
 
 dependency "redis" {
   config_path = "../redis"
@@ -67,6 +56,17 @@ dependency "redis" {
 # Exactly one instance, always on, with CPU always allocated. It has no HTTP API:
 # commands arrive on a Redis stream and state goes back to Redis, so nothing
 # outside the platform's own health probes needs to reach it.
+dependency "bigquery" {
+  config_path = "../bigquery"
+  mock_outputs = {
+    dataset_id = "f1_dataset_uat"
+  }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
+}
+
 inputs = {
   project_id            = "f1-visualizer-488201"
   region                = "us-east1"
@@ -99,6 +99,10 @@ inputs = {
     "SPRING_DATA_REDIS_PORT" = dependency.redis.outputs.redis_port
     "SPRING_PROFILES_ACTIVE" = "uat"
 
+    # CPLX-2: the backend has read this since C4 and nothing ever set it, so
+    # every environment fell through to the shared "f1_dataset".
+    "F1V_BIGQUERY_DATASET" = dependency.bigquery.outputs.dataset_id
+
     "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI" = "https://elysianarts-uat.us.auth0.com/"
     "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_AUDIENCES"  = "uat.api.f1visualizer.com"
   }
@@ -112,19 +116,22 @@ inputs = {
     "F1V_REDIS_CA_CERT" = { secret = dependency.redis.outputs.redis_ca_secret_id }
 
     # The MQTT bridge lives here now, so the OpenF1 credentials do too (S6).
-    # SEC-6: the secret ids come from the unit that declares the containers, so a
-    # rename cannot leave a service pointing at a secret that no longer exists.
+    # SEC-6: one credential for all three environments, because OpenF1 issues
+    # one account. Declared and granted in infrastructure/platform, and named
+    # here by id rather than read from a dependency — depending across the layer
+    # boundary would pull the platform unit into an environment's `run --all`,
+    # which is the coupling CPLX-2 removes.
     #
     # `version` is stated rather than left to the module's "latest" default. It
     # is still "latest" today, because the current version numbers are live state
-    # this repository does not know — but changing it is now a one-line reviewed
-    # diff rather than an edit to a default nobody sees.
+    # this repository does not know — but changing it is a one-line reviewed diff
+    # rather than an edit to a default nobody sees.
     "F1V_OPENF1_USERNAME" = {
-      secret  = dependency.secrets.outputs.openf1_username_secret_id
+      secret  = "f1v-api-openf1-login-user-email"
       version = "latest"
     }
     "F1V_OPENF1_PASSWORD" = {
-      secret  = dependency.secrets.outputs.openf1_password_secret_id
+      secret  = "f1v-api-openf1-login-user-password"
       version = "latest"
     }
   }

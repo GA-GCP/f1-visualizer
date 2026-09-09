@@ -28,6 +28,18 @@ dependency "networking" {
   mock_outputs_merge_strategy_with_state  = "shallow"
 }
 
+dependency "secrets" {
+  config_path = "../secrets"
+  mock_outputs = {
+    openf1_username_secret_id = "f1v-api-openf1-login-user-email"
+    openf1_password_secret_id = "f1v-api-openf1-login-user-password"
+  }
+
+  # REL-7: mocks are for planning, never for applying.
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
+  mock_outputs_merge_strategy_with_state  = "shallow"
+}
+
 dependency "redis" {
   config_path = "../redis"
   mock_outputs = {
@@ -98,10 +110,20 @@ inputs = {
     # S6: read by Cloud Run at deploy time instead of by a hand-rolled Secret
     # Manager client at startup, which pinned nothing and pulled the client,
     # protobuf and gRPC stack into every ingestion image.
+    # SEC-6: the secret ids come from the unit that declares the containers, so a
+    # rename cannot leave a service pointing at a secret that no longer exists.
     #
-    # TODO: pin `version` to the current secret version once it is known; until
-    # then these track "latest", which is the behaviour being replaced.
-    "F1V_OPENF1_USERNAME" = { secret = "f1v-api-openf1-login-user-email" }
-    "F1V_OPENF1_PASSWORD" = { secret = "f1v-api-openf1-login-user-password" }
+    # `version` is stated rather than left to the module's "latest" default. It
+    # is still "latest" today, because the current version numbers are live state
+    # this repository does not know — but changing it is now a one-line reviewed
+    # diff rather than an edit to a default nobody sees.
+    "F1V_OPENF1_USERNAME" = {
+      secret  = dependency.secrets.outputs.openf1_username_secret_id
+      version = "latest"
+    }
+    "F1V_OPENF1_PASSWORD" = {
+      secret  = dependency.secrets.outputs.openf1_password_secret_id
+      version = "latest"
+    }
   }
 }

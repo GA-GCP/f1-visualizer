@@ -73,9 +73,10 @@ steps:
         /workspace/bin/tofu version
         /workspace/bin/terragrunt --version
 
-  # 2. Trivy IaC Security Scan on All Modules
+  # 2. Trivy IaC scan — fast first pass over the source
   #    tfsec is retired and folded into Trivy; this matches the scanner used
-  #    by the GitHub Actions PR checks.
+  #    by the GitHub Actions PR checks. The pass that actually sees the values
+  #    runs after the plan, in step 5.
   - name: '${_TRIVY_IMAGE}'
     id: 'security-scan'
     args:
@@ -85,7 +86,9 @@ steps:
       - '--severity'
       - 'CRITICAL,HIGH'
       - '--no-progress'
-      - 'infrastructure/modules/'
+      - '--ignorefile'
+      - 'infrastructure/.trivyignore'
+      - 'infrastructure/'
 
   # 3. Terragrunt Init
   - name: '${_ALPINE_IMAGE}'
@@ -130,7 +133,67 @@ steps:
           *) echo "ERROR: plan exited $$code" ; exit "$$code" ;;
         esac
 
-  # 5. Terragrunt Apply — the saved plans, and only those
+  # 5. Scan the rendered plans
+  #
+  #    DLV-4: the module scan above logs "Variable values were not found" for
+  #    every module, because is_public, ingress, deletion_protection and every
+  #    secret reference arrive as Terragrunt inputs — so every security-relevant
+  #    decision in this tree was invisible to it. Trivy's own run against the
+  #    modules found three findings, all in code that has no variable. A plan has
+  #    the values resolved.
+  - name: '${_ALPINE_IMAGE}'
+    id: 'render-plans'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        set -eu
+        export PATH=/workspace/bin:$$PATH
+        if [ -f /workspace/no-changes ]; then
+          echo "No changes to scan."
+          exit 0
+        fi
+        mkdir -p /workspace/plan-json
+        cd infrastructure/environments/${_ENV}
+        terragrunt run --all --non-interactive --parallelism 4 \
+          --out-dir /workspace/plans -- show -json tfplan > /workspace/plan-json/plan.json
+        wc -c /workspace/plan-json/plan.json
+
+  - name: '${_TRIVY_IMAGE}'
+    id: 'plan-scan'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        set -eu
+        if [ ! -s /workspace/plan-json/plan.json ]; then
+          echo "No plan to scan."
+          exit 0
+        fi
+        trivy config --exit-code 1 --severity CRITICAL,HIGH --no-progress \
+          --ignorefile infrastructure/.trivyignore \
+          --tf-plan /workspace/plan-json/plan.json
+
+  # 6. Policy check against the same plan
+  #
+  #    DLV-3: the rules that would have caught findings in this audit — no
+  #    project-level data or secret roles, no allUsers outside an allow-list, prod
+  #    implies deletion protection, no bare :latest image reference. Written
+  #    against a plan for the same reason as the scan above.
+  - name: 'openpolicyagent/conftest:v0.60.0'
+    id: 'policy-check'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        set -eu
+        if [ ! -s /workspace/plan-json/plan.json ]; then
+          echo "No plan to check."
+          exit 0
+        fi
+        conftest test --policy infrastructure/policy /workspace/plan-json/plan.json
+
+  # 7. Terragrunt Apply — the saved plans, and only those
   - name: '${_ALPINE_IMAGE}'
     id: 'terragrunt-apply'
     entrypoint: 'sh'

@@ -56,6 +56,55 @@ jobs:
           exit-code: '1'
           scanners: vuln
 
+      # Until this existed, the Dockerfile was only ever exercised after merge, by
+      # Cloud Build — so a broken Dockerfile.ci or a fresh CVE in the distroless
+      # base merged green and failed on the way to an environment. This builds the
+      # image production actually runs, from the layers the build above produced.
+      #
+      # One module is enough for what this adds: the base image and the Dockerfile
+      # are identical across all five services, and the Maven dependencies of every
+      # module are already covered by the filesystem scan above. Ingestion is used
+      # because it has the widest dependency set.
+      #
+      # KNOWN GAP: backend/Dockerfile — the local multi-stage build — is not
+      # exercised here. It runs a full Maven build inside the image and would cost
+      # minutes on every PR. It is not the image that ships.
+      - name: Build the production image
+        run: |
+          set -euo pipefail
+          MODULE=f1v-service-data-ingestion
+          STAGING=/tmp/f1v-image-staging
+          mkdir -p "$STAGING"
+          cd "$STAGING"
+          java -Djarmode=layertools -jar "$GITHUB_WORKSPACE/backend/$MODULE/target/"*.jar extract
+          docker build \
+            -f "$GITHUB_WORKSPACE/backend/Dockerfile.ci" \
+            -t f1v-backend:pr \
+            "$STAGING"
+
+      # Scans the runtime layers the filesystem scan cannot see: the distroless
+      # base and the JDK inside it.
+      #
+      # ignore-unfixed, unlike the dependency scan above. The base is consumed,
+      # not built here, and at the time of writing it carries six HIGH CVEs in
+      # libexpat and util-linux for which Debian has shipped no patch — so
+      # without this the gate would fail every PR on findings nobody can act on,
+      # and would be turned off within a week. The moment a fix exists, this stops
+      # ignoring it and Dependabot's docker ecosystem bumps the pinned digest.
+      #
+      # Our own Maven dependencies are held to the stricter standard: the scan
+      # above reports unfixed advisories too, because there we can drop or replace
+      # the dependency.
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: f1v-backend:pr
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+          scanners: vuln
+
       # The SBOM the build produced, kept with the run so a later advisory can be
       # answered from what shipped rather than from what main looks like today.
       - name: Upload SBOMs

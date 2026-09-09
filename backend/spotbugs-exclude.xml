@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs exclusions.
+
+  One entry, and it is a whole category rather than a list of sites. Anything
+  else should be fixed rather than listed here.
+-->
+<FindBugsFilter xmlns="https://github.com/spotbugs/filter/3.0.0">
+
+    <!--
+      MALICIOUS_CODE (EI_EXPOSE_REP, EI_EXPOSE_REP2, MS_EXPOSE_REP and friends)
+      models a threat where untrusted code runs inside this JVM and can reach a
+      field it was handed a reference to. That is not the threat model here: these
+      are single-tenant Spring services, and every finding in the category was a
+      constructor storing a collaborator the framework injected — a BigQuery
+      client, a RedisTemplate, a MeterRegistry — which are shared by reference on
+      purpose and cannot be defensively copied.
+
+      Left on, it would report roughly one finding per @Service in the codebase
+      and drown the detectors that do apply: null dereferences, resource leaks,
+      and the find-sec-bugs rules.
+
+      Note this is not a licence to alias mutable state. The one finding in this
+      category that was a real encapsulation problem — the security filter chain
+      holding the caller's CORS origin list and authorization rules by reference —
+      was fixed with defensive copies rather than suppressed, before the category
+      was switched off.
+    -->
+    <Match>
+        <Bug category="MALICIOUS_CODE"/>
+    </Match>
+
+    <!--
+      VA_FORMAT_STRING_USES_NEWLINE wants %n instead of \n, so that output picks
+      up the platform's line separator. Every String.format in this codebase
+      builds BigQuery SQL — thirteen text blocks and two DELETE statements, and
+      nothing human-facing. SQL's line separator is \n on every platform, so %n
+      would be the wrong character to emit, not the right one.
+    -->
+    <Match>
+        <Bug pattern="VA_FORMAT_STRING_USES_NEWLINE"/>
+    </Match>
+
+</FindBugsFilter>

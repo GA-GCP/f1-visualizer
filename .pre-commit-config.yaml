@@ -58,6 +58,22 @@ repos:
 
   - repo: local
     hooks:
+      # The custom rules only. The community rulesets are a registry fetch and
+      # too slow for a commit hook; CI runs those.
+      - id: semgrep-local-rules
+        name: semgrep (project rules)
+        entry: semgrep scan --config=.semgrep --metrics=off --error --quiet
+        language: system
+        pass_filenames: false
+        files: ^(backend|frontend|infrastructure)/
+
+      - id: semgrep-rule-tests
+        name: semgrep rule self-test
+        entry: semgrep --test --metrics=off .semgrep
+        language: system
+        pass_filenames: false
+        files: ^\.semgrep/
+
       # No upstream hook covers Terragrunt's own HCL, and it is most of this tree.
       - id: terragrunt-hcl-fmt
         name: terragrunt hcl fmt

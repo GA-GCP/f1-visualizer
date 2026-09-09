@@ -39,6 +39,15 @@ resource "google_project_service" "apis" {
 #
 # This resource describes the bucket it is stored in. Import it once; see
 # infrastructure/README.md.
+# Accepted, with an alternative. Bucket access logs would need a second bucket to
+# write into and a lifecycle policy on it. The question they answer — who read
+# the state, and therefore the Memorystore AUTH string inside it — is answered
+# better by adding storage.googleapis.com to `audit_log_services` below, which
+# routes the same reads into Cloud Logging with the caller's identity attached
+# and no bucket to manage. Left off because Data Access logs on Cloud Storage
+# bill by volume and this project writes state on every apply; turn it on if the
+# state bucket ever holds something worth an alert.
+# nosemgrep: terraform.gcp.security.gcp-cloud-storage-logging.gcp-cloud-storage-logging
 resource "google_storage_bucket" "tfstate" {
   name     = var.state_bucket
   project  = var.project_id

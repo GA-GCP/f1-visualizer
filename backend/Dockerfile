@@ -84,4 +84,9 @@ ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError -XX:+
 
 EXPOSE 8080
 
+# The base is gcr.io/distroless/java25-debian13:nonroot, whose default user is
+# uid 65532 — there is no shell and no root to drop from. Semgrep cannot resolve
+# a base image's default USER, so it reports the absent directive; an explicit
+# `USER` here would restate what the tag already guarantees.
+# nosemgrep: dockerfile.security.missing-user-entrypoint.missing-user-entrypoint
 ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]

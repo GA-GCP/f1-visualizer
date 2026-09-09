@@ -1,0 +1,56 @@
+rules:
+  - id: f1v-no-cross-origin-annotation
+    languages: [java]
+    severity: ERROR
+    message: >-
+      CORS is answered at the load-balancer edge and configured once in
+      f1v-commons-web. A @CrossOrigin annotation adds a second, per-controller
+      policy that the edge does not know about — which is how a preflight starts
+      succeeding at one layer and failing at the other.
+    pattern-either:
+      - pattern: |
+          @CrossOrigin
+          $RET $M(...) { ... }
+      - pattern: |
+          @CrossOrigin(...)
+          $RET $M(...) { ... }
+      - pattern: |
+          @CrossOrigin
+          class $C { ... }
+      - pattern: |
+          @CrossOrigin(...)
+          class $C { ... }
+
+  - id: f1v-permit-all-outside-commons
+    languages: [java]
+    severity: ERROR
+    message: >-
+      permitAll() belongs in f1v-commons-web (the Actuator probes) and
+      f1v-commons-messaging (the /ws handshake, which StompAuthChannelInterceptor
+      gates on CONNECT). Opening a path in a service means one service's rules
+      disagree with the shared filter chain, and the disagreement is invisible
+      from either file.
+    paths:
+      exclude:
+        - "backend/f1v-commons-web/**"
+        - "backend/f1v-commons-messaging/**"
+        - "**/src/test/**"
+    pattern: $X.permitAll(...)
+
+  - id: f1v-log-do-not-print
+    languages: [java]
+    severity: WARNING
+    message: >-
+      Use the SLF4J logger. These services emit ECS-formatted JSON with the
+      trace and span id in the MDC (O2); System.out and printStackTrace bypass
+      that, so the line lands in Cloud Logging with no severity and no way to
+      follow it across services.
+    paths:
+      exclude:
+        - "**/src/test/**"
+    pattern-either:
+      - pattern: System.out.print(...)
+      - pattern: System.out.println(...)
+      - pattern: System.err.print(...)
+      - pattern: System.err.println(...)
+      - pattern: $E.printStackTrace(...)

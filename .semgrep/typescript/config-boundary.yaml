@@ -1,0 +1,48 @@
+rules:
+  - id: f1v-auth-config-outside-env-module
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      Read Auth0 and API configuration from `config/env.ts`, which validates that
+      each variable is present and fails loudly at startup when it is not. Reading
+      import.meta.env directly here means a missing variable becomes `undefined`
+      at the point of use — an Auth0 client with no audience, or an axios base URL
+      of "undefined/api/v1".
+      VITE_RUM_ENDPOINT is deliberately not covered: telemetry is optional and its
+      absence is a supported state.
+    paths:
+      exclude:
+        - "frontend/src/config/env.ts"
+        - "frontend/src/vite-env.d.ts"
+        - "**/__tests__/**"
+        - "**/*.test.ts"
+    pattern-regex: 'import\.meta\.env\.VITE_(AUTH0_[A-Z_]+|API_BASE_URL)'
+
+  - id: f1v-no-token-in-web-storage
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      Do not put a token in localStorage or sessionStorage. Auth0 is configured
+      with refresh tokens in memory precisely so a token is not readable by any
+      script on the origin; persisting one hands it to every XSS that ever
+      reaches this page. Tokens come from getAccessTokenSilently() at the point
+      of use.
+    paths:
+      exclude:
+        - "**/__tests__/**"
+        - "**/*.test.ts"
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: localStorage.setItem($K, ...)
+              - pattern: sessionStorage.setItem($K, ...)
+          - metavariable-regex:
+              metavariable: $K
+              regex: '(?i).*(token|jwt|credential|secret|password|bearer).*'
+      - patterns:
+          - pattern-either:
+              - pattern: localStorage.setItem($K, $V)
+              - pattern: sessionStorage.setItem($K, $V)
+          - metavariable-regex:
+              metavariable: $V
+              regex: '(?i).*(token|jwt|credential|secret|password|bearer).*'

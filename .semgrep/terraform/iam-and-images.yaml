@@ -1,0 +1,37 @@
+rules:
+  - id: f1v-project-level-data-role
+    languages: [terraform]
+    severity: ERROR
+    message: >-
+      Grant this on the resource, not the project. dev, uat and prod share one
+      GCP project, so a project-level binding for a data or secret role crosses
+      every environment boundary in the estate — it is what let
+      sa-f1v-data-ingestion-dev read f1v-redis-auth-prod (SEC-3). Use
+      google_secret_manager_secret_iam_member, google_bigquery_dataset_iam_member,
+      or add an IAM condition scoping it to one resource.
+      infrastructure/policy/f1v.rego enforces the same rule against a rendered
+      plan; this catches it in review, before a plan exists.
+    patterns:
+      - pattern-inside: |
+          resource "google_project_iam_member" $NAME {
+            ...
+          }
+      - pattern: role = $ROLE
+      - metavariable-regex:
+          metavariable: $ROLE
+          regex: '"roles/(secretmanager\.secretAccessor|bigquery\.data(Editor|Viewer)|bigquery\.admin|datastore\.(owner|user))"'
+      - pattern-not-inside: |
+          resource "google_project_iam_member" $NAME {
+            ...
+            condition { ... }
+          }
+
+  - id: f1v-floating-latest-image
+    languages: [terraform]
+    severity: ERROR
+    message: >-
+      A bare `:latest` tag in IaC is REL-1: dev and prod share a registry, so the
+      tag resolves to whichever build pushed last — possibly from another
+      environment — and the next apply rolls production onto it. Use
+      `latest-<env>`, which the pipelines push, or a digest.
+    pattern-regex: '"[^"]*docker\.pkg\.dev/[^"]*:latest"'

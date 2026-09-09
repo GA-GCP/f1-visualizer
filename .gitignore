@@ -54,8 +54,12 @@ crash.*.log
 
 # REL-11: Terragrunt generates backend.tf and provider.tf into each unit on every
 # run. Two of them were committed, so any local run showed them as modified.
+# The platform layer sits outside environments/, so it is matched separately.
 infrastructure/environments/**/backend.tf
 infrastructure/environments/**/provider.tf
+infrastructure/platform/backend.tf
+infrastructure/platform/provider.tf
+infrastructure/**/terragrunt.rendered.json
 override.tf
 override.tf.json
 *_override.tf

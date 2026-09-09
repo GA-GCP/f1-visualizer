@@ -1,43 +1,16 @@
-# ==========================================
-# Cloud Build Triggers — Prod Environment
-# ==========================================
-# Creates path-filtered triggers for the five backend service
-# pipelines, the frontend pipeline and the infrastructure
-# pipeline. The API Gateway pipeline went with CPLX-1.
-# ==========================================
 include "root" {
   path = find_in_parent_folders("root.hcl")
+}
+
+# CPLX-3: the definition lives in _envcommon and the environment's facts live in
+# env.hcl. Anything below this is a real difference, not a copy.
+include "envcommon" {
+  path           = "${dirname(find_in_parent_folders("root.hcl"))}/_envcommon/cloudbuild-triggers.hcl"
+  merge_strategy = "deep"
+  expose         = true
 }
 
 # REL-8: a unit rename, a module path change or a stray `run --all destroy` all
 # plan a destroy without a prompt. Terragrunt refuses to run one here at all;
 # removing this line is the deliberate act that a production teardown should be.
 prevent_destroy = true
-
-terraform {
-  source = "../../../modules/cloudbuild-triggers"
-}
-
-dependency "iam" {
-  config_path = "../iam-and-secrets"
-  mock_outputs = {
-    sa_deploy_email = "sa-f1v-deploy-prod@f1-visualizer-488201.iam.gserviceaccount.com"
-    sa_infra_email  = "sa-f1v-infra-prod@f1-visualizer-488201.iam.gserviceaccount.com"
-  }
-
-  # REL-7: mocks are for planning, never for applying.
-  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan"]
-  mock_outputs_merge_strategy_with_state  = "shallow"
-}
-
-inputs = {
-  project_id     = "f1-visualizer-488201"
-  region         = "us-central1"
-  environment    = "prod"
-  github_owner   = "GA-GCP"
-  github_repo    = "f1-visualizer"
-  branch_pattern = "^prod$"
-
-  deploy_service_account_email = dependency.iam.outputs.sa_deploy_email
-  infra_service_account_email  = dependency.iam.outputs.sa_infra_email
-}

@@ -43,31 +43,16 @@ resource "google_compute_firewall" "allow_redis_from_connector" {
   source_ranges = [var.connector_cidr]
 }
 
-# Health checks and connector management traffic originate from the connector
-# range as well; ICMP is kept for reachability diagnostics only.
-resource "google_compute_firewall" "allow_icmp_from_connector" {
-  name        = "${var.network_name}-allow-icmp"
-  project     = var.project_id
-  network     = google_compute_network.f1v_vpc.id
-  description = "Reachability diagnostics from the serverless connector"
-
-  allow {
-    protocol = "icmp"
-  }
-
-  source_ranges = [var.connector_cidr]
-}
-
 # ==============================================================================
 # 4. SERVERLESS VPC ACCESS CONNECTOR
 # ==============================================================================
 # This allows Cloud Run services to reach internal IPs (like Redis) within the VPC.
 resource "google_vpc_access_connector" "connector" {
-  name          = "${var.network_name}-conn"
-  project       = var.project_id
-  region        = var.region
-  ip_cidr_range = var.connector_cidr
-  network       = google_compute_network.f1v_vpc.name
+  name           = "${var.network_name}-conn"
+  project        = var.project_id
+  region         = var.region
+  ip_cidr_range  = var.connector_cidr
+  network        = google_compute_network.f1v_vpc.name
   min_throughput = 200
   max_throughput = 300
 }

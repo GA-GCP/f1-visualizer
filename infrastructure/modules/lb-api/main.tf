@@ -1,15 +1,3 @@
-locals {
-  # CORS response headers for the telemetry backend (WebSocket route).
-  # REST API routes use the URL Map cors_policy instead (see below).
-  ws_cors_response_headers = [
-    "Access-Control-Allow-Origin: ${var.frontend_origin}",
-    "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, PATCH",
-    "Access-Control-Allow-Headers: Authorization, Cache-Control, Content-Type",
-    "Access-Control-Allow-Credentials: true",
-    "Access-Control-Max-Age: 3600",
-  ]
-}
-
 # Reserve a Global Static IP
 resource "google_compute_global_address" "default" {
   name    = "${var.name_prefix}-ip"
@@ -50,7 +38,11 @@ resource "google_compute_backend_service" "telemetry_backend" {
   load_balancing_scheme = "EXTERNAL_MANAGED"
   project               = var.project_id
 
-  custom_response_headers = local.ws_cors_response_headers
+  # CPLX-7: this backend used to carry a full set of Access-Control-Allow-*
+  # response headers. A browser does not apply CORS to a WebSocket handshake — it
+  # sends Origin and lets the server decide — and the SockJS XHR fallback that
+  # did need them was removed (frontend/src/config/env.ts; the client now opens
+  # /ws/websocket natively). They were answering nobody.
 
   backend {
     group = google_compute_region_network_endpoint_group.telemetry_neg.id

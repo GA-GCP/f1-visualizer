@@ -51,6 +51,11 @@ crash.*.log
 
 # Lock files and local overrides
 .terraform.lock.hcl
+
+# REL-11: Terragrunt generates backend.tf and provider.tf into each unit on every
+# run. Two of them were committed, so any local run showed them as modified.
+infrastructure/environments/**/backend.tf
+infrastructure/environments/**/provider.tf
 override.tf
 override.tf.json
 *_override.tf

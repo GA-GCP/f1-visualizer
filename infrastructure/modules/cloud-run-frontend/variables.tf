@@ -30,11 +30,6 @@ variable "image_url" {
   description = "Docker image URL (e.g., us-central1-docker.pkg.dev/...)"
   type        = string
 }
-variable "is_public" {
-  description = "Whether to allow unauthenticated invocations"
-  type        = bool
-  default     = true # Frontend is always public-facing
-}
 variable "deletion_protection" {
   description = "Prevent the service from being destroyed"
   type        = bool

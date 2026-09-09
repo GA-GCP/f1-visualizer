@@ -29,12 +29,4 @@ variable "branch_pattern" {
   default     = "^main$"
 }
 
-variable "auth0_issuer" {
-  description = "Auth0 issuer URI for the API Gateway (e.g., https://dev-xxx.us.auth0.com)"
-  type        = string
-}
 
-variable "auth0_audience" {
-  description = "Auth0 audience identifier for the API Gateway"
-  type        = string
-}

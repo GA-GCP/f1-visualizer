@@ -110,6 +110,8 @@ resource "google_compute_backend_service" "rest" {
     sample_rate = 1.0
   }
 
+  security_policy = google_compute_security_policy.api.id
+
   backend {
     group = google_compute_region_network_endpoint_group.rest_neg[each.key].id
   }
@@ -141,6 +143,8 @@ resource "google_compute_backend_service" "telemetry_backend" {
     enable      = true
     sample_rate = 1.0
   }
+
+  security_policy = google_compute_security_policy.api.id
 
   backend {
     group = google_compute_region_network_endpoint_group.telemetry_neg.id
@@ -240,6 +244,10 @@ resource "google_compute_target_https_proxy" "default" {
   url_map          = google_compute_url_map.default.id
   ssl_certificates = [google_compute_managed_ssl_certificate.default.id]
   project          = var.project_id
+
+  # SEC-5: TLS 1.2 and the MODERN cipher profile, instead of the default policy's
+  # TLS 1.0 and COMPATIBLE.
+  ssl_policy = google_compute_ssl_policy.default.id
 }
 
 # Global Forwarding Rule
@@ -250,4 +258,191 @@ resource "google_compute_global_forwarding_rule" "default" {
   load_balancing_scheme = "EXTERNAL_MANAGED"
   ip_address            = google_compute_global_address.default.address
   project               = var.project_id
+}
+
+# ==============================================================================
+# SEC-5: TLS and edge posture
+# ==============================================================================
+# The target HTTPS proxy used the default SSL policy, which permits TLS 1.0 and
+# the COMPATIBLE cipher profile — a scanner reports that as weak TLS on a public
+# endpoint. Only a port-443 forwarding rule existed, so `http://` refused the
+# connection rather than upgrading; nginx sets HSTS, which only helps after a
+# first successful HTTPS visit. And both addresses were IPv4 only, so an
+# IPv6-only client could not connect at all.
+
+resource "google_compute_ssl_policy" "default" {
+  name            = "${var.name_prefix}-ssl-policy"
+  project         = var.project_id
+  profile         = "MODERN"
+  min_tls_version = "TLS_1_2"
+}
+
+# A URL map that only redirects. It has no backend, so it costs nothing to serve
+# and cannot route anywhere by accident.
+resource "google_compute_url_map" "https_redirect" {
+  name    = "${var.name_prefix}-http-redirect"
+  project = var.project_id
+
+  default_url_redirect {
+    https_redirect         = true
+    redirect_response_code = "MOVED_PERMANENTLY_DEFAULT"
+    strip_query            = false
+  }
+}
+
+resource "google_compute_target_http_proxy" "redirect" {
+  name    = "${var.name_prefix}-http-proxy"
+  project = var.project_id
+  url_map = google_compute_url_map.https_redirect.id
+}
+
+# IPv6. Needs an AAAA record alongside the A record; until that exists the
+# address is reserved and unreachable, which harms nothing.
+resource "google_compute_global_address" "ipv6" {
+  name       = "${var.name_prefix}-ipv6"
+  project    = var.project_id
+  ip_version = "IPV6"
+}
+
+resource "google_compute_global_forwarding_rule" "http" {
+  name                  = "${var.name_prefix}-http-rule"
+  project               = var.project_id
+  target                = google_compute_target_http_proxy.redirect.id
+  port_range            = "80"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+  ip_address            = google_compute_global_address.default.address
+}
+
+resource "google_compute_global_forwarding_rule" "https_ipv6" {
+  name                  = "${var.name_prefix}-https-rule-v6"
+  project               = var.project_id
+  target                = google_compute_target_https_proxy.default.id
+  port_range            = "443"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+  ip_address            = google_compute_global_address.ipv6.address
+}
+
+resource "google_compute_global_forwarding_rule" "http_ipv6" {
+  name                  = "${var.name_prefix}-http-rule-v6"
+  project               = var.project_id
+  target                = google_compute_target_http_proxy.redirect.id
+  port_range            = "80"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+  ip_address            = google_compute_global_address.ipv6.address
+}
+
+# ==============================================================================
+# SEC-4: Cloud Armor
+# ==============================================================================
+# There was no security policy on either load balancer and no backend service set
+# `security_policy`, so the only thing standing between a public API and an
+# arbitrary request rate was Cloud Run autoscaling — which converts abuse into a
+# bill. The frontend's client-side retry logic exists specifically to survive 429
+# cascades, which is the symptom of having no rate limiting at the edge.
+#
+# This is also what keeps CPLX-1's trade-off honest: with the gateway gone,
+# unlisted paths reach a service instead of being refused at the edge, and this
+# is the throttle that bounds what that costs.
+resource "google_compute_security_policy" "api" {
+  name        = "${var.name_prefix}-armor"
+  project     = var.project_id
+  description = "Rate limiting and preconfigured WAF rules for the F1V API edge"
+
+  # A WebSocket handshake pins an instance for up to an hour, so the ceiling is
+  # much lower than for REST. A real user opens one.
+  rule {
+    action      = "throttle"
+    priority    = 1000
+    description = "Throttle WebSocket handshakes per client IP"
+
+    match {
+      expr {
+        expression = "request.path.startsWith('/ws')"
+      }
+    }
+
+    rate_limit_options {
+      conform_action = "allow"
+      exceed_action  = "deny(429)"
+      enforce_on_key = "IP"
+
+      rate_limit_threshold {
+        count        = 20
+        interval_sec = 60
+      }
+    }
+  }
+
+  # 300 a minute is far above what the SPA generates — the splash screen
+  # prefetch is a handful of calls — and far below what makes autoscaling
+  # expensive.
+  rule {
+    action      = "throttle"
+    priority    = 1100
+    description = "Throttle REST requests per client IP"
+
+    match {
+      expr {
+        expression = "request.path.startsWith('/api/')"
+      }
+    }
+
+    rate_limit_options {
+      conform_action = "allow"
+      exceed_action  = "deny(429)"
+      enforce_on_key = "IP"
+
+      rate_limit_threshold {
+        count        = 300
+        interval_sec = 60
+      }
+    }
+  }
+
+  # Sensitivity 1 is the lowest-false-positive tier of each preconfigured rule
+  # set. The services take JSON bodies and path variables, not SQL or markup, so
+  # a match here is a probe rather than a legitimate request.
+  dynamic "rule" {
+    for_each = {
+      2000 = "sqli-v33-stable"
+      2100 = "xss-v33-stable"
+      2200 = "lfi-v33-stable"
+      2300 = "rce-v33-stable"
+    }
+
+    content {
+      action      = "deny(403)"
+      priority    = rule.key
+      description = "Preconfigured WAF: ${rule.value} at sensitivity 1"
+
+      match {
+        expr {
+          expression = "evaluatePreconfiguredWaf('${rule.value}', {'sensitivity': 1})"
+        }
+      }
+    }
+  }
+
+  # Required: the lowest-priority rule is the default action.
+  rule {
+    action      = "allow"
+    priority    = 2147483647
+    description = "Default allow"
+
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+  }
+
+  # Adaptive Protection is a Cloud Armor Enterprise feature and is billed
+  # separately, so it is off by default rather than switched on in a commit that
+  # would quietly add a subscription.
+  adaptive_protection_config {
+    layer_7_ddos_defense_config {
+      enable = var.enable_adaptive_protection
+    }
+  }
 }

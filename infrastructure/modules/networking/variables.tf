@@ -3,16 +3,6 @@ variable "project_id" {
   type        = string
 }
 
-variable "environment" {
-  description = "The environment (dev, uat, prod)"
-  type        = string
-
-  validation {
-    condition     = contains(["dev", "uat", "prod"], var.environment)
-    error_message = "environment must be dev, uat or prod."
-  }
-}
-
 variable "region" {
   description = "The GCP region for the subnets"
   type        = string

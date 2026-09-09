@@ -352,21 +352,15 @@ f1-visualizer/
 |   +-- Dockerfile                              # Multi-stage local build (Maven -> distroless)
 |   +-- Dockerfile.ci                           # Lean CI image (pre-extracted layers -> distroless)
 |   |
-|   +-- f1v-commons-parent/                     # Spring Boot 4.1.1 parent POM
-|   +-- f1v-commons-bom/                        # Bill of Materials (10 shared libraries)
-|   |   +-- f1v-commons-base/                   #   Lombok, base model annotations
-|   |   +-- f1v-commons-security/               #   OAuth2 JWT resource server, CORS policy, STOMP auth
-|   |   +-- f1v-commons-service-base/           #   WebMvc, Actuator, Jackson 3, Secret Manager client
-|   |   +-- f1v-commons-service-rest/           #   REST service foundation (extends service-base)
-|   |   +-- f1v-commons-service-reactive/       #   WebFlux foundation (extends service-base)
-|   |   +-- f1v-commons-service-websocket/      #   STOMP + MQTT dependencies
-|   |   +-- f1v-commons-gcp-bq/                 #   BigQuery client configuration
-|   |   +-- f1v-commons-gcp-firestore/          #   Firestore client configuration
-|   |   +-- f1v-commons-gcp-memorystore-redis/  #   Redis template + Pub/Sub listener config
-|   |   +-- f1v-commons-api-openf1/             #   OpenF1 REST + MQTT client, auth token management
+|   +-- pom.xml                                 # The single parent: Boot 4.1.1, plugins, enforcer
+|   +-- f1v-commons-web/                        #   Security filter chain, CORS, RFC 9457 errors, Actuator
+|   +-- f1v-commons-gcp/                        #   BigQuery and Firestore clients, query guardrails
+|   +-- f1v-commons-messaging/                  #   Redis topics and serializer, STOMP broker, MQTT
+|   +-- f1v-commons-openf1/                     #   OpenF1 RestClient, auth token lifecycle, DTOs
 |   |
 |   +-- f1v-service-data-analysis/              # REST: BigQuery queries for laps, stats, reference data
-|   +-- f1v-service-data-ingestion/             # Reactive: OpenF1 ingest, batch loaders, replay engine
+|   +-- f1v-service-data-ingestion/             # REST: OpenF1 ingest, batch loaders, ingestion jobs
+|   +-- f1v-service-replay-worker/              # Always-on: the replay engine and MQTT bridge
 |   +-- f1v-service-telemetry/                  # WebSocket: Redis listener -> STOMP broadcaster
 |   +-- f1v-service-user/                       # REST: Firestore user profiles and preferences
 |
@@ -395,10 +389,8 @@ f1-visualizer/
 |   +-- openapi.yaml                            # API Gateway OpenAPI 2.0 specification
 |
 +-- cloudbuild/                                 # GCP Cloud Build Pipeline Definitions
-|   +-- backend-data-analysis.yaml              # Build, scan, deploy: Analysis Service
-|   +-- backend-data-ingestion.yaml             # Build, scan, deploy: Ingestion Service
-|   +-- backend-telemetry.yaml                  # Build, scan, deploy: Telemetry Service
-|   +-- backend-user.yaml                       # Build, scan, deploy: User Service
+|   +-- backend-service.yaml                    # Build, scan, deploy: any backend service
+|                                               #   (_MODULE, _IMAGE and _SERVICE per trigger)
 |   +-- frontend.yaml                           # Lint, test, build, deploy: React SPA
 |   +-- api-gateway.yaml                        # Discover URLs, inject, validate, deploy, smoke test
 |   +-- infrastructure.yaml                     # Trivy IaC scan, Terragrunt init/plan/apply
@@ -423,26 +415,29 @@ The backend is composed of four independently deployable Spring Boot microservic
 | **data-analysis** | Spring MVC (REST) | Serve lap times, driver statistics, session catalog, and reference data from BigQuery with Firestore caching | BigQuery, Firestore |
 | **user** | Spring MVC (REST) | Manage user profiles and preferences with get-or-create semantics on first login | Firestore |
 
-### Commons Bill of Materials
+### Commons Modules
 
-All microservices compose their dependencies from a shared BOM of 10 internal libraries. This ensures consistent versions, shared security configuration, and zero duplication of infrastructure concerns:
+Four modules, each a slice of shared behaviour rather than a layer in a chain.
+There were ten, five of which contained no Java at all — and the Redis and
+Firestore configuration this section used to place here actually lived duplicated
+in the services.
 
 ```
-f1v-commons-bom
+backend/pom.xml                    # The single parent and aggregator
 |
-+-- f1v-commons-base                   # Lombok, base annotations
-+-- f1v-commons-security               # OAuth2 JWT, CORS, STOMP auth interceptor
-+-- f1v-commons-service-base           # WebMvc, Actuator, Jackson 3, Secret Manager
-+-- f1v-commons-service-rest           # REST service foundation
-+-- f1v-commons-service-reactive       # WebFlux reactive foundation
-+-- f1v-commons-service-websocket      # STOMP broker, MQTT client
-+-- f1v-commons-gcp-bq                 # BigQuery client bean
-+-- f1v-commons-gcp-firestore          # Firestore client bean
-+-- f1v-commons-gcp-memorystore-redis  # Redis template + Pub/Sub listener container
-+-- f1v-commons-api-openf1             # OpenF1 WebClient, auth token lifecycle
++-- f1v-commons-web                # Security filter chain, CORS, the shared RFC 9457
+|                                  # error shape, Actuator, metrics and tracing
++-- f1v-commons-gcp                # BigQuery and Firestore clients, the job timeout and
+|                                  # byte ceiling every query runs with, the batch writer
++-- f1v-commons-messaging          # Redis topics and serializer, the replay command stream
+|                                  # and state store, the STOMP broker, MQTT
++-- f1v-commons-openf1             # OpenF1 RestClient, credentials, token lifecycle, DTOs
 ```
 
-Each microservice picks only the modules it needs — for example, `f1v-service-telemetry` pulls in `commons-service-websocket` and `commons-gcp-memorystore-redis` but has no dependency on BigQuery or Firestore.
+Each service takes only what it needs: `f1v-service-telemetry` depends on `web`
+and `messaging` and has no BigQuery or Firestore on its classpath at all. The
+layering is asserted by `CommonsLayeringTest` rather than left as a convention.
+
 
 ### Key Backend Patterns
 
@@ -452,7 +447,7 @@ Each microservice picks only the modules it needs — for example, `f1v-service-
 - **STOMP Channel Interceptor** — WebSocket connections are authenticated at the STOMP protocol level. The interceptor extracts the JWT from the CONNECT frame's Authorization header, validates it, and sets the security principal before any message routing occurs.
 - **Scheduled Token Refresh** — The OpenF1 API client automatically refreshes its access token on a fixed schedule via `@Scheduled`, maintaining an always-valid credential without request-time auth overhead.
 - **Windowed Replay Engine** — The Ingestion Service's replay engine processes historical sessions in 60-second chunks with async prefetching at 50% chunk progress, preventing OOM on multi-hour sessions. A single-threaded `ChunkLoader` executor serializes BigQuery queries to avoid overwhelming the data warehouse. Play, pause, and seek operations are exposed via REST endpoints and broadcast progress via Redis.
-- **Reference Data Caching** — The Analysis Service caches driver, session, and circuit reference data from Firestore in memory, avoiding repeated document reads for data that changes only between seasons.
+- **Reference Data Caching** — The Analysis Service holds driver, session, and circuit reference data in a Caffeine cache in front of Firestore, so data that changes only between seasons is read remotely once per TTL rather than once per request — including once per keystroke on the session search, which is what it used to do.
 - **Async Data Loading** — The Ingestion Service uses `@EnableAsync` with `CompletableFuture` for non-blocking chunk prefetch coordination, and `@EnableScheduling` for the 250ms replay tick loop and 50-minute OpenF1 token refresh cycle.
 - **Application Profiles** — Every service supports `local`, `dev`, `uat`, and `prod` profiles, with environment-specific configuration for database endpoints, Auth0 tenants, and Redis connectivity.
 
@@ -678,10 +673,9 @@ Pull Request to main                        Promotion to env branch (dev/uat/pro
     v                                             v
 GitHub Actions (3 parallel jobs)            Cloud Build (7 path-filtered triggers)
     |                                             |
-    +-- Backend: mvn clean package                +-- backend-data-analysis.yaml
-    +-- Frontend: yarn lint + test                +-- backend-data-ingestion.yaml
-    +-- Infra: Trivy + tofu validate              +-- backend-telemetry.yaml
-                                                  +-- backend-user.yaml
+    +-- Backend: ./mvnw -B verify                 +-- backend-service.yaml (x5)
+    +-- Frontend: yarn lint + test + e2e          +-- frontend.yaml
+    +-- Infra: Trivy + tofu validate              +-- api-gateway.yaml
                                                   +-- frontend.yaml
                                                   +-- api-gateway.yaml
                                                   +-- infrastructure.yaml
@@ -745,7 +739,7 @@ The infrastructure pipeline uses a scan-plan-apply pattern:
 
 ### Key CI/CD Patterns
 
-- **Path-Filtered Triggers** — Each trigger specifies `included_files` globs scoped to the relevant service directory plus its shared commons dependencies. A change to only the User Service will trigger only `backend-user.yaml` — not the other three backend pipelines. This eliminates redundant builds entirely.
+- **Path-Filtered Triggers** — Each trigger specifies `included_files` globs scoped to the relevant service directory plus its shared commons dependencies. A change to only the User Service triggers only that service's build — not the other four. The five backend triggers share one parameterized pipeline, `backend-service.yaml`, rather than a copy each.
 
 - **Immutable Image Tags** — Every image is tagged with the git commit SHA (`${SHORT_SHA}`) in addition to `latest`. Cloud Run deployments reference the SHA tag, ensuring every deployment is traceable to an exact commit.
 
@@ -767,7 +761,7 @@ The project maintains a comprehensive multi-layered testing strategy spanning un
 
 **Framework:** JUnit 5 (Jupiter 6.1.3) with Mockito, Spring Boot Test 4.1.1
 
-All backend test dependencies are centrally managed through the `f1v-commons-bom`, ensuring consistent versions across all four microservices. Each service has its own `src/test/java/` and `src/test/resources/` trees with environment-specific test profiles.
+All backend dependencies are managed by the single `f1v-parent` POM, which inherits Spring Boot's and imports the Spring Cloud GCP BOM; `maven-enforcer-plugin` fails the build if a transitive version resolves below what something asked for. Each service has its own `src/test/java/` and `src/test/resources/` trees with environment-specific test profiles.
 
 | Category | Framework / Tool | Description |
 |----------|-----------------|-------------|
@@ -789,7 +783,7 @@ All backend test dependencies are centrally managed through the `f1v-commons-bom
 cd backend && mvn clean package
 
 # Scoped test run (single service + its commons dependencies)
-cd backend && mvn clean package -pl f1v-service-data-analysis -am
+cd backend && ./mvnw clean verify -pl f1v-service-data-analysis -am
 ```
 
 ### Frontend Test Suite

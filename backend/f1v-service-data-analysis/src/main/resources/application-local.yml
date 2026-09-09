@@ -3,8 +3,6 @@ server:
 spring:
   cloud:
     gcp:
-      bigquery:
-        dataset-name: f1_dataset
       firestore:
         project-id: f1-visualizer-488201
         database-id: f1v-db-dev
@@ -14,3 +12,7 @@ spring:
         jwt:
           issuer-uri: https://elysianarts-dev.us.auth0.com/
           audiences: dev.api.f1visualizer.com
+
+f1v:
+  cors:
+    allowed-origins: http://localhost:5173,https://f1visualizer.com,https://*.f1visualizer.com

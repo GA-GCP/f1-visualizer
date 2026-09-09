@@ -1,214 +1,187 @@
 package com.elysianarts.f1.visualizer.data.ingestion.service;
 
-import com.elysianarts.f1.visualizer.commons.api.openf1.service.OpenF1AuthService;
-import com.google.cloud.bigquery.*;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-
+import com.elysianarts.f1.visualizer.commons.api.openf1.client.OpenF1Client;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Driver;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Meeting;
+import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Session;
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryBatchWriter;
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
+/**
+ * Loads the reference catalog — sessions, the current grid, and per-race rosters.
+ *
+ * <p><b>C4: through the typed client.</b> This class used to build its own {@code WebClient}
+ * against the same API the {@link OpenF1Client} already wraps, read every response as an untyped
+ * {@code Map}, and carry a second constructor so tests could inject a client — three copies of the
+ * base URL between them. It now uses the client every other loader uses.
+ */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ReferenceDataLoader {
 
-    private final WebClient webClient;
-    private final OpenF1AuthService authService;
-    private final BigQuery bigQuery;
-
-    private static final String DATASET = "f1_dataset";
-
-    @Autowired
-    public ReferenceDataLoader(WebClient.Builder webClientBuilder, OpenF1AuthService authService, BigQuery bigQuery) {
-        this.webClient = webClientBuilder.baseUrl("https://api.openf1.org/v1").build();
-        this.authService = authService;
-        this.bigQuery = bigQuery;
-    }
-
-    // Testing Constructor
-    public ReferenceDataLoader(WebClient webClient, OpenF1AuthService authService, BigQuery bigQuery) {
-        this.webClient = webClient;
-        this.authService = authService;
-        this.bigQuery = bigQuery;
-    }
+    private final OpenF1Client openF1Client;
+    private final BigQueryQueryRunner queryRunner;
+    private final BigQueryBatchWriter batchWriter;
 
     public void loadReferenceData(int year) {
-        log.info("⬇️ Initiating Reference Data Hydration for year {}...", year);
-        String token = authService.getAccessToken();
+        log.info("reference load starting year={}", year);
 
-        // 1. Fetch meetings first to build a meeting_key -> meeting_name lookup
-        // (The /sessions endpoint does not include meeting_name; it lives on /meetings)
-        Map<Object, String> meetingNameLookup = buildMeetingNameLookup(year, token);
+        // The /sessions endpoint does not carry meeting_name; that lives on /meetings.
+        Map<Long, String> meetingNames = buildMeetingNameLookup(year);
 
-        // 2. Fetch & Load Sessions
-        try {
-            List<Map> sessions = webClient.get()
-                    .uri("/sessions?year=" + year)
-                    .header("Authorization", "Bearer " + token)
-                    .retrieve().bodyToFlux(Map.class).collectList().block();
+        List<OpenF1Session> sessions = openF1Client.getSessionsForYear(year);
+        if (!sessions.isEmpty()) {
+            deleteExistingData("sessions", "year = " + year);
 
-            if (sessions != null && !sessions.isEmpty()) {
-                deleteExistingData("sessions", "year = " + year);
-
-                List<InsertAllRequest.RowToInsert> rows = new ArrayList<>();
-                for (Map s : sessions) {
-                    Map<String, Object> row = new HashMap<>();
-                    row.put("session_key", s.get("session_key"));
-                    row.put("session_name", s.get("session_name"));
-                    row.put("meeting_key", s.get("meeting_key"));
-                    row.put("meeting_name", meetingNameLookup.get(s.get("meeting_key")));
-                    row.put("year", s.get("year"));
-                    row.put("country_name", s.get("country_name"));
-                    rows.add(InsertAllRequest.RowToInsert.of(row));
-                }
-                flushToBigQuery("sessions", rows);
+            List<Map<String, Object>> rows = new ArrayList<>();
+            for (OpenF1Session session : sessions) {
+                Map<String, Object> row = new HashMap<>();
+                row.put("session_key", session.getSessionKey());
+                row.put("session_name", session.getSessionName());
+                row.put("meeting_key", session.getMeetingKey());
+                row.put("meeting_name", meetingNames.get(session.getMeetingKey()));
+                row.put("year", session.getYear());
+                row.put("country_name", session.getCountryName());
+                // P2: the replay engine needs a date window to put a partition
+                // filter on the telemetry table.
+                row.put(
+                        "date_start",
+                        session.getDateStart() == null ? null : session.getDateStart().toString());
+                row.put(
+                        "date_end",
+                        session.getDateEnd() == null ? null : session.getDateEnd().toString());
+                rows.add(row);
             }
-        } catch (Exception e) {
-            log.error("❌ Failed to fetch sessions for year {}: {}", year, e.getMessage());
+            flushToBigQuery("sessions", rows);
+        } else {
+            log.warn("reference load found no sessions year={}", year);
         }
 
-        // 3. Fetch & Load Drivers (Using 'latest' session to get the current grid)
-        try {
-            List<Map> drivers = webClient.get()
-                    .uri("/drivers?session_key=latest")
-                    .header("Authorization", "Bearer " + token)
-                    .retrieve().bodyToFlux(Map.class).collectList().block();
+        loadCurrentGrid();
+        loadSessionDrivers(year, sessions);
 
-            if (drivers != null && !drivers.isEmpty()) {
-                deleteExistingData("drivers", "1=1");
+        log.info("reference load complete year={} sessions={}", year, sessions.size());
+    }
 
-                List<InsertAllRequest.RowToInsert> rows = new ArrayList<>();
-                for (Map d : drivers) {
-                    Map<String, Object> row = new HashMap<>();
-                    row.put("driver_number", d.get("driver_number"));
-                    row.put("broadcast_name", d.get("broadcast_name"));
-                    row.put("name_acronym", d.get("name_acronym"));
-                    row.put("team_name", d.get("team_name"));
-                    row.put("team_colour", d.get("team_colour"));
-                    row.put("country_code", d.get("country_code"));
-                    rows.add(InsertAllRequest.RowToInsert.of(row));
-                }
-                flushToBigQuery("drivers", rows);
-            }
-        } catch (Exception e) {
-            log.error("❌ Failed to fetch drivers: {}", e.getMessage());
+    /** The current grid, used for the master driver list. */
+    private void loadCurrentGrid() {
+        List<OpenF1Driver> drivers = openF1Client.getDrivers("latest");
+        if (drivers.isEmpty()) {
+            log.warn(
+                    "reference drivers fetch returned nothing — leaving the existing grid in place");
+            return;
         }
 
-        // 4. Fetch & Load Session Drivers (Per-race driver rosters with team at time of race)
-        loadSessionDrivers(year, token);
+        deleteExistingData("drivers", "1=1");
+
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (OpenF1Driver driver : drivers) {
+            rows.add(driverRow(driver, null, null));
+        }
+        flushToBigQuery("drivers", rows);
     }
 
     /**
-     * For every session in the given year, fetches the driver roster from OpenF1
-     * and inserts into the session_drivers BigQuery table. This captures which
-     * drivers raced for which teams at each specific race.
+     * The roster for every session in the year, which captures who drove for which team at each
+     * specific race.
      */
-    private void loadSessionDrivers(int year, String token) {
-        log.info("⬇️ Loading per-session driver rosters for year {}...", year);
-
-        try {
-            // Fetch all sessions for this year to iterate through
-            List<Map> sessions = webClient.get()
-                    .uri("/sessions?year=" + year)
-                    .header("Authorization", "Bearer " + token)
-                    .retrieve().bodyToFlux(Map.class).collectList().block();
-
-            if (sessions == null || sessions.isEmpty()) {
-                log.warn("⚠️ No sessions found for year {} — skipping session driver load", year);
-                return;
-            }
-
-            // Clear existing session_drivers for this year before re-loading
-            deleteExistingData("session_drivers", "year = " + year);
-
-            int totalDriverRows = 0;
-
-            for (Map session : sessions) {
-                Object sessionKeyObj = session.get("session_key");
-                if (sessionKeyObj == null) continue;
-
-                int sessionKey = ((Number) sessionKeyObj).intValue();
-
-                try {
-                    List<Map> drivers = webClient.get()
-                            .uri("/drivers?session_key=" + sessionKey)
-                            .header("Authorization", "Bearer " + token)
-                            .retrieve().bodyToFlux(Map.class).collectList().block();
-
-                    if (drivers != null && !drivers.isEmpty()) {
-                        List<InsertAllRequest.RowToInsert> rows = new ArrayList<>();
-                        for (Map d : drivers) {
-                            Map<String, Object> row = new HashMap<>();
-                            row.put("session_key", sessionKey);
-                            row.put("year", year);
-                            row.put("driver_number", d.get("driver_number"));
-                            row.put("broadcast_name", d.get("broadcast_name"));
-                            row.put("name_acronym", d.get("name_acronym"));
-                            row.put("team_name", d.get("team_name"));
-                            row.put("team_colour", d.get("team_colour"));
-                            row.put("country_code", d.get("country_code"));
-                            rows.add(InsertAllRequest.RowToInsert.of(row));
-                        }
-                        flushToBigQuery("session_drivers", rows);
-                        totalDriverRows += rows.size();
-                    }
-                } catch (Exception e) {
-                    log.warn("⚠️ Failed to fetch drivers for session {}: {}", sessionKey, e.getMessage());
-                }
-            }
-
-            log.info("✅ Loaded {} total session-driver entries across {} sessions for year {}",
-                    totalDriverRows, sessions.size(), year);
-        } catch (Exception e) {
-            log.error("❌ Failed to load session drivers for year {}: {}", year, e.getMessage());
+    private void loadSessionDrivers(int year, List<OpenF1Session> sessions) {
+        if (sessions.isEmpty()) {
+            log.warn("session roster load skipped year={} reason=no_sessions", year);
+            return;
         }
+
+        deleteExistingData("session_drivers", "year = " + year);
+
+        int totalDriverRows = 0;
+        for (OpenF1Session session : sessions) {
+            Long sessionKey = session.getSessionKey();
+            if (sessionKey == null) continue;
+
+            try {
+                List<OpenF1Driver> drivers = openF1Client.getDrivers(String.valueOf(sessionKey));
+                if (drivers.isEmpty()) continue;
+
+                List<Map<String, Object>> rows = new ArrayList<>();
+                for (OpenF1Driver driver : drivers) {
+                    rows.add(driverRow(driver, sessionKey, year));
+                }
+                flushToBigQuery("session_drivers", rows);
+                totalDriverRows += rows.size();
+            } catch (RuntimeException e) {
+                // One session's roster failing should not abandon the season.
+                log.warn("session roster fetch failed session_key={}", sessionKey, e);
+            }
+        }
+
+        log.info(
+                "session roster load complete year={} rows={} sessions={}",
+                year,
+                totalDriverRows,
+                sessions.size());
     }
 
-    private Map<Object, String> buildMeetingNameLookup(int year, String token) {
-        Map<Object, String> lookup = new HashMap<>();
+    private Map<String, Object> driverRow(OpenF1Driver driver, Long sessionKey, Integer year) {
+        Map<String, Object> row = new HashMap<>();
+        if (sessionKey != null) row.put("session_key", sessionKey);
+        if (year != null) row.put("year", year);
+        row.put("driver_number", driver.getDriverNumber());
+        row.put("broadcast_name", driver.getBroadcastName());
+        row.put("name_acronym", driver.getNameAcronym());
+        row.put("team_name", driver.getTeamName());
+        row.put("team_colour", driver.getTeamColour());
+        row.put("country_code", driver.getCountryCode());
+        return row;
+    }
+
+    private Map<Long, String> buildMeetingNameLookup(int year) {
+        Map<Long, String> lookup = new HashMap<>();
         try {
-            List<Map> meetings = webClient.get()
-                    .uri("/meetings?year=" + year)
-                    .header("Authorization", "Bearer " + token)
-                    .retrieve().bodyToFlux(Map.class).collectList().block();
-            if (meetings != null) {
-                for (Map m : meetings) {
-                    Object meetingKey = m.get("meeting_key");
-                    String meetingName = (String) m.get("meeting_name");
-                    if (meetingKey != null && meetingName != null) {
-                        lookup.put(meetingKey, meetingName);
-                    }
+            for (OpenF1Meeting meeting : openF1Client.getMeetings(year)) {
+                if (meeting.getMeetingKey() != null && meeting.getMeetingName() != null) {
+                    lookup.put(meeting.getMeetingKey(), meeting.getMeetingName());
                 }
-                log.info("🏁 Built meeting name lookup with {} entries for year {}", lookup.size(), year);
             }
-        } catch (Exception e) {
-            log.warn("⚠️ Could not fetch meetings for name enrichment: {}", e.getMessage());
+            log.info("meeting name lookup built year={} entries={}", year, lookup.size());
+        } catch (RuntimeException e) {
+            log.warn(
+                    "meeting fetch failed year={} — sessions will load without meeting names",
+                    year,
+                    e);
         }
         return lookup;
     }
 
     private void deleteExistingData(String table, String whereClause) {
-        String sql = String.format("DELETE FROM `%s.%s` WHERE %s", DATASET, table, whereClause);
+        String sql = String.format("DELETE FROM `%s.%s` WHERE %s", dataset(), table, whereClause);
         try {
-            QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(sql).build();
-            bigQuery.query(queryConfig);
-            log.info("🗑️ Cleared existing rows from {} (WHERE {})", table, whereClause);
+            queryRunner.query(sql);
+            log.info("reference rows cleared table={} where={}", table, whereClause);
         } catch (Exception e) {
-            log.warn("⚠️ Could not clear existing data from {} (may be empty): {}", table, e.getMessage());
+            throw new IllegalStateException("Could not clear existing rows in " + table, e);
         }
     }
 
-    private void flushToBigQuery(String table, List<InsertAllRequest.RowToInsert> rows) {
-        InsertAllRequest request = InsertAllRequest.newBuilder(DATASET, table).setRows(rows).build();
-        InsertAllResponse response = bigQuery.insertAll(request);
-        if (response.hasErrors()) {
-            log.error("❌ BigQuery Insert Errors on {}: {}", table, response.getInsertErrors());
-        } else {
-            log.info("✅ Successfully hydrated {} rows into {}", rows.size(), table);
-        }
+    /**
+     * R4: a batch load rather than a streaming insert. The delete-then-insert above could leave
+     * stale rows behind precisely because streamed rows sit in a buffer that DML cannot remove for
+     * up to about 90 minutes.
+     */
+    private void flushToBigQuery(String table, List<Map<String, Object>> rows) {
+        batchWriter.append(dataset(), table, rows);
+        log.info("reference load complete table={} rows={}", table, rows.size());
+    }
+
+    /** C4: {@code "f1_dataset"} was a private constant in ten classes. */
+    private String dataset() {
+        return queryRunner.properties().dataset();
     }
 }

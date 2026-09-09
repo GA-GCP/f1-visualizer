@@ -1,35 +1,37 @@
 package com.elysianarts.f1.visualizer.data.analysis.service;
 
-import com.elysianarts.f1.visualizer.data.analysis.model.LapDataRecord;
-import com.google.cloud.bigquery.*;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
+import com.elysianarts.f1.visualizer.data.analysis.model.LapDataRecord;
+import com.google.cloud.bigquery.*;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 @ExtendWith(MockitoExtension.class)
 class RaceAnalysisServiceTest {
-    @Mock
-    private BigQuery bigQuery;
+    @Mock private BigQuery bigQuery;
 
-    @Mock
-    private TableResult tableResult;
+    @Mock private TableResult tableResult;
 
-    @Mock
-    private FieldValueList mockRow;
+    @Mock private FieldValueList mockRow;
 
-    @Mock
-    private FieldValue mockValue;
+    @Mock private FieldValue mockValue;
 
-    @InjectMocks
     private RaceAnalysisService raceAnalysisService;
+
+    @BeforeEach
+    void initService() {
+        // The runner applies the job timeout and byte ceiling (R6); the
+        // BigQuery mock underneath it is still what the tests stub.
+        raceAnalysisService = new RaceAnalysisService(BigQueryQueryRunner.withDefaults(bigQuery));
+    }
 
     @Test
     void getSessionLapTimes_ReturnsMappedRecords_WhenQuerySucceeds() throws InterruptedException {
@@ -164,9 +166,12 @@ class RaceAnalysisServiceTest {
                 .thenThrow(new BigQueryException(500, "Internal Error"));
 
         // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            raceAnalysisService.getSessionLapTimes(123L);
-        });
+        RuntimeException exception =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> {
+                            raceAnalysisService.getSessionLapTimes(123L);
+                        });
 
         assertTrue(exception.getMessage().contains("Failed to fetch analysis data"));
     }

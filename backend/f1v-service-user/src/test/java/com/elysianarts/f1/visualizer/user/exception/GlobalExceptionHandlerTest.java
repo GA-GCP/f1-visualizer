@@ -1,71 +1,55 @@
 package com.elysianarts.f1.visualizer.user.exception;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BeanPropertyBindingResult;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.*;
 
-@ExtendWith(MockitoExtension.class)
+import com.elysianarts.f1.visualizer.commons.web.error.ProblemDetailExceptionHandler;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+
 class GlobalExceptionHandlerTest {
 
-    @InjectMocks
-    private GlobalExceptionHandler handler;
+    private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
+    private final ProblemDetailExceptionHandler sharedHandler = new ProblemDetailExceptionHandler();
 
     @Test
-    void handleUserNotFound_Returns404WithMessage() {
-        UserNotFoundException ex = new UserNotFoundException("auth0|user_123");
+    void handleUserNotFound_Returns404ProblemDetail() {
+        ProblemDetail problem =
+                handler.handleUserNotFound(new UserNotFoundException("auth0|user_123"));
 
-        ResponseEntity<Map<String, Object>> response = handler.handleUserNotFound(ex);
-
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        assertEquals(404, response.getBody().get("status"));
-        assertEquals("User profile not found for Auth ID: auth0|user_123", response.getBody().get("error"));
+        assertEquals(HttpStatus.NOT_FOUND.value(), problem.getStatus());
+        assertEquals("User Not Found", problem.getTitle());
+        assertEquals("User profile not found for Auth ID: auth0|user_123", problem.getDetail());
     }
 
     @Test
-    void handleValidationErrors_Returns400WithFieldErrors() {
-        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(new Object(), "request");
-        bindingResult.addError(new FieldError("request", "email", "must not be blank"));
-        bindingResult.addError(new FieldError("request", "name", "must not be null"));
+    void handleUserNotFound_DetailContainsAuthId() {
+        ProblemDetail problem =
+                handler.handleUserNotFound(new UserNotFoundException("google-oauth2|456"));
 
-        MethodArgumentNotValidException ex = new MethodArgumentNotValidException(null, bindingResult);
-
-        ResponseEntity<Map<String, Object>> response = handler.handleValidationErrors(ex);
-
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        assertEquals(400, response.getBody().get("status"));
-        String errorMsg = (String) response.getBody().get("error");
-        assertTrue(errorMsg.contains("email: must not be blank"));
-        assertTrue(errorMsg.contains("name: must not be null"));
+        assertTrue(problem.getDetail().contains("google-oauth2|456"));
     }
 
+    /** S5: a 5xx body must not echo the GCP client's message back to the browser. */
     @Test
-    void handleRuntimeException_Returns500WithMessage() {
-        RuntimeException ex = new RuntimeException("Firestore connection failed");
+    void handleUnexpected_Returns500_WithoutLeakingTheExceptionMessage() {
+        ProblemDetail problem =
+                sharedHandler.handleUnexpected(
+                        new RuntimeException(
+                                "Firestore connection failed for project f1-visualizer-488201"));
 
-        ResponseEntity<Map<String, Object>> response = handler.handleRuntimeException(ex);
-
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        assertEquals(500, response.getBody().get("status"));
-        assertEquals("Internal server error: Firestore connection failed", response.getBody().get("error"));
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), problem.getStatus());
+        assertFalse(problem.getDetail().contains("Firestore"));
+        assertFalse(problem.getDetail().contains("f1-visualizer-488201"));
     }
 
+    /** The body has to carry something support can find in the logs. */
     @Test
-    void handleUserNotFound_MessageContainsAuthId() {
-        UserNotFoundException ex = new UserNotFoundException("google-oauth2|456");
+    void handleUnexpected_CarriesACorrelationIdMatchingTheLogLine() {
+        ProblemDetail problem = sharedHandler.handleUnexpected(new RuntimeException("boom"));
 
-        ResponseEntity<Map<String, Object>> response = handler.handleUserNotFound(ex);
-
-        String errorMsg = (String) response.getBody().get("error");
-        assertTrue(errorMsg.contains("google-oauth2|456"));
+        Object correlationId = problem.getProperties().get("correlationId");
+        assertNotNull(correlationId);
+        assertEquals(8, correlationId.toString().length());
     }
 }

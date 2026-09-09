@@ -7,9 +7,13 @@ spring:
           audiences: test.api.f1visualizer.com
   cloud:
     gcp:
-      bigquery:
-        dataset-name: test_dataset
 
 logging:
   level:
     root: WARN
+
+f1v:
+  bigquery:
+    dataset: test_dataset
+  cors:
+    allowed-origins: http://localhost:5173

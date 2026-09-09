@@ -4,22 +4,382 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <!--
+      C2: one parent for everything.
+
+      There used to be three POMs at the top of this build. The root aggregator had
+      no parent at all; the services inherited f1v-commons-parent; the commons
+      modules inherited f1v-commons-bom, which was simultaneously an aggregator, a
+      parent and a BOM imported by the other chain. Nothing was published for
+      external consumption, so none of that separation bought anything — and the
+      duplicated version pins it invited had already drifted: JUnit Jupiter's API
+      was pinned to 6.1.3 while its engine and platform resolved to 6.1.2, and
+      Jackson was pinned two minor versions ahead of what Boot 4.1.1 was verified
+      against.
+
+      Every pin that Spring Boot's parent or the Spring Cloud GCP BOM already
+      manages is gone. What is left is what neither of them knows about.
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.1</version>
+        <relativePath/>
+    </parent>
+
     <groupId>com.elysianarts.f1.visualizer</groupId>
-    <artifactId>f1v-backend</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <artifactId>f1v-parent</artifactId>
+    <!--
+      O3: ${revision} is stamped by CI (-Drevision=...) and resolved into the
+      installed POMs by flatten-maven-plugin, so a jar can say which commit it is
+      instead of only ever being 1.0.0-SNAPSHOT.
+    -->
+    <version>${revision}</version>
     <packaging>pom</packaging>
 
     <modules>
-        <module>f1v-commons-bom</module>
-        <module>f1v-commons-parent</module>
+        <!-- C1: four commons modules, not ten. Five of the ten contained no Java
+             at all, and the Redis and Firestore configuration the README placed in
+             commons actually lived duplicated in the services. -->
+        <module>f1v-commons-web</module>
+        <module>f1v-commons-gcp</module>
+        <module>f1v-commons-messaging</module>
+        <module>f1v-commons-openf1</module>
+
         <module>f1v-service-data-analysis</module>
         <module>f1v-service-data-ingestion</module>
+        <module>f1v-service-replay-worker</module>
         <module>f1v-service-telemetry</module>
         <module>f1v-service-user</module>
+
+        <!-- Last: reads every other module's coverage data. -->
+        <module>f1v-coverage</module>
     </modules>
 
     <properties>
+        <revision>1.0.0-SNAPSHOT</revision>
+        <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Not managed by the Boot parent. -->
+        <spring-cloud-gcp.version>8.1.1</spring-cloud-gcp.version>
+        <testcontainers.version>1.21.3</testcontainers.version>
+        <springdoc.version>3.1.1</springdoc.version>
+        <!-- BigQuery and Firestore request different versions of this; without a
+             pin the resolved one is below what Firestore asked for. Annotations
+             only, so the choice is safe — it just has to be stated. -->
+        <error-prone-annotations.version>2.49.0</error-prone-annotations.version>
+        <!--
+          Raised above what the Boot parent manages, because springdoc asks for
+          them and requireUpperBoundDeps would otherwise fail the build. These
+          two pins exist for a stated reason and should disappear the moment
+          Boot catches up — unlike the pins this parent replaced, which had no
+          reason left and had silently drifted.
+        -->
+        <snakeyaml.version>2.6</snakeyaml.version>
+        <jackson2-bom.version>2.22.1</jackson2-bom.version>
+
+        <!--
+          Boot 4.1.1 manages Tomcat 11.0.24, which carries three CRITICAL
+          advisories — CVE-2026-65182 (security constraint bypass),
+          CVE-2026-65905 (authentication bypass) and CVE-2026-68525. All three
+          are fixed in 11.0.25. Every service here is a Tomcat-backed resource
+          server whose only protection is its security constraints, so a
+          constraint bypass is not theoretical for us.
+
+          This is the pin to drop first: the next Boot patch that ships 11.0.25
+          or later makes it redundant, and Dependabot's maven ecosystem (S8) is
+          what will say so.
+        -->
+        <tomcat.version>11.0.25</tomcat.version>
+        <eclipse-paho-mqtt3-client.version>1.2.5</eclipse-paho-mqtt3-client.version>
+        <mockwebserver.version>5.5.0</mockwebserver.version>
+        <flatten-maven-plugin.version>1.7.0</flatten-maven-plugin.version>
+        <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
+        <jacoco-maven-plugin.version>0.8.13</jacoco-maven-plugin.version>
+        <spotless-maven-plugin.version>3.10.2</spotless-maven-plugin.version>
+        <!-- 1.36+ understands JDK 26's javac internals; older releases fail
+             with NoSuchMethodError on a developer machine running it. -->
+        <google-java-format.version>1.36.1</google-java-format.version>
+        <archunit.version>1.4.1</archunit.version>
+        <!--
+          T3: today's coverage, to be ratcheted. A floor that starts where the
+          suite already is cannot be argued with and cannot regress. Checked
+          across the reactor by the f1v-coverage module, not per module: most of
+          commons is exercised by the services that use it.
+        -->
+        <jacoco.line.coverage>0.70</jacoco.line.coverage>
+        <jacoco.branch.coverage>0.60</jacoco.branch.coverage>
+        <!-- Above Boot's 1.18.46, which does not support JDK 25. -->
+        <lombok.version>1.18.48</lombok.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>spring-cloud-gcp-dependencies</artifactId>
+                <version>${spring-cloud-gcp.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.errorprone</groupId>
+                <artifactId>error_prone_annotations</artifactId>
+                <version>${error-prone-annotations.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.paho</groupId>
+                <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+                <version>${eclipse-paho-mqtt3-client.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>mockwebserver</artifactId>
+                <version>${mockwebserver.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <!-- Jackson 2 still arrives transitively through swagger-core, which
+                 springdoc depends on; Jackson 3 is what the application uses. -->
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson2-bom.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.tngtech.archunit</groupId>
+                <artifactId>archunit-junit5</artifactId>
+                <version>${archunit.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- The four commons modules, so services name them without a version. -->
+            <dependency>
+                <groupId>com.elysianarts.f1.visualizer.commons</groupId>
+                <artifactId>f1v-commons-web</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.elysianarts.f1.visualizer.commons</groupId>
+                <artifactId>f1v-commons-gcp</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.elysianarts.f1.visualizer.commons</groupId>
+                <artifactId>f1v-commons-messaging</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.elysianarts.f1.visualizer.commons</groupId>
+                <artifactId>f1v-commons-openf1</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Every module compiles against Lombok and tests with JUnit; declaring
+             them here is what the three-POM arrangement kept re-deciding. -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.vaadin.external.google</groupId>
+                    <artifactId>android-json</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
+            <!-- C2: the JUnit split above merged green and was only visible in a
+                 dependency tree. These rules make that class of drift a build
+                 failure. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>${maven-enforcer-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>enforce</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>[25,)</version>
+                                </requireJavaVersion>
+                                <requireMavenVersion>
+                                    <version>[3.9,)</version>
+                                </requireMavenVersion>
+                                <banDuplicatePomDependencyVersions/>
+                                <!--
+                                  requireUpperBoundDeps, not dependencyConvergence:
+                                  the Google client stack requests the same
+                                  transitive artifact at half a dozen versions and
+                                  relies on its own BOM to settle them, so strict
+                                  convergence fails on a graph nobody here controls.
+                                  This rule asks the question that actually matters
+                                  — is the version Maven picked at least the highest
+                                  anything asked for — which is exactly the JUnit
+                                  API-6.1.3-on-engine-6.1.2 split that merged green.
+                                -->
+                                <requireUpperBoundDeps/>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+              T3: JDK 25 and 26 print integrity warnings during tests — dynamic
+              agent loading for Mockito, final-field mutation, Netty native access
+              — which become hard errors in a later JDK. Opting in explicitly keeps
+              the output readable and the upgrade uneventful.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>@{argLine} -XX:+EnableDynamicAgentLoading --enable-native-access=ALL-UNNAMED</argLine>
+                </configuration>
+            </plugin>
+
+            <!-- T3: the backend job ran `mvn clean package`, which stops short of
+                 the phase every check binds to, and gated nothing. -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- T3: the frontend enforces Prettier; the backend enforced nothing,
+                 so formatting drifted per editor and showed up in review diffs.
+                 `mvn spotless:apply` fixes any failure. -->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless-maven-plugin.version}</version>
+                <configuration>
+                    <java>
+                        <googleJavaFormat>
+                            <version>${google-java-format.version}</version>
+                            <style>AOSP</style>
+                        </googleJavaFormat>
+                        <removeUnusedImports/>
+                        <trimTrailingWhitespace/>
+                        <endWithNewline/>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>spotless-check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- O3: resolves ${revision} in the installed and deployed POMs. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>${flatten-maven-plugin.version}</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten-clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+
+        <pluginManagement>
+            <plugins>
+                <!-- O3: /actuator/info reports the commit a running instance is on.
+                     Activated by each deployable, which declares the plugin. -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>build-info</id>
+                            <goals>
+                                <goal>build-info</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 
 </project>

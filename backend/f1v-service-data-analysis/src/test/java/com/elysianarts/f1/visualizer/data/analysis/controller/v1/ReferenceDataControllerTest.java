@@ -1,10 +1,17 @@
 package com.elysianarts.f1.visualizer.data.analysis.controller.v1;
 
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.elysianarts.f1.visualizer.commons.security.config.F1VisualizerSecurityConfig;
-import com.elysianarts.f1.visualizer.commons.service.config.JacksonObjectMapperConfig;
 import com.elysianarts.f1.visualizer.data.analysis.model.DriverProfile;
 import com.elysianarts.f1.visualizer.data.analysis.model.RaceSession;
 import com.elysianarts.f1.visualizer.data.analysis.service.ReferenceDataService;
+import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,49 +22,39 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Collections;
-import java.util.List;
-
-import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 @WebMvcTest(ReferenceDataController.class)
 @AutoConfigureMockMvc
-@Import({F1VisualizerSecurityConfig.class, JacksonObjectMapperConfig.class})
+@Import(F1VisualizerSecurityConfig.class)
 class ReferenceDataControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @MockitoBean
-    private ReferenceDataService referenceDataService;
+    @MockitoBean private ReferenceDataService referenceDataService;
 
-    @MockitoBean
-    private JwtDecoder jwtDecoder;
+    @MockitoBean private JwtDecoder jwtDecoder;
 
     private DriverProfile mockDriver;
     private RaceSession mockSession;
 
     @BeforeEach
     void setUp() {
-        mockDriver = DriverProfile.builder()
-                .id(1)
-                .code("VER")
-                .name("Max Verstappen")
-                .team("Red Bull Racing")
-                .teamColor("#3671C6")
-                .stats(DriverProfile.DriverStats.builder().speed(99).wins(54).build())
-                .build();
+        mockDriver =
+                DriverProfile.builder()
+                        .id(1)
+                        .code("VER")
+                        .name("Max Verstappen")
+                        .team("Red Bull Racing")
+                        .teamColor("#3671C6")
+                        .stats(DriverProfile.DriverStats.builder().speed(99).wins(54).build())
+                        .build();
 
-        mockSession = RaceSession.builder()
-                .sessionKey(9165)
-                .sessionName("Race")
-                .meetingName("Singapore Grand Prix")
-                .year(2023)
-                .build();
+        mockSession =
+                RaceSession.builder()
+                        .sessionKey(9165)
+                        .sessionName("Race")
+                        .meetingName("Singapore Grand Prix")
+                        .year(2023)
+                        .build();
     }
 
     @Test
@@ -66,8 +63,9 @@ class ReferenceDataControllerTest {
         when(referenceDataService.getMasterDriverList()).thenReturn(List.of(mockDriver));
 
         // Act & Assert
-        mockMvc.perform(get("/api/v1/analysis/drivers")
-                        .with(jwt().jwt(jwt -> jwt.subject("admin_user"))))
+        mockMvc.perform(
+                        get("/api/v1/analysis/drivers")
+                                .with(jwt().jwt(jwt -> jwt.subject("admin_user"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(1))
@@ -82,8 +80,9 @@ class ReferenceDataControllerTest {
         when(referenceDataService.getAvailableSessions()).thenReturn(List.of(mockSession));
 
         // Act & Assert
-        mockMvc.perform(get("/api/v1/analysis/sessions")
-                        .with(jwt().jwt(jwt -> jwt.subject("admin_user"))))
+        mockMvc.perform(
+                        get("/api/v1/analysis/sessions")
+                                .with(jwt().jwt(jwt -> jwt.subject("admin_user"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(1))
@@ -93,21 +92,19 @@ class ReferenceDataControllerTest {
 
     @Test
     void endpoints_Return401_WhenUnauthenticated() throws Exception {
-        mockMvc.perform(get("/api/v1/analysis/drivers"))
-                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/analysis/drivers")).andExpect(status().isUnauthorized());
 
-        mockMvc.perform(get("/api/v1/analysis/sessions"))
-                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/analysis/sessions")).andExpect(status().isUnauthorized());
     }
 
     @Test
     void searchSessions_ReturnsMatchingSessions_WhenQueryProvided() throws Exception {
-        when(referenceDataService.searchSessions("Singapore"))
-                .thenReturn(List.of(mockSession));
+        when(referenceDataService.searchSessions("Singapore")).thenReturn(List.of(mockSession));
 
-        mockMvc.perform(get("/api/v1/analysis/sessions/search")
-                        .param("query", "Singapore")
-                        .with(jwt().jwt(jwt -> jwt.subject("admin_user"))))
+        mockMvc.perform(
+                        get("/api/v1/analysis/sessions/search")
+                                .param("query", "Singapore")
+                                .with(jwt().jwt(jwt -> jwt.subject("admin_user"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].meetingName").value("Singapore Grand Prix"));
@@ -118,9 +115,10 @@ class ReferenceDataControllerTest {
         when(referenceDataService.searchSessions("Nonexistent"))
                 .thenReturn(Collections.emptyList());
 
-        mockMvc.perform(get("/api/v1/analysis/sessions/search")
-                        .param("query", "Nonexistent")
-                        .with(jwt().jwt(jwt -> jwt.subject("admin_user"))))
+        mockMvc.perform(
+                        get("/api/v1/analysis/sessions/search")
+                                .param("query", "Nonexistent")
+                                .with(jwt().jwt(jwt -> jwt.subject("admin_user"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(0));

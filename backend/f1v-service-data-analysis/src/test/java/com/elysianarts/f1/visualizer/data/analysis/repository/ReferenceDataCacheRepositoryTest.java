@@ -1,34 +1,29 @@
 package com.elysianarts.f1.visualizer.data.analysis.repository;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
 import com.elysianarts.f1.visualizer.data.analysis.model.DriverProfile;
 import com.elysianarts.f1.visualizer.data.analysis.model.RaceEntryRoster;
 import com.elysianarts.f1.visualizer.data.analysis.model.RaceSession;
-import com.elysianarts.f1.visualizer.data.analysis.model.SessionDriverEntry;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class ReferenceDataCacheRepositoryTest {
 
-    @Mock
-    private Firestore firestore;
+    @Mock private Firestore firestore;
 
-    @InjectMocks
-    private ReferenceDataCacheRepository repository;
+    @InjectMocks private ReferenceDataCacheRepository repository;
 
     // ── Helper builders ──
 
@@ -39,14 +34,20 @@ class ReferenceDataCacheRepositoryTest {
                 .name(name)
                 .team(team)
                 .teamColor("3671C6")
-                .stats(DriverProfile.DriverStats.builder()
-                        .speed(90).consistency(85).aggression(70)
-                        .tireMgmt(80).experience(95)
-                        .wins(60).podiums(110)
-                        .totalPoints(2500).bestChampionshipFinish(1)
-                        .totalRaces(200)
-                        .teamsDrivenFor(List.of("Red Bull", "Toro Rosso"))
-                        .build())
+                .stats(
+                        DriverProfile.DriverStats.builder()
+                                .speed(90)
+                                .consistency(85)
+                                .aggression(70)
+                                .tireMgmt(80)
+                                .experience(95)
+                                .wins(60)
+                                .podiums(110)
+                                .totalPoints(2500)
+                                .bestChampionshipFinish(1)
+                                .totalRaces(200)
+                                .teamsDrivenFor(List.of("Red Bull", "Toro Rosso"))
+                                .build())
                 .build();
     }
 
@@ -69,18 +70,18 @@ class ReferenceDataCacheRepositoryTest {
         when(doc.getString("team")).thenReturn(driver.getTeam());
         when(doc.getString("teamColor")).thenReturn(driver.getTeamColor());
 
-        Map<String, Object> statsMap = Map.of(
-                "speed", driver.getStats().getSpeed(),
-                "consistency", driver.getStats().getConsistency(),
-                "aggression", driver.getStats().getAggression(),
-                "tireMgmt", driver.getStats().getTireMgmt(),
-                "experience", driver.getStats().getExperience(),
-                "wins", driver.getStats().getWins(),
-                "podiums", driver.getStats().getPodiums(),
-                "totalPoints", driver.getStats().getTotalPoints(),
-                "bestChampionshipFinish", driver.getStats().getBestChampionshipFinish(),
-                "totalRaces", driver.getStats().getTotalRaces()
-        );
+        Map<String, Object> statsMap =
+                Map.of(
+                        "speed", driver.getStats().getSpeed(),
+                        "consistency", driver.getStats().getConsistency(),
+                        "aggression", driver.getStats().getAggression(),
+                        "tireMgmt", driver.getStats().getTireMgmt(),
+                        "experience", driver.getStats().getExperience(),
+                        "wins", driver.getStats().getWins(),
+                        "podiums", driver.getStats().getPodiums(),
+                        "totalPoints", driver.getStats().getTotalPoints(),
+                        "bestChampionshipFinish", driver.getStats().getBestChampionshipFinish(),
+                        "totalRaces", driver.getStats().getTotalRaces());
         when(doc.get("stats")).thenReturn(statsMap);
         return doc;
     }
@@ -97,7 +98,8 @@ class ReferenceDataCacheRepositoryTest {
 
     /** For collections using a simple orderBy(field) — e.g. drivers ordered by "id". */
     @SuppressWarnings("unchecked")
-    private void mockSimpleOrderByQuery(String collection, String field, List<QueryDocumentSnapshot> docs) throws Exception {
+    private void mockSimpleOrderByQuery(
+            String collection, String field, List<QueryDocumentSnapshot> docs) throws Exception {
         CollectionReference collRef = mock(CollectionReference.class);
         Query query = mock(Query.class);
         ApiFuture<QuerySnapshot> future = mock(ApiFuture.class);
@@ -110,9 +112,13 @@ class ReferenceDataCacheRepositoryTest {
         when(snapshot.getDocuments()).thenReturn(docs);
     }
 
-    /** For collections using two orderBy(field, direction) — e.g. sessions ordered by year DESC, sessionKey DESC. */
+    /**
+     * For collections using two orderBy(field, direction) — e.g. sessions ordered by year DESC,
+     * sessionKey DESC.
+     */
     @SuppressWarnings("unchecked")
-    private void mockDoubleOrderByQuery(String collection, List<QueryDocumentSnapshot> docs) throws Exception {
+    private void mockDoubleOrderByQuery(String collection, List<QueryDocumentSnapshot> docs)
+            throws Exception {
         CollectionReference collRef = mock(CollectionReference.class);
         Query query = mock(Query.class);
         Query query2 = mock(Query.class);
@@ -153,7 +159,8 @@ class ReferenceDataCacheRepositoryTest {
         when(firestore.collection("reference_drivers")).thenReturn(collRef);
         when(collRef.orderBy("id")).thenReturn(query);
         when(query.get()).thenReturn(future);
-        when(future.get()).thenThrow(new ExecutionException("Firestore unavailable", new RuntimeException()));
+        when(future.get())
+                .thenThrow(new ExecutionException("Firestore unavailable", new RuntimeException()));
 
         List<DriverProfile> result = repository.getCachedDrivers();
 
@@ -213,7 +220,8 @@ class ReferenceDataCacheRepositoryTest {
         when(collRef.orderBy("year", Query.Direction.DESCENDING)).thenReturn(query);
         when(query.orderBy("sessionKey", Query.Direction.DESCENDING)).thenReturn(query2);
         when(query2.get()).thenReturn(future);
-        when(future.get()).thenThrow(new ExecutionException("Firestore unavailable", new RuntimeException()));
+        when(future.get())
+                .thenThrow(new ExecutionException("Firestore unavailable", new RuntimeException()));
 
         List<RaceSession> result = repository.getCachedSessions();
 
@@ -230,16 +238,15 @@ class ReferenceDataCacheRepositoryTest {
         when(doc.getLong("sessionKey")).thenReturn(9165L);
         when(doc.getLong("year")).thenReturn(2024L);
 
-        List<Map<String, Object>> driverMaps = List.of(
-                Map.of(
-                        "driverNumber", 1,
-                        "broadcastName", "M VERSTAPPEN",
-                        "nameAcronym", "VER",
-                        "teamName", "Red Bull Racing",
-                        "teamColour", "3671C6",
-                        "countryCode", "NED"
-                )
-        );
+        List<Map<String, Object>> driverMaps =
+                List.of(
+                        Map.of(
+                                "driverNumber", 1,
+                                "broadcastName", "M VERSTAPPEN",
+                                "nameAcronym", "VER",
+                                "teamName", "Red Bull Racing",
+                                "teamColour", "3671C6",
+                                "countryCode", "NED"));
         when(doc.get("drivers")).thenReturn(driverMaps);
 
         CollectionReference collRef = mock(CollectionReference.class);
@@ -290,7 +297,8 @@ class ReferenceDataCacheRepositoryTest {
         when(firestore.collection("reference_race_entries")).thenReturn(collRef);
         when(collRef.document("9165")).thenReturn(docRef);
         when(docRef.get()).thenReturn(future);
-        when(future.get()).thenThrow(new ExecutionException("Firestore error", new RuntimeException()));
+        when(future.get())
+                .thenThrow(new ExecutionException("Firestore error", new RuntimeException()));
 
         RaceEntryRoster result = repository.getCachedRaceEntries(9165);
 

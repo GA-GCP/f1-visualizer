@@ -9,3 +9,7 @@ spring:
 logging:
   level:
     root: WARN
+
+f1v:
+  cors:
+    allowed-origins: http://localhost:5173

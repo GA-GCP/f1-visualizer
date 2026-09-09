@@ -2,46 +2,76 @@ package com.elysianarts.f1.visualizer.data.ingestion.service;
 
 import com.elysianarts.f1.visualizer.commons.api.openf1.client.OpenF1Client;
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
-import com.google.cloud.bigquery.BigQuery;
-import com.google.cloud.bigquery.InsertAllRequest;
-import com.google.cloud.bigquery.InsertAllResponse;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryBatchWriter;
+import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class HistoricalDataLoader {
 
     private final OpenF1Client openF1Client;
-    private final BigQuery bigQuery;
+    private final BigQueryBatchWriter batchWriter;
+    private final BigQueryQueryRunner queryRunner;
 
-    private static final String DATASET = "f1_dataset";
+    /**
+     * Rate-limit courtesy between 15-minute windows. Injected rather than a literal {@code
+     * Thread.sleep(500)} because the production delay used to run for real inside the tests, where
+     * two loader suites accounted for 12.7 of the 23.8 second wall time (T2).
+     */
+    private final Duration windowDelay;
+
     private static final String TABLE = "telemetry";
     private static final int BATCH_SIZE = 500;
 
-    public void loadSessionIntoBigQuery(long sessionKey) {
-        log.info("⏳ Fetching metadata for Session {}...", sessionKey);
+    public HistoricalDataLoader(
+            OpenF1Client openF1Client,
+            BigQueryBatchWriter batchWriter,
+            BigQueryQueryRunner queryRunner,
+            @Value("${f1v.openf1.window-delay:500ms}") Duration windowDelay) {
+        this.openF1Client = openF1Client;
+        this.batchWriter = batchWriter;
+        this.queryRunner = queryRunner;
+        this.windowDelay = windowDelay;
+    }
 
-        var sessionMeta = openF1Client.getSession(sessionKey).block();
+    public void loadSessionIntoBigQuery(long sessionKey) {
+        log.info("telemetry load starting session_key={}", sessionKey);
+
+        var sessionMeta = openF1Client.getSession(sessionKey).orElse(null);
 
         if (sessionMeta == null || sessionMeta.getDateStart() == null) {
-            log.warn("⚠️ Could not find valid session metadata for key: {}", sessionKey);
+            log.warn(
+                    "telemetry load skipped session_key={} reason=no_session_metadata", sessionKey);
             return;
         }
 
         OffsetDateTime windowStart = sessionMeta.getDateStart();
         // Fallback to a 2-hour window if the API hasn't populated the end date yet
-        OffsetDateTime raceEnd = sessionMeta.getDateEnd() != null ? sessionMeta.getDateEnd() : windowStart.plusHours(2);
+        OffsetDateTime raceEnd =
+                sessionMeta.getDateEnd() != null
+                        ? sessionMeta.getDateEnd()
+                        : windowStart.plusHours(2);
 
-        log.info("🚀 Starting Full Race Ingestion for Session {} ({} to {}) into BigQuery...", sessionKey, windowStart, raceEnd);
+        log.info(
+                "telemetry load window session_key={} from={} to={}",
+                sessionKey,
+                windowStart,
+                raceEnd);
+
+        // R4: a re-run used to insert everything a second time, because nothing
+        // cleared what the previous run had written. Batch loads are visible to
+        // DML immediately — unlike streaming inserts, which sit in a buffer for up
+        // to 90 minutes — so deleting first is reliable.
+        deleteExistingRows(sessionKey, windowStart, raceEnd);
 
         int totalPacketsIngested = 0;
 
@@ -50,13 +80,14 @@ public class HistoricalDataLoader {
             OffsetDateTime windowEnd = windowStart.plusMinutes(15);
             if (windowEnd.isAfter(raceEnd)) windowEnd = raceEnd;
 
-            log.info("⏳ Fetching time window: {} -> {}", windowStart, windowEnd);
+            log.debug("telemetry fetching from={} to={}", windowStart, windowEnd);
             try {
-                List<OpenF1CarData> data = openF1Client.getCarData(sessionKey, windowStart, windowEnd).collectList().block();
+                List<OpenF1CarData> data =
+                        openF1Client.getCarData(sessionKey, windowStart, windowEnd);
 
                 if (data != null && !data.isEmpty()) {
                     totalPacketsIngested += data.size();
-                    List<InsertAllRequest.RowToInsert> rows = new ArrayList<>();
+                    List<Map<String, Object>> rows = new ArrayList<>();
 
                     for (OpenF1CarData packet : data) {
                         Map<String, Object> rowContent = new HashMap<>();
@@ -71,35 +102,72 @@ public class HistoricalDataLoader {
                         rowContent.put("brake", packet.getBrake());
                         rowContent.put("drs", packet.getDrs());
 
-                        rows.add(InsertAllRequest.RowToInsert.of(rowContent));
+                        rows.add(rowContent);
 
                         if (rows.size() >= BATCH_SIZE) {
-                            flushToBigQuery(rows);
+                            batchWriter.append(dataset(), TABLE, rows);
                             rows.clear();
                         }
                     }
-                    if (!rows.isEmpty()) flushToBigQuery(rows);
+                    if (!rows.isEmpty()) batchWriter.append(dataset(), TABLE, rows);
                 }
             } catch (Exception e) {
-                log.error("❌ Failed to fetch telemetry window {} -> {}: {}", windowStart, windowEnd, e.getMessage());
+                log.error(
+                        "telemetry window failed session_key={} from={} to={}",
+                        sessionKey,
+                        windowStart,
+                        windowEnd,
+                        e);
             }
 
             // Move to the next chunk
             windowStart = windowEnd;
 
-            // Polite delay to respect API rate limits even on sponsor tier
-            try { Thread.sleep(500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            pauseBetweenWindows();
         }
 
-        log.info("✅ Hydration Complete! Successfully loaded {} total rows into BigQuery `f1_dataset.telemetry`.", totalPacketsIngested);
+        log.info(
+                "telemetry load complete session_key={} rows={} table={}.{}",
+                sessionKey,
+                totalPacketsIngested,
+                dataset(),
+                TABLE);
     }
 
-    private void flushToBigQuery(List<InsertAllRequest.RowToInsert> rows) {
-        InsertAllRequest request = InsertAllRequest.newBuilder(DATASET, TABLE).setRows(rows).build();
-        InsertAllResponse response = bigQuery.insertAll(request);
-
-        if (response.hasErrors()) {
-            log.error("❌ BigQuery Insert Errors on batch: {}", response.getInsertErrors());
+    private void pauseBetweenWindows() {
+        if (windowDelay.isZero() || windowDelay.isNegative()) return;
+        try {
+            Thread.sleep(windowDelay);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
+    }
+
+    /**
+     * Clears the session's existing rows so a re-run replaces rather than duplicates. The date
+     * range is required, not merely an optimisation: the table demands a partition filter (P2).
+     */
+    private void deleteExistingRows(long sessionKey, OffsetDateTime from, OffsetDateTime to) {
+        String sql =
+                String.format(
+                        """
+                DELETE FROM `%s.%s`
+                WHERE session_key = %d
+                  AND date >= TIMESTAMP('%s')
+                  AND date <= TIMESTAMP('%s')
+                """,
+                        dataset(), TABLE, sessionKey, from.minusDays(1), to.plusDays(1));
+        try {
+            queryRunner.query(sql);
+            log.info("telemetry rows cleared session_key={}", sessionKey);
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Could not clear existing telemetry for session " + sessionKey, e);
+        }
+    }
+
+    /** C4: {@code "f1_dataset"} was a private constant in ten classes. */
+    private String dataset() {
+        return queryRunner.properties().dataset();
     }
 }

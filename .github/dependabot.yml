@@ -98,3 +98,52 @@ updates:
     commit-message:
       prefix: ci
       include: scope
+
+  # ---------------------------------------------------------------------------
+  # Backend Maven dependencies.
+  # ---------------------------------------------------------------------------
+  # Nothing was bumping these: the git history shows every backend version moving
+  # by hand, and Trivy only ran post-merge, so a vulnerable dependency merged
+  # green. Grouped the same way as npm — patches and minors arrive together,
+  # majors arrive alone because those are the ones that need reading.
+  #
+  # `directory: /backend` covers the whole reactor: Dependabot resolves the
+  # aggregator POM and every module beneath it.
+  - package-ecosystem: maven
+    directory: /backend
+    schedule:
+      # TEMPORARY — see the note at the top of this file. Revert to:
+      #   interval: weekly
+      #   day: monday
+      interval: daily
+      time: '06:00'
+      timezone: America/New_York
+    open-pull-requests-limit: 5
+    groups:
+      backend-minor-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: build
+      include: scope
+
+  # ---------------------------------------------------------------------------
+  # Base images in backend/Dockerfile and backend/Dockerfile.ci.
+  # ---------------------------------------------------------------------------
+  # Both are now digest-pinned; this is what keeps those digests from freezing at
+  # whatever they were on the day they were pinned. Same known gap as the
+  # frontend: the step images in cloudbuild/backend-*.yaml are not Dockerfiles
+  # and have to be bumped by hand.
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      # TEMPORARY — see the note at the top of this file. Revert to:
+      #   interval: weekly
+      #   day: monday
+      interval: daily
+      time: '06:00'
+      timezone: America/New_York
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: build
+      include: scope
+

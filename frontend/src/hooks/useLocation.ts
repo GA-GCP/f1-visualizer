@@ -1,6 +1,6 @@
 import { type IMessage } from '@stomp/stompjs';
 import { useEffect, useRef } from 'react';
-import * as z from 'zod/mini';
+import { parsePacketBatch } from '../api/parseBatch';
 import { locationPacketSchema } from '../api/schemas';
 import { stompClient } from '../api/stompClient';
 import { createLogger } from '../lib/logger';
@@ -36,26 +36,27 @@ export const useLocation = (locationQueueRef: React.RefObject<LocationPacket[]>)
 
         const subscription = stompClient.subscribe('/topic/race-location', (message: IMessage) => {
             try {
-                // Replaces a hand-rolled three-field check that never verified
-                // the types — a string x would sail through it and land as NaN
-                // on the canvas.
-                const result = z.safeParse(locationPacketSchema, JSON.parse(message.body));
-                if (!result.success) {
-                    log.error('Packet did not match the expected shape', result.error.issues);
-                    return;
-                }
+                // Schema validation per packet replaces a hand-rolled three-field
+                // check that never verified the types — a string x would sail
+                // through it and land as NaN on the canvas. One message carries a
+                // whole tick's worth of points (P1).
+                const packets = parsePacketBatch(locationPacketSchema, message.body, (issues) =>
+                    log.error('Packet did not match the expected shape', issues),
+                );
+                if (packets.length === 0) return;
 
                 const queue = locationQueueRef.current;
-                queue.push(result.data);
+                queue.push(...packets);
                 if (queue.length > MAX_QUEUED_POINTS) {
                     queue.splice(0, queue.length - MAX_QUEUED_POINTS);
                 }
 
-                packetCountRef.current++;
+                const last = packets[packets.length - 1];
+                packetCountRef.current += packets.length;
                 if (packetCountRef.current === 1 || packetCountRef.current % 500 === 0) {
                     log.debug(
-                        `Packet #${packetCountRef.current} | driver=${result.data.driver_number} ` +
-                            `x=${result.data.x} y=${result.data.y} | queue=${queue.length}`,
+                        `Packet #${packetCountRef.current} | driver=${last.driver_number} ` +
+                            `x=${last.x} y=${last.y} | queue=${queue.length}`,
                     );
                 }
             } catch (err) {

@@ -1,6 +1,6 @@
 import { type IMessage } from '@stomp/stompjs';
 import { useEffect, useRef } from 'react';
-import * as z from 'zod/mini';
+import { parsePacketBatch } from '../api/parseBatch';
 import { telemetryPacketSchema } from '../api/schemas';
 import { stompClient } from '../api/stompClient';
 import { createLogger } from '../lib/logger';
@@ -45,14 +45,16 @@ export const useTelemetry = (onDataReceived: (data: TelemetryPacket) => void) =>
                 measureBetween('f1v:stomp-ttfp', MARK.stompConnected, MARK.firstPacket);
             }
             try {
-                // safeParse, not parse: one malformed packet must not tear down
-                // the subscription for the rest of the feed.
-                const result = z.safeParse(telemetryPacketSchema, JSON.parse(message.body));
-                if (!result.success) {
-                    log.error('Packet did not match the expected shape', result.error.issues);
-                    return;
+                // One message now carries a whole tick's packets (P1). Each is
+                // validated on its own, so a single malformed entry does not
+                // discard the rest of the batch or tear down the subscription.
+                for (const packet of parsePacketBatch(
+                    telemetryPacketSchema,
+                    message.body,
+                    (issues) => log.error('Packet did not match the expected shape', issues),
+                )) {
+                    bufferRef.current.set(packet.driver_number, packet);
                 }
-                bufferRef.current.set(result.data.driver_number, result.data);
             } catch (err) {
                 log.error('Failed to parse telemetry', err);
             }
@@ -72,13 +74,13 @@ export const useTelemetry = (onDataReceived: (data: TelemetryPacket) => void) =>
             frames.frame(now);
             const buffer = bufferRef.current;
             if (buffer.size > 0 && callbackRef.current) {
-                // /topic/race-data carries every driver, and the replay engine
-                // publishes a whole 250 ms window back-to-back — so all ~20
-                // drivers land inside a single rAF interval. Taking only the
-                // last *message* therefore forwarded one arbitrary driver and
-                // discarded the rest, which is why the selected driver's readout
-                // stalled while the trace kept moving. Forward the latest packet
-                // for each driver instead; the consumer filters to the one it wants.
+                // /topic/race-data carries every driver, and a single message
+                // carries a whole 250 ms window — so all ~20 drivers land inside
+                // one rAF interval. Taking only the last *message* therefore
+                // forwarded one arbitrary driver and discarded the rest, which is
+                // why the selected driver's readout stalled while the trace kept
+                // moving. Forward the latest packet for each driver instead; the
+                // consumer filters to the one it wants.
                 for (const packet of buffer.values()) {
                     callbackRef.current(packet);
                 }

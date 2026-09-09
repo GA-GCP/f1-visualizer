@@ -6,16 +6,19 @@ import com.elysianarts.f1.visualizer.commons.messaging.replay.ReplayCommand;
 import com.elysianarts.f1.visualizer.commons.messaging.replay.ReplayCommandStream;
 import com.elysianarts.f1.visualizer.commons.messaging.replay.ReplayState;
 import com.elysianarts.f1.visualizer.commons.messaging.replay.ReplayStateStore;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.data.redis.connection.stream.ReadOffset;
 import org.springframework.data.redis.connection.stream.StreamOffset;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -28,6 +31,12 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * worker communicate at all (R1), and a mock of {@code StringRedisTemplate} would assert nothing
  * about whether a Redis stream behaves the way this code assumes.
  *
+ * <p><b>No Spring context.</b> This wires the two classes under test straight onto the container.
+ * Booting the application instead would drag in the BigQuery and Firestore clients, which are built
+ * from {@code getDefaultInstance()} and need real GCP credentials — so the whole class errored in
+ * CI while passing locally, where it was skipped for want of Docker. What is under test here is
+ * Redis; nothing else belongs in the fixture.
+ *
  * <p>Skipped where Docker is unavailable rather than failing, so a developer machine without it
  * still gets a green build.
  */
@@ -35,32 +44,61 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 // per-method assumption would be too late. A developer machine without Docker
 // skips these; CI runs them.
 @Testcontainers(disabledWithoutDocker = true)
-@SpringBootTest(properties = "spring.data.redis.ssl.enabled=false")
-@ActiveProfiles("test")
 class ReplayRedisIntegrationTest {
 
-    @Container @ServiceConnection
+    @Container
     static final GenericContainer<?> REDIS =
             new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
 
-    @Autowired private ReplayCommandStream commandStream;
+    private static LettuceConnectionFactory connectionFactory;
 
-    @Autowired private ReplayStateStore stateStore;
+    private StringRedisTemplate redis;
+    private ReplayCommandStream commandStream;
+    private ReplayStateStore stateStore;
 
-    @Autowired private StringRedisTemplate redis;
+    @BeforeAll
+    static void connectToTheContainer() {
+        connectionFactory =
+                new LettuceConnectionFactory(
+                        new RedisStandaloneConfiguration(
+                                REDIS.getHost(), REDIS.getMappedPort(6379)));
+        connectionFactory.afterPropertiesSet();
+        connectionFactory.start();
+    }
+
+    @AfterAll
+    static void disconnect() {
+        if (connectionFactory != null) {
+            connectionFactory.destroy();
+        }
+    }
+
+    /** A clean stream and state per test, so nothing depends on execution order. */
+    @BeforeEach
+    void freshKeys() {
+        redis = new StringRedisTemplate(connectionFactory);
+        redis.delete(List.of(ReplayCommandStream.KEY, ReplayStateStore.KEY));
+        commandStream = new ReplayCommandStream(redis);
+        stateStore = new ReplayStateStore(redis);
+    }
+
+    private List<MapRecord<String, Object, Object>> commandsOnTheStream() {
+        List<MapRecord<String, Object, Object>> records =
+                redis.opsForStream()
+                        .read(StreamOffset.create(ReplayCommandStream.KEY, ReadOffset.from("0")));
+        assertNotNull(records, "reading the command stream returned nothing at all");
+        return records;
+    }
 
     /** A command survives the round trip through Redis with its fields intact. */
     @Test
     void aPublishedCommandIsReadableFromTheStream() {
-
         commandStream.publish(ReplayCommand.loadSimulation(9165L));
 
-        List<MapRecord<String, Object, Object>> records =
-                redis.opsForStream().read(StreamOffset.fromStart(ReplayCommandStream.KEY));
+        List<MapRecord<String, Object, Object>> records = commandsOnTheStream();
 
-        assertNotNull(records);
-        assertFalse(records.isEmpty());
-        var fields = records.get(records.size() - 1).getValue();
+        assertEquals(1, records.size());
+        Map<Object, Object> fields = records.get(0).getValue();
         assertEquals("LOAD_SIMULATION", fields.get("type"));
         assertEquals("9165", fields.get("sessionKey"));
     }
@@ -68,22 +106,32 @@ class ReplayRedisIntegrationTest {
     /** A seek carries its percentage; a play carries neither key nor percentage. */
     @Test
     void commandFieldsRoundTrip() {
-
         commandStream.publish(ReplayCommand.seek(73));
         commandStream.publish(ReplayCommand.play());
 
-        List<MapRecord<String, Object, Object>> records =
-                redis.opsForStream()
-                        .read(StreamOffset.create(ReplayCommandStream.KEY, ReadOffset.from("0")));
+        List<MapRecord<String, Object, Object>> records = commandsOnTheStream();
+        assertEquals(2, records.size());
 
-        assertNotNull(records);
-        var seek = ReplayCommand.fromFields(asStrings(records.get(records.size() - 2).getValue()));
-        var play = ReplayCommand.fromFields(asStrings(records.get(records.size() - 1).getValue()));
+        ReplayCommand seek = ReplayCommand.fromFields(asStrings(records.get(0).getValue()));
+        ReplayCommand play = ReplayCommand.fromFields(asStrings(records.get(1).getValue()));
 
         assertEquals(ReplayCommand.Type.SEEK, seek.type());
         assertEquals(73, seek.percentage());
         assertEquals(ReplayCommand.Type.PLAY, play.type());
         assertNull(play.sessionKey());
+        assertNull(play.percentage());
+    }
+
+    /** The stream is a command channel, not a log to keep: it stays bounded. */
+    @Test
+    void theStreamIsTrimmed() {
+        for (int i = 0; i < 20; i++) {
+            commandStream.publish(ReplayCommand.seek(i));
+        }
+
+        // longValue(): size() returns a Long, and assertEquals(int, Long) would
+        // compare an Integer to a Long through the Object overload and never pass.
+        assertEquals(20L, redis.opsForStream().size(ReplayCommandStream.KEY).longValue());
     }
 
     /**
@@ -92,7 +140,6 @@ class ReplayRedisIntegrationTest {
      */
     @Test
     void stateSurvivesTheRoundTrip() {
-
         ReplayState saved =
                 new ReplayState(
                         ReplayState.Mode.SIMULATION,
@@ -112,17 +159,26 @@ class ReplayRedisIntegrationTest {
         assertEquals(42, loaded.progress());
     }
 
+    /** A worker with nothing to resume writes and reads a state with no session. */
+    @Test
+    void anIdleStateSurvivesTheRoundTrip() {
+        stateStore.save(ReplayState.idle());
+
+        ReplayState loaded = stateStore.load();
+
+        assertEquals(ReplayState.Mode.IDLE, loaded.mode());
+        assertNull(loaded.sessionKey());
+        assertFalse(loaded.running());
+    }
+
     /** An empty store reads as idle rather than throwing or returning null. */
     @Test
     void anEmptyStateReadsAsIdle() {
-
-        redis.delete(ReplayStateStore.KEY);
-
         assertEquals(ReplayState.Mode.IDLE, stateStore.load().mode());
     }
 
-    private static java.util.Map<String, String> asStrings(java.util.Map<Object, Object> raw) {
-        java.util.Map<String, String> out = new java.util.HashMap<>();
+    private static Map<String, String> asStrings(Map<Object, Object> raw) {
+        Map<String, String> out = new HashMap<>();
         raw.forEach((k, v) -> out.put(String.valueOf(k), String.valueOf(v)));
         return out;
     }

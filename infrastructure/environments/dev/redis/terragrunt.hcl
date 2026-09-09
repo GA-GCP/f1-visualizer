@@ -23,6 +23,11 @@ inputs = {
   environment = "dev"
   region      = "us-central1"
 
+  # Single node, no failover: a dev cache that restarts is a re-load, not an
+  # incident.
+  tier           = "BASIC"
+  memory_size_gb = 1
+
   # The mock output above allows this reference to resolve during the plan phase
-  network_id  = dependency.networking.outputs.network_id
+  network_id = dependency.networking.outputs.network_id
 }

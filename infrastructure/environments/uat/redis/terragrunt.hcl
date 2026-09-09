@@ -23,6 +23,11 @@ inputs = {
   environment = "uat"
   region      = "us-east1"
 
+  # Single node, no failover: matches dev deliberately, so the difference between
+  # uat and prod is stated here rather than inferred from the environment name.
+  tier           = "BASIC"
+  memory_size_gb = 1
+
   # The mock output above allows this reference to resolve during the plan phase
-  network_id  = dependency.networking.outputs.network_id
+  network_id = dependency.networking.outputs.network_id
 }

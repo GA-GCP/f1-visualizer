@@ -45,7 +45,7 @@ inputs = {
   ingress   = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 
   # Pointing to the Artifact Registry repo we created
-  image_url    = "us-east1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/telemetry:latest"
+  image_url    = "us-east1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/telemetry:latest-uat"
 
   # Elevated resources: high-frequency Redis Pub/Sub to WebSocket broadcast (1000+ msg/sec during live sessions)
   cpu    = "2000m"

@@ -19,7 +19,7 @@ inputs = {
   project_id   = "f1-visualizer-488201"
   region       = "us-east1"
   service_name = "f1v-service-data-analysis-uat"
-  image_url    = "us-east1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/data-analysis:latest"
+  image_url    = "us-east1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/data-analysis:latest-uat"
   service_account_email = dependency.iam.outputs.sa_data_analysis_email
 
   # S3: the *.run.app URL no longer answers the internet. Only the API Gateway's

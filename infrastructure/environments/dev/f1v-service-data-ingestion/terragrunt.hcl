@@ -35,7 +35,7 @@ inputs = {
   region       = "us-central1"
   service_name = "f1v-service-data-ingestion-dev"
   service_account_email = dependency.iam.outputs.sa_data_ingestion_email
-  image_url    = get_env("TF_VAR_image_url", "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/data-ingestion:latest")
+  image_url    = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/data-ingestion:latest-dev"
 
   # S3: the *.run.app URL no longer answers the internet. Only the API Gateway's
   # service account can invoke this service, and it presents an ID token minted

@@ -47,3 +47,9 @@ variable "telemetry_service_name" {
   description = "Cloud Run service name serving the /ws WebSocket route"
   type        = string
 }
+
+variable "enable_adaptive_protection" {
+  description = "Cloud Armor Adaptive Protection (layer 7 DDoS defence). Requires Cloud Armor Enterprise, which is billed separately."
+  type        = bool
+  default     = false
+}

@@ -46,7 +46,14 @@ one-time, out-of-band step for a project that does not exist yet.
 6. **Point DNS at the load balancers.** A Google-managed certificate stays in
    PROVISIONING until the domain resolves to the forwarding rule's address, so
    the first apply of a new environment will show a certificate that is not
-   ready. `terragrunt output static_ip` in `lb-api` and `lb-frontend`.
+   ready. Both units output both addresses:
+
+       terragrunt output static_ip     # A record
+       terragrunt output static_ipv6   # AAAA record (SEC-5)
+
+   The IPv6 address is reserved and serving whether or not an AAAA record points
+   at it; until one does, IPv6-only clients simply cannot reach the site, which
+   is the state before this change.
 
 7. **Apply the rest.** `terragrunt run --all apply` from `environments/<env>`.
 

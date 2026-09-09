@@ -62,6 +62,8 @@ resource "google_compute_backend_service" "default" {
     sample_rate = 0.1
   }
 
+  security_policy = google_compute_security_policy.frontend.id
+
   backend {
     group = google_compute_region_network_endpoint_group.serverless_neg.id
   }
@@ -90,6 +92,10 @@ resource "google_compute_target_https_proxy" "default" {
   url_map          = google_compute_url_map.default.id
   ssl_certificates = [google_compute_managed_ssl_certificate.default.id]
   project          = var.project_id
+
+  # SEC-5: TLS 1.2 and the MODERN cipher profile, instead of the default policy's
+  # TLS 1.0 and COMPATIBLE.
+  ssl_policy = google_compute_ssl_policy.default.id
 }
 
 # 7. Global Forwarding Rule
@@ -100,4 +106,133 @@ resource "google_compute_global_forwarding_rule" "default" {
   load_balancing_scheme = "EXTERNAL_MANAGED"
   ip_address            = google_compute_global_address.default.address
   project               = var.project_id
+}
+
+# ==============================================================================
+# SEC-5: TLS and edge posture
+# ==============================================================================
+# The target HTTPS proxy used the default SSL policy, which permits TLS 1.0 and
+# the COMPATIBLE cipher profile — a scanner reports that as weak TLS on a public
+# endpoint. Only a port-443 forwarding rule existed, so `http://` refused the
+# connection rather than upgrading; nginx sets HSTS, which only helps after a
+# first successful HTTPS visit. And both addresses were IPv4 only, so an
+# IPv6-only client could not connect at all.
+
+resource "google_compute_ssl_policy" "default" {
+  name            = "${var.name_prefix}-ssl-policy"
+  project         = var.project_id
+  profile         = "MODERN"
+  min_tls_version = "TLS_1_2"
+}
+
+# A URL map that only redirects. It has no backend, so it costs nothing to serve
+# and cannot route anywhere by accident.
+resource "google_compute_url_map" "https_redirect" {
+  name    = "${var.name_prefix}-http-redirect"
+  project = var.project_id
+
+  default_url_redirect {
+    https_redirect         = true
+    redirect_response_code = "MOVED_PERMANENTLY_DEFAULT"
+    strip_query            = false
+  }
+}
+
+resource "google_compute_target_http_proxy" "redirect" {
+  name    = "${var.name_prefix}-http-proxy"
+  project = var.project_id
+  url_map = google_compute_url_map.https_redirect.id
+}
+
+# IPv6. Needs an AAAA record alongside the A record; until that exists the
+# address is reserved and unreachable, which harms nothing.
+resource "google_compute_global_address" "ipv6" {
+  name       = "${var.name_prefix}-ipv6"
+  project    = var.project_id
+  ip_version = "IPV6"
+}
+
+resource "google_compute_global_forwarding_rule" "http" {
+  name                  = "${var.name_prefix}-http-rule"
+  project               = var.project_id
+  target                = google_compute_target_http_proxy.redirect.id
+  port_range            = "80"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+  ip_address            = google_compute_global_address.default.address
+}
+
+resource "google_compute_global_forwarding_rule" "https_ipv6" {
+  name                  = "${var.name_prefix}-https-rule-v6"
+  project               = var.project_id
+  target                = google_compute_target_https_proxy.default.id
+  port_range            = "443"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+  ip_address            = google_compute_global_address.ipv6.address
+}
+
+resource "google_compute_global_forwarding_rule" "http_ipv6" {
+  name                  = "${var.name_prefix}-http-rule-v6"
+  project               = var.project_id
+  target                = google_compute_target_http_proxy.redirect.id
+  port_range            = "80"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+  ip_address            = google_compute_global_address.ipv6.address
+}
+
+# ==============================================================================
+# SEC-4: Cloud Armor
+# ==============================================================================
+# Lighter than the API policy on purpose. This backend serves a static bundle
+# behind a CDN (PERF-2), so most requests never reach it and there is no input to
+# attack — the ceiling is here to bound the cost of someone deliberately missing
+# the cache, not to inspect payloads.
+resource "google_compute_security_policy" "frontend" {
+  name        = "${var.name_prefix}-armor"
+  project     = var.project_id
+  description = "Rate limiting for the F1V frontend edge"
+
+  rule {
+    action      = "throttle"
+    priority    = 1000
+    description = "Throttle requests per client IP"
+
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+
+    rate_limit_options {
+      conform_action = "allow"
+      exceed_action  = "deny(429)"
+      enforce_on_key = "IP"
+
+      # A first page load is one document plus a handful of hashed assets, all
+      # then cached in the browser for a decade.
+      rate_limit_threshold {
+        count        = 600
+        interval_sec = 60
+      }
+    }
+  }
+
+  rule {
+    action      = "allow"
+    priority    = 2147483647
+    description = "Default allow"
+
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+  }
+
+  adaptive_protection_config {
+    layer_7_ddos_defense_config {
+      enable = var.enable_adaptive_protection
+    }
+  }
 }

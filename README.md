@@ -25,7 +25,6 @@
   <!-- Cloud -->
   <img src="https://img.shields.io/badge/Google_Cloud-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white" alt="Google Cloud" />
   <img src="https://img.shields.io/badge/Cloud_Run-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white" alt="Cloud Run" />
-  <img src="https://img.shields.io/badge/API_Gateway-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white" alt="API Gateway" />
   <br />
   <!-- IaC -->
   <img src="https://img.shields.io/badge/OpenTofu-1.12-FFDA18?style=for-the-badge&logo=opentofu&logoColor=black" alt="OpenTofu 1.12" />
@@ -145,18 +144,18 @@ Opens at `http://localhost:5173` with Hot Module Replacement.
                                                  |
                                           JWT Validation
                                                  |
-    +------------------+                +--------v---------+               +--------------------+
-    |                  |   HTTPS/WSS    |                  |   HTTPS       |                    |
-    |   React SPA      +--------------->+  Global HTTPS    +<------------->+   Google Cloud     |
-    |   (Cloud Run)    |                |  Load Balancer   |               |   API Gateway      |
-    |                  |                |                  |               |   (OpenAPI 2.0)    |
-    +------------------+                +----+--------+----+               +----+----------+----+
-                                             |        |                         |          |
-                                        /ws  |        | /*                      |          |
-                                             |        |            +------------+          |
-                              +--------------+        +----------->+                       |
-                              |                                    |   Path-Based          |
-                              v                                    |   Routing             |
+    +------------------+                +--------v---------+
+    |                  |   HTTPS/WSS    |                  |
+    |   React SPA      +--------------->+  Global HTTPS    |
+    |   (Cloud Run,    |                |  Load Balancer   |
+    |    Cloud CDN)    |                |  (Cloud Armor)   |
+    +------------------+                +----+--------+----+
+                                             |        |
+                                        /ws  |        | /api/v1/{users,
+                                             |        |  analysis,ingestion}
+                              +--------------+        +----------+
+                              |                                  |
+                              v                                  v
                   +-----------+-----------+                        |                       |
                   |                       |              +---------v---+  +-----------+   +v-----------+
                   |  Telemetry Service    |              |  Analysis   |  | Ingestion |   |   User     |
@@ -283,11 +282,12 @@ The real-time pipeline is the core of the platform — a four-hop event-driven c
 | **Data** | BigQuery | — | Columnar data warehouse with DAY-partitioned, clustered tables |
 | | Firestore | Native | Document database for user profiles and preferences |
 | | Redis (Memorystore) | 6.x | In-memory Pub/Sub broker between microservices |
-| **Cloud** | Cloud Run | v2 | Serverless container platform with VPC connector support |
-| | API Gateway | — | OpenAPI 2.0 request routing with OAuth2 JWT enforcement |
+| **Cloud** | Cloud Run | v2 | Serverless container platform, with direct VPC egress |
+| | Cloud Armor | — | Edge rate limiting and preconfigured WAF rules |
 | | Secret Manager | — | Secure credential storage for external API keys |
-| | Cloud Load Balancing | Global | HTTPS termination with managed SSL and path-based routing |
-| | VPC + Connector | — | Private networking for Cloud Run to Redis communication |
+| | Cloud Load Balancing | Global | HTTPS termination, path-based routing, Cloud CDN |
+| | VPC | — | Private networking for Cloud Run to Redis, via direct VPC egress |
+| | Cloud Monitoring | — | Uptime checks, alert policies and a per-environment budget |
 | | Artifact Registry | — | Docker image repository with layer caching |
 | **IaC** | OpenTofu | 1.12 | Infrastructure as Code (Terraform-compatible, open-source) |
 | | Terragrunt | 1.1 | DRY configuration wrapper with dependency orchestration |
@@ -365,39 +365,39 @@ f1-visualizer/
 |   +-- f1v-service-user/                       # REST: Firestore user profiles and preferences
 |
 +-- infrastructure/                             # OpenTofu + Terragrunt IaC
-|   +-- root.hcl                                # Terragrunt root config (GCS state backend)
-|   +-- modules/                                # 12 reusable OpenTofu modules
-|   |   +-- cloud-run-backend/                  #   Serverless container services for Maven/Java/SpringBoot
-|   |   +-- cloud-run-frontend/                 #   Serverless container services for Vite/React/Typescript
-|   |   +-- api-gateway/                        #   OpenAPI-driven request routing
-|   |   +-- bigquery/                           #   Dataset + 7 tables with partitioning/clustering
-|   |   +-- firestore/                          #   Document database with delete protection
-|   |   +-- redis/                              #   Memorystore instance (HA in production)
-|   |   +-- artifact-registry/                  #   Docker image repository
-|   |   +-- networking/                         #   VPC, subnets, firewall rules, VPC connector
-|   |   +-- iam-and-secrets/                    #   6 service accounts with scoped IAM bindings
-|   |   +-- lb-api/                             #   Global HTTPS LB with WebSocket path bypass
-|   |   +-- lb-frontend/                        #   Global HTTPS LB for React SPA
+|   +-- root.hcl                                # Terragrunt root: state, provider, retries
+|   +-- README.md                               # Bootstrap order for a new project
+|   +-- MIGRATIONS.md                           # Changes an apply cannot finish alone
+|   +-- platform/                               # What all three environments share
+|   +-- _envcommon/                             # 15 shared unit definitions
+|   +-- policy/f1v.rego                         # Conftest rules run against the plan
+|   +-- modules/                                # 11 reusable OpenTofu modules
+|   |   +-- cloud-run/                          #   All six services, backend and SPA
+|   |   +-- bigquery/                           #   Dataset + 8 tables, schemas in JSON
+|   |   +-- firestore/                          #   Document database, PITR in prod
+|   |   +-- redis/                              #   Memorystore (HA in production)
+|   |   +-- networking/                         #   VPC, subnet, one firewall rule
+|   |   +-- iam-and-secrets/                    #   6 runtime + 2 CI service accounts
+|   |   +-- lb-api/                             #   Global HTTPS LB, path-routed
+|   |   +-- lb-frontend/                        #   Global HTTPS LB + Cloud CDN
+|   |   +-- monitoring/                         #   Uptime checks, alerts, budget
 |   |   +-- cloudbuild-triggers/                #   7 path-filtered CI/CD triggers
+|   |   +-- platform/                           #   State bucket, registries, DNS, audit
 |   +-- environments/
-|   |   +-- dev/                                # DEV environment Terragrunt configurations
-|   |       +-- (16 module instances with dependency declarations)
-|   |   +-- prod/                               # PROD environment Terragrunt configurations
-|   |       +-- (14 module instances with dependency declarations)
-|   |   +-- uat/                                # UAT environment Terragrunt configurations
-|   |       +-- (15 module instances with dependency declarations)
-|   +-- openapi.yaml                            # API Gateway OpenAPI 2.0 specification
+|       +-- dev/    env.hcl + 15 units
+|       +-- uat/    env.hcl + 15 units
+|       +-- prod/   env.hcl + 15 units
 |
 +-- cloudbuild/                                 # GCP Cloud Build Pipeline Definitions
 |   +-- backend-service.yaml                    # Build, scan, deploy: any backend service
 |                                               #   (_MODULE, _IMAGE and _SERVICE per trigger)
 |   +-- frontend.yaml                           # Lint, test, build, deploy: React SPA
-|   +-- api-gateway.yaml                        # Discover URLs, inject, validate, deploy, smoke test
-|   +-- infrastructure.yaml                     # Trivy IaC scan, Terragrunt init/plan/apply
+|   +-- infrastructure.yaml                     # Scan, plan to file, policy, apply
 |
 +-- .github/
     +-- workflows/
-        +-- pr-checks.yml                       # 3 parallel PR jobs: backend, frontend, infrastructure
+        +-- pr-checks.yml                       # 5 PR jobs, including a real plan
+        +-- pinned-versions.yml                 # Weekly: pins no ecosystem watches
 ```
 
 ---
@@ -529,68 +529,124 @@ Authentication flows through Auth0 with two parallel paths:
 
 ### Module Architecture
 
-The infrastructure is fully codified across 12 reusable OpenTofu modules, composed per environment via Terragrunt:
+Eleven OpenTofu modules under `infrastructure/modules/`, composed per environment
+by Terragrunt. Each module has a README covering what it is for and which
+decisions in it are load bearing.
 
 ```
-infrastructure/modules/
+infrastructure/
 |
-+-- iam-and-secrets      6 service accounts with principle-of-least-privilege bindings
-|       |
-+-- networking           VPC, subnet, firewall rules, serverless VPC connector
-|       |
-+-- artifact-registry    Docker image repository
-+-- firestore            Document database (delete protection per env)
-+-- bigquery             Dataset + 7 tables (partitioned + clustered)
-+-- redis                Memorystore (BASIC for dev, STANDARD_HA for prod)
-|       |
-+-- cloud-run (x5)       Frontend + 4 backend services (VPC connector for Redis access)
-|       |
-+-- api-gateway          OpenAPI 2.0 routing with JWT enforcement
-|       |
-+-- lb-api               Global HTTPS LB with /ws WebSocket path bypass
-+-- lb-frontend          Global HTTPS LB for React SPA
-|       |
-+-- cloudbuild-triggers  7 path-filtered CI/CD pipeline triggers
++-- platform/            What every environment shares: state bucket, both
+|                        registries, the OpenF1 secrets, enabled APIs, DNS zone,
+|                        audit logging, org policies. Outside environments/ so a
+|                        `run --all` in one cannot destroy another's dependency.
+|
++-- _envcommon/          One definition per unit type, included by all three
+|                        environments.
+|
++-- environments/<env>/  env.hcl, plus 15 units that are an include and, in nine
+|                        cases, a genuine override.
+|
++-- modules/
+    +-- iam-and-secrets  6 runtime + 2 CI service accounts, least privilege
+    +-- networking       VPC, subnet, one firewall rule (direct VPC egress)
+    +-- firestore        Document database, PITR and backups in prod
+    +-- bigquery         One dataset per environment, 8 tables
+    +-- redis            Memorystore, with AUTH and its CA delivered by secret
+    +-- cloud-run        All six services: five JVM backends and the SPA
+    +-- lb-api           Global HTTPS LB routing straight to the services
+    +-- lb-frontend      Global HTTPS LB for the SPA, with Cloud CDN
+    +-- cloudbuild-triggers  7 path-filtered triggers
+    +-- monitoring       Uptime checks, alert policies, budget
+    +-- platform         The shared layer above
 ```
 
 ### Dependency Orchestration
 
-Terragrunt manages the deployment order through explicit `dependency` blocks. The graph ensures that IAM identities and networking exist before any service that needs them:
+Terragrunt derives the order from `dependency` blocks. Every edge is a real
+output reference — a NEG or a trigger naming a resource as a bare string is how a
+first bootstrap used to fail and every run after it succeed by accident.
 
 ```
-iam-and-secrets ----+----> cloud-run (all services)
-                    |
-networking ---------+----> redis
-                    |
-artifact-registry --+
-firestore ----------+
-bigquery -----------+----> api-gateway -----> lb-api
-                                              lb-frontend
-                                              cloudbuild-triggers
+platform (applied separately, rarely)
+
+iam-and-secrets --+--> cloud-run (all six) --+--> lb-api
+                  |                          +--> lb-frontend
+                  +--> bigquery -------------+
+                  +--> cloudbuild-triggers
+networking -------+--> redis ----------------+
+firestore
+monitoring
 ```
 
 ### Key Infrastructure Patterns
 
-- **Environment Promotion** — Module inputs are parameterized per environment (`dev`, `uat`, `prod`) via Terragrunt `inputs` blocks. Redis scales from BASIC to STANDARD_HA, Firestore enables delete protection, and Cloud Run adjusts min instances — all without changing module code.
+- **Environment facts stated once** — `environments/<env>/env.hcl` holds
+  everything true of one environment: project, region, Auth0 tenant, database
+  and dataset ids, registry host and image tag, domains, branch pattern, and an
+  `is_production` flag. `root.hcl` reads it, `_envcommon/*.hcl` build the units
+  from it. A unit contains only what genuinely differs.
 
-- **GCS Remote State** — All Terraform state is stored in a GCS bucket with a hierarchical prefix structure (`env/module/terraform.tfstate`), enabling safe concurrent operations across modules.
+- **The pipeline owns the image; IaC owns everything else** — both Cloud Run
+  paths ignore `template.containers.image` and `traffic`. Without that, an
+  infrastructure apply reads the SHA tag from state, sees the floating tag in
+  configuration, and rolls a revision from whatever was built last — which,
+  because dev and prod share a registry, could be a dev build. Images are tagged
+  `latest-<env>`.
 
-- **WebSocket Load Balancer Bypass** — The API load balancer uses a URL map to route `/ws` and `/ws/*` directly to the Telemetry Service's Cloud Run instance via a serverless NEG, bypassing the API Gateway (which does not support WebSocket upgrades). All other paths route through the API Gateway for OpenAPI validation.
+- **GCS remote state** — one object per unit under
+  `environments/<env>/<unit>/terraform.tfstate`. The bucket is declared in the
+  platform layer with versioning, uniform access and public-access prevention;
+  it holds the Memorystore AUTH string in clear text, so it is not a bucket to
+  leave unmanaged.
 
-- **VPC Connector** — Cloud Run services that need Redis access (Ingestion and Telemetry) are configured with a VPC connector on a `/28` subnet, enabling private network communication without exposing Redis to the public internet.
+- **Direct VPC egress** — services that reach Redis attach to the subnet
+  directly. The three always-on Serverless VPC Access connectors they replaced
+  were a fixed monthly cost and a shared bandwidth ceiling on the busiest path in
+  the system.
 
-- **CORS at Load Balancer Edge** — The API load balancer's URL map includes a `cors_policy` that handles OPTIONS preflight requests at the edge with a 204 response, preventing cascade failures when the API Gateway is cold-starting or rate-limiting. REST and WebSocket backends receive separate CORS header configurations.
+- **CORS at the load-balancer edge** — every REST path rule carries a
+  `cors_policy`, so OPTIONS is answered at the edge with a 204. A non-2xx
+  preflight makes the browser block the real request, whose retries then compound
+  whatever caused it; this removes the whole failure mode. `cors_policy` does not
+  inherit into a path rule, so it is stated per rule.
 
-- **Always-Warm Services** — All backend Cloud Run services set `min_instance_count = 1` to eliminate cold-start delays. This is critical because the splash screen prefetches reference data immediately after login, `/users/me` is called on every authentication, and WebSocket connections benefit from instant availability.
+- **Cloud CDN** — in front of the SPA, and in front of the analysis service's six
+  reference endpoints, which the origin already marks `public, max-age=3600`.
+  A response marked public is served from the edge on the cache key alone, and
+  the default key excludes Authorization, so those endpoints answer without a
+  token once warm. That is a deliberate trade for public F1 reference data; the
+  alternative is one line in `modules/lb-api/main.tf`.
 
-- **Bootstrap API Gateway** — Terraform creates a minimal health-check endpoint in the API Gateway config, then uses `ignore_changes = [api_config]` to prevent Terragrunt from reverting the active config. Cloud Build manages the real routing spec with dynamically-discovered Cloud Run service URLs and Auth0 configuration.
+- **Warm instances in prod only** — prod keeps one instance of each REST service
+  and of telemetry, because the splash screen prefetches reference data and
+  `/users/me` is called on every authentication. dev scales everything to zero;
+  uat keeps the replay worker and telemetry, which is what it exists to rehearse.
 
-- **Scoped IAM** — Each microservice runs under a dedicated service account with only the permissions it requires:
-  - Analysis: BigQuery read + job execution + Firestore read (reference data cache)
-  - Ingestion: BigQuery write + Secret Manager read (OpenF1 credentials)
-  - Telemetry: Redis subscribe only
-  - User: Firestore read/write
-  - Frontend: Zero permissions (completely isolated)
+- **Two CI identities** — the pipelines that run `./mvnw verify` and
+  `yarn install` execute third-party code, so they hold no IAM, network or data
+  administration at all. Only the infrastructure pipeline can change the estate,
+  and its `projectIamAdmin` grant is conditioned to the roles this repository
+  declares, so it cannot grant itself Owner.
+
+- **Scoped IAM** — each service runs under its own account, and data access is
+  granted on the resource rather than the project. dev, uat and prod share one
+  GCP project, so a project-level grant crosses every environment boundary:
+
+  | Service | Holds |
+  |---|---|
+  | Analysis | `bigquery.jobUser`; dataViewer on its own dataset; `datastore.user` conditioned to its own database |
+  | Ingestion | `bigquery.jobUser`; dataEditor on its own dataset; `datastore.user` conditioned; secretAccessor on the Redis and OpenF1 secrets |
+  | Replay worker | `bigquery.jobUser`; dataViewer on its own dataset; secretAccessor on the Redis and OpenF1 secrets |
+  | Telemetry | secretAccessor on the Redis AUTH and CA secrets, and nothing at project level |
+  | User | `datastore.user` conditioned to its own database |
+  | Frontend | Nothing, anywhere |
+
+- **Migrations** — changes that an apply cannot finish on its own, with the
+  commands and the order, are in
+  [`infrastructure/MIGRATIONS.md`](infrastructure/MIGRATIONS.md). The bootstrap
+  order for a project that does not exist yet is in
+  [`infrastructure/README.md`](infrastructure/README.md).
 
 ---
 
@@ -614,7 +670,7 @@ feature/*          main             dev              uat              prod
     |                |                |                |                |
     |   GitHub       |   Cloud Build  |   Cloud Build  |   Cloud Build  |
     |   Actions      |   (dev env)    |   (uat env)    |   (prod env)   |
-    |   PR Checks    |   7 pipelines  |   7 pipelines  |   7 pipelines  |
+    |   PR Checks    |   7 triggers   |   7 triggers   |   7 triggers   |
 ```
 
 ### Branch Responsibilities
@@ -622,18 +678,18 @@ feature/*          main             dev              uat              prod
 | Branch | Purpose | Deploys To | Trigger |
 |--------|---------|-----------|---------|
 | `main` | Development trunk — all feature branches merge here | Nothing (validation only) | GitHub Actions PR checks |
-| `dev` | Development environment deployment | GCP Dev | Cloud Build on push (7 path-filtered pipelines) |
+| `dev` | Development environment deployment | GCP Dev | Cloud Build on push (7 path-filtered triggers) |
 | `uat` | User acceptance testing deployment | GCP UAT | Cloud Build on push |
-| `prod` | Production deployment | GCP Prod | Cloud Build on push (requires approval) |
+| `prod` | Production deployment | GCP Prod | Cloud Build on push; the infrastructure trigger requires approval |
 
 ### Promotion Flow
 
 Each promotion is an explicit pull request from one environment branch to the next, creating a clear audit trail:
 
-1. **feature → main** — Developer opens a PR. GitHub Actions runs backend tests, frontend lint + tests, and infrastructure validation. On merge, the code is integrated but not yet deployed.
+1. **feature → main** — Developer opens a PR. GitHub Actions runs backend tests, frontend lint, tests and e2e, infrastructure static checks, and a real `terragrunt plan` per environment posted as a comment. On merge, the code is integrated but not yet deployed.
 2. **main → dev** — A promotion PR deploys to the dev environment. Cloud Build pipelines build, scan, containerize, and deploy all affected services.
 3. **dev → uat** — After dev validation, a promotion PR moves the release candidate to the UAT environment for acceptance testing.
-4. **uat → prod** — After UAT sign-off, a promotion PR deploys to production. This is the only promotion that will require explicit reviewer approval once branch protection rules are enabled.
+4. **uat → prod** — After UAT sign-off, a promotion PR deploys to production. The infrastructure trigger holds its apply for manual approval in prod (`approval_config` in `modules/cloudbuild-triggers`), so a merge cannot apply a plan nobody read — including a destroy. The application triggers do not: the frontend pipeline gates itself with deploy-no-traffic, smoke test, promote, and a backend deploy is reversible by re-running at an earlier SHA.
 
 ### Down-Merge Flow
 
@@ -671,32 +727,37 @@ The CI/CD system operates across two layers: **GitHub Actions** for fast PR vali
 Pull Request to main                        Promotion to env branch (dev/uat/prod)
     |                                             |
     v                                             v
-GitHub Actions (3 parallel jobs)            Cloud Build (7 path-filtered triggers)
-    |                                             |
-    +-- Backend: ./mvnw -B verify                 +-- backend-service.yaml (x5)
-    +-- Frontend: yarn lint + test + e2e          +-- frontend.yaml
-    +-- Infra: Trivy + tofu validate              +-- api-gateway.yaml
-                                                  +-- frontend.yaml
-                                                  +-- api-gateway.yaml
-                                                  +-- infrastructure.yaml
+GitHub Actions (5 jobs)                     Cloud Build (7 path-filtered triggers,
+    |                                        3 pipeline definitions)
+    +-- Backend                                   |
+    +-- Frontend                                  +-- backend-service.yaml  (x5,
+    +-- Frontend E2E (needs: frontend)            |   one trigger per service)
+    +-- Infrastructure static checks              +-- frontend.yaml
+    +-- Infrastructure plan (needs: above,        +-- infrastructure.yaml
+        one job per environment, WIF)
 ```
+
+The five backend services share one pipeline definition: the triggers differ only
+in three substitutions. The API Gateway pipeline is gone with the gateway itself.
 
 ### PR Quality Gates (GitHub Actions)
 
-Every pull request targeting `main` triggers three parallel validation jobs:
+Every pull request targeting `main` runs:
 
 | Job | Steps | Purpose |
 |-----|-------|---------|
-| **Backend** | `mvn clean package -am` | Compile all modules + run full test suite |
-| **Frontend** | `yarn lint` then `yarn test:ci` | ESLint checks + Vitest unit tests |
-| **Infrastructure** | Trivy config scan + `tofu validate` per module | Security analysis + HCL syntax validation |
+| **Backend** | `mvn -B clean verify`, Trivy filesystem scan, SBOM upload | The whole reactor through `verify`, which is the phase every check binds to — `package` stops short of all of them |
+| **Frontend** | `yarn audit`, `format:check`, `lint`, `typecheck`, `test:coverage`, `build`, `size` | Lint, types, coverage thresholds and a gzipped bundle budget |
+| **Frontend E2E** | Playwright, desktop and mobile viewports, axe at both | The only layer exercising the Auth0 redirect, real STOMP frames and canvas resize |
+| **Infrastructure static checks** | `tofu fmt`, `terragrunt hcl fmt`, module validate with `-lockfile=readonly`, `terragrunt hcl validate --inputs --strict`, `tflint`, Trivy | Formatting, undeclared inputs and provider drift, all of which used to reach `main` green |
+| **Infrastructure plan** | `terragrunt run --all -- plan` per environment, posted as a PR comment | The plan a reviewer approves. It runs through Workload Identity Federation as a read-only planner — no service-account key, and it cannot apply |
 
 ### Environment Pipelines (Cloud Build)
 
-Each Cloud Build pipeline is triggered only when files matching its path filter are pushed to an environment branch. The backend pipelines all follow the same five-step pattern:
+Each Cloud Build pipeline is triggered only when files matching its path filter are pushed to an environment branch. The five backend services share `backend-service.yaml`; the triggers differ in three substitutions:
 
 ```
-1. Scoped Maven Build       mvn clean package -pl <module> -am
+1. Scoped Maven Build       mvn -B clean verify -pl <module> -am
          |
 2. Layer Extraction         java -Djarmode=layertools -jar ... extract
          |
@@ -706,6 +767,10 @@ Each Cloud Build pipeline is triggered only when files matching its path filter 
          |
 5. Cloud Run Deploy         gcloud run services update --image=<sha-tagged>
 ```
+
+Images are pushed as both `:<sha>` and `:latest-<env>`. The environment suffix
+matters: dev and prod are both in us-central1 and therefore share one registry,
+so a bare `:latest` was one tag across all three environments.
 
 The frontend pipeline extends this with lint and test gates:
 
@@ -723,19 +788,28 @@ The frontend pipeline extends this with lint and test gates:
 6. Cloud Run Deploy         gcloud run services update --image=<sha-tagged>
 ```
 
-The infrastructure pipeline uses a scan-plan-apply pattern:
+The infrastructure pipeline plans to a file and applies that file:
 
 ```
-1. Install Tools            OpenTofu 1.12.6 + Terragrunt 1.1.4
+1. Install Tools            OpenTofu 1.12.6 + Terragrunt 1.1.4, each verified
+         |                  against the SHA256SUMS published with its release
+2. Trivy IaC Scan           trivy config over infrastructure/ (fast first pass)
          |
-2. Trivy IaC Scan           trivy config --severity CRITICAL,HIGH
+3. Terragrunt Init          terragrunt run --all -- init  (shared provider cache)
          |
-3. Terragrunt Init          terragrunt run --all -- init
+4. Terragrunt Plan          plan -out=tfplan --out-dir /workspace/plans
+         |                  -detailed-exitcode: no changes skips the apply
+5. Plan Scan                trivy config --tf-plan  (values resolved, unlike (2))
          |
-4. Terragrunt Plan          terragrunt run --all -- plan
+6. Policy Check             conftest against infrastructure/policy/f1v.rego
          |
-5. Terragrunt Apply         terragrunt run --all -- apply -auto-approve
+7. Terragrunt Apply         apply tfplan — the plans from (4), not a re-plan
 ```
+
+Steps 5 and 6 are the ones that see anything: `is_public`, `ingress`,
+`deletion_protection` and every secret reference arrive as Terragrunt inputs, so
+a scan of the modules alone logs "Variable values were not found" and finds only
+what has no variable in it. In prod, step 7 waits for manual approval.
 
 ### Key CI/CD Patterns
 
@@ -749,7 +823,7 @@ The infrastructure pipeline uses a scan-plan-apply pattern:
 
 - **Pre-Image Security Scanning** — Trivy scans the extracted JAR filesystem before the Docker image is built. This fails fast on vulnerabilities without wasting time building an image that would be rejected.
 
-- **API Gateway Smoke Test** — After deploying a new API Gateway configuration, the pipeline waits 30 seconds for propagation and then hits the `/api/v1/analysis/drivers` endpoint, failing the build if the gateway returns a 404 or server error.
+- **Apply the Plan That Was Reviewed** — The infrastructure pipeline writes each unit's plan to a file and applies that file, rather than running `apply -auto-approve`, which re-plans. The apply cannot differ from the plan in the log, and in prod it waits for manual approval first.
 
 ---
 
@@ -780,10 +854,10 @@ All backend dependencies are managed by the single `f1v-parent` POM, which inher
 **Test Execution:**
 ```bash
 # Full backend test suite (all modules)
-cd backend && mvn clean package
+cd backend && ./mvnw -B clean verify
 
 # Scoped test run (single service + its commons dependencies)
-cd backend && ./mvnw clean verify -pl f1v-service-data-analysis -am
+cd backend && ./mvnw -B clean verify -pl f1v-service-data-analysis -am
 ```
 
 ### Frontend Test Suite
@@ -828,10 +902,12 @@ cd frontend && yarn vitest
 
 | Category | Tool | Description |
 |----------|------|-------------|
-| **Security Scanning** | Trivy (`config`) | Static analysis of all 12 OpenTofu modules against security best practices, failing on `CRITICAL` or `HIGH` findings. Runs on both PR checks (GitHub Actions) and deployment pipelines (Cloud Build). Replaced tfsec, which was retired and folded into Trivy. |
-| **Module Validation** | OpenTofu `validate` | Syntax and semantic validation of each Terraform module individually (`tofu init -backend=false && tofu validate`). Catches HCL errors, missing variables, and invalid resource references before any plan or apply. |
-| **Deployment Planning** | Terragrunt `plan` | Generates an execution plan showing all proposed infrastructure changes before applying, serving as a safety gate in the Cloud Build pipeline. |
-| **API Contract Validation** | OpenAPI 2.0 Spec | The `openapi.yaml` specification defines the full API contract (paths, methods, request/response schemas, Auth0 security scheme). The API Gateway pipeline validates the spec and runs a smoke test against the deployed gateway's `/api/v1/analysis/drivers` endpoint. |
+| **Security Scanning** | Trivy (`config`) | Two passes. Over `infrastructure/` on every PR, which is fast but blind to anything that arrives as a Terragrunt input — that is, to every security-relevant decision here. And over the rendered plan in Cloud Build, where the values are resolved. Accepted findings are recorded in `.trivyignore` with the reason. Replaced tfsec, which was retired and folded into Trivy. |
+| **Policy** | Conftest / OPA | `infrastructure/policy/f1v.rego`, run against the same rendered plan: no project-level data or secret role without an IAM condition, no owner/editor anywhere, no Cloud Run service without a service account, no `allUsers` outside an allow-list, no bare `:latest` image, prod implies deletion protection, no proxy on the default SSL policy, no backend service without request logging. |
+| **Linting** | tflint + Google ruleset | Catches invalid values, deprecated arguments and undocumented variables that `validate` accepts because they are only wrong at the API. |
+| **Module Validation** | OpenTofu `validate` | Each module validated in isolation, with `-lockfile=readonly` so a run that would change a committed lock file fails rather than silently resolving a different provider build. |
+| **Input Validation** | `terragrunt hcl validate --inputs --strict` | Catches an input that no variable declares — which is how `tier = "STANDARD_HA"` sat in the prod redis unit being exported and ignored. |
+| **Deployment Planning** | Terragrunt `plan` | A plan per environment on every PR, posted as a comment, so a reviewer approves a promotion having seen what it changes. In Cloud Build the plan is written to a file and that file is applied — not re-planned — so the apply is the plan that was reviewed. |
 | **Container Scanning** | Trivy | Filesystem-level vulnerability scanning of all backend service JARs before Docker image construction. Configured with `--exit-code 1 --severity CRITICAL,HIGH` — any critical or high-severity CVE fails the build immediately. |
 
 ### Test Distribution Summary
@@ -840,16 +916,18 @@ cd frontend && yarn vitest
 |-------|-----------|---------------|------------|
 | **Backend** | 29 files, 182 tests | JUnit 5, Mockito, Spring Boot Test | Unit, controller, security, reactive, serialization, parameterized |
 | **Frontend** | 38 files, 188 tests | Vitest, React Testing Library | Component, visual regression, hook, utility, API client, auth |
-| **Infrastructure** | — | Trivy, OpenTofu | Security scanning, module validation, container scanning |
+| **Infrastructure** | 11 modules, 46 units | Trivy, Conftest, tflint, OpenTofu, Terragrunt | Plan-based security scanning, policy checks, linting, module and input validation |
 
 ### CI Test Integration
 
 Tests execute at two stages in the delivery pipeline:
 
-1. **PR Quality Gate (GitHub Actions)** — Three parallel jobs run on every pull request to `main`:
-   - Backend: `mvn clean package -am` (compiles and tests all modules)
-   - Frontend: `yarn lint` then `yarn test:ci` (ESLint + Vitest)
-   - Infrastructure: Trivy config scan + `tofu validate` per module
+1. **PR Quality Gate (GitHub Actions)** — Five jobs run on every pull request to `main`:
+   - Backend: `mvn -B clean verify` (the whole reactor through the phase the checks bind to), Trivy filesystem scan, SBOM upload
+   - Frontend: audit, format, lint, typecheck, coverage, build, bundle budget
+   - Frontend E2E: Playwright across a desktop and a mobile viewport, axe at both
+   - Infrastructure static checks: formatting, module and input validation, tflint, Trivy
+   - Infrastructure plan: a real `terragrunt plan` per environment, commented on the PR
 
 2. **Deployment Pipeline (Cloud Build)** — Tests re-run as part of each service's build-scan-deploy pipeline on environment branches (`dev`, `uat`, `prod`). The frontend pipeline additionally installs native C++ dependencies (Cairo, Pango, Python, g++) on Alpine Linux to support the `canvas` package required by the visual regression test suite.
 
@@ -864,21 +942,27 @@ Security is enforced at every layer of the stack:
 | **Identity** | Auth0 (OAuth2/OIDC) | All user authentication via Auth0 with PKCE flow |
 | **API Authentication** | JWT (RS256) | Every HTTP request validated against Auth0 JWKS endpoint |
 | **WebSocket Authentication** | STOMP Interceptor | JWT validated on CONNECT frame before topic subscription |
-| **API Gateway** | OpenAPI Security Scheme | JWT audience and issuer enforcement at the gateway edge |
-| **Network Isolation** | VPC + Private Access | Redis accessible only via VPC connector (no public IP) |
-| **IAM** | Per-Service Accounts | 6 dedicated identities with principle-of-least-privilege |
-| **Secrets** | Secret Manager | External API credentials stored in Secret Manager, never in code |
+| **Edge Rate Limiting** | Cloud Armor | 300 REST requests and 20 WebSocket handshakes per client IP per minute, plus preconfigured sqli/xss/lfi/rce rule sets at sensitivity 1 |
+| **TLS** | SSL policy, HSTS | TLS 1.2 minimum with the MODERN cipher profile on both edges; `http://` redirects rather than refusing |
+| **Network Isolation** | VPC + direct egress | Redis has no public IP and one firewall rule reaches it, on TCP 6379 from the services' subnet |
+| **Redis** | AUTH + TLS | The instance requires a credential and encrypts the connection; the services are given its CA to verify against |
+| **IAM** | Per-Service Accounts | 6 runtime identities, each holding only what its service needs, with data and secret access granted on the resource rather than the project |
+| **CI Identity** | Split by trust | The pipelines that run third-party build code hold no IAM, network or data administration; only the infrastructure pipeline can change the estate, and it cannot grant itself Owner |
+| **Audit** | Data Access logs | Secret Manager, Firestore and BigQuery reads and writes are recorded, with 90-day retention |
+| **Secrets** | Secret Manager | Credentials are declared in IaC and their values added out of band, so they never enter state; each is granted to the one or two accounts that consume it |
 | **Container Hardening** | Distroless Images | No shell, no package manager — minimal attack surface |
-| **IaC Scanning** | Trivy (`config`) | Static analysis of all OpenTofu modules on every PR |
+| **IaC Scanning** | Trivy + Conftest | Scanned against the rendered plan, where the values are resolved, plus a policy layer encoding the rules from the 2026-09-09 audit |
 | **Image Scanning** | Trivy | Filesystem vulnerability scan on every backend build |
 | **Session Policy** | Stateless | No server-side sessions; CSRF disabled (JWT-only auth) |
-| **CORS** | Multi-Layer | LB edge handles OPTIONS preflight; Spring CORS on REST; custom headers on WebSocket |
+| **CORS** | Edge preflight | The load balancer answers OPTIONS with a 204 per path rule, which removes the retry cascade a failed preflight used to cause; Spring CORS remains for the origin |
 
 ---
 
 ## Environment Configuration
 
-Three parallel environments share identical module code but diverge on scale, region, and security posture:
+Three environments share the module code and the unit definitions in
+`_envcommon/`. Everything below lives in `environments/<env>/env.hcl`, which is
+the only place any of it is written down:
 
 | Dimension | Dev | UAT | Prod |
 |-----------|-----|-----|------|
@@ -888,12 +972,23 @@ Three parallel environments share identical module code but diverge on scale, re
 | **Frontend Domain** | dev.f1visualizer.com | uat.f1visualizer.com | f1visualizer.com |
 | **Auth0 Tenant** | elysianarts-dev | elysianarts-uat | elysianarts |
 | **Firestore DB** | f1v-db-dev | f1v-db-uat | f1v-db-prod |
+| **BigQuery Dataset** | f1_dataset_dev | f1_dataset_uat | f1_dataset_prod |
+| **Image Tag** | latest-dev | latest-uat | latest-prod |
 | **Redis Tier** | BASIC (single node) | BASIC (single node) | STANDARD_HA (automatic failover) |
-| **Firestore Delete Protection** | Disabled | Disabled | Enabled |
-| **VPC Connector CIDR** | 10.8.0.0/28 | 10.8.0.16/28 | 10.8.0.32/28 |
-| **Cloud Run Min Instances** | 1 (warm) | 1 (warm) | 1 (warm) |
+| **Firestore Protection** | None | 3-day backups | Delete protection, PITR, 14-day backups |
+| **Subnet** | 10.0.0.0/24 | 10.0.0.0/24 | 10.0.0.0/24 |
+| **Warm Instances** | None | Replay worker + telemetry | All six services |
+| **Alerting** | Policies defined, not enabled | Enabled | Enabled |
+| **Infrastructure Apply** | Automatic | Automatic | Manual approval |
 
-All environments share a single GCP project (`f1-visualizer-488201`), a single Artifact Registry repository (`f1v-repo`), and a shared BigQuery dataset (`f1_dataset`) — differentiated by environment labels and image tags.
+The subnets can share a range because each environment has its own VPC.
+
+All three still share one GCP project (`f1-visualizer-488201`) and one Artifact
+Registry repository per region. That is the remaining structural compromise: IAM
+conditions and per-resource grants keep dev out of prod's data, but a project is
+the real isolation boundary and this estate does not have one per environment.
+The path to fixing it is one project per environment under a folder, with the
+platform layer where it already is.
 
 ---
 

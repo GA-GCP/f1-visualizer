@@ -143,6 +143,20 @@ resource "google_cloudbuild_trigger" "infrastructure" {
 
   filename = "cloudbuild/infrastructure.yaml"
 
+  # REL-5: a merge to `prod` touching any file under infrastructure/ used to
+  # apply within minutes with nobody looking at the plan — including destroys —
+  # while the README's branch table said prod "requires approval". The plan runs
+  # either way; this holds the apply until a human has read it.
+  #
+  # Deliberately not on the backend and frontend triggers. The frontend pipeline
+  # already gates itself: it deploys with no traffic, smoke tests the revision on
+  # its own tag URL and only then promotes. A backend deploy is reversible by
+  # re-running the pipeline at an earlier SHA. Neither can destroy a Redis
+  # instance or a VPC, which is what this gate is actually for.
+  approval_config {
+    approval_required = var.environment == "prod"
+  }
+
   substitutions = {
     _ENV       = var.environment
     _SHORT_SHA = "$SHORT_SHA"

@@ -18,8 +18,15 @@ variable "network_name" {
   type        = string
 }
 
-variable "connector_cidr" {
-  description = "IP CIDR range for the Serverless VPC Access Connector (must be unique per project)"
+# PERF-1: connector_cidr is gone with the connector. Each environment has its own
+# VPC, so the subnets may — and do — use the same range.
+variable "subnet_cidr" {
+  description = "IP CIDR range for the subnet Cloud Run attaches to with direct VPC egress"
   type        = string
-  default     = "10.8.0.0/28"
+  default     = "10.0.0.0/24"
+
+  validation {
+    condition     = can(cidrhost(var.subnet_cidr, 0))
+    error_message = "subnet_cidr must be a valid CIDR range."
+  }
 }

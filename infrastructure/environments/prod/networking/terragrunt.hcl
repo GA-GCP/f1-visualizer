@@ -18,6 +18,9 @@ inputs = {
   environment  = "prod"
   project_id   = "f1-visualizer-488201"
   region       = "us-central1"
-  network_name   = "f1v-vpc-prod"
-  connector_cidr = "10.8.0.32/28"
+  network_name = "f1v-vpc-prod"
+
+  # PERF-1: the range Cloud Run instances take an address on. Each environment
+  # has its own VPC, so all three can use the same range.
+  subnet_cidr = "10.0.0.0/24"
 }

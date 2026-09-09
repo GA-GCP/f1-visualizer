@@ -22,7 +22,8 @@ dependency "iam" {
 dependency "networking" {
   config_path = "../networking"
   mock_outputs = {
-    vpc_access_connector_id = "projects/f1-visualizer-488201/locations/us-east1/connectors/f1v-vpc-uat-conn-MOCK"
+    network_name    = "f1v-vpc-uat"
+    subnetwork_name = "f1v-vpc-uat-subnet"
   }
 
   # REL-7: mocks are for planning, never for applying.
@@ -83,7 +84,8 @@ inputs = {
   # 250 lets Cloud Run scale out instead, and every instance receives the same
   # Redis messages, so scaling out is correct rather than merely tolerable (P4).
   container_concurrency = 250
-  vpc_connector_id      = dependency.networking.outputs.vpc_access_connector_id
+  vpc_network    = dependency.networking.outputs.network_name
+  vpc_subnetwork = dependency.networking.outputs.subnetwork_name
 
   env_vars = {
     "SPRING_DATA_REDIS_HOST" = dependency.redis.outputs.redis_host

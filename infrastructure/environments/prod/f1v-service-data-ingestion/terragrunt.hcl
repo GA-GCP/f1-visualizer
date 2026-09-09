@@ -25,7 +25,8 @@ dependency "iam" {
 dependency "networking" {
   config_path = "../networking"
   mock_outputs = {
-    vpc_access_connector_id = "projects/f1-visualizer-488201/locations/us-central1/connectors/f1v-vpc-prod-conn-MOCK"
+    network_name    = "f1v-vpc-prod"
+    subnetwork_name = "f1v-vpc-prod-subnet"
   }
 
   # REL-7: mocks are for planning, never for applying.
@@ -95,7 +96,8 @@ inputs = {
   memory = "1024Mi"
 
   # Needs VPC access to write to Redis
-  vpc_connector_id = dependency.networking.outputs.vpc_access_connector_id
+  vpc_network    = dependency.networking.outputs.network_name
+  vpc_subnetwork = dependency.networking.outputs.subnetwork_name
 
   env_vars = {
     "SPRING_DATA_REDIS_HOST" = dependency.redis.outputs.redis_host

@@ -1,5 +1,6 @@
 package com.elysianarts.f1.visualizer.commons.security.config;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -30,8 +31,10 @@ public class F1VisualizerSecurityConfig {
     public F1VisualizerSecurityConfig(
             @Value("${f1v.cors.allowed-origins}") List<String> allowedOrigins,
             List<ServiceAuthorizationRules> serviceRules) {
-        this.allowedOrigins = allowedOrigins;
-        this.serviceRules = serviceRules;
+        // Copied, not aliased: these decide who may call the service, and this
+        // object outlives whoever handed the lists over.
+        this.allowedOrigins = List.copyOf(allowedOrigins);
+        this.serviceRules = List.copyOf(serviceRules);
     }
 
     @Bean
@@ -69,7 +72,7 @@ public class F1VisualizerSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(allowedOrigins);
+        configuration.setAllowedOriginPatterns(new ArrayList<>(allowedOrigins));
 
         // Explicitly define what is allowed to pass preflight checks
         configuration.setAllowedMethods(

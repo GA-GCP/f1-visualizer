@@ -6,6 +6,7 @@ import com.google.cloud.bigquery.TableResult;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -17,6 +18,8 @@ import org.springframework.stereotype.Component;
  * <p>Callers build the {@link QueryJobConfiguration.Builder} as before — including named parameters
  * — and hand it here instead of calling {@code BigQuery.query} directly.
  */
+/** Built only where a dataset is configured; see {@link BigQueryConfig}. */
+@ConditionalOnProperty(name = "f1v.bigquery.dataset")
 @Component
 public class BigQueryQueryRunner {
 
@@ -72,10 +75,5 @@ public class BigQueryQueryRunner {
     private QueryJobConfiguration.Builder guard(QueryJobConfiguration.Builder builder) {
         return builder.setJobTimeoutMs(properties.jobTimeoutMs())
                 .setMaximumBytesBilled(properties.maximumBytesBilled());
-    }
-
-    /** The underlying client, for the streaming-insert paths that are not queries. */
-    public BigQuery client() {
-        return bigQuery;
     }
 }

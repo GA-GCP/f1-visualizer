@@ -5,6 +5,11 @@ spring:
         jwt:
           issuer-uri: https://test-issuer.example.com/
           audiences: test.api.f1visualizer.com
+  cloud:
+    gcp:
+      firestore:
+        project-id: test-project
+        database-id: test-db
 
 logging:
   level:

@@ -83,3 +83,35 @@ logging:
 f1v:
   cors:
     allowed-origins: https://f1visualizer.com,https://*.f1visualizer.com
+
+# ==============================================================================
+# REL-3: trust the Memorystore CA
+# ==============================================================================
+# Memorystore's SERVER_AUTHENTICATION mode presents a certificate issued by the
+# instance's own CA, which is in no JVM default trust store. `ssl.enabled: true`
+# above with no bundle meant Lettuce verified against the default store, so the
+# first Redis call could only fail with `PKIX path building failed` — which means
+# the readiness probe never passes and this revision never becomes healthy.
+#
+# The chain arrives as PEM content in F1V_REDIS_CA_CERT, mounted from the secret
+# the redis module writes. Spring Boot's PEM store takes certificate content
+# directly, so there is no file to place or keystore to build.
+#
+# Named profiles rather than `!local`: this document must not activate under a
+# @WebMvcTest slice, which runs with no profile set and would then fail to
+# resolve F1V_REDIS_CA_CERT. A local Redis has no certificate and SSL is off.
+---
+spring:
+  config:
+    activate:
+      on-profile: "dev | uat | prod"
+  ssl:
+    bundle:
+      pem:
+        redis-memorystore:
+          truststore:
+            certificate: ${F1V_REDIS_CA_CERT}
+  data:
+    redis:
+      ssl:
+        bundle: redis-memorystore

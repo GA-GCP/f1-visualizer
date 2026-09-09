@@ -42,6 +42,7 @@ dependency "redis" {
     redis_host           = "10.0.0.5"
     redis_port           = 6379
     redis_auth_secret_id = "f1v-redis-auth-MOCK"
+    redis_ca_secret_id   = "f1v-redis-ca-MOCK"
   }
 
   # REL-7: mocks are for planning, never for applying.
@@ -106,5 +107,10 @@ inputs = {
   # Secret Manager rather than passed through env_vars (S2).
   secret_env_vars = {
     "SPRING_DATA_REDIS_PASSWORD" = { secret = dependency.redis.outputs.redis_auth_secret_id }
+
+    # REL-3: the per-instance CA chain Memorystore signs its certificate with.
+    # Tracked at "latest" like the AUTH string, because both are values GCP
+    # rotates for us rather than values a deploy should decide.
+    "F1V_REDIS_CA_CERT" = { secret = dependency.redis.outputs.redis_ca_secret_id }
   }
 }

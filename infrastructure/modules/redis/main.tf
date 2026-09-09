@@ -53,6 +53,46 @@ resource "google_secret_manager_secret_version" "redis_auth" {
 # credential — sa-f1v-data-ingestion-dev could read f1v-redis-auth-prod. This
 # secret is granted to the accounts of the three services that connect to this
 # instance, and to nothing else.
+# ==============================================================================
+# SERVER CA DELIVERY
+# ==============================================================================
+# REL-3: transit_encryption_mode = "SERVER_AUTHENTICATION" makes Memorystore
+# present a certificate issued by its own per-instance CA. That CA is not in any
+# JVM's default trust store, and no service was ever given it — the applications
+# set `spring.data.redis.ssl.enabled: true` with no bundle, so Lettuce verified
+# against the default store and the handshake could only fail with
+# `PKIX path building failed`.
+#
+# Every certificate in the list is included, not just the first: Memorystore
+# rotates the CA and publishes the next one here before it starts using it, so a
+# truststore holding all of them survives the rotation without a deploy.
+resource "google_secret_manager_secret" "redis_ca" {
+  secret_id = "f1v-redis-ca-${var.environment}"
+  project   = var.project_id
+
+  replication {
+    auto {}
+  }
+
+  labels = {
+    env = var.environment
+  }
+}
+
+resource "google_secret_manager_secret_version" "redis_ca" {
+  secret      = google_secret_manager_secret.redis_ca.id
+  secret_data = join("\n", [for c in google_redis_instance.f1v_cache.server_ca_certs : c.cert])
+}
+
+resource "google_secret_manager_secret_iam_member" "ca_accessors" {
+  for_each = toset(var.auth_secret_accessors)
+
+  project   = var.project_id
+  secret_id = google_secret_manager_secret.redis_ca.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = each.value
+}
+
 resource "google_secret_manager_secret_iam_member" "auth_accessors" {
   for_each = toset(var.auth_secret_accessors)
 

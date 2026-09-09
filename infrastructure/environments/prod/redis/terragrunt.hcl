@@ -28,9 +28,11 @@ inputs = {
   environment = "prod"
   region      = "us-central1"
 
-  # HA tier for production reliability
-  tier        = "STANDARD_HA"
+  # A replica and automatic failover. Live telemetry fan-out and replay state both
+  # live here, so losing the node mid-session drops every connected browser.
+  tier           = "STANDARD_HA"
+  memory_size_gb = 1
 
   # The mock output above allows this reference to resolve during the plan phase
-  network_id  = dependency.networking.outputs.network_id
+  network_id = dependency.networking.outputs.network_id
 }

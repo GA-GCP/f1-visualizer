@@ -1,7 +1,7 @@
 resource "google_redis_instance" "f1v_cache" {
   name           = "f1v-redis-${var.environment}"
-  tier           = var.environment == "prod" ? "STANDARD_HA" : "BASIC"
-  memory_size_gb = 1
+  tier           = var.tier
+  memory_size_gb = var.memory_size_gb
 
   region             = var.region
   authorized_network = var.network_id

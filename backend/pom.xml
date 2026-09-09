@@ -63,7 +63,7 @@
 
         <!-- Not managed by the Boot parent. -->
         <spring-cloud-gcp.version>8.1.1</spring-cloud-gcp.version>
-        <testcontainers.version>1.21.3</testcontainers.version>
+        <testcontainers.version>2.0.5</testcontainers.version>
         <springdoc.version>3.1.1</springdoc.version>
         <!-- BigQuery and Firestore request different versions of this; without a
              pin the resolved one is below what Firestore asked for. Annotations

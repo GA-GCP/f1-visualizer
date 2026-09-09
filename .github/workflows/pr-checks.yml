@@ -663,11 +663,14 @@ jobs:
         run: |
           set -euo pipefail
           cd /tmp
+          TARBALL="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
           BASE="https://github.com/rhysd/actionlint/releases/download/v$ACTIONLINT_VERSION"
-          curl -fsSL -o actionlint.tar.gz "$BASE/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
-          curl -fsSL -o checksums.txt      "$BASE/actionlint_${ACTIONLINT_VERSION}_checksums.txt"
-          grep " actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz\$" checksums.txt | sha256sum -c -
-          tar -xzf actionlint.tar.gz actionlint
+          # -O, not -o: the checksum file names the release artifact, so the
+          # local filename has to match it for `sha256sum -c` to find it.
+          curl -fsSL -O "$BASE/$TARBALL"
+          curl -fsSL -O "$BASE/actionlint_${ACTIONLINT_VERSION}_checksums.txt"
+          grep " ${TARBALL}\$" "actionlint_${ACTIONLINT_VERSION}_checksums.txt" | sha256sum -c -
+          tar -xzf "$TARBALL" actionlint
           cd "$GITHUB_WORKSPACE"
           /tmp/actionlint -color
 

@@ -65,7 +65,10 @@ steps:
         set -euo pipefail
         mkdir -p /workspace/staging
         cd /workspace/staging
-        java -Djarmode=layertools -jar /workspace/backend/${_MODULE}/target/*.jar extract
+        # jarmode=tools, not layertools: Boot 4 removed the layertools jarmode,
+        # so this step had been failing since that upgrade.
+        java -Djarmode=tools -jar /workspace/backend/${_MODULE}/target/*.jar \
+          extract --layers --launcher --destination /workspace/staging
 
   # 4. Trivy filesystem security scan
   - name: 'aquasec/trivy:0.74.0'

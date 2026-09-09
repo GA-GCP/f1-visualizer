@@ -34,3 +34,25 @@ variable "dataset_viewers" {
   type        = list(string)
   default     = []
 }
+
+variable "max_time_travel_hours" {
+  description = "Time travel window. The default is 168 (seven days); these tables only grow by append, so two days covers the recovery they need."
+  type        = number
+  default     = 48
+
+  validation {
+    condition     = var.max_time_travel_hours >= 48 && var.max_time_travel_hours <= 168
+    error_message = "max_time_travel_hours must be between 48 and 168."
+  }
+}
+
+variable "storage_billing_model" {
+  description = "LOGICAL bills uncompressed size, PHYSICAL bills what is stored. PHYSICAL is a 14-day commitment; measure the ratio first (see main.tf)."
+  type        = string
+  default     = "LOGICAL"
+
+  validation {
+    condition     = contains(["LOGICAL", "PHYSICAL"], var.storage_billing_model)
+    error_message = "storage_billing_model must be LOGICAL or PHYSICAL."
+  }
+}

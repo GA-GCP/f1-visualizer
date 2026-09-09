@@ -53,8 +53,11 @@ locals {
   # same-environment reference goes through a dependency output.
   deploy_service_account = "sa-f1v-deploy-prod@f1v-example-project.iam.gserviceaccount.com"
 
-  # --- Sizing ---------------------------------------------------------------
-  # PERF-4 is where these stop being the same in every environment.
-  rest_min_instances = 1
-  worker_enabled     = true
+  # --- Sizing --------------------------------------------------------------
+  # PERF-4: unchanged in prod. The warm instances buy latency for the splash
+  # screen prefetch, and PERF-7 put a CDN in front of the six reference
+  # endpoints, which is what would make scaling analysis to zero viable next.
+  rest_min_instances  = 1
+  telemetry_warm      = true
+  worker_enabled      = true
 }

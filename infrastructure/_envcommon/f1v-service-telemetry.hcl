@@ -73,8 +73,9 @@ inputs = {
   timeout = "3600s"
 
   # A cold-starting backend causes transient connection failures, and the
-  # frontend opens its STOMP connection immediately after login.
-  min_instance_count = 1
+  # frontend opens its STOMP connection immediately after login — so this is a
+  # per-environment decision (PERF-4) rather than a constant.
+  min_instance_count = local.env.telemetry_warm ? 1 : 0
 
   # The Redis pub/sub subscriber delivers on its own thread. With CPU allocated
   # only during requests, a session with no inbound HTTP traffic stalls the

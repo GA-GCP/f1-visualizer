@@ -53,8 +53,11 @@ locals {
   # same-environment reference goes through a dependency output.
   deploy_service_account = "sa-f1v-deploy-dev@f1v-example-project.iam.gserviceaccount.com"
 
-  # --- Sizing ---------------------------------------------------------------
-  # PERF-4 is where these stop being the same in every environment.
-  rest_min_instances = 1
-  worker_enabled     = true
+  # --- Sizing (PERF-4) -------------------------------------------------------
+  # Always-on compute in dev and uat cost about as much as prod: roughly $400 a
+  # month across the estate for latency in environments with no users overnight.
+  # Nothing here is user-facing, so nothing here stays warm.
+  rest_min_instances  = 0
+  telemetry_warm      = false
+  worker_enabled      = false
 }

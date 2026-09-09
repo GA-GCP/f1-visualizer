@@ -32,11 +32,6 @@ variable "env_vars" {
   type        = map(string)
   default     = {}
 }
-variable "is_public" {
-  description = "Whether to allow unauthenticated invocations"
-  type        = bool
-  default     = false
-}
 variable "container_concurrency" {
   description = "Max concurrent requests per instance"
   type        = number
@@ -47,10 +42,18 @@ variable "deletion_protection" {
   type        = bool
   default     = false # Default to false for DEV/UAT agility
 }
+# CPLX-4 / SEC-2: this defaulted to null with the comment "we will enforce it in
+# Terragrunt". Nothing did, and the frontend module — which did not read the
+# variable at all — ran as the default compute service account for as long as it
+# existed. Required, with no default.
 variable "service_account_email" {
-  description = "The IAM Service Account email that this Cloud Run service will run as"
+  description = "Identity the service runs as. Required: leaving it unset falls back to the default compute service account."
   type        = string
-  default     = null # Optional (but we will enforce it in Terragrunt)
+
+  validation {
+    condition     = can(regex("^[^@]+@[^@]+\\.iam\\.gserviceaccount\\.com$", var.service_account_email))
+    error_message = "service_account_email must be a service account email, not the default compute account."
+  }
 }
 variable "min_instance_count" {
   description = "Minimum number of instances to keep warm (0 = scale to zero, 1+ = always-on)"
@@ -98,10 +101,14 @@ variable "secret_env_vars" {
   default = {}
 }
 
+# CPLX-4: the description named INGRESS_TRAFFIC_INTERNAL_AND_CLOUD_LOAD_BALANCING,
+# which is not a valid value for the v2 API — the validation below rejects it —
+# and the default was the most open of the three. A service that has to be
+# reachable from the internet now says so.
 variable "ingress" {
-  description = "Which callers may reach the service directly. INGRESS_TRAFFIC_INTERNAL_AND_CLOUD_LOAD_BALANCING keeps the *.run.app URL from answering the internet."
+  description = "Which callers may reach the service directly. INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER keeps the *.run.app URL from answering the internet."
   type        = string
-  default     = "INGRESS_TRAFFIC_ALL"
+  default     = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 
   validation {
     condition = contains([
@@ -111,11 +118,6 @@ variable "ingress" {
     ], var.ingress)
     error_message = "ingress must be one of INGRESS_TRAFFIC_ALL, INGRESS_TRAFFIC_INTERNAL_ONLY or INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER."
   }
-}
-variable "invoker_service_accounts" {
-  description = "Service account emails granted roles/run.invoker. Used to give the API Gateway private access once allUsers is removed."
-  type        = list(string)
-  default     = []
 }
 
 # PERF-8: neither module stated this, so the platform chose. Services with
@@ -131,4 +133,42 @@ variable "execution_environment" {
     condition     = contains(["EXECUTION_ENVIRONMENT_GEN1", "EXECUTION_ENVIRONMENT_GEN2"], var.execution_environment)
     error_message = "execution_environment must be EXECUTION_ENVIRONMENT_GEN1 or EXECUTION_ENVIRONMENT_GEN2."
   }
+}
+
+variable "invokers" {
+  description = "Members granted roles/run.invoker. Accepts \"allUsers\" for a service fronted by a serverless NEG, which cannot present an ID token."
+  type        = list(string)
+  default     = []
+}
+
+variable "container_port" {
+  description = "Port the container listens on. 8080 for the Spring services; nginx.conf also listens on 8080."
+  type        = number
+  default     = 8080
+}
+
+# CPLX-4: objects rather than eight flat variables, and defaulted to the JVM
+# services' values so only the frontend states anything.
+variable "startup_probe" {
+  description = "Startup probe. The default is Actuator's readiness group with a 150s budget, which is generous for a JVM cold start with CPU boost."
+  type = object({
+    path                  = optional(string, "/actuator/health/readiness")
+    initial_delay_seconds = optional(number, 10)
+    period_seconds        = optional(number, 5)
+    timeout_seconds       = optional(number, 5)
+    failure_threshold     = optional(number, 30)
+  })
+  default = {}
+}
+
+variable "liveness_probe" {
+  description = "Liveness probe. Restarts an instance that is alive as a process but no longer serving."
+  type = object({
+    path                  = optional(string, "/actuator/health/liveness")
+    initial_delay_seconds = optional(number, 30)
+    period_seconds        = optional(number, 30)
+    timeout_seconds       = optional(number, 5)
+    failure_threshold     = optional(number, 3)
+  })
+  default = {}
 }

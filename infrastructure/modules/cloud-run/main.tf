@@ -67,33 +67,38 @@ resource "google_cloud_run_v2_service" "service" {
       }
 
       ports {
-        container_port = 8080
+        container_port = var.container_port
       }
 
       # R10: without probes Cloud Run only learns a container is alive when the
       # port opens, so a service whose Redis or BigQuery client is broken keeps
       # receiving traffic. Actuator's readiness and liveness groups are permitted
       # without authentication precisely for this.
+      #
+      # CPLX-4: the frontend used to have its own module with its own copy of
+      # these, pointing at nginx's /healthz with different timings. They are
+      # inputs now, so there is one place to change how a probe works.
       startup_probe {
-        initial_delay_seconds = 10
-        period_seconds        = 5
-        timeout_seconds       = 5
-        # 30 x 5s = 150s, which is generous for a JVM cold start with CPU boost.
-        failure_threshold = 30
+        initial_delay_seconds = var.startup_probe.initial_delay_seconds
+        period_seconds        = var.startup_probe.period_seconds
+        timeout_seconds       = var.startup_probe.timeout_seconds
+        failure_threshold     = var.startup_probe.failure_threshold
+
         http_get {
-          path = "/actuator/health/readiness"
-          port = 8080
+          path = var.startup_probe.path
+          port = var.container_port
         }
       }
 
       liveness_probe {
-        initial_delay_seconds = 30
-        period_seconds        = 30
-        timeout_seconds       = 5
-        failure_threshold     = 3
+        initial_delay_seconds = var.liveness_probe.initial_delay_seconds
+        period_seconds        = var.liveness_probe.period_seconds
+        timeout_seconds       = var.liveness_probe.timeout_seconds
+        failure_threshold     = var.liveness_probe.failure_threshold
+
         http_get {
-          path = "/actuator/health/liveness"
-          port = 8080
+          path = var.liveness_probe.path
+          port = var.container_port
         }
       }
 
@@ -137,30 +142,23 @@ resource "google_cloud_run_v2_service" "service" {
   }
 }
 
-# Optional: Public Access Binding
+# CPLX-4: this was two variables for one concept — `is_public` (a bool that
+# produced an `allUsers` binding) and `invoker_service_accounts` (a list). Safe
+# use depended on a caller remembering which to set, and the v1 IAM resource was
+# being used against a v2 service.
 #
-# S3: every service used to carry this, so the *.run.app URL answered straight
-# from the internet and the gateway's routing, the LB's edge CORS handling and any
-# future Cloud Armor policy could all be walked around. It is now kept only where
-# the caller genuinely is the public — the telemetry WebSocket, which is fronted by
-# the load balancer's serverless NEG and cannot present an ID token.
-resource "google_cloud_run_service_iam_member" "public_access" {
-  count    = var.is_public ? 1 : 0
-  service  = google_cloud_run_v2_service.service.name
-  location = google_cloud_run_v2_service.service.location
-  project  = google_cloud_run_v2_service.service.project
-  role     = "roles/run.invoker"
-  member   = "allUsers"
-}
+# S3: every service used to carry allUsers, so the *.run.app URL answered
+# straight from the internet and the load balancer's edge CORS handling, its
+# Cloud Armor policy and its routing could all be walked around. The services
+# reached through a serverless NEG still need it — a NEG cannot present an ID
+# token — so their exposure is closed off with `ingress` instead, which is why
+# the default below is the load-balancer-only value.
+resource "google_cloud_run_v2_service_iam_member" "invokers" {
+  for_each = toset(var.invokers)
 
-# Named callers. The API Gateway's service account holds this on each REST
-# service and presents an ID token minted for the service's own URL, which is
-# what `disable_auth: false` plus `jwt_audience` in openapi.yaml produce (S3).
-resource "google_cloud_run_service_iam_member" "invokers" {
-  for_each = toset(var.invoker_service_accounts)
-  service  = google_cloud_run_v2_service.service.name
+  name     = google_cloud_run_v2_service.service.name
   location = google_cloud_run_v2_service.service.location
   project  = google_cloud_run_v2_service.service.project
   role     = "roles/run.invoker"
-  member   = "serviceAccount:${each.value}"
+  member   = each.value
 }

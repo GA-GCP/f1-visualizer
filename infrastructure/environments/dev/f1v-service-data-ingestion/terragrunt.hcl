@@ -3,7 +3,7 @@ include "root" {
 }
 
 terraform {
-  source = "../../../modules/cloud-run-backend"
+  source = "../../../modules/cloud-run"
 }
 
 dependency "iam" {
@@ -68,8 +68,8 @@ inputs = {
   # telemetry has used since it started bypassing the gateway for WebSockets.
   # The service still validates the Auth0 JWT itself, which is now the only
   # place that happens rather than the second.
-  is_public = true
-  ingress   = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+  invokers = ["allUsers"]
+  ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 
   # Always-on: eliminates cold starts for ingestion commands and reference data loading
   min_instance_count = 1

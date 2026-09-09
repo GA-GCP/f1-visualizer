@@ -18,6 +18,8 @@ resource "google_cloud_run_v2_service" "service" {
   deletion_protection = var.deletion_protection
 
   template {
+    execution_environment = var.execution_environment
+
     # SEC-2: sa-f1v-frontend-<env> is created by iam-and-secrets with, by design,
     # no bindings at all. Naming it here is what makes that isolation real.
     service_account = var.service_account_email
@@ -34,8 +36,8 @@ resource "google_cloud_run_v2_service" "service" {
       # Optimized for Vite/React static serving — lightweight defaults
       resources {
         limits = {
-          cpu    = "1000m"
-          memory = "512Mi"
+          cpu    = var.cpu
+          memory = var.memory
         }
         cpu_idle          = true # Throttle CPU when idle (cost savings for static serving)
         startup_cpu_boost = true # Faster cold starts for the Vite/Nginx container

@@ -13,7 +13,9 @@ terraform {
 }
 
 inputs = {
-  environment  = local.env.environment
+  # No `environment` here: every name in this module derives from network_name,
+  # so the variable was declared and never read. tflint's
+  # terraform_unused_declarations caught it (DLV-3).
   region       = local.env.region
   network_name = local.env.network_name
 

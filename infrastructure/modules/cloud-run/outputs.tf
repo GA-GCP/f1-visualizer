@@ -1,7 +1,9 @@
 output "service_url" {
-  value = google_cloud_run_v2_service.service.uri
+  description = "The service's *.run.app URL. Not the public entry point — that is the load balancer."
+  value       = google_cloud_run_v2_service.service.uri
 }
 
 output "service_name" {
-  value = google_cloud_run_v2_service.service.name
+  description = "Service name, used by the load-balancer units to build their serverless NEGs."
+  value       = google_cloud_run_v2_service.service.name
 }

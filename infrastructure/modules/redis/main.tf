@@ -1,3 +1,6 @@
+# CPLX-5: the `env` label these resources used to set by hand now comes from the
+# provider's default_labels in root.hcl, which applies it to every labelable
+# resource in the estate rather than to the three that remembered.
 resource "google_redis_instance" "f1v_cache" {
   name           = "f1v-redis-${var.environment}"
   tier           = var.tier
@@ -40,9 +43,6 @@ resource "google_redis_instance" "f1v_cache" {
   # regenerate, at a write-latency cost on the hottest path in the system. Stated
   # rather than left to the default, which is the same but says nothing.
 
-  labels = {
-    env = var.environment
-  }
 }
 
 # ==============================================================================
@@ -60,9 +60,6 @@ resource "google_secret_manager_secret" "redis_auth" {
     auto {}
   }
 
-  labels = {
-    env = var.environment
-  }
 }
 
 resource "google_secret_manager_secret_version" "redis_auth" {
@@ -96,9 +93,6 @@ resource "google_secret_manager_secret" "redis_ca" {
     auto {}
   }
 
-  labels = {
-    env = var.environment
-  }
 }
 
 resource "google_secret_manager_secret_version" "redis_ca" {

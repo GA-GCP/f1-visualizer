@@ -10,9 +10,6 @@ resource "google_bigquery_dataset" "f1_dataset" {
   project                     = var.project_id
   default_table_expiration_ms = null # Data persists forever
 
-  labels = {
-    env = var.environment
-  }
 }
 
 # SEC-3: roles/bigquery.dataEditor and roles/bigquery.dataViewer were project

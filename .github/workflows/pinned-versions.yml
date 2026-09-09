@@ -1,0 +1,101 @@
+# ==========================================
+# Pinned versions that no ecosystem watches
+# ==========================================
+# DLV-6: Dependabot's docker ecosystem parses Dockerfiles, not Cloud Build step
+# images, and nothing at all watches the _TOFU_VERSION / _TERRAGRUNT_VERSION
+# substitutions. dependabot.yml has recorded that gap in a comment since it was
+# written; a pin with no process behind it goes stale, which is worse than no pin
+# because it looks maintained.
+#
+# This does not open a pull request. It opens an issue saying what has moved,
+# because these bumps are three-line edits that want a human to decide when —
+# a Cloud SDK image bump mid-release is not an improvement.
+name: Pinned versions
+
+on:
+  schedule:
+    - cron: '0 11 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    name: Check pinned tool and image versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - id: check
+        name: Compare pins against latest releases
+        run: |
+          set -euo pipefail
+          report=""
+
+          latest_release() {
+            curl -fsSL "https://api.github.com/repos/$1/releases/latest" \
+              | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'].lstrip('v'))"
+          }
+
+          current() {
+            grep -oE "$1: '[^']+'" cloudbuild/infrastructure.yaml | head -1 | cut -d"'" -f2
+          }
+
+          for pair in "opentofu/opentofu:_TOFU_VERSION" "gruntwork-io/terragrunt:_TERRAGRUNT_VERSION"; do
+            repo="${pair%%:*}"; key="${pair##*:}"
+            have="$(current "$key")"
+            want="$(latest_release "$repo")"
+            if [ "$have" != "$want" ]; then
+              report="${report}- \`${key}\`: ${have} → **${want}** (${repo})"$'\n'
+            fi
+          done
+
+          # Digest-pinned step images across all three pipelines.
+          for image in $(grep -ohE "[a-z0-9./-]+:[a-zA-Z0-9._-]+@sha256:[0-9a-f]{64}" cloudbuild/*.yaml | sort -u); do
+            ref="${image%@*}"; have="${image##*@}"
+            want="$(docker buildx imagetools inspect "$ref" --format '{{.Manifest.Digest}}' 2>/dev/null || echo "")"
+            if [ -n "$want" ] && [ "$want" != "$have" ]; then
+              report="${report}- \`${ref}\`: digest moved to \`${want}\`"$'\n'
+            fi
+          done
+
+          {
+            echo "report<<EOF"
+            echo "$report"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open or update the issue
+        if: steps.check.outputs.report != ''
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          REPORT: ${{ steps.check.outputs.report }}
+        with:
+          script: |
+            const title = 'Pinned tool and image versions have moved';
+            const body = [
+              'The versions below are pinned in `cloudbuild/*.yaml` and are not covered by',
+              'any Dependabot ecosystem (DLV-6). Each is a small, deliberate edit.',
+              '',
+              process.env.REPORT,
+            ].join('\n');
+
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'dependencies',
+            });
+            const existing = open.find(i => i.title === title);
+
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body, labels: ['dependencies'],
+              });
+            }

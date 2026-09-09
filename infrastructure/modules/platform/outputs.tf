@@ -29,3 +29,8 @@ output "planner_service_account" {
   description = "Email the pull-request plan impersonates."
   value       = try(google_service_account.planner[0].email, "")
 }
+
+output "cloudbuild_repository_id" {
+  description = "Resource id of the 2nd-gen repository, for a trigger's repository_event_config. Empty while the connection is unmanaged (CPLX-8)."
+  value       = try(google_cloudbuildv2_repository.repo[0].id, "")
+}

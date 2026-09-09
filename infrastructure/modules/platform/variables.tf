@@ -138,3 +138,22 @@ variable "github_repository" {
     error_message = "github_repository must be in owner/repo form."
   }
 }
+
+# --- CPLX-8: second-generation repository connection --------------------------
+variable "github_app_installation_id" {
+  description = "Installation id of the Cloud Build GitHub App. Empty leaves the triggers on the first-generation github block."
+  type        = string
+  default     = ""
+}
+
+variable "github_token_secret_version" {
+  description = "Secret Manager version holding a GitHub PAT with repo scope, e.g. projects/P/secrets/S/versions/1."
+  type        = string
+  default     = ""
+}
+
+variable "cloudbuild_connection_region" {
+  description = "Region the connection and repository live in. Must match the triggers' region."
+  type        = string
+  default     = "us-central1"
+}

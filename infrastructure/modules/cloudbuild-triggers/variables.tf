@@ -54,3 +54,9 @@ variable "infra_service_account_email" {
   description = "Identity the infrastructure trigger runs as. Runs only code from this repository."
   type        = string
 }
+
+variable "cloudbuild_repository_id" {
+  description = "2nd-gen google_cloudbuildv2_repository id. Empty keeps the 1st-gen github block, whose connection is console state (CPLX-8)."
+  type        = string
+  default     = ""
+}

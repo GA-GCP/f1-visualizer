@@ -48,12 +48,30 @@ resource "google_cloudbuild_trigger" "backend" {
   project     = var.project_id
   location    = var.region
 
-  github {
-    owner = var.github_owner
-    name  = var.github_repo
+  # CPLX-8: the first generation names the repository and relies on a connection
+  # created by hand in the console. The second makes that connection a resource,
+  # declared in infrastructure/platform. Both are here so the cutover is a value
+  # rather than a rewrite of seven triggers.
+  dynamic "github" {
+    for_each = var.cloudbuild_repository_id == "" ? [1] : []
+    content {
+      owner = var.github_owner
+      name  = var.github_repo
 
-    push {
-      branch = var.branch_pattern
+      push {
+        branch = var.branch_pattern
+      }
+    }
+  }
+
+  dynamic "repository_event_config" {
+    for_each = var.cloudbuild_repository_id == "" ? [] : [1]
+    content {
+      repository = var.cloudbuild_repository_id
+
+      push {
+        branch = var.branch_pattern
+      }
     }
   }
 
@@ -95,12 +113,30 @@ resource "google_cloudbuild_trigger" "frontend" {
   project     = var.project_id
   location    = var.region
 
-  github {
-    owner = var.github_owner
-    name  = var.github_repo
+  # CPLX-8: the first generation names the repository and relies on a connection
+  # created by hand in the console. The second makes that connection a resource,
+  # declared in infrastructure/platform. Both are here so the cutover is a value
+  # rather than a rewrite of seven triggers.
+  dynamic "github" {
+    for_each = var.cloudbuild_repository_id == "" ? [1] : []
+    content {
+      owner = var.github_owner
+      name  = var.github_repo
 
-    push {
-      branch = var.branch_pattern
+      push {
+        branch = var.branch_pattern
+      }
+    }
+  }
+
+  dynamic "repository_event_config" {
+    for_each = var.cloudbuild_repository_id == "" ? [] : [1]
+    content {
+      repository = var.cloudbuild_repository_id
+
+      push {
+        branch = var.branch_pattern
+      }
     }
   }
 
@@ -128,12 +164,30 @@ resource "google_cloudbuild_trigger" "infrastructure" {
   project     = var.project_id
   location    = var.region
 
-  github {
-    owner = var.github_owner
-    name  = var.github_repo
+  # CPLX-8: the first generation names the repository and relies on a connection
+  # created by hand in the console. The second makes that connection a resource,
+  # declared in infrastructure/platform. Both are here so the cutover is a value
+  # rather than a rewrite of seven triggers.
+  dynamic "github" {
+    for_each = var.cloudbuild_repository_id == "" ? [1] : []
+    content {
+      owner = var.github_owner
+      name  = var.github_repo
 
-    push {
-      branch = var.branch_pattern
+      push {
+        branch = var.branch_pattern
+      }
+    }
+  }
+
+  dynamic "repository_event_config" {
+    for_each = var.cloudbuild_repository_id == "" ? [] : [1]
+    content {
+      repository = var.cloudbuild_repository_id
+
+      push {
+        branch = var.branch_pattern
+      }
     }
   }
 

@@ -346,3 +346,42 @@ resource "google_service_account_iam_member" "planner_federation" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github[0].name}/attribute.repository/${var.github_repository}"
 }
+
+# ==============================================================================
+# 9. CLOUD BUILD REPOSITORY CONNECTION (CPLX-8)
+# ==============================================================================
+# The triggers use the first-generation `github {}` block, whose repository
+# connection is created by hand in the console — unmanaged state that nothing in
+# this repository records, and which a new project cannot reproduce.
+#
+# The second generation makes the connection a resource. It needs two values that
+# only exist once the Cloud Build GitHub App is installed, so it is created only
+# when both are supplied; the triggers keep the first-generation block until
+# then. See MIGRATIONS.md.
+resource "google_cloudbuildv2_connection" "github" {
+  count = var.github_app_installation_id == "" ? 0 : 1
+
+  project  = var.project_id
+  location = var.cloudbuild_connection_region
+  name     = "github"
+
+  github_config {
+    app_installation_id = tonumber(var.github_app_installation_id)
+
+    authorizer_credential {
+      # A personal access token with repo scope, held in Secret Manager. The
+      # value never enters state; only the version reference does.
+      oauth_token_secret_version = var.github_token_secret_version
+    }
+  }
+}
+
+resource "google_cloudbuildv2_repository" "repo" {
+  count = var.github_app_installation_id == "" ? 0 : 1
+
+  project           = var.project_id
+  location          = var.cloudbuild_connection_region
+  name              = replace(var.github_repository, "/", "-")
+  parent_connection = google_cloudbuildv2_connection.github[0].name
+  remote_uri        = "https://github.com/${var.github_repository}.git"
+}

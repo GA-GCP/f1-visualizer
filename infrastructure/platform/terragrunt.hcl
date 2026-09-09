@@ -93,4 +93,9 @@ inputs = {
   #   gh variable set WIF_PROVIDER            --body "$(terragrunt output -raw wif_provider)"
   #   gh variable set PLANNER_SERVICE_ACCOUNT --body "$(terragrunt output -raw planner_service_account)"
   github_repository = "GA-GCP/f1-visualizer"
+  # CPLX-8: the Cloud Build GitHub connection is console state today. Supply both
+  # values to make it a resource; until then the triggers keep the 1st-gen
+  # `github {}` block and this creates nothing. See MIGRATIONS.md.
+  github_app_installation_id  = ""
+  github_token_secret_version = ""
 }

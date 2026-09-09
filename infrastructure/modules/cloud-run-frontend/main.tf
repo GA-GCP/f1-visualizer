@@ -7,6 +7,10 @@ resource "google_cloud_run_v2_service" "service" {
   deletion_protection = var.deletion_protection
 
   template {
+    # SEC-2: sa-f1v-frontend-<env> is created by iam-and-secrets with, by design,
+    # no bindings at all. Naming it here is what makes that isolation real.
+    service_account = var.service_account_email
+
     # Scaling settings
     scaling {
       min_instance_count = var.min_instance_count

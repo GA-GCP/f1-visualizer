@@ -1,0 +1,15 @@
+# DLV-4: accepted findings, with the reason. An open finding that everyone has
+# learned to scroll past is worse than a recorded decision.
+
+# AVD-GCP-0029 / AVD-GCP-0076 — VPC flow logs disabled on the subnet.
+#
+# Accepted. The only traffic that crosses this VPC is Cloud Run reaching
+# Memorystore on TCP 6379, from one subnet, allowed by one firewall rule
+# (modules/networking). There is no lateral movement to detect between two
+# resources, and flow logs on a subnet carrying one flow bill for volume that
+# answers no question anyone will ask. The edge is where the traffic worth
+# logging is, and OPS-2 turned that on.
+#
+# Revisit if the VPC ever carries a second workload.
+AVD-GCP-0029
+AVD-GCP-0076

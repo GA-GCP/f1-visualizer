@@ -126,3 +126,15 @@ variable "boolean_org_policies" {
     "constraints/iam.disableServiceAccountKeyCreation",
   ]
 }
+
+# --- DLV-1: pull-request plans ------------------------------------------------
+variable "github_repository" {
+  description = "owner/repo allowed to federate as the read-only planner. Empty creates no federation."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.github_repository == "" || can(regex("^[^/]+/[^/]+$", var.github_repository))
+    error_message = "github_repository must be in owner/repo form."
+  }
+}

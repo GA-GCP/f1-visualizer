@@ -17,3 +17,15 @@ output "dns_zone_name" {
   description = "Managed zone name the environment units add their records to. Empty when no zone is managed here."
   value       = var.dns_zone_name
 }
+
+# DLV-1: the two values the PR workflow needs, as repository variables
+# WIF_PROVIDER and PLANNER_SERVICE_ACCOUNT.
+output "wif_provider" {
+  description = "Full resource name of the OIDC provider, for google-github-actions/auth."
+  value       = try(google_iam_workload_identity_pool_provider.github[0].name, "")
+}
+
+output "planner_service_account" {
+  description = "Email the pull-request plan impersonates."
+  value       = try(google_service_account.planner[0].email, "")
+}

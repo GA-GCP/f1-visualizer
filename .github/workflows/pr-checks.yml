@@ -263,11 +263,122 @@ jobs:
           retention-days: 7
 
   # -----------------------------------------
-  # Infrastructure: Security Scan + Plan
+  # Infrastructure: static checks
   # -----------------------------------------
+  # DLV-3: this job was named "Infrastructure Scan & Plan" and ran `tofu validate`
+  # per module and no plan, because GitHub Actions had no GCP credentials — while
+  # the README's PR table said "infrastructure plan". Formatting drift,
+  # undeclared inputs and environment wiring errors like REL-2 all reached main
+  # green. These four commands are what would have caught them.
   infrastructure:
-    name: Infrastructure Scan & Plan
+    name: Infrastructure Static Checks
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # DLV-5: the same versions .mise.toml and cloudbuild/infrastructure.yaml
+      # pin, so the PR check, the plan and the apply run one toolchain.
+      - name: Install OpenTofu
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2
+        with:
+          tofu_version: '1.12.6'
+
+      # DLV-2/DLV-5: the same version cloudbuild/infrastructure.yaml pins, verified
+      # against the checksums published with the release. gruntwork-io's action
+      # runs Terragrunt inside a container and leaves nothing on PATH, which is no
+      # use to the steps below.
+      - name: Install Terragrunt
+        env:
+          TG_VERSION: '1.1.4'
+        run: |
+          set -euo pipefail
+          cd /tmp
+          BASE="https://github.com/gruntwork-io/terragrunt/releases/download/v$TG_VERSION"
+          curl -fsSL -o terragrunt_linux_amd64 "$BASE/terragrunt_linux_amd64"
+          curl -fsSL -o SHA256SUMS            "$BASE/SHA256SUMS"
+          grep ' terragrunt_linux_amd64$' SHA256SUMS | sha256sum -c -
+          sudo install -m 0755 terragrunt_linux_amd64 /usr/local/bin/terragrunt
+          terragrunt --version
+
+      # Fails today on three files. `tofu fmt -recursive infrastructure/` fixes it.
+      - name: Format — OpenTofu
+        run: tofu fmt -check -recursive infrastructure/
+
+      - name: Format — Terragrunt HCL
+        run: terragrunt hcl fmt --check --diff --working-dir infrastructure
+
+      # Validates the modules in isolation.
+      - name: Validate modules
+        run: |
+          for dir in infrastructure/modules/*/; do
+            echo "=== $dir ==="
+            # DLV-5: readonly, so a run that would change the committed lock file
+            # fails here rather than silently resolving a different provider.
+            tofu -chdir="$dir" init -backend=false -lockfile=readonly
+            tofu -chdir="$dir" validate
+          done
+
+      # DLV-3 / REL-12: catches an input no variable declares — which is how
+      # `tier = "STANDARD_HA"` sat in the prod redis unit being silently ignored.
+      - name: Validate Terragrunt inputs
+        run: |
+          for env in dev uat prod; do
+            echo "=== $env ==="
+            terragrunt hcl validate --inputs --strict \
+              --working-dir "infrastructure/environments/$env" --non-interactive
+          done
+
+      - name: tflint
+        uses: terraform-linters/setup-tflint@90f302c255ef959cbfb4bd10581afecdb7ece3e6 # v4
+        with:
+          tflint_version: v0.53.0
+
+      - name: tflint — modules
+        run: |
+          cd infrastructure
+          tflint --init
+          tflint --recursive --minimum-failure-severity=warning
+
+      # DLV-4: the module scan cannot see the values that matter — is_public,
+      # ingress, deletion_protection and every secret reference arrive as
+      # Terragrunt inputs, so every security-relevant decision was invisible to
+      # it. This is the fast first pass; the real one runs against a plan in
+      # cloudbuild/infrastructure.yaml, where credentials exist.
+      - name: Trivy IaC scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: config
+          scan-ref: infrastructure
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          trivyignores: infrastructure/.trivyignore
+
+  # -----------------------------------------
+  # Infrastructure: plan against the real project
+  # -----------------------------------------
+  # DLV-1: nothing planned before merge. The first real plan lived inside the
+  # Cloud Build run that also applied it, seconds later — so reviewers approved
+  # promotion PRs to dev, uat and prod without ever seeing what would change, and
+  # destroys and replacements were discovered when they happened.
+  #
+  # Workload Identity Federation, so there is no service account key: the planner
+  # identity holds roles/viewer and read access to the state bucket, and nothing
+  # else. It cannot apply.
+  #
+  # Skipped on a fork PR, where the OIDC token cannot be issued.
+  infrastructure-plan:
+    name: Infrastructure Plan
+    runs-on: ubuntu-latest
+    needs: infrastructure
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [dev, uat, prod]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -276,18 +387,62 @@ jobs:
         with:
           tofu_version: '1.12.6'
 
-      - name: Trivy IaC Security Scan
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      - id: auth
+        name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
-          scan-type: config
-          scan-ref: infrastructure/modules
-          severity: CRITICAL,HIGH
-          exit-code: '1'
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.PLANNER_SERVICE_ACCOUNT }}
 
-      - name: Validate OpenTofu Modules
+      # DLV-2/DLV-5: the same version cloudbuild/infrastructure.yaml pins, verified
+      # against the checksums published with the release. gruntwork-io's action
+      # runs Terragrunt inside a container and leaves nothing on PATH, which is no
+      # use to the steps below.
+      - name: Install Terragrunt
+        env:
+          TG_VERSION: '1.1.4'
         run: |
-          for dir in infrastructure/modules/*/; do
-            echo "=== Validating $dir ==="
-            tofu -chdir="$dir" init -backend=false
-            tofu -chdir="$dir" validate
-          done
+          set -euo pipefail
+          cd /tmp
+          BASE="https://github.com/gruntwork-io/terragrunt/releases/download/v$TG_VERSION"
+          curl -fsSL -o terragrunt_linux_amd64 "$BASE/terragrunt_linux_amd64"
+          curl -fsSL -o SHA256SUMS            "$BASE/SHA256SUMS"
+          grep ' terragrunt_linux_amd64$' SHA256SUMS | sha256sum -c -
+          sudo install -m 0755 terragrunt_linux_amd64 /usr/local/bin/terragrunt
+          terragrunt --version
+
+      - name: Plan
+        id: plan
+        env:
+          TG_NON_INTERACTIVE: 'true'
+        run: |
+          set -o pipefail
+          cd "infrastructure/environments/${{ matrix.environment }}"
+          terragrunt run --all --parallelism 4 -- init -lockfile=readonly
+          terragrunt run --all --parallelism 4 -- plan -no-color 2>&1 | tee /tmp/plan.txt
+
+      # A plan nobody reads is the problem this solves, so it goes on the PR
+      # rather than into a log a reviewer has to go looking for.
+      - name: Comment the plan
+        if: ${{ always() }}
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body;
+            try {
+              const plan = fs.readFileSync('/tmp/plan.txt', 'utf8');
+              // A full run --all plan can exceed the 65536-byte comment limit.
+              const trimmed = plan.length > 60000
+                ? plan.slice(0, 30000) + '\n\n...trimmed...\n\n' + plan.slice(-30000)
+                : plan;
+              body = `### Terragrunt plan — \`${{ matrix.environment }}\`\n\n<details><summary>Show plan</summary>\n\n\`\`\`terraform\n${trimmed}\n\`\`\`\n\n</details>`;
+            } catch (e) {
+              body = `### Terragrunt plan — \`${{ matrix.environment }}\`\n\nThe plan step produced no output. See the job log.`;
+            }
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });

@@ -267,3 +267,82 @@ resource "google_project_organization_policy" "boolean_constraints" {
     enforced = true
   }
 }
+
+# ==============================================================================
+# 8. WORKLOAD IDENTITY FEDERATION FOR THE PR PLAN (DLV-1)
+# ==============================================================================
+# Nothing planned before merge: the GitHub job named "Infrastructure Scan & Plan"
+# ran `tofu validate` per module and no plan, because Actions had no GCP
+# credentials, and the first real plan lived inside the Cloud Build run that
+# applied it seconds later. Reviewers approved promotion PRs without ever seeing
+# what would change.
+#
+# Federation rather than a service account key, so there is no secret to leak or
+# rotate. The identity below can read; it cannot apply.
+resource "google_iam_workload_identity_pool" "github" {
+  count = var.github_repository == "" ? 0 : 1
+
+  project                   = var.project_id
+  workload_identity_pool_id = "github-actions"
+  display_name              = "GitHub Actions"
+  description               = "Federated identities for pull-request plans (DLV-1)"
+}
+
+resource "google_iam_workload_identity_pool_provider" "github" {
+  count = var.github_repository == "" ? 0 : 1
+
+  project                            = var.project_id
+  workload_identity_pool_id          = google_iam_workload_identity_pool.github[0].workload_identity_pool_id
+  workload_identity_pool_provider_id = "github"
+  display_name                       = "GitHub OIDC"
+
+  attribute_mapping = {
+    "google.subject"       = "assertion.sub"
+    "attribute.repository" = "assertion.repository"
+  }
+
+  # Without this, any repository on github.com could mint a token for this pool.
+  attribute_condition = "assertion.repository == '${var.github_repository}'"
+
+  oidc {
+    issuer_uri = "https://token.actions.githubusercontent.com"
+  }
+}
+
+resource "google_service_account" "planner" {
+  count = var.github_repository == "" ? 0 : 1
+
+  project      = var.project_id
+  account_id   = "sa-f1v-planner"
+  display_name = "F1V Pull-Request Planner"
+  description  = "Read-only. Runs terragrunt plan from a pull request; cannot apply."
+}
+
+# roles/viewer plus state read is everything a plan needs and nothing an apply
+# does. It is deliberately not one of the roles the infrastructure identity may
+# grant (see grantable_project_roles in iam-and-secrets) — this account is
+# created here, in the layer a human applies.
+resource "google_project_iam_member" "planner_viewer" {
+  count = var.github_repository == "" ? 0 : 1
+
+  project = var.project_id
+  role    = "roles/viewer"
+  member  = "serviceAccount:${google_service_account.planner[0].email}"
+}
+
+resource "google_storage_bucket_iam_member" "planner_state_reader" {
+  count = var.github_repository == "" ? 0 : 1
+
+  bucket = google_storage_bucket.tfstate.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.planner[0].email}"
+}
+
+# Only workflows in the named repository may act as the planner.
+resource "google_service_account_iam_member" "planner_federation" {
+  count = var.github_repository == "" ? 0 : 1
+
+  service_account_id = google_service_account.planner[0].name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github[0].name}/attribute.repository/${var.github_repository}"
+}

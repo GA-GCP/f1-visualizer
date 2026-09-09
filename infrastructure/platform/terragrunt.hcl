@@ -86,4 +86,11 @@ inputs = {
   # apply fails rather than warning, so it is opt-in. If there is no
   # organization, that is an accepted gap and this line is where it is recorded.
   org_policies_enabled = false
+
+  # DLV-1: federation for the pull-request plan. After applying, set the two
+  # outputs as repository variables:
+  #
+  #   gh variable set WIF_PROVIDER            --body "$(terragrunt output -raw wif_provider)"
+  #   gh variable set PLANNER_SERVICE_ACCOUNT --body "$(terragrunt output -raw planner_service_account)"
+  github_repository = "GA-GCP/f1-visualizer"
 }

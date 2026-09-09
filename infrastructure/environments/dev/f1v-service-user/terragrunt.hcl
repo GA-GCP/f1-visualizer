@@ -3,7 +3,7 @@ include "root" {
 }
 
 terraform {
-  source = "../../../modules/cloud-run-backend"
+  source = "../../../modules/cloud-run"
 }
 
 # 1. Dependency on IAM module
@@ -31,8 +31,8 @@ inputs = {
   # telemetry has used since it started bypassing the gateway for WebSockets.
   # The service still validates the Auth0 JWT itself, which is now the only
   # place that happens rather than the second.
-  is_public = true
-  ingress   = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+  invokers = ["allUsers"]
+  ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 
   # Keep 1 instance warm to eliminate cold-start latency on /users/me.
   # This endpoint is called immediately after splash; a cold-starting JVM

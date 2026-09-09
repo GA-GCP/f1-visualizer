@@ -8,7 +8,7 @@ include "root" {
 prevent_destroy = true
 
 terraform {
-  source = "../../../modules/cloud-run-backend"
+  source = "../../../modules/cloud-run"
 }
 
 dependency "iam" {
@@ -80,8 +80,8 @@ inputs = {
   image_url             = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/replay-worker:latest-prod"
 
   # No callers: not public, and unreachable from the internet.
-  is_public = false
-  ingress   = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+  invokers = []
+  ingress  = "INGRESS_TRAFFIC_INTERNAL_ONLY"
 
   # O3: prod inherited the module's DEV/UAT default of false.
   deletion_protection = true

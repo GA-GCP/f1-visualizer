@@ -8,7 +8,7 @@ include "root" {
 prevent_destroy = true
 
 terraform {
-  source = "../../../modules/cloud-run-backend"
+  source = "../../../modules/cloud-run"
 }
 
 # 1. Dependency on IAM module
@@ -63,8 +63,8 @@ inputs = {
   # S3: fronted by the load balancer's serverless NEG, which cannot present an ID
   # token — so the public invoker binding stays and ingress is narrowed instead,
   # keeping the *.run.app URL from answering the internet directly.
-  is_public = true
-  ingress   = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+  invokers = ["allUsers"]
+  ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 
   # Pointing to the Artifact Registry repo we created
   image_url    = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/telemetry:latest-prod"

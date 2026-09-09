@@ -3,7 +3,7 @@ include "root" {
 }
 
 terraform {
-  source = "../../../modules/cloud-run-backend"
+  source = "../../../modules/cloud-run"
 }
 
 dependency "iam" {
@@ -75,8 +75,8 @@ inputs = {
   image_url             = "us-central1-docker.pkg.dev/f1-visualizer-488201/f1v-repo/replay-worker:latest-dev"
 
   # No callers: not public, and unreachable from the internet.
-  is_public = false
-  ingress   = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+  invokers = []
+  ingress  = "INGRESS_TRAFFIC_INTERNAL_ONLY"
 
   # Exactly one. This is the whole point of the service.
   min_instance_count = 1

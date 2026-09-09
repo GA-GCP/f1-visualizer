@@ -8,7 +8,7 @@ include "root" {
 prevent_destroy = true
 
 terraform {
-  source = "../../../modules/cloud-run-backend"
+  source = "../../../modules/cloud-run"
 }
 
 # 1. Dependency on IAM module
@@ -39,8 +39,8 @@ inputs = {
   # telemetry has used since it started bypassing the gateway for WebSockets.
   # The service still validates the Auth0 JWT itself, which is now the only
   # place that happens rather than the second.
-  is_public = true
-  ingress   = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+  invokers = ["allUsers"]
+  ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 
   # P4: each request is a BigQuery round trip. Virtual threads mean they no
   # longer pin a platform thread, but 80 in flight against one vCPU only

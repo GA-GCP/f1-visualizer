@@ -86,9 +86,14 @@ resource "google_cloud_run_v2_service" "service" {
   }
 }
 
-# Public Access Binding — frontend is always internet-facing
+# Public Access Binding.
+#
+# CPLX-7: this was `count = var.is_public ? 1 : 0` behind a variable whose own
+# description said "Frontend is always public-facing" and which every unit set to
+# true. A toggle with one reachable position is a question in review, not a
+# feature. The SPA is the public entry point; SEC-10 is where narrowing its
+# ingress is discussed, and that is an `ingress` decision, not an IAM one.
 resource "google_cloud_run_service_iam_member" "public_access" {
-  count    = var.is_public ? 1 : 0
   service  = google_cloud_run_v2_service.service.name
   location = google_cloud_run_v2_service.service.location
   project  = google_cloud_run_v2_service.service.project

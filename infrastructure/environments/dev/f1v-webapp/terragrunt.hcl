@@ -22,7 +22,4 @@ inputs = {
   # SEC-2: the isolated frontend identity, which holds no IAM bindings anywhere.
   # Without it Cloud Run falls back to the default compute service account.
   service_account_email = dependency.iam.outputs.sa_frontend_email
-
-  # IMPORTANT: This makes the React app accessible to the internet
-  is_public = true
 }

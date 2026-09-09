@@ -1,7 +1,17 @@
 package com.elysianarts.f1.visualizer.commons.api.openf1.client;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.*;
 import com.elysianarts.f1.visualizer.commons.api.openf1.service.OpenF1AuthService;
+import java.io.IOException;
+import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Optional;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -10,28 +20,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClient;
 
-import java.io.IOException;
-import java.time.Duration;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 /**
- * C3: the client returns values rather than publishers, so these read as calls
- * and results instead of {@code StepVerifier} chains over a stack that was always
- * blocked on immediately.
+ * C3: the client returns values rather than publishers, so these read as calls and results instead
+ * of {@code StepVerifier} chains over a stack that was always blocked on immediately.
  */
 class OpenF1ClientTest {
 
     private MockWebServer mockWebServer;
     private OpenF1Client openF1Client;
 
-    private static final OffsetDateTime START = OffsetDateTime.of(2023, 9, 17, 12, 0, 0, 0, ZoneOffset.UTC);
+    private static final OffsetDateTime START =
+            OffsetDateTime.of(2023, 9, 17, 12, 0, 0, 0, ZoneOffset.UTC);
     private static final OffsetDateTime END = START.plusSeconds(2);
 
     @BeforeEach
@@ -42,7 +41,8 @@ class OpenF1ClientTest {
         OpenF1AuthService mockAuthService = mock(OpenF1AuthService.class);
         when(mockAuthService.requireAccessToken()).thenReturn("dummy-test-token");
 
-        RestClient restClient = RestClient.builder().baseUrl(mockWebServer.url("/").toString()).build();
+        RestClient restClient =
+                RestClient.builder().baseUrl(mockWebServer.url("/").toString()).build();
         // A near-zero backoff so the retry policy is exercised without waiting for it.
         openF1Client = new OpenF1Client(restClient, mockAuthService, Duration.ofMillis(1));
     }
@@ -53,14 +53,16 @@ class OpenF1ClientTest {
     }
 
     private void enqueueJson(String body) {
-        mockWebServer.enqueue(new MockResponse().setBody(body).addHeader("Content-Type", "application/json"));
+        mockWebServer.enqueue(
+                new MockResponse().setBody(body).addHeader("Content-Type", "application/json"));
     }
 
     // ── Parsing ──
 
     @Test
     void getCarData_ParsesJsonCorrectly() {
-        enqueueJson("""
+        enqueueJson(
+                """
             [
               {
                 "session_key": 9165,
@@ -95,12 +97,14 @@ class OpenF1ClientTest {
         assertEquals("Bearer dummy-test-token", request.getHeader("Authorization"));
         String path = request.getPath();
         assertTrue(path.contains("session_key=9165"), path);
-        assertTrue(path.contains("date%3E="), "the >= range operator must survive encoding: " + path);
+        assertTrue(
+                path.contains("date%3E="), "the >= range operator must survive encoding: " + path);
     }
 
     @Test
     void getLocationData_ParsesJsonCorrectly() {
-        enqueueJson("""
+        enqueueJson(
+                """
             [{"session_key":9165,"date":"2023-09-17T12:00:00.456Z","driver_number":44,"x":1200,"y":3400,"z":100}]
             """);
 
@@ -113,7 +117,8 @@ class OpenF1ClientTest {
 
     @Test
     void getLapData_ParsesJsonCorrectly() {
-        enqueueJson("""
+        enqueueJson(
+                """
             [{"session_key":9165,"driver_number":1,"lap_number":5,"lap_duration":92.456}]
             """);
 
@@ -126,7 +131,8 @@ class OpenF1ClientTest {
 
     @Test
     void getSession_ParsesSessionCorrectly() {
-        enqueueJson("""
+        enqueueJson(
+                """
             [{"session_key":9165,"session_name":"Race","year":2023,"country_name":"Singapore",
               "date_start":"2023-09-17T12:00:00.000Z","date_end":"2023-09-17T14:00:00.000Z"}]
             """);
@@ -149,7 +155,8 @@ class OpenF1ClientTest {
     /** C4: the reference loader reads these through the client now, not as Maps. */
     @Test
     void getDrivers_ParsesTheRoster() {
-        enqueueJson("""
+        enqueueJson(
+                """
             [{"driver_number":1,"broadcast_name":"M VERSTAPPEN","name_acronym":"VER",
               "team_name":"Red Bull Racing","team_colour":"3671C6","country_code":"NED"}]
             """);
@@ -163,7 +170,8 @@ class OpenF1ClientTest {
 
     @Test
     void getMeetings_ParsesMeetingNames() {
-        enqueueJson("""
+        enqueueJson(
+                """
             [{"meeting_key":1219,"meeting_name":"Singapore Grand Prix","year":2023}]
             """);
 
@@ -175,14 +183,15 @@ class OpenF1ClientTest {
     // ── R5: failures are failures ──
 
     /**
-     * A 500 used to be mapped to an empty stream, so the caller recorded "no
-     * telemetry for this window" and moved on.
+     * A 500 used to be mapped to an empty stream, so the caller recorded "no telemetry for this
+     * window" and moved on.
      */
     @Test
     void getCarData_RetriesThenFails_WhenApiReturns500() {
         // Four responses: the original attempt plus three retries.
         for (int i = 0; i < 4; i++) {
-            mockWebServer.enqueue(new MockResponse().setResponseCode(500).setBody("Internal Server Error"));
+            mockWebServer.enqueue(
+                    new MockResponse().setResponseCode(500).setBody("Internal Server Error"));
         }
 
         assertThrows(OpenF1Exception.class, () -> openF1Client.getCarData(9165, START, END));
@@ -202,7 +211,8 @@ class OpenF1ClientTest {
     @Test
     void getCarData_Succeeds_WhenTheFirstAttemptIsTransient() {
         mockWebServer.enqueue(new MockResponse().setResponseCode(503));
-        enqueueJson("""
+        enqueueJson(
+                """
             [{"session_key":9165,"driver_number":1,"speed":300,"n_gear":7}]
             """);
 

@@ -41,6 +41,7 @@
     <dependency>
       <groupId>com.elysianarts.f1.visualizer.commons</groupId>
       <artifactId>f1v-commons-openf1</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

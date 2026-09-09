@@ -1,14 +1,11 @@
 package com.elysianarts.f1.visualizer.commons.messaging.replay;
 
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-
-/**
- * Where the replay worker's state lives, so that it outlives the worker (R1).
- */
+/** Where the replay worker's state lives, so that it outlives the worker (R1). */
 @Slf4j
 @Component
 public class ReplayStateStore {

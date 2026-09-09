@@ -1,10 +1,9 @@
 package com.elysianarts.f1.visualizer.data.ingestion.config;
 
+import java.util.concurrent.ThreadPoolExecutor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-
-import java.util.concurrent.ThreadPoolExecutor;
 
 @Configuration
 public class IngestionAsyncConfig {
@@ -12,12 +11,11 @@ public class IngestionAsyncConfig {
     /**
      * Where historical and reference loads run (R3).
      *
-     * <p>Deliberately narrow: one at a time, with a short queue. A load is minutes
-     * of OpenF1 calls and BigQuery writes against a service pinned to a single
-     * always-on instance (R1), so concurrency here buys nothing and would only
-     * multiply the rate-limit pressure on OpenF1. The bounded queue with an abort
-     * policy means an overloaded service says so — the controller turns the
-     * rejection into a 429 — rather than accumulating work it will never reach.</p>
+     * <p>Deliberately narrow: one at a time, with a short queue. A load is minutes of OpenF1 calls
+     * and BigQuery writes against a service pinned to a single always-on instance (R1), so
+     * concurrency here buys nothing and would only multiply the rate-limit pressure on OpenF1. The
+     * bounded queue with an abort policy means an overloaded service says so — the controller turns
+     * the rejection into a 429 — rather than accumulating work it will never reach.
      */
     @Bean("ingestionJobExecutor")
     public ThreadPoolTaskExecutor ingestionJobExecutor() {

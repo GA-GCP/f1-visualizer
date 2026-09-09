@@ -2,6 +2,7 @@ package com.elysianarts.f1.visualizer.data.ingestion.service;
 
 import com.elysianarts.f1.visualizer.data.ingestion.model.IngestionJob;
 import com.elysianarts.f1.visualizer.data.ingestion.repository.IngestionJobRepository;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
@@ -10,11 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Optional;
-
-/**
- * Accepts a load, hands back a job id, and runs the work behind it (R3).
- */
+/** Accepts a load, hands back a job id, and runs the work behind it (R3). */
 @Slf4j
 @Service
 public class IngestionJobService {
@@ -22,8 +19,9 @@ public class IngestionJobService {
     private final IngestionJobRepository repository;
     private final TaskExecutor executor;
 
-    public IngestionJobService(IngestionJobRepository repository,
-                               @Qualifier("ingestionJobExecutor") TaskExecutor executor) {
+    public IngestionJobService(
+            IngestionJobRepository repository,
+            @Qualifier("ingestionJobExecutor") TaskExecutor executor) {
         this.repository = repository;
         this.executor = executor;
     }
@@ -35,8 +33,10 @@ public class IngestionJobService {
         try {
             executor.execute(() -> run(job, work));
         } catch (TaskRejectedException e) {
-            repository.save(job.to(IngestionJob.Status.FAILED, "Rejected: the ingestion queue is full"));
-            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+            repository.save(
+                    job.to(IngestionJob.Status.FAILED, "Rejected: the ingestion queue is full"));
+            throw new ResponseStatusException(
+                    HttpStatus.TOO_MANY_REQUESTS,
                     "An ingestion load is already queued. Try again once it finishes.");
         }
 
@@ -60,7 +60,12 @@ public class IngestionJobService {
             // The message goes to the job record, which only an ingest:admin can
             // read — not to an anonymous 5xx body.
             repository.save(job.to(IngestionJob.Status.FAILED, e.getMessage()));
-            log.error("job failed job_id={} type={} target={}", job.id(), job.type(), job.target(), e);
+            log.error(
+                    "job failed job_id={} type={} target={}",
+                    job.id(),
+                    job.type(),
+                    job.target(),
+                    e);
         }
     }
 }

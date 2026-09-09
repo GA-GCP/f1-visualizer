@@ -41,6 +41,13 @@
             <artifactId>spring-boot-starter-jackson</artifactId>
         </dependency>
         <!-- O2: metrics leave the container, and requests carry a trace id. -->
+        <!-- C8: each service publishes its own contract at /v3/api-docs, so the
+             hand-written gateway spec has something to be checked against rather
+             than being the only description of the API. -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+        </dependency>
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>

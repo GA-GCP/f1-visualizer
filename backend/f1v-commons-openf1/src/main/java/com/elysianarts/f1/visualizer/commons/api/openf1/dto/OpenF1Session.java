@@ -1,10 +1,9 @@
 package com.elysianarts.f1.visualizer.commons.api.openf1.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.OffsetDateTime;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.OffsetDateTime;
 
 @Data
 @NoArgsConstructor
@@ -31,4 +30,3 @@ public class OpenF1Session {
     @JsonProperty("country_name")
     private String countryName;
 }
-

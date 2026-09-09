@@ -1,19 +1,15 @@
 package com.elysianarts.f1.visualizer.replay.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1LocationData;
 import com.elysianarts.f1.visualizer.commons.messaging.redis.RedisTopics;
 import com.elysianarts.f1.visualizer.replay.model.ReplayChunk;
 import com.elysianarts.f1.visualizer.replay.model.SessionBounds;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import org.mockito.ArgumentCaptor;
-import org.springframework.data.redis.core.RedisTemplate;
-
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
@@ -22,19 +18,20 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class ReplayEngineTest {
 
-    @Mock
-    private ChunkLoader chunkLoader;
+    @Mock private ChunkLoader chunkLoader;
 
-    @Mock
-    private RedisTemplate<String, Object> redisTemplate;
+    @Mock private RedisTemplate<String, Object> redisTemplate;
 
     private ReplayEngine replayEngine;
 
@@ -52,11 +49,16 @@ class ReplayEngineTest {
         return new SessionBounds(9165, start, end);
     }
 
-    private ReplayChunk chunk(OffsetDateTime start, OffsetDateTime end,
-                               List<OpenF1CarData> telemetry, List<OpenF1LocationData> locations) {
-        return new ReplayChunk(start, end,
-            Collections.unmodifiableList(telemetry),
-            Collections.unmodifiableList(locations));
+    private ReplayChunk chunk(
+            OffsetDateTime start,
+            OffsetDateTime end,
+            List<OpenF1CarData> telemetry,
+            List<OpenF1LocationData> locations) {
+        return new ReplayChunk(
+                start,
+                end,
+                Collections.unmodifiableList(telemetry),
+                Collections.unmodifiableList(locations));
     }
 
     private List<OpenF1CarData> telemetryPackets(int count, long intervalMs) {
@@ -98,7 +100,8 @@ class ReplayEngineTest {
         ReplayChunk firstChunk = chunk(baseTime, sessionEnd, tel, loc);
 
         when(chunkLoader.fetchBounds(9165)).thenReturn(sessionBounds);
-        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(sessionEnd))).thenReturn(firstChunk);
+        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(sessionEnd)))
+                .thenReturn(firstChunk);
     }
 
     // --- Loading tests ---
@@ -151,7 +154,6 @@ class ReplayEngineTest {
         assertTrue(publishedTelemetry().stream().anyMatch(p -> p.getDriverNumber() == 44));
     }
 
-
     // ── P1 helpers ──
     //
     // A tick publishes at most one message per channel, carrying that tick's
@@ -161,20 +163,23 @@ class ReplayEngineTest {
     @SuppressWarnings("unchecked")
     private List<OpenF1CarData> publishedTelemetry() {
         ArgumentCaptor<List<OpenF1CarData>> captor = ArgumentCaptor.captor();
-        verify(redisTemplate, atLeast(0)).convertAndSend(eq(RedisTopics.TELEMETRY), captor.capture());
+        verify(redisTemplate, atLeast(0))
+                .convertAndSend(eq(RedisTopics.TELEMETRY), captor.capture());
         return captor.getAllValues().stream().flatMap(List::stream).toList();
     }
 
     @SuppressWarnings("unchecked")
     private List<OpenF1LocationData> publishedLocations() {
         ArgumentCaptor<List<OpenF1LocationData>> captor = ArgumentCaptor.captor();
-        verify(redisTemplate, atLeast(0)).convertAndSend(eq(RedisTopics.LOCATION), captor.capture());
+        verify(redisTemplate, atLeast(0))
+                .convertAndSend(eq(RedisTopics.LOCATION), captor.capture());
         return captor.getAllValues().stream().flatMap(List::stream).toList();
     }
 
     private int telemetryPublishCalls() {
         ArgumentCaptor<Object> captor = ArgumentCaptor.captor();
-        verify(redisTemplate, atLeast(0)).convertAndSend(eq(RedisTopics.TELEMETRY), captor.capture());
+        verify(redisTemplate, atLeast(0))
+                .convertAndSend(eq(RedisTopics.TELEMETRY), captor.capture());
         return captor.getAllValues().size();
     }
 
@@ -195,8 +200,8 @@ class ReplayEngineTest {
     }
 
     /**
-     * P1: three telemetry packets used to mean three blocking Redis round trips
-     * and, downstream, three STOMP frames to every connected client.
+     * P1: three telemetry packets used to mean three blocking Redis round trips and, downstream,
+     * three STOMP frames to every connected client.
      */
     @Test
     void tick_PublishesOneMessagePerChannel_NotOnePerPacket() {
@@ -210,9 +215,9 @@ class ReplayEngineTest {
     }
 
     /**
-     * P1: at 250 ms ticks the progress integer repeats for dozens of ticks in a
-     * row — a two-hour session moves one percent every ~288 ticks — and a message
-     * per tick told the browser nothing it did not already have.
+     * P1: at 250 ms ticks the progress integer repeats for dozens of ticks in a row — a two-hour
+     * session moves one percent every ~288 ticks — and a message per tick told the browser nothing
+     * it did not already have.
      */
     @Test
     void tick_PublishesProgressOnlyWhenTheIntegerChanges() {
@@ -220,7 +225,12 @@ class ReplayEngineTest {
         OffsetDateTime sessionEnd = baseTime.plusHours(1);
         when(chunkLoader.fetchBounds(9165)).thenReturn(bounds(baseTime, sessionEnd));
         when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), any()))
-                .thenReturn(chunk(baseTime, baseTime.plusSeconds(60), telemetryPackets(10, 100), List.of()));
+                .thenReturn(
+                        chunk(
+                                baseTime,
+                                baseTime.plusSeconds(60),
+                                telemetryPackets(10, 100),
+                                List.of()));
 
         replayEngine.loadSession(9165);
         for (int i = 0; i < 4; i++) {
@@ -228,8 +238,11 @@ class ReplayEngineTest {
         }
 
         ArgumentCaptor<Object> captor = ArgumentCaptor.captor();
-        verify(redisTemplate, atLeast(0)).convertAndSend(eq(RedisTopics.PLAYBACK_STATUS), captor.capture());
-        assertEquals(1, captor.getAllValues().size(),
+        verify(redisTemplate, atLeast(0))
+                .convertAndSend(eq(RedisTopics.PLAYBACK_STATUS), captor.capture());
+        assertEquals(
+                1,
+                captor.getAllValues().size(),
                 "four ticks inside one percent should produce one progress message");
     }
 
@@ -240,7 +253,8 @@ class ReplayEngineTest {
 
         replayEngine.tick();
 
-        verify(redisTemplate, atLeastOnce()).convertAndSend(eq(RedisTopics.PLAYBACK_STATUS), any(Map.class));
+        verify(redisTemplate, atLeastOnce())
+                .convertAndSend(eq(RedisTopics.PLAYBACK_STATUS), any(Map.class));
     }
 
     @Test
@@ -277,7 +291,8 @@ class ReplayEngineTest {
         ReplayChunk firstChunk = chunk(baseTime, sessionEnd, List.of(packet), List.of());
 
         when(chunkLoader.fetchBounds(9165)).thenReturn(sessionBounds);
-        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(sessionEnd))).thenReturn(firstChunk);
+        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(sessionEnd)))
+                .thenReturn(firstChunk);
 
         replayEngine.loadSession(9165);
         replayEngine.tick(); // emits packet, finishes session
@@ -313,11 +328,12 @@ class ReplayEngineTest {
         ReplayChunk secondChunk = chunk(chunk2Start, sessionEnd, List.of(p2), List.of());
 
         when(chunkLoader.fetchBounds(9165)).thenReturn(sessionBounds);
-        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(chunk1End))).thenReturn(firstChunk);
+        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(chunk1End)))
+                .thenReturn(firstChunk);
 
         // Pre-fetch will be triggered — mock it as immediately completed
         when(chunkLoader.fetchChunkAsync(eq(9165L), eq(chunk2Start), eq(sessionEnd)))
-            .thenReturn(CompletableFuture.completedFuture(secondChunk));
+                .thenReturn(CompletableFuture.completedFuture(secondChunk));
 
         replayEngine.loadSession(9165);
 
@@ -357,11 +373,13 @@ class ReplayEngineTest {
         ReplayChunk firstChunk = chunk(baseTime, chunk1End, telemetry, List.of());
 
         when(chunkLoader.fetchBounds(9165)).thenReturn(sessionBounds);
-        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(chunk1End))).thenReturn(firstChunk);
+        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(chunk1End)))
+                .thenReturn(firstChunk);
 
         OffsetDateTime chunk2Start = chunk1End.plusNanos(1000);
         when(chunkLoader.fetchChunkAsync(eq(9165L), eq(chunk2Start), eq(sessionEnd)))
-            .thenReturn(new CompletableFuture<>()); // never completes, we just verify it was called
+                .thenReturn(
+                        new CompletableFuture<>()); // never completes, we just verify it was called
 
         replayEngine.loadSession(9165);
 
@@ -395,7 +413,8 @@ class ReplayEngineTest {
         ReplayChunk firstChunk = chunk(baseTime, chunk1End, telemetryPackets(3, 100), List.of());
 
         when(chunkLoader.fetchBounds(9165)).thenReturn(sessionBounds);
-        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(chunk1End))).thenReturn(firstChunk);
+        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(chunk1End)))
+                .thenReturn(firstChunk);
 
         replayEngine.loadSession(9165);
 
@@ -409,7 +428,8 @@ class ReplayEngineTest {
         seekPacket.setDate(baseTime.plusSeconds(90));
         ReplayChunk seekChunk = chunk(seekChunkStart, seekChunkEnd, List.of(seekPacket), List.of());
 
-        when(chunkLoader.fetchChunkSync(eq(9165L), eq(seekChunkStart), eq(seekChunkEnd))).thenReturn(seekChunk);
+        when(chunkLoader.fetchChunkSync(eq(9165L), eq(seekChunkStart), eq(seekChunkEnd)))
+                .thenReturn(seekChunk);
 
         replayEngine.seek(75);
 
@@ -426,7 +446,8 @@ class ReplayEngineTest {
         ReplayChunk firstChunk = chunk(baseTime, sessionEnd, telemetryPackets(3, 100), List.of());
 
         when(chunkLoader.fetchBounds(9165)).thenReturn(sessionBounds);
-        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(sessionEnd))).thenReturn(firstChunk);
+        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(sessionEnd)))
+                .thenReturn(firstChunk);
 
         replayEngine.loadSession(9165);
 
@@ -451,7 +472,8 @@ class ReplayEngineTest {
         ReplayChunk firstChunk = chunk(baseTime, sessionEnd, List.of(lastPacket), List.of());
 
         when(chunkLoader.fetchBounds(9165)).thenReturn(sessionBounds);
-        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(sessionEnd))).thenReturn(firstChunk);
+        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(sessionEnd)))
+                .thenReturn(firstChunk);
 
         replayEngine.loadSession(9165);
 
@@ -506,7 +528,8 @@ class ReplayEngineTest {
         ReplayChunk firstChunk = chunk(baseTime, sessionEnd, List.of(packet), List.of());
 
         when(chunkLoader.fetchBounds(9165)).thenReturn(sessionBounds);
-        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(sessionEnd))).thenReturn(firstChunk);
+        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(sessionEnd)))
+                .thenReturn(firstChunk);
 
         replayEngine.loadSession(9165);
         replayEngine.tick(); // consumes all, finishes session
@@ -527,10 +550,12 @@ class ReplayEngineTest {
         OffsetDateTime sessionEnd = baseTime.plusSeconds(50);
         SessionBounds sessionBounds = bounds(baseTime, sessionEnd);
 
-        ReplayChunk firstChunk = chunk(baseTime, sessionEnd, telemetryPackets(3, 100), locationPackets(2, 200));
+        ReplayChunk firstChunk =
+                chunk(baseTime, sessionEnd, telemetryPackets(3, 100), locationPackets(2, 200));
 
         when(chunkLoader.fetchBounds(9165)).thenReturn(sessionBounds);
-        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(sessionEnd))).thenReturn(firstChunk);
+        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(sessionEnd)))
+                .thenReturn(firstChunk);
 
         replayEngine.loadSession(9165);
 
@@ -554,7 +579,8 @@ class ReplayEngineTest {
         ReplayChunk firstChunk = chunk(baseTime, sessionEnd, tel, loc);
 
         when(chunkLoader.fetchBounds(9165)).thenReturn(sessionBounds);
-        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(sessionEnd))).thenReturn(firstChunk);
+        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(sessionEnd)))
+                .thenReturn(firstChunk);
 
         replayEngine.loadSession(9165);
         replayEngine.pause();
@@ -577,7 +603,8 @@ class ReplayEngineTest {
         ReplayChunk emptyChunk = chunk(baseTime, sessionEnd, List.of(), List.of());
 
         when(chunkLoader.fetchBounds(9165)).thenReturn(sessionBounds);
-        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(sessionEnd))).thenReturn(emptyChunk);
+        when(chunkLoader.fetchChunkSync(eq(9165L), eq(baseTime), eq(sessionEnd)))
+                .thenReturn(emptyChunk);
 
         replayEngine.loadSession(9165);
         replayEngine.tick();

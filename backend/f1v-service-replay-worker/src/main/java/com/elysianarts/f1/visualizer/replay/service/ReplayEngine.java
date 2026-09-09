@@ -8,10 +8,6 @@ import com.elysianarts.f1.visualizer.replay.model.SessionBounds;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Service;
-
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
@@ -20,21 +16,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
 
 /**
- * Replays historical telemetry and location data through Redis pub/sub using
- * a windowed buffer approach. Only the current chunk (plus a pre-fetched next chunk)
- * is held in memory at any time, preventing OOM on large sessions.
+ * Replays historical telemetry and location data through Redis pub/sub using a windowed buffer
+ * approach. Only the current chunk (plus a pre-fetched next chunk) is held in memory at any time,
+ * preventing OOM on large sessions.
  *
- * <p><b>One message per channel per tick (P1).</b> Twenty cars at OpenF1's rates
- * is roughly 150 packets per 250 ms tick. Each used to be its own blocking Redis
- * round trip over the VPC connector, and the telemetry service then re-broadcast
- * each one as its own STOMP frame to every client — about 15,000 frames per tick
- * out of one instance at 100 viewers. The browser buffers in a ref and flushes
- * once per animation frame regardless, so per-packet delivery bought nothing.
- * A tick now publishes each channel's packets as a single JSON array: roughly
- * 100x fewer operations end to end, and the progress message goes out only when
- * the integer actually changes.</p>
+ * <p><b>One message per channel per tick (P1).</b> Twenty cars at OpenF1's rates is roughly 150
+ * packets per 250 ms tick. Each used to be its own blocking Redis round trip over the VPC
+ * connector, and the telemetry service then re-broadcast each one as its own STOMP frame to every
+ * client — about 15,000 frames per tick out of one instance at 100 viewers. The browser buffers in
+ * a ref and flushes once per animation frame regardless, so per-packet delivery bought nothing. A
+ * tick now publishes each channel's packets as a single JSON array: roughly 100x fewer operations
+ * end to end, and the progress message goes out only when the integer actually changes.
  */
 @Slf4j
 @Service
@@ -71,23 +68,29 @@ public class ReplayEngine {
     private final Object lock = new Object();
     private boolean isRunning = false;
     private OffsetDateTime virtualClock;
+
     /** The last progress value published, so an unchanged integer costs nothing. */
     private int lastPublishedProgress = -1;
 
-    public ReplayEngine(ChunkLoader chunkLoader,
-                        RedisTemplate<String, Object> redisTemplate,
-                        MeterRegistry meterRegistry) {
+    public ReplayEngine(
+            ChunkLoader chunkLoader,
+            RedisTemplate<String, Object> redisTemplate,
+            MeterRegistry meterRegistry) {
         this.chunkLoader = chunkLoader;
         this.redisTemplate = redisTemplate;
-        this.packetsPublished = Counter.builder("f1v.replay.packets")
-                .description("Telemetry and location packets published to Redis")
-                .register(meterRegistry);
-        this.chunkStalls = Counter.builder("f1v.replay.stalls")
-                .description("Ticks that could not advance because the next chunk was not ready")
-                .register(meterRegistry);
-        this.tickTimer = Timer.builder("f1v.replay.tick")
-                .description("Wall time spent in a single replay tick")
-                .register(meterRegistry);
+        this.packetsPublished =
+                Counter.builder("f1v.replay.packets")
+                        .description("Telemetry and location packets published to Redis")
+                        .register(meterRegistry);
+        this.chunkStalls =
+                Counter.builder("f1v.replay.stalls")
+                        .description(
+                                "Ticks that could not advance because the next chunk was not ready")
+                        .register(meterRegistry);
+        this.tickTimer =
+                Timer.builder("f1v.replay.tick")
+                        .description("Wall time spent in a single replay tick")
+                        .register(meterRegistry);
         meterRegistry.gauge("f1v.replay.progress", progressGauge);
     }
 
@@ -110,16 +113,21 @@ public class ReplayEngine {
             }
 
             OffsetDateTime chunkEnd = calculateChunkEnd(sessionBounds.startTime());
-            this.currentChunk = chunkLoader.fetchChunkSync(sessionKey, sessionBounds.startTime(), chunkEnd);
+            this.currentChunk =
+                    chunkLoader.fetchChunkSync(sessionKey, sessionBounds.startTime(), chunkEnd);
             this.telemetryIndex = 0;
             this.locationIndex = 0;
             this.virtualClock = sessionBounds.startTime();
             this.lastPublishedProgress = -1;
             this.isRunning = true;
 
-            log.info("replay loaded session_key={} bounds=[{} -> {}] first_chunk_telemetry={} first_chunk_locations={}",
-                sessionKey, sessionBounds.startTime(), sessionBounds.endTime(),
-                currentChunk.telemetry().size(), currentChunk.locations().size());
+            log.info(
+                    "replay loaded session_key={} bounds=[{} -> {}] first_chunk_telemetry={} first_chunk_locations={}",
+                    sessionKey,
+                    sessionBounds.startTime(),
+                    sessionBounds.endTime(),
+                    currentChunk.telemetry().size(),
+                    currentChunk.locations().size());
         }
     }
 
@@ -144,7 +152,9 @@ public class ReplayEngine {
                 if (!trySwapToNextChunk()) {
                     // Next chunk not ready — stall by rolling back the clock advance
                     chunkStalls.increment();
-                    log.warn("replay stalled virtual_clock={} reason=next_chunk_not_ready", virtualClock);
+                    log.warn(
+                            "replay stalled virtual_clock={} reason=next_chunk_not_ready",
+                            virtualClock);
                     virtualClock = virtualClock.minus(TICK_RATE_MS, ChronoUnit.MILLIS);
                     return;
                 }
@@ -153,8 +163,8 @@ public class ReplayEngine {
             // 3. Collect the telemetry packets due this tick
             List<OpenF1CarData> telemetry = currentChunk.telemetry();
             List<OpenF1CarData> telemetryBatch = new ArrayList<>();
-            while (telemetryIndex < telemetry.size() &&
-                   !telemetry.get(telemetryIndex).getDate().isAfter(virtualClock)) {
+            while (telemetryIndex < telemetry.size()
+                    && !telemetry.get(telemetryIndex).getDate().isAfter(virtualClock)) {
                 telemetryBatch.add(telemetry.get(telemetryIndex));
                 telemetryIndex++;
             }
@@ -162,8 +172,8 @@ public class ReplayEngine {
             // 4. Collect the location packets due this tick
             List<OpenF1LocationData> locations = currentChunk.locations();
             List<OpenF1LocationData> locationBatch = new ArrayList<>();
-            while (locationIndex < locations.size() &&
-                   !locations.get(locationIndex).getDate().isAfter(virtualClock)) {
+            while (locationIndex < locations.size()
+                    && !locations.get(locationIndex).getDate().isAfter(virtualClock)) {
                 locationBatch.add(locations.get(locationIndex));
                 locationIndex++;
             }
@@ -204,7 +214,8 @@ public class ReplayEngine {
     }
 
     /** What the worker publishes to Redis so any instance can answer a status query (R1). */
-    public record Snapshot(Long sessionKey, OffsetDateTime virtualClock, boolean running, int progress) {}
+    public record Snapshot(
+            Long sessionKey, OffsetDateTime virtualClock, boolean running, int progress) {}
 
     public Snapshot snapshot() {
         synchronized (lock) {
@@ -225,8 +236,10 @@ public class ReplayEngine {
 
     public void play() {
         synchronized (lock) {
-            if (sessionBounds != null && !sessionBounds.isEmpty() &&
-                virtualClock != null && virtualClock.isBefore(sessionBounds.endTime())) {
+            if (sessionBounds != null
+                    && !sessionBounds.isEmpty()
+                    && virtualClock != null
+                    && virtualClock.isBefore(sessionBounds.endTime())) {
                 this.isRunning = true;
                 log.info("replay playing virtual_clock={}", virtualClock);
             }
@@ -243,12 +256,15 @@ public class ReplayEngine {
             // Calculate target time from percentage
             long totalDurationMs = sessionBounds.durationMillis();
             long targetOffsetMs = (totalDurationMs * safePercentage) / 100;
-            OffsetDateTime targetTime = sessionBounds.startTime().plus(targetOffsetMs, ChronoUnit.MILLIS);
+            OffsetDateTime targetTime =
+                    sessionBounds.startTime().plus(targetOffsetMs, ChronoUnit.MILLIS);
 
             // Calculate aligned chunk boundaries
-            long sessionOffsetSeconds = Duration.between(sessionBounds.startTime(), targetTime).getSeconds();
+            long sessionOffsetSeconds =
+                    Duration.between(sessionBounds.startTime(), targetTime).getSeconds();
             long chunkNumber = sessionOffsetSeconds / CHUNK_DURATION_SECONDS;
-            OffsetDateTime chunkStart = sessionBounds.startTime().plusSeconds(chunkNumber * CHUNK_DURATION_SECONDS);
+            OffsetDateTime chunkStart =
+                    sessionBounds.startTime().plusSeconds(chunkNumber * CHUNK_DURATION_SECONDS);
             OffsetDateTime chunkEnd = calculateChunkEnd(chunkStart);
 
             // Load target chunk synchronously
@@ -285,8 +301,14 @@ public class ReplayEngine {
             // landed in — otherwise the first boundary after a scrub stalls (P6).
             startPrefetch();
 
-            log.info("replay seek percentage={} time={} chunk=[{} -> {}] telemetry_index={} location_index={}",
-                safePercentage, targetTime, chunkStart, chunkEnd, telemetryIndex, locationIndex);
+            log.info(
+                    "replay seek percentage={} time={} chunk=[{} -> {}] telemetry_index={} location_index={}",
+                    safePercentage,
+                    targetTime,
+                    chunkStart,
+                    chunkEnd,
+                    telemetryIndex,
+                    locationIndex);
         }
     }
 
@@ -299,14 +321,15 @@ public class ReplayEngine {
     }
 
     private boolean isCurrentChunkExhausted() {
-        return telemetryIndex >= currentChunk.telemetry().size() &&
-               locationIndex >= currentChunk.locations().size();
+        return telemetryIndex >= currentChunk.telemetry().size()
+                && locationIndex >= currentChunk.locations().size();
     }
 
     private void maybeStartPrefetch() {
-        double chunkProgress = currentChunk.telemetry().isEmpty()
-            ? 1.0
-            : (double) telemetryIndex / currentChunk.telemetry().size();
+        double chunkProgress =
+                currentChunk.telemetry().isEmpty()
+                        ? 1.0
+                        : (double) telemetryIndex / currentChunk.telemetry().size();
 
         if (chunkProgress >= PREFETCH_THRESHOLD) {
             startPrefetch();

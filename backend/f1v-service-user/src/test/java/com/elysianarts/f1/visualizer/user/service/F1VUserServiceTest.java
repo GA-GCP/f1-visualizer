@@ -1,7 +1,12 @@
 package com.elysianarts.f1.visualizer.user.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 import com.elysianarts.f1.visualizer.user.firestore.document.F1VUserDocument;
 import com.elysianarts.f1.visualizer.user.firestore.repository.F1VUserRepository;
+import com.google.cloud.Timestamp;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,20 +14,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.google.cloud.Timestamp;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class F1VUserServiceTest {
 
-    @Mock
-    private F1VUserRepository userRepository;
+    @Mock private F1VUserRepository userRepository;
 
-    @InjectMocks
-    private F1VUserService f1VUserService;
+    @InjectMocks private F1VUserService f1VUserService;
 
     private final String testAuthId = "auth0|12345";
     private final String testEmail = "driver@f1visualizer.com";
@@ -30,12 +27,13 @@ class F1VUserServiceTest {
 
     @BeforeEach
     void setUp() {
-        existingUser = F1VUserDocument.builder()
-                .authSubId(testAuthId)
-                .email(testEmail)
-                .createdAt(Timestamp.now())
-                .preferences(new F1VUserDocument.UserPreferences())
-                .build();
+        existingUser =
+                F1VUserDocument.builder()
+                        .authSubId(testAuthId)
+                        .email(testEmail)
+                        .createdAt(Timestamp.now())
+                        .preferences(new F1VUserDocument.UserPreferences())
+                        .build();
     }
 
     @Test
@@ -67,7 +65,8 @@ class F1VUserServiceTest {
         newPrefs.setFavoriteDriver("Charles Leclerc");
 
         when(userRepository.findById(testAuthId)).thenReturn(existingUser);
-        when(userRepository.save(any(F1VUserDocument.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.save(any(F1VUserDocument.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         F1VUserDocument result = f1VUserService.updatePreferences(testAuthId, newPrefs);
 
@@ -80,9 +79,10 @@ class F1VUserServiceTest {
         F1VUserDocument.UserPreferences newPrefs = new F1VUserDocument.UserPreferences();
         when(userRepository.findById(testAuthId)).thenReturn(null);
 
-        RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                f1VUserService.updatePreferences(testAuthId, newPrefs)
-        );
+        RuntimeException ex =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> f1VUserService.updatePreferences(testAuthId, newPrefs));
 
         assertTrue(ex.getMessage().contains("User profile not found"));
     }

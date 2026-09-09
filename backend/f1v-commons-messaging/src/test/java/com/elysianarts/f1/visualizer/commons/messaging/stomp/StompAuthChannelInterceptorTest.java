@@ -1,5 +1,10 @@
 package com.elysianarts.f1.visualizer.commons.messaging.stomp;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
+
+import java.time.Instant;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,17 +20,10 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
-import java.time.Instant;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
-
 @ExtendWith(MockitoExtension.class)
 class StompAuthChannelInterceptorTest {
 
-    @Mock
-    private JwtDecoder jwtDecoder;
+    @Mock private JwtDecoder jwtDecoder;
 
     private StompAuthChannelInterceptor interceptor;
 
@@ -44,8 +42,13 @@ class StompAuthChannelInterceptorTest {
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
         accessor.addNativeHeader("Authorization", "Bearer valid-token");
 
-        Jwt mockJwt = new Jwt("valid-token", Instant.now(), Instant.now().plusSeconds(3600),
-                Map.of("alg", "RS256"), Map.of("sub", "auth0|user123"));
+        Jwt mockJwt =
+                new Jwt(
+                        "valid-token",
+                        Instant.now(),
+                        Instant.now().plusSeconds(3600),
+                        Map.of("alg", "RS256"),
+                        Map.of("sub", "auth0|user123"));
 
         when(jwtDecoder.decode("valid-token")).thenReturn(mockJwt);
 
@@ -64,8 +67,7 @@ class StompAuthChannelInterceptorTest {
 
         Message<byte[]> message = buildStompMessage(accessor);
 
-        assertThrows(AccessDeniedException.class, () ->
-                interceptor.preSend(message, null));
+        assertThrows(AccessDeniedException.class, () -> interceptor.preSend(message, null));
     }
 
     @Test
@@ -75,8 +77,7 @@ class StompAuthChannelInterceptorTest {
 
         Message<byte[]> message = buildStompMessage(accessor);
 
-        assertThrows(AccessDeniedException.class, () ->
-                interceptor.preSend(message, null));
+        assertThrows(AccessDeniedException.class, () -> interceptor.preSend(message, null));
     }
 
     @Test
@@ -88,8 +89,7 @@ class StompAuthChannelInterceptorTest {
 
         Message<byte[]> message = buildStompMessage(accessor);
 
-        assertThrows(AccessDeniedException.class, () ->
-                interceptor.preSend(message, null));
+        assertThrows(AccessDeniedException.class, () -> interceptor.preSend(message, null));
     }
 
     @Test

@@ -7,11 +7,10 @@ import java.util.Map;
 /**
  * What the replay worker is currently doing (R1).
  *
- * <p>Mode, session and virtual clock used to be fields on a singleton in one
- * JVM's memory: no other instance could answer a status query, and a restart —
- * every deploy — silently discarded the replay. Held in Redis, any instance can
- * report it and a restarted worker can pick the session back up where it left
- * off.</p>
+ * <p>Mode, session and virtual clock used to be fields on a singleton in one JVM's memory: no other
+ * instance could answer a status query, and a restart — every deploy — silently discarded the
+ * replay. Held in Redis, any instance can report it and a restarted worker can pick the session
+ * back up where it left off.
  */
 public record ReplayState(
         Mode mode,
@@ -21,7 +20,11 @@ public record ReplayState(
         int progress,
         String updatedAt) {
 
-    public enum Mode { IDLE, SIMULATION, LIVE }
+    public enum Mode {
+        IDLE,
+        SIMULATION,
+        LIVE
+    }
 
     public static ReplayState idle() {
         return new ReplayState(Mode.IDLE, null, null, false, 0, Instant.now().toString());

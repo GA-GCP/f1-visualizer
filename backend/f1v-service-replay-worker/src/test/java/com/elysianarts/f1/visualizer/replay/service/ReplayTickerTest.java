@@ -1,7 +1,12 @@
 package com.elysianarts.f1.visualizer.replay.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import com.elysianarts.f1.visualizer.commons.messaging.replay.ReplayState;
 import com.elysianarts.f1.visualizer.commons.messaging.replay.ReplayStateStore;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,32 +15,24 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class ReplayTickerTest {
 
-    @Mock
-    private ReplayEngine replayEngine;
+    @Mock private ReplayEngine replayEngine;
 
-    @Mock
-    private LiveStreamService liveStreamService;
+    @Mock private LiveStreamService liveStreamService;
 
-    @Mock
-    private ReplayStateStore stateStore;
+    @Mock private ReplayStateStore stateStore;
 
-    @InjectMocks
-    private ReplayTicker replayTicker;
+    @InjectMocks private ReplayTicker replayTicker;
 
-    private static final OffsetDateTime CLOCK = OffsetDateTime.of(2023, 9, 17, 12, 30, 0, 0, ZoneOffset.UTC);
+    private static final OffsetDateTime CLOCK =
+            OffsetDateTime.of(2023, 9, 17, 12, 30, 0, 0, ZoneOffset.UTC);
 
     @BeforeEach
     void stubSnapshot() {
-        lenient().when(replayEngine.snapshot())
+        lenient()
+                .when(replayEngine.snapshot())
                 .thenReturn(new ReplayEngine.Snapshot(9165L, CLOCK, true, 42));
     }
 
@@ -104,8 +101,15 @@ class ReplayTickerTest {
     /** A deploy used to end the session silently. */
     @Test
     void resumeFromLastKnownState_ReloadsAndSeeks_ThenLeavesItPaused() {
-        when(stateStore.load()).thenReturn(
-                new ReplayState(ReplayState.Mode.SIMULATION, 9165L, CLOCK.toString(), true, 37, null));
+        when(stateStore.load())
+                .thenReturn(
+                        new ReplayState(
+                                ReplayState.Mode.SIMULATION,
+                                9165L,
+                                CLOCK.toString(),
+                                true,
+                                37,
+                                null));
 
         replayTicker.resumeFromLastKnownState();
 

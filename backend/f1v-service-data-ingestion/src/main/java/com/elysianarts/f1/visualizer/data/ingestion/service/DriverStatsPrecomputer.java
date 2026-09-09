@@ -10,16 +10,14 @@ import org.springframework.stereotype.Service;
 /**
  * Computes the driver radar and career figures once per ingestion run (P2).
  *
- * <p>These numbers change only when a session is loaded, but the ten-CTE query
- * behind them used to run on every {@code /drivers/{id}/stats} request —
- * including {@code COUNTIF(throttle > 95)} across the entire telemetry table with
- * no partition filter, so each call scanned the largest table end to end and the
- * bytes billed grew with every session ever ingested. The head-to-head page
- * issues two of them per comparison.</p>
+ * <p>These numbers change only when a session is loaded, but the ten-CTE query behind them used to
+ * run on every {@code /drivers/{id}/stats} request — including {@code COUNTIF(throttle > 95)}
+ * across the entire telemetry table with no partition filter, so each call scanned the largest
+ * table end to end and the bytes billed grew with every session ever ingested. The head-to-head
+ * page issues two of them per comparison.
  *
- * <p>The same aggregation now runs here, for every driver at once, at the end of
- * the load that changes its inputs. The analysis service reads a table of roughly
- * twenty rows instead.</p>
+ * <p>The same aggregation now runs here, for every driver at once, at the end of the load that
+ * changes its inputs. The analysis service reads a table of roughly twenty rows instead.
  */
 @Slf4j
 @Service
@@ -28,9 +26,9 @@ public class DriverStatsPrecomputer {
 
     private final BigQueryQueryRunner queryRunner;
 
-
     /** Points for positions 1-10, used for both career totals and season ranking. */
-    private static final String POINTS_CASE = """
+    private static final String POINTS_CASE =
+            """
             CASE
               WHEN position = 1 THEN 25 WHEN position = 2 THEN 18 WHEN position = 3 THEN 15
               WHEN position = 4 THEN 12 WHEN position = 5 THEN 10 WHEN position = 6 THEN 8
@@ -41,12 +39,15 @@ public class DriverStatsPrecomputer {
     public void recompute() {
         TelemetryWindow window = telemetryWindow();
         if (window == null) {
-            log.warn("driver stats recompute skipped reason=no_session_dates "
-                    + "— run POST /api/v1/ingestion/load-reference first");
+            log.warn(
+                    "driver stats recompute skipped reason=no_session_dates "
+                            + "— run POST /api/v1/ingestion/load-reference first");
             return;
         }
 
-        String sql = String.format("""
+        String sql =
+                String.format(
+                        """
                 MERGE `%1$s.driver_stats` T
                 USING (
                   WITH race_results AS (
@@ -141,11 +142,15 @@ public class DriverStatsPrecomputer {
                   teams_list = S.teams_list,
                   computed_at = S.computed_at
                 WHEN NOT MATCHED THEN INSERT ROW
-                """, dataset(), POINTS_CASE, window.from(), window.to());
+                """,
+                        dataset(), POINTS_CASE, window.from(), window.to());
 
         try {
             queryRunner.query(sql);
-            log.info("driver stats recomputed telemetry_window=[{} -> {}]", window.from(), window.to());
+            log.info(
+                    "driver stats recomputed telemetry_window=[{} -> {}]",
+                    window.from(),
+                    window.to());
         } catch (Exception e) {
             throw new IllegalStateException("Driver stats recompute failed", e);
         }
@@ -154,26 +159,30 @@ public class DriverStatsPrecomputer {
     private record TelemetryWindow(String from, String to) {}
 
     /**
-     * The date range covered by every loaded session, used as the partition filter
-     * the telemetry table now requires (P2). Read from the small unpartitioned
-     * {@code sessions} table rather than from telemetry itself.
+     * The date range covered by every loaded session, used as the partition filter the telemetry
+     * table now requires (P2). Read from the small unpartitioned {@code sessions} table rather than
+     * from telemetry itself.
      */
     private TelemetryWindow telemetryWindow() {
-        String sql = String.format("""
+        String sql =
+                String.format(
+                        """
                 SELECT
                   FORMAT_TIMESTAMP('%%Y-%%m-%%d %%H:%%M:%%S', TIMESTAMP_SUB(MIN(date_start), INTERVAL 1 DAY)) AS win_from,
                   FORMAT_TIMESTAMP('%%Y-%%m-%%d %%H:%%M:%%S',
                     TIMESTAMP_ADD(COALESCE(MAX(date_end), MAX(date_start)), INTERVAL 1 DAY)) AS win_to
                 FROM `%s.sessions`
                 WHERE date_start IS NOT NULL
-                """, dataset());
+                """,
+                        dataset());
         try {
             TableResult result = queryRunner.query(sql);
             for (FieldValueList row : result.iterateAll()) {
                 if (row.get("win_from").isNull() || row.get("win_to").isNull()) {
                     return null;
                 }
-                return new TelemetryWindow(row.get("win_from").getStringValue(), row.get("win_to").getStringValue());
+                return new TelemetryWindow(
+                        row.get("win_from").getStringValue(), row.get("win_to").getStringValue());
             }
         } catch (Exception e) {
             log.error("telemetry window query failed", e);

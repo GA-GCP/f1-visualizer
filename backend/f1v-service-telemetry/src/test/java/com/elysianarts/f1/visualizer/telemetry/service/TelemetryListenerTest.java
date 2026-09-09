@@ -1,6 +1,9 @@
 package com.elysianarts.f1.visualizer.telemetry.service;
 
+import static org.mockito.Mockito.*;
+
 import com.elysianarts.f1.visualizer.commons.messaging.redis.RedisTopics;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -9,18 +12,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
-import java.nio.charset.StandardCharsets;
-
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class TelemetryListenerTest {
 
-    @Mock
-    private SimpMessagingTemplate messagingTemplate;
+    @Mock private SimpMessagingTemplate messagingTemplate;
 
-    @InjectMocks
-    private TelemetryListener telemetryListener;
+    @InjectMocks private TelemetryListener telemetryListener;
 
     @Test
     void onMessage_RoutesTelemetry_ToRaceDataTopic() {

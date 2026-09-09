@@ -4,14 +4,13 @@ import com.elysianarts.f1.visualizer.commons.api.openf1.client.OpenF1Client;
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1PositionData;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryBatchWriter;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
@@ -51,8 +50,12 @@ public class ResultDataLoader {
 
                 if (!rows.isEmpty()) {
                     batchWriter.append(dataset(), TABLE, rows);
-                    log.info("result load complete session_key={} rows={} table={}.{}",
-                            sessionKey, rows.size(), dataset(), TABLE);
+                    log.info(
+                            "result load complete session_key={} rows={} table={}.{}",
+                            sessionKey,
+                            rows.size(),
+                            dataset(),
+                            TABLE);
                 }
             } else {
                 log.warn("result load skipped session_key={} reason=no_position_data", sessionKey);
@@ -63,17 +66,18 @@ public class ResultDataLoader {
     }
 
     /**
-     * R4: clears the session's rows so a re-run replaces rather than duplicates.
-     * Safe because batch loads, unlike streaming inserts, leave no rows in a
-     * buffer that DML cannot touch.
+     * R4: clears the session's rows so a re-run replaces rather than duplicates. Safe because batch
+     * loads, unlike streaming inserts, leave no rows in a buffer that DML cannot touch.
      */
     private void deleteExistingRows(long sessionKey) {
-        String sql = String.format("DELETE FROM `%s.%s` WHERE session_key = %d", dataset(), TABLE, sessionKey);
+        String sql =
+                String.format(
+                        "DELETE FROM `%s.%s` WHERE session_key = %d", dataset(), TABLE, sessionKey);
         try {
             queryRunner.query(sql);
         } catch (Exception e) {
-            throw new IllegalStateException("Could not clear existing rows in " + TABLE
-                    + " for session " + sessionKey, e);
+            throw new IllegalStateException(
+                    "Could not clear existing rows in " + TABLE + " for session " + sessionKey, e);
         }
     }
 

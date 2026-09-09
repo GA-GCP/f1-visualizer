@@ -6,23 +6,21 @@ import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Meeting;
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Session;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryBatchWriter;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * Loads the reference catalog — sessions, the current grid, and per-race rosters.
  *
- * <p><b>C4: through the typed client.</b> This class used to build its own
- * {@code WebClient} against the same API the {@link OpenF1Client} already wraps,
- * read every response as an untyped {@code Map}, and carry a second constructor
- * so tests could inject a client — three copies of the base URL between them. It
- * now uses the client every other loader uses.</p>
+ * <p><b>C4: through the typed client.</b> This class used to build its own {@code WebClient}
+ * against the same API the {@link OpenF1Client} already wraps, read every response as an untyped
+ * {@code Map}, and carry a second constructor so tests could inject a client — three copies of the
+ * base URL between them. It now uses the client every other loader uses.
  */
 @Slf4j
 @Service
@@ -32,7 +30,6 @@ public class ReferenceDataLoader {
     private final OpenF1Client openF1Client;
     private final BigQueryQueryRunner queryRunner;
     private final BigQueryBatchWriter batchWriter;
-
 
     public void loadReferenceData(int year) {
         log.info("reference load starting year={}", year);
@@ -55,8 +52,12 @@ public class ReferenceDataLoader {
                 row.put("country_name", session.getCountryName());
                 // P2: the replay engine needs a date window to put a partition
                 // filter on the telemetry table.
-                row.put("date_start", session.getDateStart() == null ? null : session.getDateStart().toString());
-                row.put("date_end", session.getDateEnd() == null ? null : session.getDateEnd().toString());
+                row.put(
+                        "date_start",
+                        session.getDateStart() == null ? null : session.getDateStart().toString());
+                row.put(
+                        "date_end",
+                        session.getDateEnd() == null ? null : session.getDateEnd().toString());
                 rows.add(row);
             }
             flushToBigQuery("sessions", rows);
@@ -74,7 +75,8 @@ public class ReferenceDataLoader {
     private void loadCurrentGrid() {
         List<OpenF1Driver> drivers = openF1Client.getDrivers("latest");
         if (drivers.isEmpty()) {
-            log.warn("reference drivers fetch returned nothing — leaving the existing grid in place");
+            log.warn(
+                    "reference drivers fetch returned nothing — leaving the existing grid in place");
             return;
         }
 
@@ -88,8 +90,8 @@ public class ReferenceDataLoader {
     }
 
     /**
-     * The roster for every session in the year, which captures who drove for
-     * which team at each specific race.
+     * The roster for every session in the year, which captures who drove for which team at each
+     * specific race.
      */
     private void loadSessionDrivers(int year, List<OpenF1Session> sessions) {
         if (sessions.isEmpty()) {
@@ -120,7 +122,11 @@ public class ReferenceDataLoader {
             }
         }
 
-        log.info("session roster load complete year={} rows={} sessions={}", year, totalDriverRows, sessions.size());
+        log.info(
+                "session roster load complete year={} rows={} sessions={}",
+                year,
+                totalDriverRows,
+                sessions.size());
     }
 
     private Map<String, Object> driverRow(OpenF1Driver driver, Long sessionKey, Integer year) {
@@ -146,7 +152,10 @@ public class ReferenceDataLoader {
             }
             log.info("meeting name lookup built year={} entries={}", year, lookup.size());
         } catch (RuntimeException e) {
-            log.warn("meeting fetch failed year={} — sessions will load without meeting names", year, e);
+            log.warn(
+                    "meeting fetch failed year={} — sessions will load without meeting names",
+                    year,
+                    e);
         }
         return lookup;
     }
@@ -162,9 +171,9 @@ public class ReferenceDataLoader {
     }
 
     /**
-     * R4: a batch load rather than a streaming insert. The delete-then-insert
-     * above could leave stale rows behind precisely because streamed rows sit in
-     * a buffer that DML cannot remove for up to about 90 minutes.
+     * R4: a batch load rather than a streaming insert. The delete-then-insert above could leave
+     * stale rows behind precisely because streamed rows sit in a buffer that DML cannot remove for
+     * up to about 90 minutes.
      */
     private void flushToBigQuery(String table, List<Map<String, Object>> rows) {
         batchWriter.append(dataset(), table, rows);

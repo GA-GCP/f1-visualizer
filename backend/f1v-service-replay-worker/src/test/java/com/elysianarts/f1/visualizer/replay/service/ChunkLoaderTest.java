@@ -1,32 +1,29 @@
 package com.elysianarts.f1.visualizer.replay.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1CarData;
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1LocationData;
 import com.elysianarts.f1.visualizer.replay.model.ReplayChunk;
 import com.elysianarts.f1.visualizer.replay.model.SessionBounds;
 import com.elysianarts.f1.visualizer.replay.repository.HistoricalLocationRepository;
 import com.elysianarts.f1.visualizer.replay.repository.HistoricalRepository;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class ChunkLoaderTest {
 
-    @Mock
-    private HistoricalRepository historicalRepository;
+    @Mock private HistoricalRepository historicalRepository;
 
-    @Mock
-    private HistoricalLocationRepository historicalLocationRepository;
+    @Mock private HistoricalLocationRepository historicalLocationRepository;
 
     private ChunkLoader chunkLoader;
 
@@ -66,8 +63,10 @@ class ChunkLoaderTest {
         OpenF1LocationData locData = new OpenF1LocationData();
         locData.setX(1200);
 
-        when(historicalRepository.fetchTelemetryWindow(9165, from, to)).thenReturn(List.of(carData));
-        when(historicalLocationRepository.fetchLocationWindow(9165, from, to)).thenReturn(List.of(locData));
+        when(historicalRepository.fetchTelemetryWindow(9165, from, to))
+                .thenReturn(List.of(carData));
+        when(historicalLocationRepository.fetchLocationWindow(9165, from, to))
+                .thenReturn(List.of(locData));
 
         ChunkLoader loader = createChunkLoader();
         ReplayChunk chunk = loader.fetchChunkSync(9165, from, to);
@@ -87,7 +86,8 @@ class ChunkLoaderTest {
         OffsetDateTime to = OffsetDateTime.of(2023, 9, 17, 12, 1, 0, 0, ZoneOffset.UTC);
 
         when(historicalRepository.fetchTelemetryWindow(9165, from, to)).thenReturn(List.of());
-        when(historicalLocationRepository.fetchLocationWindow(9165, from, to)).thenReturn(List.of());
+        when(historicalLocationRepository.fetchLocationWindow(9165, from, to))
+                .thenReturn(List.of());
 
         ChunkLoader loader = createChunkLoader();
         ReplayChunk chunk = loader.fetchChunkSync(9165, from, to);
@@ -103,8 +103,10 @@ class ChunkLoaderTest {
         OpenF1CarData carData = new OpenF1CarData();
         carData.setSpeed(280);
 
-        when(historicalRepository.fetchTelemetryWindow(9165, from, to)).thenReturn(List.of(carData));
-        when(historicalLocationRepository.fetchLocationWindow(9165, from, to)).thenReturn(List.of());
+        when(historicalRepository.fetchTelemetryWindow(9165, from, to))
+                .thenReturn(List.of(carData));
+        when(historicalLocationRepository.fetchLocationWindow(9165, from, to))
+                .thenReturn(List.of());
 
         ChunkLoader loader = createChunkLoader();
         ReplayChunk chunk = loader.fetchChunkAsync(9165, from, to).join();

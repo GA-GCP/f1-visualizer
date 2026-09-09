@@ -38,11 +38,14 @@
             <groupId>org.eclipse.paho</groupId>
             <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
         </dependency>
-        <!-- The packets on the wire are the OpenF1 DTOs; the contract test asserts
-             their serialized shape against the real mapper. -->
+        <!-- Test scope only: the packets on the wire are the OpenF1 DTOs and the
+             contract test asserts their serialized shape against the real mapper,
+             but nothing here needs the client at runtime — and a compile-scope
+             dependency put it in the telemetry service's component scan. -->
         <dependency>
             <groupId>com.elysianarts.f1.visualizer.commons</groupId>
             <artifactId>f1v-commons-openf1</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

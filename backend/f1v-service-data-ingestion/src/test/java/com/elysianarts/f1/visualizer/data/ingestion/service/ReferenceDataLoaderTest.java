@@ -1,5 +1,9 @@
 package com.elysianarts.f1.visualizer.data.ingestion.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
 import com.elysianarts.f1.visualizer.commons.api.openf1.client.OpenF1Client;
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Driver;
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Meeting;
@@ -7,6 +11,10 @@ import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1Session;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryBatchWriter;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryProperties;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,34 +23,21 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-
 /**
- * C4: the loader used to build its own WebClient against the same API the typed
- * client already wraps, and read every response as an untyped Map — so this test
- * had to drive a MockWebServer and enqueue five responses in the right order.
+ * C4: the loader used to build its own WebClient against the same API the typed client already
+ * wraps, and read every response as an untyped Map — so this test had to drive a MockWebServer and
+ * enqueue five responses in the right order.
  */
 @ExtendWith(MockitoExtension.class)
 class ReferenceDataLoaderTest {
 
-    @Mock
-    private OpenF1Client openF1Client;
+    @Mock private OpenF1Client openF1Client;
 
-    @Mock
-    private BigQueryQueryRunner queryRunner;
+    @Mock private BigQueryQueryRunner queryRunner;
 
-    @Mock
-    private BigQueryBatchWriter batchWriter;
+    @Mock private BigQueryBatchWriter batchWriter;
 
-    @InjectMocks
-    private ReferenceDataLoader referenceDataLoader;
+    @InjectMocks private ReferenceDataLoader referenceDataLoader;
 
     @BeforeEach
     void stubDataset() {
@@ -91,7 +86,8 @@ class ReferenceDataLoaderTest {
 
         ArgumentCaptor<String> tableCaptor = ArgumentCaptor.captor();
         ArgumentCaptor<List<Map<String, Object>>> rowsCaptor = ArgumentCaptor.captor();
-        verify(batchWriter, times(3)).append(eq("f1_dataset"), tableCaptor.capture(), rowsCaptor.capture());
+        verify(batchWriter, times(3))
+                .append(eq("f1_dataset"), tableCaptor.capture(), rowsCaptor.capture());
 
         assertEquals(List.of("sessions", "drivers", "session_drivers"), tableCaptor.getAllValues());
 
@@ -119,16 +115,20 @@ class ReferenceDataLoaderTest {
 
         ArgumentCaptor<String> sql = ArgumentCaptor.captor();
         verify(queryRunner, times(3)).query(sql.capture());
-        assertTrue(sql.getAllValues().stream().allMatch(q -> q.startsWith("DELETE FROM")), sql.getAllValues().toString());
+        assertTrue(
+                sql.getAllValues().stream().allMatch(q -> q.startsWith("DELETE FROM")),
+                sql.getAllValues().toString());
     }
 
     /** One session's roster failing must not abandon the rest of the season. */
     @Test
     void loadReferenceData_ContinuesPastAFailedRoster() {
         when(openF1Client.getMeetings(2023)).thenReturn(List.of());
-        when(openF1Client.getSessionsForYear(2023)).thenReturn(List.of(session(9165), session(9166)));
+        when(openF1Client.getSessionsForYear(2023))
+                .thenReturn(List.of(session(9165), session(9166)));
         when(openF1Client.getDrivers("latest")).thenReturn(List.of(driver(1)));
-        when(openF1Client.getDrivers("9165")).thenThrow(new IllegalStateException("OpenF1 is down"));
+        when(openF1Client.getDrivers("9165"))
+                .thenThrow(new IllegalStateException("OpenF1 is down"));
         when(openF1Client.getDrivers("9166")).thenReturn(List.of(driver(44)));
 
         referenceDataLoader.loadReferenceData(2023);

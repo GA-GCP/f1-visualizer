@@ -6,7 +6,11 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 // C4, C6: typed configuration, validated at startup.
 @ConfigurationPropertiesScan("com.elysianarts.f1.visualizer")
-@SpringBootApplication(scanBasePackages = {"com.elysianarts.f1.visualizer.data.analysis", "com.elysianarts.f1.visualizer.commons"})
+@SpringBootApplication(
+        scanBasePackages = {
+            "com.elysianarts.f1.visualizer.data.analysis",
+            "com.elysianarts.f1.visualizer.commons"
+        })
 public class F1VDataAnalysisServiceApplication {
     public static void main(String[] args) {
         SpringApplication.run(F1VDataAnalysisServiceApplication.class, args);

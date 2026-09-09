@@ -1,15 +1,14 @@
 package com.elysianarts.f1.visualizer.commons.api.openf1.dto;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 class OpenF1DtoSerializationTest {
 
     private JsonMapper mapper;
-
 
     @BeforeEach
     void setUp() {
@@ -18,7 +17,8 @@ class OpenF1DtoSerializationTest {
 
     @Test
     void carData_DeserializesSnakeCaseJson_Correctly() throws Exception {
-        String json = """
+        String json =
+                """
             {
                 "session_key": 9165,
                 "meeting_key": 1219,
@@ -45,7 +45,8 @@ class OpenF1DtoSerializationTest {
 
     @Test
     void locationData_DeserializesSnakeCaseJson_Correctly() throws Exception {
-        String json = """
+        String json =
+                """
             {
                 "session_key": 9165,
                 "meeting_key": 1219,
@@ -68,7 +69,8 @@ class OpenF1DtoSerializationTest {
 
     @Test
     void lapData_DeserializesSnakeCaseJson_Correctly() throws Exception {
-        String json = """
+        String json =
+                """
             {
                 "session_key": 9165,
                 "meeting_key": 1219,
@@ -92,7 +94,8 @@ class OpenF1DtoSerializationTest {
 
     @Test
     void stintData_DeserializesSnakeCaseJson_Correctly() throws Exception {
-        String json = """
+        String json =
+                """
             {
                 "session_key": 9165,
                 "meeting_key": 1219,
@@ -118,7 +121,8 @@ class OpenF1DtoSerializationTest {
 
     @Test
     void positionData_DeserializesSnakeCaseJson_Correctly() throws Exception {
-        String json = """
+        String json =
+                """
             {
                 "session_key": 9165,
                 "driver_number": 1,
@@ -135,7 +139,8 @@ class OpenF1DtoSerializationTest {
 
     @Test
     void session_DeserializesSnakeCaseJson_Correctly() throws Exception {
-        String json = """
+        String json =
+                """
             {
                 "session_key": 9165,
                 "date_start": "2023-09-17T12:00:00.000Z",
@@ -171,7 +176,8 @@ class OpenF1DtoSerializationTest {
 
     @Test
     void carData_HandlesNullFields_WithoutError() throws Exception {
-        String json = """
+        String json =
+                """
             {
                 "session_key": 9165,
                 "driver_number": 1

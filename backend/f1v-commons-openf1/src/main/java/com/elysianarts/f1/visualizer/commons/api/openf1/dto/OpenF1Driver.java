@@ -7,9 +7,8 @@ import lombok.NoArgsConstructor;
 /**
  * A driver as OpenF1 reports them, for a session or for the current grid.
  *
- * <p>C4: the reference loader used to hand-roll these requests and read the
- * responses as untyped {@code Map}s, alongside a typed client that already
- * existed for every other endpoint.</p>
+ * <p>C4: the reference loader used to hand-roll these requests and read the responses as untyped
+ * {@code Map}s, alongside a typed client that already existed for every other endpoint.
  */
 @Data
 @NoArgsConstructor

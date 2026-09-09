@@ -5,14 +5,13 @@ import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1LapData;
 import com.elysianarts.f1.visualizer.commons.api.openf1.dto.OpenF1StintData;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryBatchWriter;
 import com.elysianarts.f1.visualizer.commons.gcp.bq.BigQueryQueryRunner;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
@@ -72,15 +71,20 @@ public class LapDataLoader {
             }
 
             batchWriter.append(dataset(), TABLE, rows);
-            log.info("lap load complete session_key={} rows={} table={}.{}", sessionKey, rows.size(), dataset(), TABLE);
+            log.info(
+                    "lap load complete session_key={} rows={} table={}.{}",
+                    sessionKey,
+                    rows.size(),
+                    dataset(),
+                    TABLE);
         } catch (Exception e) {
             log.error("lap load failed session_key={}", sessionKey, e);
         }
     }
 
     /**
-     * Builds a lookup map from (driverNumber:lapNumber) -> compound by fetching
-     * stint data from the OpenF1 /stints endpoint.
+     * Builds a lookup map from (driverNumber:lapNumber) -> compound by fetching stint data from the
+     * OpenF1 /stints endpoint.
      */
     private Map<String, String> buildCompoundLookup(long sessionKey) {
         Map<String, String> lookup = new HashMap<>();
@@ -88,32 +92,41 @@ public class LapDataLoader {
             List<OpenF1StintData> stints = openF1Client.getStintData(sessionKey);
             if (stints != null) {
                 for (OpenF1StintData stint : stints) {
-                    if (stint.getCompound() != null && stint.getLapStart() != null && stint.getLapEnd() != null) {
+                    if (stint.getCompound() != null
+                            && stint.getLapStart() != null
+                            && stint.getLapEnd() != null) {
                         for (int lap = stint.getLapStart(); lap <= stint.getLapEnd(); lap++) {
                             lookup.put(stint.getDriverNumber() + ":" + lap, stint.getCompound());
                         }
                     }
                 }
-                log.info("compound lookup built mappings={} stints={}", lookup.size(), stints.size());
+                log.info(
+                        "compound lookup built mappings={} stints={}",
+                        lookup.size(),
+                        stints.size());
             }
         } catch (Exception e) {
-            log.warn("stint fetch failed session_key={} — laps will load without compound", sessionKey, e);
+            log.warn(
+                    "stint fetch failed session_key={} — laps will load without compound",
+                    sessionKey,
+                    e);
         }
         return lookup;
     }
 
     /**
-     * R4: clears the session's rows so a re-run replaces rather than duplicates.
-     * Safe because batch loads, unlike streaming inserts, leave no rows in a
-     * buffer that DML cannot touch.
+     * R4: clears the session's rows so a re-run replaces rather than duplicates. Safe because batch
+     * loads, unlike streaming inserts, leave no rows in a buffer that DML cannot touch.
      */
     private void deleteExistingRows(long sessionKey) {
-        String sql = String.format("DELETE FROM `%s.%s` WHERE session_key = %d", dataset(), TABLE, sessionKey);
+        String sql =
+                String.format(
+                        "DELETE FROM `%s.%s` WHERE session_key = %d", dataset(), TABLE, sessionKey);
         try {
             queryRunner.query(sql);
         } catch (Exception e) {
-            throw new IllegalStateException("Could not clear existing rows in " + TABLE
-                    + " for session " + sessionKey, e);
+            throw new IllegalStateException(
+                    "Could not clear existing rows in " + TABLE + " for session " + sessionKey, e);
         }
     }
 

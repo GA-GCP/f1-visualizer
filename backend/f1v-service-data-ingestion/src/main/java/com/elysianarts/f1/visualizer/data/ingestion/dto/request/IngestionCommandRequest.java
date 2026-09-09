@@ -6,9 +6,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * C8: validated by Bean Validation rather than by hand-written null checks in the
- * controller. The validation starter was already on the classpath and unused, and
- * a failure now produces the same RFC 9457 body as every other error (S5).
+ * C8: validated by Bean Validation rather than by hand-written null checks in the controller. The
+ * validation starter was already on the classpath and unused, and a failure now produces the same
+ * RFC 9457 body as every other error (S5).
  */
 @Data
 @NoArgsConstructor

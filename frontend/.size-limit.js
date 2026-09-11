@@ -32,6 +32,11 @@ export default [
     //                  spread across 41 compiled components / 988 cache
     //                  slots). Vendor chunks are byte-identical — the
     //                  compiler does not touch node_modules.
+    //   405 -> 415 kB  React 19.3.0 (+8.7 kB gz, all of it in the react
+    //                  vendor chunk: 70.2 -> 78.8 kB for <ViewTransition/>,
+    //                  Fragment refs and browser() landing in react-dom).
+    //                  Every other chunk is byte-identical. First load moved
+    //                  237.6 -> 246.2 kB and stays under its own budget.
     //
     // This is the total across *all* chunks, most of which are lazy route
     // chunks behind the login. The number a first-time visitor actually
@@ -39,7 +44,7 @@ export default [
     // 3.1 kB, not 14.7.
     name: 'total JS shipped (all chunks)',
     path: 'dist/assets/*.js',
-    limit: '405 kB',
+    limit: '415 kB',
     gzip: true,
   },
 ];

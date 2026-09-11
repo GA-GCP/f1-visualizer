@@ -112,7 +112,7 @@ steps:
         docker push "$$IMAGE:latest-${_ENV}"
 
   # 6. Deploy to Cloud Run (immutable SHA tag)
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:583.0.0'
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:584.0.0'
     id: 'deploy'
     entrypoint: 'gcloud'
     args:

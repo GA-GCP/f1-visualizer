@@ -39,10 +39,34 @@
 
 ---
 
+## Status
+
+**Not deployed.** This is a portfolio project: the code, pipelines and infrastructure are complete and
+exercised in CI on every pull request, but the Google Cloud estate the `infrastructure/` tree
+describes has been torn down and the domains in the environment table do not resolve. To see it,
+run it locally ([Quick Start](#quick-start-local-development)) or run `yarn test:e2e`, which
+drives the built bundle through a stubbed Auth0 tenant and a STOMP broker mocked at the socket.
+The screenshots below were captured that way — nothing in them needed a server.
+
+Three end-to-end reviews — [frontend](docs/audits/2026-09-06-frontend-audit.md),
+[backend](docs/audits/2026-09-08-backend-architecture-review.md) and
+[infrastructure](docs/audits/2026-09-09-infrastructure-audit.md) — were written against named
+commits and then worked through; the finding IDs they define (`R9`, `SEC-1`, `CPLX-2`) are the ones
+cited in code comments and commit messages, so a comment that says *why* a line exists can be
+followed back to the finding that put it there. See [`docs/audits/`](docs/audits/).
+
+<p align="center">
+  <img src="docs/screenshots/live-console.png" alt="The Live Console: a circuit trace drawn on Canvas from a streaming STOMP feed, with the race initialisation panel, simulation timeline and live telemetry readouts" width="900" />
+</p>
+
+---
+
 ## Table of Contents
 
+- [Status](#status)
 - [Overview](#overview)
 - [Highlights](#highlights)
+- [Screenshots](#screenshots)
 - [Quick Start (Local Development)](#quick-start-local-development)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
@@ -95,6 +119,21 @@ The project enforces enterprise-grade practices throughout: Zero-Trust security 
 - **Head-to-Head Comparison** — A split-screen analytical dashboard using D3.js radar charts (speed, consistency, aggression, tire management, experience) and animated Framer Motion stat bars (wins, podiums) to compare driver performance profiles side-by-side.
 
 - **Race Engineer Aesthetic** — A dark-mode glassmorphism UI built with Material UI and the Titillium Web typeface (the official F1 broadcast font family), using real team hex colors, driver numbers, and a radial gradient canvas that evokes an authentic pit wall data console. A cinematic post-login splash sequence with Framer Motion letter-stagger reveals, layered gradient animations, and a circuit trace plays while reference data prefetches in the background.
+
+---
+
+## Screenshots
+
+Captured from the built bundle by `yarn screenshots` in `frontend/`, through the same stubs the
+end-to-end suite uses: a stubbed Auth0 tenant, a fixture API and a STOMP broker mocked at the
+socket. The circuit is the fixture's 240-point oval, replayed at 40 Hz.
+
+| | |
+|:---:|:---:|
+| <img src="docs/screenshots/landing.png" alt="Landing page: animated title, circuit outline and the login call to action" width="440" /> | <img src="docs/screenshots/data-vault.png" alt="Data Vault: a D3 lap-time chart for two drivers over twelve laps of the 2025 Bahrain Grand Prix" width="440" /> |
+| Landing — letter-stagger title, circuit animation, login CTA | Data Vault — session search and the D3 lap-time chart |
+| <img src="docs/screenshots/head-to-head.png" alt="Head-to-Head: a five-axis radar chart and animated career-statistics bars comparing two drivers" width="440" /> | <img src="docs/screenshots/live-console-mobile.png" alt="The Live Console on a Pixel 7 viewport, with the circuit trace re-scaled to the narrow layout" width="200" /> |
+| Head-to-Head — radar chart and Framer Motion stat bars | Live Console on a Pixel 7 — the canvas re-scales with the viewport |
 
 ---
 
@@ -294,11 +333,12 @@ The real-time pipeline is the core of the platform — a four-hop event-driven c
 | | Terragrunt | 1.1.4 | DRY configuration wrapper with dependency orchestration |
 | | Google provider | 8.2 | Lock-file pinned in every module |
 | **CI/CD** | Cloud Build | — | 7 path-filtered triggers over 3 pipeline definitions (build, scan, deploy) |
-| | GitHub Actions | — | PR quality gates: 7 jobs (lint, test, e2e, validate, plan, workflow lint) |
+| | GitHub Actions | — | PR quality gates: 8 jobs (lint, test, e2e, validate, plan, Semgrep, workflow lint) |
 | | Dependabot | — | Weekly updates across npm, Maven, Docker (×2), GitHub Actions and Terraform |
 | | Cloud Build Docker builder | — | Layer-cached image builds (replaced Kaniko, archived upstream) |
 | | Trivy | 0.74 | Container filesystem scanning and IaC static analysis (replaced tfsec, retired upstream) |
 | | Conftest / OPA | 0.69 | Policy checks against the rendered plan |
+| | Semgrep | — | Project-specific rules for Java, TypeScript and Terraform, tested against their own fixtures |
 | | tflint | 0.64 | Terraform linting with the Google ruleset (0.39) |
 | **Container** | Distroless | Java 25, Debian 13 | Minimal backend runtime (no shell, no package manager) |
 | | nginx-unprivileged | 1.31, Alpine | Lightweight frontend serving with SPA routing and security headers |
@@ -405,15 +445,22 @@ f1-visualizer/
 |   +-- frontend.yaml                           # Lint, test, build, scan, deploy-no-traffic, smoke, promote
 |   +-- infrastructure.yaml                     # Scan, plan to file, policy, apply
 |
++-- docs/
+|   +-- audits/                                 # The three reviews whose finding IDs the code cites
+|   +-- screenshots/                            # Captured from the built bundle through the e2e stubs
+|
 +-- .github/
 |   +-- workflows/
-|   |   +-- pr-checks.yml                       # 7 PR jobs, including a real plan and workflow lint
+|   |   +-- pr-checks.yml                       # 8 PR jobs, including a real plan, Semgrep and workflow lint
+|   |   +-- semgrep-scheduled.yml               # Weekly: full-repository Semgrep scan
 |   |   +-- pinned-versions.yml                 # Weekly: the pins no ecosystem watches
 |   +-- dependabot.yml                          # 6 ecosystems, weekly
 |   +-- CODEOWNERS / pull_request_template.md
 |
-+-- .pre-commit-config.yaml                     # fmt, validate, tflint, terraform-docs, trivy for infrastructure/
++-- .semgrep/                                   # Project-specific Semgrep rules, each with a fixture it must flag
++-- .pre-commit-config.yaml                     # fmt, validate, tflint, terraform-docs, trivy, semgrep for infrastructure/
 +-- .mise.toml                                  # OpenTofu and Terragrunt versions, the ones the pipeline pins
++-- LICENSE / SECURITY.md                       # MIT; how to report privately
 ```
 
 ---
@@ -761,7 +808,7 @@ The CI/CD system operates across two layers: **GitHub Actions** for fast PR vali
 Pull Request to main                        Promotion to env branch (dev/uat/prod)
     |                                             |
     v                                             v
-GitHub Actions (7 jobs)                     Cloud Build (7 path-filtered triggers,
+GitHub Actions (8 jobs)                     Cloud Build (7 path-filtered triggers,
     |                                        3 pipeline definitions)
     +-- Detect changed areas (gates the rest)     |
     +-- Backend                                   +-- backend-service.yaml  (x5,
@@ -770,6 +817,7 @@ GitHub Actions (7 jobs)                     Cloud Build (7 path-filtered trigger
     +-- Infrastructure static checks              +-- infrastructure.yaml
     +-- Infrastructure plan (needs: above,
     |   one job per environment, WIF)
+    +-- Semgrep (project rules, tested first)
     +-- Workflow lint (actionlint, zizmor)
 ```
 
@@ -788,6 +836,7 @@ Every pull request targeting `main` runs the jobs whose paths changed:
 | **Frontend E2E** | Playwright, desktop and mobile viewports, axe at both | The only layer exercising the Auth0 redirect, real STOMP frames and canvas resize |
 | **Infrastructure static checks** | `tofu fmt`, `terragrunt hcl fmt`, module validate with `-lockfile=readonly`, `terragrunt hcl validate --inputs --strict`, `tflint`, Trivy | Formatting, undeclared inputs and provider drift, all of which used to reach `main` green |
 | **Infrastructure plan** | `terragrunt run --all -- plan` per environment, posted as a PR comment | The plan a reviewer approves. It runs through Workload Identity Federation as a read-only planner — no service-account key, and it cannot apply |
+| **Semgrep** | `semgrep --test .semgrep`, then `semgrep scan --config=.semgrep` | Invariants no off-the-shelf linter knows — BigQuery query guardrails, Spring boundary rules, the frontend config boundary, React XSS sinks, IAM and image rules in Terraform — each rule shipped with the fixture it must flag |
 | **Workflow lint** | actionlint (checksum-verified download), zizmor | The workflows themselves: expression and shell errors, and the supply-chain postures zizmor checks for |
 
 ### Environment Pipelines (Cloud Build)
@@ -983,12 +1032,13 @@ cd frontend && yarn vitest
 
 Tests execute at two stages in the delivery pipeline:
 
-1. **PR Quality Gate (GitHub Actions)** — Seven jobs, gated on which paths changed, run on every pull request to `main`:
+1. **PR Quality Gate (GitHub Actions)** — Eight jobs, gated on which paths changed, run on every pull request to `main`:
    - Backend: `./mvnw -B clean verify` (the whole reactor through the phase the checks bind to), Trivy filesystem scan, SBOM upload
    - Frontend: audit, format, lint, typecheck, coverage, build, bundle budget
    - Frontend E2E: Playwright across a desktop and a mobile viewport, axe at both
    - Infrastructure static checks: formatting, module and input validation, tflint, Trivy
    - Infrastructure plan: a real `terragrunt plan` per environment, commented on the PR
+   - Semgrep: the project's own rules, after their fixtures prove each rule still fires
    - Workflow lint: actionlint and zizmor over the workflows themselves
 
 2. **Deployment Pipeline (Cloud Build)** — Tests re-run as part of each service's build-scan-deploy pipeline on environment branches (`dev`, `uat`, `prod`). The frontend pipeline additionally installs native C++ dependencies (Cairo, Pango, Python, g++) on Alpine Linux to support the `canvas` package required by the visual regression test suite.
@@ -1014,7 +1064,7 @@ Security is enforced at every layer of the stack:
 | **Secrets** | Secret Manager | Credentials are declared in IaC and their values added out of band, so they never enter state; each is granted to the one or two accounts that consume it |
 | **Container Hardening** | Distroless Images | No shell, no package manager — minimal attack surface; nginx runs unprivileged with CSP, HSTS, COOP/CORP and a Permissions-Policy |
 | **Supply Chain** | Pins and checksums | Step images pinned by digest, tool downloads checksum-verified, actions pinned to commits, `--frozen-lockfile`, a high/critical `yarn audit` gate, CycloneDX SBOMs, Dependabot weekly and a pin watcher for the rest |
-| **IaC Scanning** | Trivy + Conftest | Scanned against the rendered plan, where the values are resolved, plus a policy layer encoding the rules from the 2026-09-09 audit |
+| **IaC Scanning** | Trivy + Conftest | Scanned against the rendered plan, where the values are resolved, plus a policy layer encoding the rules from the [2026-09-09 audit](docs/audits/2026-09-09-infrastructure-audit.md) |
 | **Image Scanning** | Trivy | Filesystem vulnerability scan on every backend build |
 | **Session Policy** | Stateless | No server-side sessions; CSRF disabled (JWT-only auth) |
 | **CORS** | Edge preflight | The load balancer answers OPTIONS with a 204 per path rule, which removes the retry cascade a failed preflight used to cause; Spring CORS remains for the origin |

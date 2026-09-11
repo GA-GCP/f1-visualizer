@@ -1,8 +1,10 @@
 # Semgrep rules
 
 Custom rules encoding invariants that are specific to this codebase — the things
-no off-the-shelf linter knows, and that the 2026-09-08 backend review and the
-2026-09-09 infrastructure audit found the hard way.
+no off-the-shelf linter knows, and that the
+[2026-09-08 backend review](../docs/audits/2026-09-08-backend-architecture-review.md) and the
+[2026-09-09 infrastructure audit](../docs/audits/2026-09-09-infrastructure-audit.md) found the
+hard way.
 
 Everything else this repo checks is already covered elsewhere and is deliberately
 not duplicated here:

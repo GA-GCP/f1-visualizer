@@ -10,7 +10,7 @@
 # The tag is kept alongside the digest for readability; the digest is what
 # actually resolves. Dockerfile.ci pins the same NGINX_IMAGE and the two must
 # move together.
-ARG NODE_IMAGE=node:26.8.1-alpine3.24@sha256:2d984a15c9b54fd0aeb608b8e0d0d83529eb34d2966db27a1fb4f1edc3d298a3
+ARG NODE_IMAGE=node:26.8.2-alpine3.24@sha256:ef24c5053d50fdc3e4e56eb4e7ddb7861874ab0fdc797046ba897581deb8e868
 ARG NGINX_IMAGE=nginxinc/nginx-unprivileged:1.31.5-alpine@sha256:2ddec616f1cb58bcac057aa388f28cb81e35137641ef4226d321714499329bd1
 
 # ==========================================

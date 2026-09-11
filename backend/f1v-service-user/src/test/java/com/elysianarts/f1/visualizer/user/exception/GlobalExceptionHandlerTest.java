@@ -36,11 +36,11 @@ class GlobalExceptionHandlerTest {
         ProblemDetail problem =
                 sharedHandler.handleUnexpected(
                         new RuntimeException(
-                                "Firestore connection failed for project f1v-example-project"));
+                                "Firestore connection failed for project example-project-123"));
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), problem.getStatus());
         assertFalse(problem.getDetail().contains("Firestore"));
-        assertFalse(problem.getDetail().contains("f1v-example-project"));
+        assertFalse(problem.getDetail().contains("example-project-123"));
     }
 
     /** The body has to carry something support can find in the logs. */

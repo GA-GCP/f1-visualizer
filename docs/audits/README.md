@@ -16,7 +16,9 @@ Each report ends with a ranked roadmap; the commits that followed reference the
 IDs they close. The infrastructure report's migration steps became
 [`infrastructure/MIGRATIONS.md`](../../infrastructure/MIGRATIONS.md).
 
-The reports are reproduced as written, at the commit they name. Where the code
+The reports are reproduced as written, at the commit they name, with one
+substitution: the GCP project id they quote has been replaced by the placeholder
+`f1v-example-project` used throughout the repository. Where the code
 has since moved — the four services are five, the ten commons modules are four,
 the API Gateway is gone — that is the roadmap having been executed, and the
 current READMEs describe the result.

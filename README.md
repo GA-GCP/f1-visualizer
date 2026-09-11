@@ -416,6 +416,7 @@ f1-visualizer/
 |
 +-- infrastructure/                             # OpenTofu + Terragrunt IaC
 |   +-- root.hcl                                # Terragrunt root: state, provider, retries
+|   +-- project.hcl                             # The one GCP project, stated once (a placeholder here)
 |   +-- README.md                               # Bootstrap order for a new project
 |   +-- MIGRATIONS.md                           # Changes an apply cannot finish alone
 |   +-- .tflint.hcl / .trivyignore             # Linter config; accepted scanner findings, with reasons
@@ -660,10 +661,13 @@ monitoring
 ### Key Infrastructure Patterns
 
 - **Environment facts stated once** — `environments/<env>/env.hcl` holds
-  everything true of one environment: project, region, Auth0 tenant, database
-  and dataset ids, registry host and image tag, domains, branch pattern, and an
+  everything true of one environment: region, Auth0 tenant, database and
+  dataset ids, registry host and image tag, domains, branch pattern, and an
   `is_production` flag. `root.hcl` reads it, `_envcommon/*.hcl` build the units
-  from it. A unit contains only what genuinely differs.
+  from it. A unit contains only what genuinely differs. The one thing every
+  environment shares — the GCP project — lives in `infrastructure/project.hcl`,
+  and the service-account emails, registry path and state bucket are derived
+  from it, so a fork changes one line.
 
 - **The pipeline owns the image; IaC owns everything else** — both Cloud Run
   paths ignore `template.containers.image` and `traffic`. Without that, an
@@ -1096,8 +1100,9 @@ the only place any of it is written down:
 
 The subnets can share a range because each environment has its own VPC.
 
-All three still share one GCP project (`f1v-example-project`) and one Artifact
-Registry repository per region. That is the remaining structural compromise: IAM
+All three still share one GCP project (`project_id` in `infrastructure/project.hcl`;
+the committed value is a placeholder, the real project having been torn down) and
+one Artifact Registry repository per region. That is the remaining structural compromise: IAM
 conditions and per-resource grants keep dev out of prod's data, but a project is
 the real isolation boundary and this estate does not have one per environment.
 The path to fixing it is one project per environment under a folder, with the

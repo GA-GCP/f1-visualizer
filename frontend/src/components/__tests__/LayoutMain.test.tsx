@@ -67,7 +67,9 @@ describe('LayoutMain', () => {
             </MemoryRouter>,
         );
 
-        expect(screen.getByText('F1 VISUALIZER')).toBeInTheDocument();
+        // "VISUALIZER" is a separate span, clipped away below the sm breakpoint,
+        // so the title is one string only as the banner's text content.
+        expect(screen.getByRole('banner')).toHaveTextContent('F1 VISUALIZER');
     });
 
     it('renders the mocked UserSettingsModal', () => {

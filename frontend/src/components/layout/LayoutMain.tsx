@@ -22,6 +22,25 @@ import { BRAND_RED } from '../../theme/tokens';
 import ErrorBoundary from '../ErrorBoundary';
 import RouteFallback from '../ui/RouteFallback';
 import UserSettingsModal from './UserSettingsModal';
+import type { Breakpoint, SxProps, Theme } from '@mui/material';
+
+/**
+ * Visually hidden below `from`, in flow at and above it.
+ *
+ * One element, hidden visually rather than removed, so the text is in the DOM
+ * and read by assistive technology at every width — rendering it twice, once
+ * per breakpoint, would have put two copies in the accessibility tree. Nowrap
+ * throughout: a 1px box must not reflow its text into a stack of lines, and
+ * nothing this wraps — a nav label, half of the wordmark — may wrap once shown.
+ */
+const visuallyHiddenBelow = (from: Breakpoint): SxProps<Theme> => ({
+    position: { xs: 'absolute', [from]: 'static' },
+    width: { xs: '1px', [from]: 'auto' },
+    height: { xs: '1px', [from]: 'auto' },
+    overflow: { xs: 'hidden', [from]: 'visible' },
+    clipPath: { xs: 'inset(50%)', [from]: 'none' },
+    whiteSpace: 'nowrap',
+});
 
 const LayoutMain: React.FC = () => {
     const location = useLocation();
@@ -89,11 +108,18 @@ const LayoutMain: React.FC = () => {
                 <Container maxWidth="xl">
                     <Toolbar disableGutters sx={{ height: 64 }}>
                         <SpeedIcon sx={{ mr: 1, color: 'primary.main', fontSize: 32 }} />
+                        {/* The bar has to hold the brand, three 44px nav targets
+                            and two icon buttons; on a 412px phone that left the
+                            wordmark 84px, so it wrapped "F1" above "VISUALIZER"
+                            and still pushed the logout button off the right edge.
+                            Below sm the brand is the icon plus "F1"; nowrap so it
+                            can never stack again. */}
                         <Typography
                             variant="h5"
                             component="div"
                             sx={{
                                 flexGrow: 1,
+                                whiteSpace: 'nowrap',
                                 fontWeight: 900,
                                 fontStyle: 'italic',
                                 letterSpacing: '-0.02em',
@@ -102,7 +128,11 @@ const LayoutMain: React.FC = () => {
                                 WebkitTextFillColor: 'transparent',
                             }}
                         >
-                            F1 VISUALIZER
+                            F1
+                            <Box component="span" sx={visuallyHiddenBelow('sm')}>
+                                {' '}
+                                VISUALIZER
+                            </Box>
                         </Typography>
 
                         {/* The links lived in generic elements, so there was no
@@ -136,7 +166,7 @@ const LayoutMain: React.FC = () => {
                                 onClick={() => setIsSettingsOpen(true)}
                                 aria-label="User preferences"
                                 sx={{
-                                    ml: 2,
+                                    ml: { xs: 0, sm: 2 },
                                     color: 'text.secondary',
                                     '&:hover': { color: 'primary.main' },
                                 }}
@@ -150,7 +180,7 @@ const LayoutMain: React.FC = () => {
                                 onClick={handleLogout}
                                 aria-label="Log out"
                                 sx={{
-                                    ml: 2,
+                                    ml: { xs: 0, sm: 2 },
                                     color: 'text.secondary',
                                     '&:hover': { color: 'error.main' },
                                 }}
@@ -239,7 +269,9 @@ const NavButton = ({
             aria-current={isActive ? 'page' : undefined}
             startIcon={icon}
             sx={{
-                mx: { xs: 0.25, md: 1 },
+                // No gaps at all below sm: with the two icon buttons also flush,
+                // the bar fits the 320px reflow width with 44px targets intact.
+                mx: { xs: 0, sm: 0.25, md: 1 },
                 minWidth: { xs: 44, md: 64 },
                 '& .MuiButton-startIcon': { mr: { xs: 0, md: 1 }, ml: 0 },
                 color: isActive ? 'white' : 'text.secondary',
@@ -252,22 +284,9 @@ const NavButton = ({
             }}
         >
             {/* Icon-only below md: three labelled buttons plus the brand and two
-                icon buttons overflowed a 375px bar.
-
-                One element, hidden visually rather than removed, so the button
-                keeps the same accessible name at every width — rendering the
-                label twice would have put two copies in the DOM. */}
-            <Box
-                component="span"
-                sx={{
-                    position: { xs: 'absolute', md: 'static' },
-                    width: { xs: '1px', md: 'auto' },
-                    height: { xs: '1px', md: 'auto' },
-                    overflow: { xs: 'hidden', md: 'visible' },
-                    clipPath: { xs: 'inset(50%)', md: 'none' },
-                    whiteSpace: { xs: 'nowrap', md: 'normal' },
-                }}
-            >
+                icon buttons overflowed a 375px bar. Hidden, not removed, so the
+                button keeps the same accessible name at every width. */}
+            <Box component="span" sx={visuallyHiddenBelow('md')}>
                 {label}
             </Box>
             {isActive && (

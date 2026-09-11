@@ -6,7 +6,7 @@
   <!-- Frontend -->
   <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white" alt="React 19" />
   <img src="https://img.shields.io/badge/TypeScript-6.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript 6.0" />
-  <img src="https://img.shields.io/badge/Vite-8.2-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite 8.2" />
+  <img src="https://img.shields.io/badge/Vite-8.3-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite 8.3" />
   <img src="https://img.shields.io/badge/D3.js-7-F9A03C?style=for-the-badge&logo=d3dotjs&logoColor=white" alt="D3.js" />
   <img src="https://img.shields.io/badge/MUI-9.4-007FFF?style=for-the-badge&logo=mui&logoColor=white" alt="MUI" />
   <img src="https://img.shields.io/badge/Framer_Motion-13-0055FF?style=for-the-badge&logo=framer&logoColor=white" alt="Framer Motion" />
@@ -88,9 +88,9 @@ The project enforces enterprise-grade practices throughout: Zero-Trust security 
 
 ## Highlights
 
-- **Live Race Console** — Connects to active F1 session data via STOMP WebSockets, rendering a dynamic, low-latency circuit trace on the HTML5 Canvas API at 60fps. Telemetry packets (speed, RPM, gear, throttle, brake, DRS) stream through a Redis Pub/Sub broker and display in real-time data panels with team-color-coded driver indicators.
+- **Live Race Console** — Connects to active F1 session data over a STOMP WebSocket, rendering a dynamic, low-latency circuit trace on the HTML5 Canvas API at 60fps. Telemetry packets (speed, RPM, gear, throttle, brake, DRS) stream through a Redis Pub/Sub broker and display in real-time data panels with team-color-coded driver indicators. The same console replays any past session: a media controller (play/pause/seek) drives an always-on replay worker that re-broadcasts historical telemetry at its original timing.
 
-- **Historical Data Vault** — Query and replay any past Grand Prix session through a searchable session catalog backed by BigQuery. A persistent media controller (play/pause/seek) drives a replay engine that re-broadcasts historical telemetry at original timing intervals, while D3.js line charts visualize lap time progressions across all drivers.
+- **Historical Data Vault** — Query any past Grand Prix session through a searchable session catalog backed by BigQuery, with D3.js line charts of lap time progression across all drivers.
 
 - **Head-to-Head Comparison** — A split-screen analytical dashboard using D3.js radar charts (speed, consistency, aggression, tire management, experience) and animated Framer Motion stat bars (wins, podiums) to compare driver performance profiles side-by-side.
 
@@ -102,23 +102,25 @@ The project enforces enterprise-grade practices throughout: Zero-Trust security 
 
 ### Prerequisites
 
-- **JDK 25** (Temurin recommended)
-- **Maven 3.9+**
+- **JDK 25** (Temurin recommended); Maven comes from the wrapper (`./mvnw`, 3.9.16)
 - **Node.js 26** with **Yarn** (classic, 1.x)
+- **Redis** on `localhost:6379` for the live path (telemetry and replay worker); the `local` profile connects without TLS
 - **GCP credentials** configured via `gcloud auth application-default login` (for BigQuery/Firestore access)
 
 ### Backend
 
 ```bash
 cd backend
-mvn clean install
+./mvnw clean install
 ```
 
-Each service can be started individually. The Vite dev server proxies API calls to:
-- Telemetry: `localhost:8080`
+Each service can be started individually with the `local` profile (the default). The Vite dev server proxies API calls to:
+- Telemetry: `localhost:8080` (WebSocket at `/ws`)
 - Ingestion: `localhost:8081`
 - Analysis: `localhost:8082`
 - User: `localhost:8083`
+
+The replay worker listens on `localhost:8084` for Actuator only — it takes its commands from Redis, not HTTP.
 
 ### Frontend
 
@@ -137,57 +139,46 @@ Opens at `http://localhost:5173` with Hot Module Replacement.
 ### High-Level System Architecture
 
 ```
-                                    +---------------------------+
-                                    |       Auth0 (IdP)         |
-                                    |   OAuth2 / OIDC / JWKS    |
-                                    +------------+--------------+
-                                                 |
-                                          JWT Validation
-                                                 |
-    +------------------+                +--------v---------+
-    |                  |   HTTPS/WSS    |                  |
-    |   React SPA      +--------------->+  Global HTTPS    |
-    |   (Cloud Run,    |                |  Load Balancer   |
-    |    Cloud CDN)    |                |  (Cloud Armor)   |
-    +------------------+                +----+--------+----+
-                                             |        |
-                                        /ws  |        | /api/v1/{users,
-                                             |        |  analysis,ingestion}
-                              +--------------+        +----------+
-                              |                                  |
-                              v                                  v
-                  +-----------+-----------+                        |                       |
-                  |                       |              +---------v---+  +-----------+   +v-----------+
-                  |  Telemetry Service    |              |  Analysis   |  | Ingestion |   |   User     |
-                  |  (WebSocket/STOMP)    |              |  Service    |  | Service   |   |  Service   |
-                  |                       |              |  (REST)     |  | (Reactive)|   |  (REST)    |
-                  +-----------+-----------+              +------+------+  +-----+-----+   +-----+------+
-                              |                                 |               |               |
-                              |  subscribe                      |               |               |
-                              v                                 v               |               v
-                  +-----------+-----------+           +---------+--------+      |       +-------+------+
-                  |                       |           |                  |      |       |              |
-                  |    Redis Memorystore  |           |     BigQuery     |      |       |   Firestore  |
-                  |    (Pub/Sub Broker)   |           |  (Data Warehouse)|      |       | (User Store) |
-                  |                       |           |                  |      |       |              |
-                  +-----------+-----------+           +------------------+      |       +--------------+
-                              ^                                                 |
-                              |  publish                                        |
-                              |                                                 |
-                  +-----------+-----------+                                     |
-                  |                       |                +--------------------v---+
-                  |  Ingestion Service    |                |                        |
-                  |  (Redis Publisher)    |                |  OpenF1 API (External) |
-                  |                       |                |  REST + MQTT Streams   |
-                  +-----------+-----------+                +------------------------+
-                              ^
-                              |
-                  +-----------+-----------+
-                  |                       |
-                  |  OpenF1 MQTT Broker   |
-                  |  (wss:// Live Feed)   |
-                  |                       |
-                  +------------------------+
+                              +---------------------------+
+                              |        Auth0 (IdP)        |
+                              |   OAuth2 / OIDC / JWKS    |
+                              +-------------+-------------+
+                                            |
+                                     JWT validated locally
+                                      by every service
+                                            |
+    +------------------+               +----v---------------------+
+    |    React SPA     |  HTTPS / WSS  |    Global HTTPS LB       |
+    | (Cloud Run + CDN)|-------------->| Cloud Armor, Cloud CDN   |
+    +------------------+               +--+------+------+----+----+
+                                          |      |      |    |
+              /ws                         |      |      |    |    /api/v1/{users,analysis,ingestion}
+    +-------------------------------------+      |      |    +-----------------------+
+    |                         +------------------+      +---------+                  |
+    |                         |                                   |                  |
++---v-----------------+   +---v----------------------+  +---------v---------+   +----v---------------+
+|  Telemetry Service  |   |     Analysis Service     |  |    User Service   |   |  Ingestion Service |
+|  (WebSocket/STOMP)  |   |     (REST)               |  |    (REST)         |   |      (REST)        |
++---+-----------------+   +---+------------------+---+  +---------+---------+   +----+----------+----+
+    ^ subscribe               |                  |                |                  |          |
++---+-----------------+   +---v--------+    +----v-------+  +-----v------+  +--------v--+  +----v-------+
+|  Redis Memorystore  |   |  BigQuery  |    | Firestore  |  | Firestore  |  | BigQuery  |  |   Redis    |
+|  Pub/Sub channels   |   |  (laps,    |    | (reference |  | (profiles) |  | (loaders, |  |   Stream   |
+|  (3)                |   |   stats)   |    |  cache)    |  |            |  |  8 tables)|  |  (commands)|
++---+-----------------+   +------------+    +------------+  +------------+  +-----------+  +----+-------+
+    ^ publish                                                                                   |
+    |                                                                                           | XREADGROUP
+    |                                                                                           |
++---+-------------------------------------------------------------------------------------------v------+
+|                         Replay Worker (always-on, no HTTP API)                                       |
+|   MQTT bridge for live sessions  |  replay engine over 60 s BigQuery chunks  |  Redis publisher      |
++-----------------------------------------------+------------------------------------------------------+
+                                                |
+                                                |
+                                    +-----------v------------+
+                                    |    OpenF1 (external)   |
+                                    |    REST API + MQTT/wss |
+                                    +------------------------+
 ```
 
 ### Real-Time Data Flow
@@ -195,35 +186,40 @@ Opens at `http://localhost:5173` with Hot Module Replacement.
 The real-time pipeline is the core of the platform — a four-hop event-driven chain that moves telemetry data from the track to the browser in near real-time:
 
 ```
-+-------------------+     +-------------------+     +-------------------+     +-------------------+
-|                   |     |                   |     |                   |     |                   |
-|  OpenF1 MQTT      | --> |  Ingestion        | --> |  Redis            | --> |  Telemetry        |
-|  Broker           |     |  Service          |     |  Memorystore      |     |  Service          |
-|                   |     |                   |     |                   |     |                   |
-|  Live car data    |     |  MQTT listener    |     |  3 Pub/Sub        |     |  Redis subscriber |
-|  Location coords  |     |  JSON parsing     |     |  channels:        |     |  STOMP broadcast  |
-|  Session events   |     |  Redis publish    |     |  - live_telemetry |     |  to /topic/*      |
-|                   |     |                   |     |  - live_location  |     |                   |
-+-------------------+     +-------------------+     |  - playback_status|     +--------+----------+
-                                                    +-------------------+              |
-                                                                                       | WebSocket
-                                                                                       v
-                                                                              +--------+----------+
-                                                                              |                   |
-                                                                              |  React SPA        |
-                                                                              |                   |
-                                                                              |  useTelemetry()   |
-                                                                              |  useLocation()    |
-                                                                              |  60fps buffer     |
-                                                                              |  Canvas render    |
-                                                                              +-------------------+
++-----------------------+     +-----------------------+     +-----------------------+     +-----------------------+
+|                       |     |                       |     |                       |     |                       |
+| OpenF1 MQTT           | --> | Replay Worker         | --> | Redis                 | --> | Telemetry             |
+| Broker (wss)          |     | (always-on)           |     | Memorystore           |     | Service               |
+|                       |     |                       |     |                       |     |                       |
+| Live car data         |     | MQTT bridge, or       |     | 3 Pub/Sub channels    |     | Redis subscriber      |
+| Location coords       |     | replay engine over    |     | - live_telemetry      |     | STOMP broadcast       |
+| Session events        |     | 60 s BigQuery chunks  |     | - live_location       |     | to /topic/*           |
+|                       |     |                       |     | - playback_status     |     |                       |
++-----------------------+     +-----------+-----------+     +-----------------------+     +-----------+-----------+
+                                          ^                                                           |
+                                          | Redis Stream                                              | native WebSocket,
+                                          | f1v:replay:commands (XADD)                                | STOMP frames
+                              +-----------v-----------+                                   +-----------v-----------+
+                              |                       |                                   |                       |
+                              | Ingestion Service     |                                   | React SPA             |
+                              | (REST)                |                                   |                       |
+                              |                       |                                   | useTelemetry():       |
+                              | /api/v1/ingestion/    |                                   |   latest per driver,  |
+                              |   command             |                                   |   flushed on rAF      |
+                              |   playback/{play,     |                                   | useLocation():        |
+                              |     pause,seek,status}|                                   |   every point, direct |
+                              |                       |                                   |                       |
+                              +-----------------------+                                   | Canvas / D3 render    |
+                                                                                          |                       |
+                                                                                          +-----------------------+
 ```
 
-1. **OpenF1 MQTT** — The Ingestion Service maintains a persistent MQTT connection (Eclipse Paho) to the OpenF1 live data stream, subscribing to car telemetry and location topics per active session.
-2. **Ingestion Service** — Parses incoming MQTT JSON payloads into typed DTOs and publishes them to Redis Pub/Sub channels. In simulation mode, a Replay Engine replays historical data at original timing intervals with play/pause/seek control.
-3. **Redis Memorystore** — Acts as a decoupled message broker between the Ingestion and Telemetry services. Three channels carry telemetry packets, GPS coordinates, and playback state respectively.
-4. **Telemetry Service** — A Redis subscriber that re-broadcasts every received message to connected STOMP WebSocket clients. The frontend subscribes to `/topic/race-data`, `/topic/race-location`, and `/topic/playback-status`.
-5. **React SPA** — Custom hooks (`useTelemetry`, `useLocation`) buffer incoming packets via `useRef` and flush to the render layer at 60fps using `requestAnimationFrame`, preventing React re-render storms while maintaining smooth Canvas and D3 animations.
+1. **OpenF1 MQTT** — For a live session, the replay worker holds a persistent MQTT connection (Eclipse Paho, MQTT 3.1.1, QoS 1) to the OpenF1 broker, subscribing to the car-data and location topics for that session.
+2. **Replay Worker** — An always-on service with no HTTP API beyond Actuator. It parses incoming MQTT JSON payloads into typed DTOs and publishes them to Redis Pub/Sub. For a historical session, its replay engine streams the data back from BigQuery in 60-second chunks at the original timing, under play/pause/seek control.
+3. **Ingestion Service** — The REST face of playback: `/api/v1/ingestion/command` and `/playback/{play,pause,seek,status}`. Commands reach the worker over a Redis Stream (`f1v:replay:commands`, consumer group `replay-worker`) rather than Pub/Sub, so a command issued while the worker is restarting — every deploy — is replayed instead of dropped. The worker's state (mode, session, virtual clock) is held in Redis, so any instance can answer a status query and a restarted worker resumes where it left off.
+4. **Redis Memorystore** — Acts as a decoupled message broker between the worker and the Telemetry Service. Three channels carry telemetry packets, GPS coordinates, and playback state respectively; the command stream lives in the same instance.
+5. **Telemetry Service** — A Redis subscriber that re-broadcasts every received message to connected STOMP clients. The frontend subscribes to `/topic/race-data`, `/topic/race-location`, and `/topic/playback-status`.
+6. **React SPA** — `useTelemetry` keeps the latest packet per driver in a `useRef` map and flushes it on `requestAnimationFrame`, so a burst of frames costs one render. `useLocation` forwards every GPS point straight through, because the circuit trace draws the whole path and a dropped coordinate is a gap in the line.
 
 ### Historical Data Flow
 
@@ -237,16 +233,17 @@ The real-time pipeline is the core of the platform — a four-hop event-driven c
 |  /car_data        |     |  - Sessions       |     |  - sessions       |     |  Lap times, stats |
 |  /location        |     |  - Laps           |     |  - laps           |     |  Driver profiles  |
 |  /position        |     |  - Locations      |     |  - telemetry (P)  |     |  Reference data   |
-|  /stints          |     |  - Results        |     |  - locations (P)  |     |                   |
-|                   |     |  - Reference data |     |  - drivers        |     +--------+----------+
-+-------------------+     +-------------------+     |  - results        |              |
-                                                    |  - session_drivers|              | REST API
+|  /stints          |     |  - Results        |     |  - locations (P)  |     |  (Firestore cache |
+|                   |     |  - Reference data |     |  - drivers        |     |   + Caffeine)     |
++-------------------+     +-------------------+     |  - results        |     +--------+----------+
+                                                    |  - session_drivers|              |
+                                                    |  - driver_stats   |              | REST API
                                                     | (P) = Partitioned |              v
                                                     |  by DAY, clustered|     +--------+----------+
                                                     |  by session +     |     |                   |
-                                                    |  driver           |     |  React SPA        |
-                                                    +-------------------+     |                   |
-                                                                              |  D3.js charts     |
+                                                    |  driver, partition|     |  React SPA        |
+                                                    |  filter required  |     |                   |
+                                                    +-------------------+     |  D3.js charts     |
                                                                               |  Session search   |
                                                                               |  Lap comparisons  |
                                                                               +-------------------+
@@ -258,45 +255,53 @@ The real-time pipeline is the core of the platform — a four-hop event-driven c
 
 | Layer | Technology | Version | Purpose |
 |-------|-----------|---------|---------|
-| **Frontend** | React | 19 | Component-based UI framework |
-| | TypeScript | 6.0 | Static type safety across the codebase |
-| | Vite | 8.2 | Build tooling with HMR and environment modes |
-| | D3.js | 7 | Canvas and SVG data visualizations (circuit trace, line charts, radar charts) |
+| **Frontend** | React | 19.3 | Component-based UI framework, compiled by the React Compiler |
+| | TypeScript | 6.0 | Static type safety across the codebase (7.0 is out; `typescript-eslint` accepts `<6.1` today) |
+| | Vite | 8.3 | Rolldown-based build tooling with HMR, environment modes and manual vendor chunking |
+| | React Router | 7.18 | Client routing with lazy route chunks behind the auth guard |
+| | TanStack Query | 5.102 | Server-state cache: request de-duplication, staleness, splash-time prefetch |
+| | Zod | 4.6 | Runtime validation of every data-bearing API response at the boundary |
+| | D3.js | 7.9 | Canvas and SVG data visualizations (circuit trace, line charts, radar charts) |
 | | HTML5 Canvas | — | High-performance 60fps circuit trace rendering |
 | | Material UI | 9.4 | Component library with dark-mode glassmorphism theme |
-| | Framer Motion | 13 | Page transitions, letter-stagger reveals, spring-physics nav indicators, stat bars |
-| | @stomp/stompjs | 7.3 | STOMP protocol client over SockJS WebSocket transport |
-| | Axios | 1.20 | HTTP client with JWT interceptor, retry logic, and 429 backoff |
+| | Framer Motion | 13.2 | Page transitions, letter-stagger reveals, spring-physics nav indicators, stat bars |
+| | @stomp/stompjs | 7.3 | STOMP client over a native WebSocket, exponential reconnect with a circuit breaker |
+| | Axios | 1.20 | HTTP client with JWT interceptor and jittered, idempotent-only retry on 429/5xx |
 | | Emotion | 11.14 | CSS-in-JS styling engine powering MUI's theme layer |
 | | Auth0 React SDK | 2.24 | OAuth2/OIDC authentication flow with PKCE |
-| **Backend** | Java | 25 | Language runtime (Temurin distribution) |
-| | Spring Boot | 4.1 | Microservice framework |
-| | Spring Security | 7.x | OAuth2 Resource Server with JWT validation |
-| | Spring WebSocket | — | STOMP message broker with SockJS fallback |
-| | Spring WebFlux | — | Reactive non-blocking HTTP for the Ingestion Service |
-| | Spring Cloud GCP | 8.1.1 | GCP service integration (BigQuery, Firestore, Secret Manager) |
-| | Eclipse Paho | 1.2.5 | MQTT 3.1.1 client for OpenF1 live data stream (QoS 1) |
-| | Project Reactor | 3.8.7 | Reactive streams for non-blocking data ingestion pipeline |
-| | Jackson 3 | 3.2.2 | JSON serialization with SNAKE_CASE convention |
+| **Backend** | Java | 25 | Language runtime (Temurin distribution, newest LTS); virtual threads on every blocking path |
+| | Spring Boot | 4.1.1 | Microservice framework |
+| | Spring Security | 7.1 | OAuth2 Resource Server with JWT validation |
+| | Spring Web MVC + RestClient | — | REST controllers; blocking `RestClient` for OpenF1, served by virtual threads |
+| | Spring WebSocket | — | STOMP simple broker over a native WebSocket (a SockJS endpoint stays registered, unused) |
+| | Google Cloud client libraries | BOM 8.1.1 | BigQuery and Firestore clients, versions aligned by the Spring Cloud GCP BOM |
+| | Eclipse Paho | 1.2.5 | MQTT 3.1.1 client for the OpenF1 live data stream (QoS 1) |
+| | Jackson 3 | 3.1 | JSON serialization with SNAKE_CASE convention (Boot-managed) |
+| | Caffeine | 3.2 | In-memory reference-data cache in front of Firestore |
+| | Micrometer + OpenTelemetry | — | Prometheus metrics, W3C trace propagation, ECS-structured JSON logs |
 | | Lombok | 1.18.48 | Boilerplate reduction (@Builder, @Data) |
 | **Data** | BigQuery | — | Columnar data warehouse with DAY-partitioned, clustered tables |
-| | Firestore | Native | Document database for user profiles and preferences |
-| | Redis (Memorystore) | 6.x | In-memory Pub/Sub broker between microservices |
+| | Firestore | Native | Document database for user profiles, ingestion job status and the reference-data cache |
+| | Redis (Memorystore) | 7.2 | Pub/Sub broker between the worker and telemetry; Stream for replay commands; replay state |
 | **Cloud** | Cloud Run | v2 | Serverless container platform, with direct VPC egress |
 | | Cloud Armor | — | Edge rate limiting and preconfigured WAF rules |
-| | Secret Manager | — | Secure credential storage for external API keys |
+| | Secret Manager | — | Credential storage; values are mounted into Cloud Run as environment variables |
 | | Cloud Load Balancing | Global | HTTPS termination, path-based routing, Cloud CDN |
 | | VPC | — | Private networking for Cloud Run to Redis, via direct VPC egress |
 | | Cloud Monitoring | — | Uptime checks, alert policies and a per-environment budget |
 | | Artifact Registry | — | Docker image repository with layer caching |
-| **IaC** | OpenTofu | 1.12 | Infrastructure as Code (Terraform-compatible, open-source) |
-| | Terragrunt | 1.1 | DRY configuration wrapper with dependency orchestration |
-| **CI/CD** | Cloud Build | — | 7 path-filtered pipelines (build, scan, deploy) |
-| | GitHub Actions | — | PR quality gates (lint, test, validate) |
+| **IaC** | OpenTofu | 1.12.6 | Infrastructure as Code (Terraform-compatible, open-source) |
+| | Terragrunt | 1.1.4 | DRY configuration wrapper with dependency orchestration |
+| | Google provider | 8.2 | Lock-file pinned in every module |
+| **CI/CD** | Cloud Build | — | 7 path-filtered triggers over 3 pipeline definitions (build, scan, deploy) |
+| | GitHub Actions | — | PR quality gates: 7 jobs (lint, test, e2e, validate, plan, workflow lint) |
+| | Dependabot | — | Weekly updates across npm, Maven, Docker (×2), GitHub Actions and Terraform |
 | | Cloud Build Docker builder | — | Layer-cached image builds (replaced Kaniko, archived upstream) |
 | | Trivy | 0.74 | Container filesystem scanning and IaC static analysis (replaced tfsec, retired upstream) |
-| **Container** | Distroless | Java 25 | Minimal backend runtime (no shell, no package manager) |
-| | nginx-unprivileged | Alpine | Lightweight frontend serving with SPA routing |
+| | Conftest / OPA | 0.69 | Policy checks against the rendered plan |
+| | tflint | 0.64 | Terraform linting with the Google ruleset (0.39) |
+| **Container** | Distroless | Java 25, Debian 13 | Minimal backend runtime (no shell, no package manager) |
+| | nginx-unprivileged | 1.31, Alpine | Lightweight frontend serving with SPA routing and security headers |
 
 ---
 
@@ -307,12 +312,16 @@ f1-visualizer/
 |
 +-- frontend/                                   # React 19 Single Page Application
 |   +-- src/
-|   |   +-- api/                                # Axios HTTP client + STOMP WebSocket client
-|   |   |   +-- apiClient.ts                    #   Environment-aware Axios instance with JWT interceptor
-|   |   |   +-- referenceApi.ts                 #   Drivers, sessions, stats endpoints
+|   |   +-- api/                                # REST clients, query layer, STOMP client
+|   |   |   +-- apiClient.ts                    #   Axios instance: JWT interceptor, jittered retry
+|   |   |   +-- queries.ts / queryClient.ts     #   TanStack Query definitions and the shared cache
+|   |   |   +-- schemas.ts / parseResponse.ts   #   Zod schemas; data responses validated
+|   |   |   +-- referenceApi.ts                 #   Drivers, sessions, seasons, stats fetchers
 |   |   |   +-- ingestionApi.ts                 #   Live/simulation commands and playback control
 |   |   |   +-- userApi.ts                      #   User profile and preferences
-|   |   |   +-- stompClient.ts                  #   STOMP-over-SockJS with JWT authentication
+|   |   |   +-- prefetch.ts                     #   Splash-time cache warming
+|   |   |   +-- stompClient.ts                  #   STOMP over a native WebSocket, JWT in CONNECT
+|   |   +-- app/                                # AppDataProvider: query client + user context
 |   |   +-- auth/                               # Auth0 integration
 |   |   |   +-- AuthHandler.tsx                 #   Axios request interceptor (Bearer token injection)
 |   |   |   +-- StompAuthHandler.tsx            #   WebSocket STOMP CONNECT authentication
@@ -320,62 +329,64 @@ f1-visualizer/
 |   |   |   +-- RaceSimulator.tsx               #   Main live console: telemetry panels + circuit trace
 |   |   |   +-- CircuitTrace.tsx                #   HTML5 Canvas real-time track visualization
 |   |   |   +-- LapTimeChart.tsx                #   D3.js SVG multi-driver lap time line chart
-|   |   |   +-- MediaController.tsx             #   Play/pause/seek for simulation replay
+|   |   |   +-- MediaController.tsx             #   Play/pause/seek for replay
 |   |   |   +-- ErrorBoundary.tsx               #   Auto-retry error boundary (3 attempts, 2s delay)
 |   |   |   +-- layout/                         #   App shell, navigation, user settings modal
-|   |   |   +-- selectors/                      #   Reusable driver and session autocomplete selectors
-|   |   |   +-- splash/                         #   Post-login cinematic splash (background, circuit, progress)
+|   |   |   +-- selectors/                      #   Driver and session pickers
+|   |   |   +-- splash/                         #   Post-login splash, prefetch sequencing, skip preference
+|   |   |   +-- ui/                             #   Empty/error states, route fallback, shimmer
 |   |   |   +-- versus/                         #   Radar chart and animated stat comparison bars
-|   |   +-- context/                            # React Context
-|   |   |   +-- UserContext.tsx                 #   Global user profile + preferences state
-|   |   +-- hooks/                              # Custom React hooks
-|   |   |   +-- useTelemetry.ts                 #   STOMP subscription with 60fps buffered flush
-|   |   |   +-- useLocation.ts                  #   STOMP subscription preserving all GPS points
-|   |   +-- pages/                              # Route-level page components
-|   |   |   +-- Landing.tsx                     #   Public login page (animated title, circuit, glow CTA)
-|   |   |   +-- Home.tsx                        #   Live Console (RaceSimulator)
-|   |   |   +-- HistoricalData.tsx              #   Data Vault (session search + lap charts)
-|   |   |   +-- VersusMode.tsx                  #   Head-to-Head (radar + stat bars)
-|   |   +-- types/                              # TypeScript interfaces
-|   |   +-- utils/                              # D3 scale factories, coordinate projection, radar geometry
-|   |   +-- App.tsx                             # Auth0 provider, theme, routing
-|   |   +-- main.tsx                            # Vite entry point
-|   +-- nginx.conf                              # SPA-aware nginx config for production
-|   +-- Dockerfile                              # Multi-stage local build (Node -> nginx)
-|   +-- Dockerfile.ci                           # Lean CI image (pre-built dist -> nginx)
-|   +-- vite.config.ts                          # Dev server proxy to 4 backend services + WebSocket
-|   +-- .env.dev / .env.uat / .env.prod         # Per-environment Auth0 + API config (Vite build modes)
-|   +-- eslint.config.js                        # TypeScript-ESLint + React Hooks rules
+|   |   +-- config/env.ts                       # API and WebSocket origins per build mode
+|   |   +-- context/UserContext.tsx             # Global user profile + preferences state
+|   |   +-- features/live/                      # Live telemetry panel and race-session hook
+|   |   +-- hooks/
+|   |   |   +-- useTelemetry.ts                 #   STOMP subscription, latest-per-driver, rAF flush
+|   |   |   +-- useLocation.ts                  #   STOMP subscription, every GPS point forwarded
+|   |   +-- lib/                                # Logger, error reporting, perf marks, web-vitals
+|   |   +-- pages/                              # Landing, Home (Live Console), HistoricalData, VersusMode
+|   |   +-- realtime/                           # Connection-status store and hook
+|   |   +-- theme/                              # MUI theme, tokens, motion variants
+|   |   +-- types/ + utils/                     # Shared types; D3 scales, projection, radar geometry
+|   |   +-- App.tsx / main.tsx                  # Auth0 provider, lazy routes, splash; Vite entry point
+|   +-- e2e/                                    # Playwright: Auth0 redirect, live trace, axe checks
+|   +-- nginx.conf                              # SPA-aware nginx config with security headers
+|   +-- Dockerfile / Dockerfile.ci              # Multi-stage local build; lean CI image (dist -> nginx)
+|   +-- vite.config.ts                          # Dev proxy (3 REST services + /ws), Vitest, chunking
+|   +-- playwright.config.ts / .size-limit.js   # E2E projects (desktop, mobile); gzipped bundle budgets
+|   +-- .env.dev / .env.uat / .env.prod / .env.e2e  # Per-mode Auth0 + API config (Vite build modes)
+|   +-- eslint.config.js / .prettierrc.json     # Flat ESLint config; Prettier
 |
 +-- backend/                                    # Maven Multi-Module Spring Boot Microservices
-|   +-- pom.xml                                 # Aggregator POM (Java 25)
-|   +-- Dockerfile                              # Multi-stage local build (Maven -> distroless)
-|   +-- Dockerfile.ci                           # Lean CI image (pre-extracted layers -> distroless)
+|   +-- pom.xml                                 # The single parent and aggregator: Boot 4.1.1, plugins, enforcer
+|   +-- mvnw                                    # Maven wrapper (3.9.16)
+|   +-- Dockerfile / Dockerfile.ci              # Multi-stage local build; lean CI image (layers -> distroless)
+|   +-- spotbugs-exclude.xml                    # SpotBugs exclusions, each with its reason
 |   |
-|   +-- pom.xml                                 # The single parent: Boot 4.1.1, plugins, enforcer
 |   +-- f1v-commons-web/                        #   Security filter chain, CORS, RFC 9457 errors, Actuator
 |   +-- f1v-commons-gcp/                        #   BigQuery and Firestore clients, query guardrails
-|   +-- f1v-commons-messaging/                  #   Redis topics and serializer, STOMP broker, MQTT
+|   +-- f1v-commons-messaging/                  #   Redis topics, replay command stream, STOMP broker, MQTT
 |   +-- f1v-commons-openf1/                     #   OpenF1 RestClient, auth token lifecycle, DTOs
 |   |
 |   +-- f1v-service-data-analysis/              # REST: BigQuery queries for laps, stats, reference data
-|   +-- f1v-service-data-ingestion/             # REST: OpenF1 ingest, batch loaders, ingestion jobs
-|   +-- f1v-service-replay-worker/              # Always-on: the replay engine and MQTT bridge
+|   +-- f1v-service-data-ingestion/             # REST: OpenF1 loaders, ingestion jobs, replay commands
+|   +-- f1v-service-replay-worker/              # Always-on: replay engine and MQTT bridge (no HTTP API)
 |   +-- f1v-service-telemetry/                  # WebSocket: Redis listener -> STOMP broadcaster
 |   +-- f1v-service-user/                       # REST: Firestore user profiles and preferences
+|   +-- f1v-coverage/                           # Aggregates JaCoCo across the reactor; enforces the floors
 |
 +-- infrastructure/                             # OpenTofu + Terragrunt IaC
 |   +-- root.hcl                                # Terragrunt root: state, provider, retries
 |   +-- README.md                               # Bootstrap order for a new project
 |   +-- MIGRATIONS.md                           # Changes an apply cannot finish alone
+|   +-- .tflint.hcl / .trivyignore             # Linter config; accepted scanner findings, with reasons
 |   +-- platform/                               # What all three environments share
 |   +-- _envcommon/                             # 15 shared unit definitions
 |   +-- policy/f1v.rego                         # Conftest rules run against the plan
-|   +-- modules/                                # 11 reusable OpenTofu modules
+|   +-- modules/                                # 11 reusable OpenTofu modules, each with a README
 |   |   +-- cloud-run/                          #   All six services, backend and SPA
 |   |   +-- bigquery/                           #   Dataset + 8 tables, schemas in JSON
 |   |   +-- firestore/                          #   Document database, PITR in prod
-|   |   +-- redis/                              #   Memorystore (HA in production)
+|   |   +-- redis/                              #   Memorystore 7.2 (HA in production)
 |   |   +-- networking/                         #   VPC, subnet, one firewall rule
 |   |   +-- iam-and-secrets/                    #   6 runtime + 2 CI service accounts
 |   |   +-- lb-api/                             #   Global HTTPS LB, path-routed
@@ -390,14 +401,19 @@ f1-visualizer/
 |
 +-- cloudbuild/                                 # GCP Cloud Build Pipeline Definitions
 |   +-- backend-service.yaml                    # Build, scan, deploy: any backend service
-|                                               #   (_MODULE, _IMAGE and _SERVICE per trigger)
-|   +-- frontend.yaml                           # Lint, test, build, deploy: React SPA
+|   |                                           #   (_MODULE, _IMAGE and _SERVICE per trigger)
+|   +-- frontend.yaml                           # Lint, test, build, scan, deploy-no-traffic, smoke, promote
 |   +-- infrastructure.yaml                     # Scan, plan to file, policy, apply
 |
 +-- .github/
-    +-- workflows/
-        +-- pr-checks.yml                       # 5 PR jobs, including a real plan
-        +-- pinned-versions.yml                 # Weekly: pins no ecosystem watches
+|   +-- workflows/
+|   |   +-- pr-checks.yml                       # 7 PR jobs, including a real plan and workflow lint
+|   |   +-- pinned-versions.yml                 # Weekly: the pins no ecosystem watches
+|   +-- dependabot.yml                          # 6 ecosystems, weekly
+|   +-- CODEOWNERS / pull_request_template.md
+|
++-- .pre-commit-config.yaml                     # fmt, validate, tflint, terraform-docs, trivy for infrastructure/
++-- .mise.toml                                  # OpenTofu and Terragrunt versions, the ones the pipeline pins
 ```
 
 ---
@@ -406,13 +422,14 @@ f1-visualizer/
 
 ### Microservice Decomposition
 
-The backend is composed of four independently deployable Spring Boot microservices, each with a single clearly-defined responsibility:
+The backend is composed of five independently deployable Spring Boot services, each with a single clearly-defined responsibility:
 
 | Service | Type | Responsibility | GCP Dependencies |
 |---------|------|---------------|-----------------|
-| **data-ingestion** | WebFlux (Reactive) | Ingest live telemetry via MQTT, batch-load historical sessions from OpenF1 REST API, drive the replay engine | BigQuery, Redis, Secret Manager |
+| **data-ingestion** | Spring MVC (REST) | Batch-load historical sessions and reference data from the OpenF1 REST API into BigQuery as tracked jobs; issue replay and live-session commands to the worker over a Redis Stream | BigQuery, Firestore (job status), Redis, Secret Manager |
+| **replay-worker** | Always-on worker (no HTTP API) | Bridge live OpenF1 MQTT sessions into Redis; replay historical sessions from BigQuery at original timing under play/pause/seek | BigQuery, Redis, Secret Manager |
 | **telemetry** | WebSocket/STOMP | Subscribe to Redis channels and broadcast to all connected WebSocket clients | Redis |
-| **data-analysis** | Spring MVC (REST) | Serve lap times, driver statistics, session catalog, and reference data from BigQuery with Firestore caching | BigQuery, Firestore |
+| **data-analysis** | Spring MVC (REST) | Serve lap times, driver statistics, session catalog, and reference data from BigQuery, with reference data cached in Firestore and Caffeine | BigQuery, Firestore |
 | **user** | Spring MVC (REST) | Manage user profiles and preferences with get-or-create semantics on first login | Firestore |
 
 ### Commons Modules
@@ -442,14 +459,17 @@ layering is asserted by `CommonsLayeringTest` rather than left as a convention.
 ### Key Backend Patterns
 
 - **Scoped Maven Builds** — Each CI pipeline compiles only the target module and its transitive commons dependencies (`mvn -pl <module> -am`), avoiding a full monorepo rebuild on every change.
-- **Spring Boot Layered JARs** — Production images use `java -Djarmode=layertools -jar ... extract` to split the fat JAR into four Docker layers (dependencies, loader, snapshots, application), maximizing cache reuse since dependency layers rarely change.
+- **Spring Boot Layered JARs** — Production images use `java -Djarmode=tools -jar app.jar extract --layers --launcher` (Boot 4 removed the older `layertools` mode) to split the fat JAR into four Docker layers — dependencies, spring-boot-loader, snapshot-dependencies, application — maximizing cache reuse since dependency layers rarely change.
 - **Stateless JWT Validation** — All services validate JWTs locally using the Auth0 JWKS endpoint. No session state exists anywhere in the backend — every request carries its own authentication context.
 - **STOMP Channel Interceptor** — WebSocket connections are authenticated at the STOMP protocol level. The interceptor extracts the JWT from the CONNECT frame's Authorization header, validates it, and sets the security principal before any message routing occurs.
-- **Scheduled Token Refresh** — The OpenF1 API client automatically refreshes its access token on a fixed schedule via `@Scheduled`, maintaining an always-valid credential without request-time auth overhead.
-- **Windowed Replay Engine** — The Ingestion Service's replay engine processes historical sessions in 60-second chunks with async prefetching at 50% chunk progress, preventing OOM on multi-hour sessions. A single-threaded `ChunkLoader` executor serializes BigQuery queries to avoid overwhelming the data warehouse. Play, pause, and seek operations are exposed via REST endpoints and broadcast progress via Redis.
-- **Reference Data Caching** — The Analysis Service holds driver, session, and circuit reference data in a Caffeine cache in front of Firestore, so data that changes only between seasons is read remotely once per TTL rather than once per request — including once per keystroke on the session search, which is what it used to do.
-- **Async Data Loading** — The Ingestion Service uses `@EnableAsync` with `CompletableFuture` for non-blocking chunk prefetch coordination, and `@EnableScheduling` for the 250ms replay tick loop and 50-minute OpenF1 token refresh cycle.
-- **Application Profiles** — Every service supports `local`, `dev`, `uat`, and `prod` profiles, with environment-specific configuration for database endpoints, Auth0 tenants, and Redis connectivity.
+- **Expiry-driven Token Refresh** — The OpenF1 client's token lives in an `AtomicReference`. The first refresh is scheduled from `ApplicationReadyEvent`, off the startup path, and each subsequent one from the `expires_in` the server actually returned, five minutes early; 50 minutes is only the fallback when the server omits it or the call fails. It no longer runs on Boot's shared scheduler thread, where a slow `/token` used to freeze the replay tick.
+- **Windowed Replay Engine** — The replay worker streams historical sessions in 60-second BigQuery chunks, prefetching the next chunk at 50% progress so multi-hour sessions never sit in memory at once. `ChunkLoader` runs a two-thread executor: a prefetch issued after a seek used to queue behind the query the seek had just abandoned, because a cancelled `CompletableFuture` never interrupts the running BigQuery call. A 250 ms tick advances a virtual clock and publishes one message per Redis channel per tick; play, pause and seek arrive over the command stream and playback state is held in Redis, so a redeployed worker resumes the session it was replaying.
+- **Reference Data Caching** — The Analysis Service warms a Firestore copy of the driver, session and roster reference data from BigQuery after startup — skipped when another instance refreshed recently — and holds it in a Caffeine cache in front of Firestore, so data that changes only between seasons is read remotely once per TTL rather than once per request — including once per keystroke on the session search, which is what it used to do.
+- **Tracked Ingestion Jobs** — Batch loads run on a dedicated `ThreadPoolTaskExecutor` and record their status in Firestore, so `GET /api/v1/ingestion/jobs/{id}` can be answered by any instance.
+- **Configuration by Environment** — One `application.yml` per service with a `local` default and a shared `dev | uat | prod` block. Everything that differs per environment — Auth0 issuer and audience, dataset and database ids, Redis host, AUTH string and CA — arrives as Cloud Run environment variables and Secret Manager references set by Terragrunt, so no environment-specific value lives in the JAR.
+- **Blocking, on Virtual Threads** — Every I/O path blocks (BigQuery, Firestore, MQTT, the OpenF1 `RestClient`), which is exactly what virtual threads serve; WebFlux and reactor-netty were removed once nothing non-blocking remained. Graceful shutdown gives in-flight requests and WebSocket sessions 8 seconds of Cloud Run's 10-second SIGTERM window.
+- **Observability** — ECS-structured JSON logs with trace and span ids in the MDC, Prometheus metrics via Actuator, W3C trace propagation through Micrometer Tracing (an OTLP exporter is configured and off until a collector endpoint is set), `/actuator/info` reporting the commit a running instance was built from, and readiness/liveness probes wired to Cloud Run.
+- **Build Quality Gates** — Everything binds to `verify`: the enforcer (`requireUpperBoundDeps`, Java 25, Maven 3.9), JaCoCo floors of 70% line / 60% branch measured across the reactor by `f1v-coverage`, SpotBugs with find-sec-bugs, Spotless (google-java-format, AOSP style), ArchUnit's `CommonsLayeringTest`, and a CycloneDX SBOM per deployable.
 
 ---
 
@@ -464,35 +484,40 @@ layering is asserted by `CommonsLayeringTest` rather than left as a convention.
 | `/historical` | Data Vault | Session search (Autocomplete), LapTimeChart (D3.js SVG), DataVaultLoader | REST API + BigQuery |
 | `/versus` | Head-to-Head | DriverSelector (x2), RadarChart (D3.js SVG), StatComparisonBar (Framer Motion) | REST API + BigQuery |
 
-All authenticated routes are wrapped by a `RequiredAuth` guard. On first login, a cinematic splash screen plays a ~7-second sequence (layered gradient background, circuit animation, progress bar, title reveal) while reference data (drivers, sessions) is prefetched in the background — eliminating skeleton loaders on subsequent page transitions.
+All authenticated routes are wrapped by a `RequiredAuth` guard and rendered inside the `LayoutMain` shell; each page is a lazy chunk behind a `Suspense` fallback. On login, a cinematic splash screen (layered gradient background, circuit animation, progress bar, title reveal) runs while reference data (drivers, sessions) and the route chunks are prefetched in the background. It lasts between a 2-second brand minimum and a 7-second cap, ending as soon as the prefetch completes, and a user who skips it once is not shown it again on that browser (`f1v:skip-splash` in `localStorage`). The warm cache eliminates skeleton loaders on subsequent page transitions.
 
 ### Real-Time Rendering Pipeline
 
-The live console uses a carefully designed rendering pipeline to handle high-frequency WebSocket data without overwhelming React's reconciliation:
+The live console uses two deliberately different paths to handle high-frequency WebSocket data without overwhelming React's reconciliation:
 
 ```
-STOMP Message Received
+STOMP message received
         |
-        v
-useRef Buffer (accumulate)          <-- No React re-render
-        |
-        v
-requestAnimationFrame (60fps)       <-- Browser vsync
-        |
-        v
-Flush buffer -> setState            <-- Single batched re-render
-        |
-        v
-Canvas 2D draw / D3.js update       <-- Visual update
+        +-------------------------------+
+        |                               |
+        v                               v
+/topic/race-data                /topic/race-location
+        |                               |
+        v                               |
+useRef Map, keyed by driver     <-- No React re-render
+        |                               |
+        v                               |
+requestAnimationFrame (60fps)   <-- Browser vsync
+        |                               |
+        v                               v
+Flush latest-per-driver         Forward every point, synchronously
+        |                               |
+        v                               v
+Telemetry panels (React state)  CircuitTrace (Canvas 2D, via ref)
 ```
 
-The `useTelemetry` hook flushes only the latest packet (UI displays current values), while `useLocation` flushes all buffered packets (Canvas needs every GPS coordinate to draw continuous trace paths).
+`useTelemetry` keeps only the newest packet per driver — the readouts show a current value, so intermediate frames are discarded and a burst of messages costs one render instead of dozens; keying by driver also bounds the buffer while a hidden tab has rAF paused and the socket still delivering. `useLocation` has no rAF buffer at all: the circuit trace draws the whole path, so every GPS coordinate is passed straight through to the Canvas render loop, which owns the pixels while React owns the surrounding UI.
 
 ### Visualization Details
 
 - **CircuitTrace** — A `<canvas>` element using `CanvasRenderingContext2D` with D3 linear scales to map world coordinates (x, y, z) to screen space. The selected driver's trace renders in their team color with a shadow glow effect; all other drivers render as ghosted semi-transparent paths. A `ResizeObserver` maintains a 1.6:1 aspect ratio on window resize.
 
-- **LapTimeChart** — An SVG line chart built with `d3.line()`, `d3.scaleLinear()`, and `d3.axisBottom/Left`. Each driver gets a colored series line. An overlay captures mouse events to display a tooltip with exact lap time, sector splits, and tire compound at the hovered lap.
+- **LapTimeChart** — An SVG line chart built with `d3.line()`, `d3.scaleLinear()`, and `d3.axisBottom/Left`. Each driver gets a colored series line. An overlay captures mouse events to display a tooltip with the driver, lap number and exact lap time at the hovered lap.
 
 - **RadarChart** — A five-axis spider chart comparing driver attributes on a 0–100 scale. Concentric grid rings provide reference points. Each driver's polygon is filled with their team color at reduced opacity.
 
@@ -502,19 +527,23 @@ Authentication flows through Auth0 with two parallel paths:
 
 1. **HTTP Requests** — An Axios request interceptor (`AuthHandler`) calls `getAccessTokenSilently()` on every request and injects the `Authorization: Bearer` header. A response interceptor catches 401s for token expiration handling.
 
-2. **WebSocket** — A dedicated `StompAuthHandler` activates the STOMP client with the JWT in the CONNECT frame headers. The backend's `StompAuthChannelInterceptor` validates this token before allowing subscription to any topic.
+2. **WebSocket** — A dedicated `StompAuthHandler` activates the STOMP client — a native WebSocket to `/ws/websocket` — with the JWT in the CONNECT frame headers rather than a query parameter. The token is re-read on every reconnect, so a routine reconnect after token expiry cannot become a permanent auth-failure loop. The backend's `StompAuthChannelInterceptor` validates it before allowing subscription to any topic.
 
 ### Frontend Resilience Patterns
 
-- **Request Deduplication** — The `referenceApi` layer maintains global in-flight promise caches for drivers and sessions. Multiple components requesting the same data simultaneously share a single network call. A 3-second failure cooldown prevents 429 rate-limit cascading after transient errors.
+- **Request Deduplication and Caching** — Server state goes through TanStack Query (`api/queries.ts`, a module-level `queryClient`): several components request the driver list on mount and StrictMode doubles each call, which without de-duplication fired six to eight concurrent requests and tripped the edge rate limiter. Query de-duplicates by key, holds data fresh for 5 minutes and in memory for 30, and is what the splash prefetch warms. The module-level promise caches this replaced never expired and could not be invalidated.
 
-- **Exponential Backoff (HTTP)** — Axios response interceptors retry 429 (Rate Limit) and network errors with exponential backoff (2s → 4s → 8s, up to 3 attempts). The `Retry-After` header is respected when present.
+- **Runtime Validation** — Every data-bearing response (reference data, laps, stats, the user profile) is parsed against a Zod schema (`api/schemas.ts`) before it reaches a component, so a backend contract change fails loudly at the boundary rather than as an `undefined` somewhere in a chart.
 
-- **WebSocket Circuit Breaker** — The STOMP client caps reconnection at 6 attempts (5s → 10s → 20s → 40s → 60s → 60s, ~3 minutes total) with ±25% jitter to prevent thundering-herd reconnection storms. After exhausting attempts, the user must reload to recover.
+- **Retry with Jitter (HTTP)** — One Axios policy: 429, 502, 503, 504, network errors and the 15-second instance timeout are retried up to 3 times, but only for idempotent requests (or those explicitly marked so). The delay is `500 ms × 2^attempt` — 1 s, 2 s, 4 s — with full jitter (×0.5–1.5) so clients that failed together do not retry together; a `Retry-After` header, in seconds or as a date, is respected up to 30 seconds. A 401 gets exactly one retry with a freshly minted token.
 
-- **Splash Prefetch Strategy** — The post-login splash animation (~7 seconds) runs concurrently with REST API prefetches for drivers and sessions, with 400ms stagger between requests. Once cached, in-memory hits eliminate network calls during route transitions.
+- **WebSocket Circuit Breaker** — The STOMP client delegates backoff to the library's `ReconnectionTimeMode.EXPONENTIAL`: 5 s → 10 s → 20 s → 40 s → 60 s → 60 s, capped at 6 consecutive failures (about three minutes) before it deactivates and reports the outage. Heartbeats run on a Worker ticker, because `setInterval` is throttled to about once a minute in a hidden tab, which used to tear down a healthy socket.
 
-- **60fps Buffer Architecture** — STOMP packets arrive at unpredictable rates but `useTelemetry` and `useLocation` accumulate them in `useRef` buffers (bypassing React's reconciliation), flushing to state only on `requestAnimationFrame` — ensuring smooth Canvas animation without triggering React re-render storms.
+- **Splash Prefetch Strategy** — The post-login splash runs concurrently with the startup prefetch list: drivers, then sessions 400 ms later — because on login they compete with `GET /users/me` for the same rate-limit budget — then the app shell, the dashboard, and the remaining route chunks a second later. The analysis API client and its schemas are imported dynamically so none of it lands in the chunk the public landing page downloads.
+
+- **Auto-retry Error Boundary** — A rendering error is retried in place up to 3 times, 2 seconds apart; a tree that then renders cleanly for 30 seconds earns its retry budget back.
+
+- **React Compiler** — Components are compiled by the React Compiler through `@vitejs/plugin-react`, so memoization is automatic rather than hand-placed; the measured cost is recorded in `.size-limit.js`.
 
 ### Design System
 
@@ -531,7 +560,9 @@ Authentication flows through Auth0 with two parallel paths:
 
 Eleven OpenTofu modules under `infrastructure/modules/`, composed per environment
 by Terragrunt. Each module has a README covering what it is for and which
-decisions in it are load bearing.
+decisions in it are load bearing, followed by an inputs and outputs table that
+`terraform-docs` regenerates from the variables (a pre-commit hook), so the
+README cannot drift from the module.
 
 ```
 infrastructure/
@@ -618,10 +649,13 @@ monitoring
   token once warm. That is a deliberate trade for public F1 reference data; the
   alternative is one line in `modules/lb-api/main.tf`.
 
-- **Warm instances in prod only** — prod keeps one instance of each REST service
-  and of telemetry, because the splash screen prefetches reference data and
-  `/users/me` is called on every authentication. dev scales everything to zero;
-  uat keeps the replay worker and telemetry, which is what it exists to rehearse.
+- **Warm instances where they earn it** — prod keeps one instance of each REST
+  service, of telemetry and of the replay worker, because the splash screen
+  prefetches reference data, `/users/me` is called on every authentication and
+  the worker is stateful. The SPA scales to zero everywhere: a static nginx
+  container starts quickly and sits behind Cloud CDN. dev scales everything to
+  zero; uat
+  keeps the replay worker and telemetry, which is what it exists to rehearse.
 
 - **Two CI identities** — the pipelines that run `./mvnw verify` and
   `yarn install` execute third-party code, so they hold no IAM, network or data
@@ -727,14 +761,16 @@ The CI/CD system operates across two layers: **GitHub Actions** for fast PR vali
 Pull Request to main                        Promotion to env branch (dev/uat/prod)
     |                                             |
     v                                             v
-GitHub Actions (5 jobs)                     Cloud Build (7 path-filtered triggers,
+GitHub Actions (7 jobs)                     Cloud Build (7 path-filtered triggers,
     |                                        3 pipeline definitions)
-    +-- Backend                                   |
-    +-- Frontend                                  +-- backend-service.yaml  (x5,
-    +-- Frontend E2E (needs: frontend)            |   one trigger per service)
-    +-- Infrastructure static checks              +-- frontend.yaml
-    +-- Infrastructure plan (needs: above,        +-- infrastructure.yaml
-        one job per environment, WIF)
+    +-- Detect changed areas (gates the rest)     |
+    +-- Backend                                   +-- backend-service.yaml  (x5,
+    +-- Frontend                                  |   one trigger per service)
+    +-- Frontend E2E (needs: frontend)            +-- frontend.yaml
+    +-- Infrastructure static checks              +-- infrastructure.yaml
+    +-- Infrastructure plan (needs: above,
+    |   one job per environment, WIF)
+    +-- Workflow lint (actionlint, zizmor)
 ```
 
 The five backend services share one pipeline definition: the triggers differ only
@@ -742,15 +778,17 @@ in three substitutions. The API Gateway pipeline is gone with the gateway itself
 
 ### PR Quality Gates (GitHub Actions)
 
-Every pull request targeting `main` runs:
+Every pull request targeting `main` runs the jobs whose paths changed:
 
 | Job | Steps | Purpose |
 |-----|-------|---------|
-| **Backend** | `mvn -B clean verify`, Trivy filesystem scan, SBOM upload | The whole reactor through `verify`, which is the phase every check binds to — `package` stops short of all of them |
+| **Detect changed areas** | path filter over backend, frontend, infrastructure, workflows | Every other job is gated on its output, so a README change does not run a Maven build |
+| **Backend** | `./mvnw -B clean verify`, Trivy filesystem scan, SBOM upload | The whole reactor through `verify`, which is the phase every check binds to — `package` stops short of all of them |
 | **Frontend** | `yarn audit`, `format:check`, `lint`, `typecheck`, `test:coverage`, `build`, `size` | Lint, types, coverage thresholds and a gzipped bundle budget |
 | **Frontend E2E** | Playwright, desktop and mobile viewports, axe at both | The only layer exercising the Auth0 redirect, real STOMP frames and canvas resize |
 | **Infrastructure static checks** | `tofu fmt`, `terragrunt hcl fmt`, module validate with `-lockfile=readonly`, `terragrunt hcl validate --inputs --strict`, `tflint`, Trivy | Formatting, undeclared inputs and provider drift, all of which used to reach `main` green |
 | **Infrastructure plan** | `terragrunt run --all -- plan` per environment, posted as a PR comment | The plan a reviewer approves. It runs through Workload Identity Federation as a read-only planner — no service-account key, and it cannot apply |
+| **Workflow lint** | actionlint (checksum-verified download), zizmor | The workflows themselves: expression and shell errors, and the supply-chain postures zizmor checks for |
 
 ### Environment Pipelines (Cloud Build)
 
@@ -759,7 +797,7 @@ Each Cloud Build pipeline is triggered only when files matching its path filter 
 ```
 1. Scoped Maven Build       mvn -B clean verify -pl <module> -am
          |
-2. Layer Extraction         java -Djarmode=layertools -jar ... extract
+2. Layer Extraction         java -Djarmode=tools -jar ... extract --layers --launcher
          |
 3. Trivy Security Scan      trivy filesystem --severity CRITICAL,HIGH
          |
@@ -772,21 +810,34 @@ Images are pushed as both `:<sha>` and `:latest-<env>`. The environment suffix
 matters: dev and prod are both in us-central1 and therefore share one registry,
 so a bare `:latest` was one tag across all three environments.
 
-The frontend pipeline extends this with lint and test gates:
+The frontend pipeline extends this with lint and test gates, and deploys behind a smoke test:
 
 ```
-1. Install Dependencies     yarn install (Node 26 Alpine + native canvas deps)
+1. Verify Version           the SHA in the checkout is the one the trigger was fired for
          |
-2. ESLint Check             yarn lint
+2. Install Dependencies     yarn install --frozen-lockfile (Node 26 Alpine + native canvas deps)
          |
-3. Unit + Visual Tests      yarn test:ci (Vitest + jest-image-snapshot)
+3. ESLint Check             yarn lint
          |
-4. Production Build         yarn build --mode ${_ENV}
+4. Unit + Visual Tests      yarn test:ci (Vitest + jest-image-snapshot)
          |
-5. Docker Image Build       Layer-cached build (--cache-from) -> Artifact Registry
+5. Production Build         yarn build --mode ${_ENV}, stamped with the commit
          |
-6. Cloud Run Deploy         gcloud run services update --image=<sha-tagged>
+6. Archive Source Maps      hidden source maps to a bucket, out of the served image
+         |
+7. Docker Image Build       Layer-cached build (--cache-from) -> Artifact Registry
+         |
+8. Trivy Image Scan         the built image, before any traffic reaches it
+         |
+9. Deploy, No Traffic       gcloud run deploy --no-traffic --tag=<sha>
+         |
+10. Smoke Test              the revision's tag URL: /healthz, the shell at / and
+                            /dashboard, the CSP header, and this SHA's version stamp
+         |
+11. Promote                 gcloud run services update-traffic to the new revision
 ```
+
+A backend deploy is a plain `gcloud run services update --image=<sha>` and is reversed by re-running at an earlier SHA; the frontend gates itself instead, so a broken bundle never receives traffic.
 
 The infrastructure pipeline plans to a file and applies that file:
 
@@ -815,7 +866,7 @@ what has no variable in it. In prod, step 7 waits for manual approval.
 
 - **Path-Filtered Triggers** — Each trigger specifies `included_files` globs scoped to the relevant service directory plus its shared commons dependencies. A change to only the User Service triggers only that service's build — not the other four. The five backend triggers share one parameterized pipeline, `backend-service.yaml`, rather than a copy each.
 
-- **Immutable Image Tags** — Every image is tagged with the git commit SHA (`${SHORT_SHA}`) in addition to `latest`. Cloud Run deployments reference the SHA tag, ensuring every deployment is traceable to an exact commit.
+- **Immutable Image Tags** — Every image is tagged with the git commit SHA (`${SHORT_SHA}`) in addition to `latest-<env>`. Cloud Run deployments reference the SHA tag, ensuring every deployment is traceable to an exact commit; the policy layer rejects a bare `:latest`.
 
 - **Lean CI Dockerfiles** — Separate `Dockerfile.ci` files accept pre-built artifacts (extracted JAR layers for backend, `dist/` for frontend) from earlier Cloud Build steps, eliminating the double-compilation that would occur with a standard multi-stage Dockerfile.
 
@@ -825,6 +876,8 @@ what has no variable in it. In prod, step 7 waits for manual approval.
 
 - **Apply the Plan That Was Reviewed** — The infrastructure pipeline writes each unit's plan to a file and applies that file, rather than running `apply -auto-approve`, which re-plans. The apply cannot differ from the plan in the log, and in prod it waits for manual approval first.
 
+- **Pinned, and Watched** — Step images are pinned by digest, tool downloads are verified against the checksums published with their release, and every action is pinned to a commit. Dependabot covers npm, Maven, both Docker directories, GitHub Actions and Terraform weekly; `pinned-versions.yml` opens an issue on Monday for what Dependabot cannot see — the OpenTofu, Terragrunt, tflint, Google-ruleset, conftest, actionlint and zizmor pins, and any step image whose digest has moved.
+
 ---
 
 ## Testing
@@ -833,16 +886,17 @@ The project maintains a comprehensive multi-layered testing strategy spanning un
 
 ### Backend Test Suite
 
-**Framework:** JUnit 5 (Jupiter 6.1.3) with Mockito, Spring Boot Test 4.1.1
+**Framework:** JUnit 6 (Jupiter 6.0.3, as managed by Boot 4.1.1) with Mockito 5.23, Spring Boot Test 4.1.1, ArchUnit 1.5 and Testcontainers 2.0
 
-All backend dependencies are managed by the single `f1v-parent` POM, which inherits Spring Boot's and imports the Spring Cloud GCP BOM; `maven-enforcer-plugin` fails the build if a transitive version resolves below what something asked for. Each service has its own `src/test/java/` and `src/test/resources/` trees with environment-specific test profiles.
+All backend dependencies are managed by the single `f1v-parent` POM, which inherits Spring Boot's and imports the Spring Cloud GCP BOM; `maven-enforcer-plugin` fails the build if a transitive version resolves below what something asked for. Each service has its own `src/test/java/` and `src/test/resources/` trees with a `test` profile.
 
 | Category | Framework / Tool | Description |
 |----------|-----------------|-------------|
-| **Unit Tests** | JUnit 5 + Mockito | Isolated service-layer testing with `@ExtendWith(MockitoExtension.class)`, `@Mock`, and `@InjectMocks`. Covers scoring algorithms, data loaders, replay engine logic, and repository interactions. |
+| **Unit Tests** | JUnit 6 + Mockito | Isolated service-layer testing with `@ExtendWith(MockitoExtension.class)`, `@Mock`, and `@InjectMocks`. Covers scoring algorithms, data loaders, replay engine logic, and repository interactions. |
 | **Controller Tests** | Spring `@WebMvcTest` | Lightweight Spring context tests for REST controllers with `MockMvc`. Validates request mapping, JSON serialization, HTTP status codes, and error handling without starting a full server. |
 | **Security Tests** | Spring Security Test | OAuth2 JWT authentication testing using `SecurityMockMvcRequestPostProcessors.jwt()` to inject mock tokens with configurable subjects and claims. Validates endpoint authorization across all secured controllers. |
-| **Reactive Tests** | Reactor Test (`StepVerifier`) | Verifies non-blocking `Flux`/`Mono` streams in the Ingestion Service's OpenF1 client and data pipeline using `StepVerifier.create().expectNextMatches().verifyComplete()`. |
+| **Integration Tests** | Testcontainers (Redis) | `ReplayRedisIntegrationTest` runs the replay command stream and state store against a real Redis container — the consumer-group semantics a mock cannot fake. |
+| **Architecture Tests** | ArchUnit | `CommonsLayeringTest` asserts the layering among the four commons modules — no commons class depends on a service, `gcp` never reaches into `messaging`, and each layer is accessed only from the layers allowed to — rather than leaving it as a convention. |
 | **HTTP Mock Tests** | OkHttp `MockWebServer` | Embeds a local HTTP server to test external API client behavior — request construction, response parsing, error handling, and retry logic — without network calls to the real OpenF1 API. |
 | **Serialization Tests** | Jackson 3 + `JsonMapper` | Validates DTO serialization/deserialization roundtrips for all OpenF1 data transfer objects, ensuring JSON contract stability. |
 | **Parameterized Tests** | JUnit `@ParameterizedTest` + `@CsvSource` | Data-driven tests for the driver scoring algorithms (speed, consistency, experience, aggression, tire management), running each scoring function against multiple input/output pairs from inline CSV data. |
@@ -862,24 +916,25 @@ cd backend && ./mvnw -B clean verify -pl f1v-service-data-analysis -am
 
 ### Frontend Test Suite
 
-**Framework:** Vitest 5.0 with React Testing Library, jsdom 30, jest-image-snapshot
+**Framework:** Vitest 5.0 with React Testing Library, jsdom 30, jest-image-snapshot; Playwright 1.63 for end-to-end
 
-**Configuration:** the `test` block in `vite.config.ts` — jsdom environment, global test APIs enabled, `@` path alias resolved from `tsconfig.app.json`, and a setup file (`src/test/setup.ts`) that polyfills `ResizeObserver`, `requestAnimationFrame`/`cancelAnimationFrame`, and configures automatic React Testing Library cleanup between tests.
+**Configuration:** the `test` block in `vite.config.ts` — jsdom environment, global test APIs enabled, `@` path alias resolved from `tsconfig.app.json`, coverage thresholds (89% statements, 76% branches, 77% functions, 89% lines) that gate the PR, and a setup file (`src/test/setup.ts`) that polyfills `ResizeObserver`, `matchMedia`, `requestAnimationFrame`/`cancelAnimationFrame`, and configures automatic React Testing Library cleanup between tests.
 
 | Category | Framework / Tool | Description |
 |----------|-----------------|-------------|
-| **Component Tests** | React Testing Library | Renders React components with `render()` and asserts on DOM output, user interactions (`fireEvent`), and async state updates (`waitFor`, `act`). Spans 22 component test files including `CircuitTrace`, `LapTimeChart`, `RadarChart`, `RaceSimulator`, `SessionControlPanel`, and `VersusMode`. |
+| **Component Tests** | React Testing Library | Renders React components with `render()` and asserts on DOM output, user interactions (`fireEvent`), and async state updates (`waitFor`, `act`). Spans 25 component test files including `CircuitTrace`, `LapTimeChart`, `RadarChart`, `RaceSimulator`, `SessionControlPanel`, and `VersusMode`. |
 | **Visual Regression Tests** | jest-image-snapshot + node-canvas | Renders the `CircuitTrace` component to a Node.js Canvas and compares pixel-level output against stored PNG baseline snapshots with a failure threshold of 0.01%. Baselines stored in `src/components/__tests__/__image_snapshots__/`. |
 | **Hook Tests** | `renderHook()` from React Testing Library | Tests custom React hooks (`useTelemetry`, `useLocation`) in isolation, validating STOMP subscription lifecycle, message buffering, and callback invocation patterns. |
 | **Utility Tests** | Vitest | Pure function tests for D3 scale factories (`chartScales`), world-to-canvas coordinate projection (`circuitProjection`), and radar chart geometry calculations (`radarGeometry`). |
 | **API Client Tests** | Vitest + `vi.stubEnv()` | Validates Axios instance configuration across deployment environments (dev, uat, prod) and STOMP client initialization with JWT authentication headers. |
 | **Auth Tests** | Vitest | Tests the Auth0 Axios interceptor (`AuthHandler`) for Bearer token injection and 401 response handling. |
 | **Error Boundary Tests** | React Testing Library | Validates the auto-retry error boundary's fallback rendering, retry attempts, and error recovery behavior. |
+| **End-to-End Tests** | Playwright + axe | 12 tests over the built bundle on a desktop Chrome and a Pixel 7 project: the real Auth0 redirect handshake against a stubbed tenant (`.env.e2e`), the SPA fallback for deep links, a live circuit trace fed by mocked STOMP frames over `routeWebSocket`, canvas re-scaling on viewport change, and axe accessibility scans of the landing page and the authenticated shell. |
 
 **Mocking Patterns:**
 - **D3.js** — Complex fluent API chains mocked as chainable objects that track method calls (`textCalls`, `styleCalls`, `appendCallCount`) for assertion.
 - **Canvas API** — `HTMLCanvasElement.prototype.getContext` spied to intercept and verify `beginPath()`, `moveTo()`, `lineTo()`, `stroke()`, `arc()`, and `fill()` draw operations.
-- **STOMP/WebSocket** — Full mock of `@stomp/stompjs` Client class and `sockjs-client`, returning controllable `{ id, unsubscribe }` subscription objects.
+- **STOMP/WebSocket** — Full mock of the `@stomp/stompjs` `Client` class, returning controllable `{ id, unsubscribe }` subscription objects.
 - **Auth0** — `useAuth0` hook mocked to return configurable authentication state and token accessors.
 
 **Visual Regression Baselines** (5 snapshots):
@@ -893,6 +948,12 @@ cd backend && ./mvnw -B clean verify -pl f1v-service-data-analysis -am
 ```bash
 # Full frontend test suite (CI mode — single run, no watch)
 cd frontend && yarn test:ci
+
+# The same suite with the coverage thresholds applied — what the PR gate runs
+cd frontend && yarn test:coverage
+
+# End-to-end (builds with --mode e2e and serves it on 127.0.0.1:4173)
+cd frontend && yarn test:e2e
 
 # Watch mode for development
 cd frontend && yarn vitest
@@ -914,20 +975,21 @@ cd frontend && yarn vitest
 
 | Layer | Test Files | Test Framework | Test Types |
 |-------|-----------|---------------|------------|
-| **Backend** | 29 files, 182 tests | JUnit 5, Mockito, Spring Boot Test | Unit, controller, security, reactive, serialization, parameterized |
-| **Frontend** | 38 files, 188 tests | Vitest, React Testing Library | Component, visual regression, hook, utility, API client, auth |
+| **Backend** | 42 files, 251 tests | JUnit 6, Mockito, Spring Boot Test, ArchUnit, Testcontainers | Unit, controller, security, HTTP mock, serialization, parameterized, integration, architecture |
+| **Frontend** | 54 files, 352 tests + 12 e2e | Vitest, React Testing Library, Playwright | Component, visual regression, hook, utility, API client, auth, end-to-end |
 | **Infrastructure** | 11 modules, 46 units | Trivy, Conftest, tflint, OpenTofu, Terragrunt | Plan-based security scanning, policy checks, linting, module and input validation |
 
 ### CI Test Integration
 
 Tests execute at two stages in the delivery pipeline:
 
-1. **PR Quality Gate (GitHub Actions)** — Five jobs run on every pull request to `main`:
-   - Backend: `mvn -B clean verify` (the whole reactor through the phase the checks bind to), Trivy filesystem scan, SBOM upload
+1. **PR Quality Gate (GitHub Actions)** — Seven jobs, gated on which paths changed, run on every pull request to `main`:
+   - Backend: `./mvnw -B clean verify` (the whole reactor through the phase the checks bind to), Trivy filesystem scan, SBOM upload
    - Frontend: audit, format, lint, typecheck, coverage, build, bundle budget
    - Frontend E2E: Playwright across a desktop and a mobile viewport, axe at both
    - Infrastructure static checks: formatting, module and input validation, tflint, Trivy
    - Infrastructure plan: a real `terragrunt plan` per environment, commented on the PR
+   - Workflow lint: actionlint and zizmor over the workflows themselves
 
 2. **Deployment Pipeline (Cloud Build)** — Tests re-run as part of each service's build-scan-deploy pipeline on environment branches (`dev`, `uat`, `prod`). The frontend pipeline additionally installs native C++ dependencies (Cairo, Pango, Python, g++) on Alpine Linux to support the `canvas` package required by the visual regression test suite.
 
@@ -950,7 +1012,8 @@ Security is enforced at every layer of the stack:
 | **CI Identity** | Split by trust | The pipelines that run third-party build code hold no IAM, network or data administration; only the infrastructure pipeline can change the estate, and it cannot grant itself Owner |
 | **Audit** | Data Access logs | Secret Manager, Firestore and BigQuery reads and writes are recorded, with 90-day retention |
 | **Secrets** | Secret Manager | Credentials are declared in IaC and their values added out of band, so they never enter state; each is granted to the one or two accounts that consume it |
-| **Container Hardening** | Distroless Images | No shell, no package manager — minimal attack surface |
+| **Container Hardening** | Distroless Images | No shell, no package manager — minimal attack surface; nginx runs unprivileged with CSP, HSTS, COOP/CORP and a Permissions-Policy |
+| **Supply Chain** | Pins and checksums | Step images pinned by digest, tool downloads checksum-verified, actions pinned to commits, `--frozen-lockfile`, a high/critical `yarn audit` gate, CycloneDX SBOMs, Dependabot weekly and a pin watcher for the rest |
 | **IaC Scanning** | Trivy + Conftest | Scanned against the rendered plan, where the values are resolved, plus a policy layer encoding the rules from the 2026-09-09 audit |
 | **Image Scanning** | Trivy | Filesystem vulnerability scan on every backend build |
 | **Session Policy** | Stateless | No server-side sessions; CSRF disabled (JWT-only auth) |
@@ -977,7 +1040,7 @@ the only place any of it is written down:
 | **Redis Tier** | BASIC (single node) | BASIC (single node) | STANDARD_HA (automatic failover) |
 | **Firestore Protection** | None | 3-day backups | Delete protection, PITR, 14-day backups |
 | **Subnet** | 10.0.0.0/24 | 10.0.0.0/24 | 10.0.0.0/24 |
-| **Warm Instances** | None | Replay worker + telemetry | All six services |
+| **Warm Instances** | None | Replay worker + telemetry | Five backends (the SPA scales to zero) |
 | **Alerting** | Policies defined, not enabled | Enabled | Enabled |
 | **Infrastructure Apply** | Automatic | Automatic | Manual approval |
 

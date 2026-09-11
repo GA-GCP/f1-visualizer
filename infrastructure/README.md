@@ -24,6 +24,10 @@ never could — a human with Owner created the first copy of each of these, and
 that was written down nowhere. This is that order. Everything below is a
 one-time, out-of-band step for a project that does not exist yet.
 
+0. **Name the project.** Put its id in `project.hcl`; everything below — the
+   state bucket, the service-account emails, the registry path — is derived
+   from that one line. The committed value is a placeholder.
+
 1. **Enable two APIs by hand.** `cloudresourcemanager` and `serviceusage`.
    The platform layer enables the other seventeen, but it cannot enable the ones
    it needs in order to run.

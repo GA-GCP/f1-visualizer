@@ -15,8 +15,8 @@ terraform {
 dependency "iam" {
   config_path = "../iam-and-secrets"
   mock_outputs = {
-    sa_deploy_email = "sa-f1v-deploy-${local.env.environment}@f1v-example-project.iam.gserviceaccount.com"
-    sa_infra_email  = "sa-f1v-infra-${local.env.environment}@f1v-example-project.iam.gserviceaccount.com"
+    sa_deploy_email = "sa-f1v-deploy-${local.env.environment}@${local.env.project_id}.iam.gserviceaccount.com"
+    sa_infra_email  = "sa-f1v-infra-${local.env.environment}@${local.env.project_id}.iam.gserviceaccount.com"
   }
 
   # REL-7: mocks are for planning, never for applying.

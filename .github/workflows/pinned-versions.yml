@@ -79,6 +79,24 @@ jobs:
             fi
           done
 
+          # The infrastructure linters. Dependabot sees none of them: tflint is a
+          # setup-action input, its Google ruleset lives in .tflint.hcl, and
+          # conftest is a step image whose digest the loop below compares but
+          # whose version tag nothing did — which is how v0.60.0 sat nine
+          # releases behind a digest that had never moved.
+          pin() { grep -oE "$2" "$1" | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1; }
+          for spec in \
+            "terraform-linters/tflint|tflint_version|.github/workflows/pr-checks.yml|tflint_version: v[0-9.]+" \
+            "terraform-linters/tflint-ruleset-google|tflint-ruleset-google|infrastructure/.tflint.hcl|version = \"[0-9.]+\"" \
+            "open-policy-agent/conftest|_CONFTEST_IMAGE|cloudbuild/infrastructure.yaml|conftest:v[0-9.]+"; do
+            IFS='|' read -r repo key file regex <<< "$spec"
+            have="$(pin "$file" "$regex")"
+            want="$(latest_release "$repo")"
+            if [ -n "$have" ] && [ "$have" != "$want" ]; then
+              report="${report}- \`${key}\`: ${have} → **${want}** (${repo})"$'\n'
+            fi
+          done
+
           # Digest-pinned step images across all three pipelines.
           #
           # `while read` fed by process substitution, not `for ... in $(...)`:
@@ -109,8 +127,9 @@ jobs:
           script: |
             const title = 'Pinned tool and image versions have moved';
             const body = [
-              'The versions below are pinned in `cloudbuild/*.yaml` and are not covered by',
-              'any Dependabot ecosystem (DLV-6). Each is a small, deliberate edit.',
+              'The versions below are pinned in `cloudbuild/*.yaml`, `.github/workflows/pr-checks.yml`',
+              'or `infrastructure/.tflint.hcl` and are not covered by any Dependabot ecosystem (DLV-6).',
+              'Each is a small, deliberate edit.',
               '',
               process.env.REPORT,
             ].join('\n');

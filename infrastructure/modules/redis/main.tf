@@ -18,7 +18,13 @@ resource "google_redis_instance" "f1v_cache" {
   auth_enabled            = true
   transit_encryption_mode = "SERVER_AUTHENTICATION"
 
-  redis_version = "REDIS_7_X"
+  # REDIS_7_2, which is what Memorystore offers as newest. The value this held
+  # for two days, REDIS_7_X, is not one the API accepts (it takes REDIS_6_X,
+  # REDIS_7_0 and REDIS_7_2), so the first apply after 24cda2a would have
+  # failed. On an instance still on 6.x this is an in-place upgrade: a restart
+  # on BASIC, a failover on STANDARD_HA, and not reversible — the API has no
+  # downgrade.
+  redis_version = "REDIS_7_2"
   display_name  = "F1V Live Telemetry Cache (${var.environment})"
 
   # REL-9: with no policy Google picks the window, which can land in the middle

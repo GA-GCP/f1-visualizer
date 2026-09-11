@@ -8,9 +8,9 @@ put it there.
 
 | Date | Report | Scope | IDs |
 |---|---|---|---|
-| 2026-09-06 | [Frontend audit](2026-09-06-frontend-audit.md) | `frontend/` at `c3f2563` — 96 findings | `F001`–`F096`, grouped by theme; categories S1 performance, S2 fluidity, S3 enterprise |
-| 2026-09-08 | [Backend architecture review](2026-09-08-backend-architecture-review.md) | `backend/` at `1c55a59` — 38 findings | `S` security, `R` reliability, `P` performance, `C` complexity, `T` testing, `O` operations |
-| 2026-09-09 | [Infrastructure audit](2026-09-09-infrastructure-audit.md) | `infrastructure/` at `df044ef` — 51 findings | `SEC`, `REL`, `PERF`, `CPLX`, `DLV`, `OPS` — prefixed so they never collide with the backend IDs |
+| 2026-09-06 | [Frontend audit](2026-09-06-frontend-audit.md) | `frontend/` at `d8383ce` — 96 findings | `F001`–`F096`, grouped by theme; categories S1 performance, S2 fluidity, S3 enterprise |
+| 2026-09-08 | [Backend architecture review](2026-09-08-backend-architecture-review.md) | `backend/` at `626176d` — 38 findings | `S` security, `R` reliability, `P` performance, `C` complexity, `T` testing, `O` operations |
+| 2026-09-09 | [Infrastructure audit](2026-09-09-infrastructure-audit.md) | `infrastructure/` at `d901495` — 51 findings | `SEC`, `REL`, `PERF`, `CPLX`, `DLV`, `OPS` — prefixed so they never collide with the backend IDs |
 
 Each report ends with a ranked roadmap; the commits that followed reference the
 IDs they close. The infrastructure report's migration steps became

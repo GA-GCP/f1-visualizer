@@ -1,5 +1,5 @@
 # ==============================================================================
-# uat — release rehearsal; moved to us-east1 on 2026-03-10 (c4b3b82)
+# uat — release rehearsal; moved to us-east1 on 2026-03-10 (ce7549e)
 # ==============================================================================
 # CPLX-3: every fact that is true of this environment and only this environment,
 # stated once. root.hcl reads this file, _envcommon/*.hcl build the units from

@@ -1,12 +1,12 @@
 # F1 Visualizer · Frontend Audit (2026-09-06)
 
-> Repository: GA-GCP/f1-visualizer (monorepo) · Scope: `frontend/` · Audited at `main @ c3f2563` · Read-only audit, no source changes.
+> Repository: GA-GCP/f1-visualizer (monorepo) · Scope: `frontend/` · Audited at `main @ d8383ce` · Read-only audit, no source changes.
 > 96 findings, ids F001–F096: 3 critical · 23 high · 44 medium · 26 low.
 
 ## 0. Conventions
 
 - Conventions: Severity = Critical / High / Medium / Low. Category = S1 Performance · S2 Fluidity · S3 Enterprise (the three audit goals). Effort = S (under half a day) · M (1–3 days) · L (over 3 days). Priority = 1–10 (impact × confidence ÷ effort).
-- Every finding was checked against the source at c3f2563 and, where a library claim mattered, against `node_modules`. Line numbers drift after edits; the **Evidence** snippet in each finding is the durable locator.
+- Every finding was checked against the source at d8383ce and, where a library claim mattered, against `node_modules`. Line numbers drift after edits; the **Evidence** snippet in each finding is the durable locator.
 
 ## 1. Context snapshot
 
@@ -1221,7 +1221,7 @@ Findings: F004, F026, F032, F033, F048, F049, F050, F055, F056, F066, F057, F058
 
 - Where: `frontend/Dockerfile:22`
 - Evidence: frontend/Dockerfile:4: FROM node:26-alpine AS builder frontend/Dockerfile:22: FROM nginxinc/nginx-unprivileged:alpine frontend/Dockerfile.ci:10: FROM nginxinc/nginx-unprivileged:alpine cloudbuild/frontend.yaml:22,34,43,…
-- Problem: Commit d3c6bd3 claims reproducible deploys, but the image that actually serves production — `nginxinc/nginx-unprivileged:alpine` in both Dockerfiles — carries no nginx version and no Alpine version at all; it will silently move across nginx minors/majors and Alpine releases on every rebuild. `node:26-alpine` is a major-only tag that tracks every Node 26.x patch and every Alpine bump, so `yarn install --frozen-lockfile` reproducibility is undermined by an un-pinned native toolchain (this matters here because `canvas` is compiled from source against whatever musl/cairo Alpine ships that day, `cloudbuild/frontend.yaml:28-30`). Neither uses a `@sha256:` digest. The `--cache-from $IMAGE:latest-${_ENV}` layer cache (frontend.yaml:76) also cannot hit when the base image changes underneath it.
+- Problem: Commit 4777360 claims reproducible deploys, but the image that actually serves production — `nginxinc/nginx-unprivileged:alpine` in both Dockerfiles — carries no nginx version and no Alpine version at all; it will silently move across nginx minors/majors and Alpine releases on every rebuild. `node:26-alpine` is a major-only tag that tracks every Node 26.x patch and every Alpine bump, so `yarn install --frozen-lockfile` reproducibility is undermined by an un-pinned native toolchain (this matters here because `canvas` is compiled from source against whatever musl/cairo Alpine ships that day, `cloudbuild/frontend.yaml:28-30`). Neither uses a `@sha256:` digest. The `--cache-from $IMAGE:latest-${_ENV}` layer cache (frontend.yaml:76) also cannot hit when the base image changes underneath it.
 - Impact: Two builds of the same commit can produce different nginx binaries and different `canvas` native builds; a broken upstream `:alpine` push (nginx has shipped regressions in minor releases) lands in prod with no diff in this repo to bisect. This is the first thing a supply-chain or SRE reviewer checks, and the commit message makes it a credibility issue.
 - Fix: Pin to full versions with digests: `FROM node:26.8.1-alpine3.22@sha256:<digest>` and `FROM nginxinc/nginx-unprivileged:1.29-alpine@sha256:<digest>` (same string in Dockerfile, Dockerfile.ci and the four Cloud Build `name:` entries — consider a `_NODE_IMAGE` substitution in cloudbuild/frontend.yaml so it is declared once). Add a `.github/dependabot.yml` with `package-ecosystem: docker` for `/frontend` (and `/cloudbuild` via `directories`) so the digests are bumped by PR rather than by drift. Since Dockerfile and Dockerfile.ci duplicate the nginx stage verbatim (nginx.conf COPY, dist COPY, EXPOSE, CMD), collapse them into one Dockerfile with `--target` stages (`builder`, `runtime`) and have Cloud Build pass `--target runtime` plus a `COPY --from` override, or at minimum declare the base in one shared `ARG NGINX_IMAGE` line.
 - Verified: Confirmed in both Dockerfiles and cloudbuild/frontend.yaml: node:26-alpine and nginxinc/nginx-unprivileged:alpine carry no digest, contradicting the intent of the pin-every-image commit. Lowered from high because the images are rebuilt rarely.

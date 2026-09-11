@@ -88,7 +88,7 @@ steps:
   # us-central1 and therefore share one f1v-repo, so a bare `:latest` was one tag
   # per service across all three environments — a dev build was the newest
   # `:latest` that a prod infrastructure apply would pick up. The frontend was
-  # given `latest-<env>` in fc84fa2; this is the backend half of the same fix.
+  # given `latest-<env>` in 28c004b; this is the backend half of the same fix.
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build-push-image'
     entrypoint: 'bash'

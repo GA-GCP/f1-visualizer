@@ -1,6 +1,6 @@
 # F1V Infrastructure Audit
 
-Repository `GA-GCP/f1-visualizer`, commit `df044ef` (2026-09-08), reviewed 2026-09-09.
+Repository `GA-GCP/f1-visualizer`, commit `d901495` (2026-09-08), reviewed 2026-09-09.
 
 Companion to the backend architecture review of 2026-09-08. Finding IDs here are prefixed SEC, REL, PERF, CPLX, DLV and OPS so they never collide with that review's S/R/P/C/T/O IDs, which appear in code comments.
 
@@ -268,7 +268,7 @@ Restrict ingress to the load balancer once the pipeline smoke test (which uses t
 
 **Evidence**
 
-Three facts combine. First, `cloudbuild/backend-service.yaml` pushes every backend image as `<region>-docker.pkg.dev/<project>/f1v-repo/<image>:latest` as well as `:<sha>`; dev and prod both use `us-central1`, so they share one `f1v-repo` and one `:latest` tag per service (the frontend was given `latest-<env>` in fc84fa2; the backend was not). Second, every prod unit sets `image_url = "...:latest"`. Third, the module has no `lifecycle { ignore_changes }`, while the deploy step updates the live service to `:<sha>` with `gcloud run services update`. On the next apply the provider sees `:<sha>` in the refreshed state and `:latest` in configuration, creates a new revision from `:latest`, and, because the v2 API sends absent `traffic` as "100% to latest", routes all traffic to it. The prod infrastructure trigger fires on any push to `prod` that touches `infrastructure/**`.
+Three facts combine. First, `cloudbuild/backend-service.yaml` pushes every backend image as `<region>-docker.pkg.dev/<project>/f1v-repo/<image>:latest` as well as `:<sha>`; dev and prod both use `us-central1`, so they share one `f1v-repo` and one `:latest` tag per service (the frontend was given `latest-<env>` in 28c004b; the backend was not). Second, every prod unit sets `image_url = "...:latest"`. Third, the module has no `lifecycle { ignore_changes }`, while the deploy step updates the live service to `:<sha>` with `gcloud run services update`. On the next apply the provider sees `:<sha>` in the refreshed state and `:latest` in configuration, creates a new revision from `:latest`, and, because the v2 API sends absent `traffic` as "100% to latest", routes all traffic to it. The prod infrastructure trigger fires on any push to `prod` that touches `infrastructure/**`.
 
 **Why it matters**
 
@@ -296,7 +296,7 @@ Run `terragrunt plan` in prod after a pipeline deploy; the plan should show the 
 
 **Evidence**
 
-UAT moved to us-east1 on 2026-03-10 (c4b3b82). The replay worker unit added on 2026-09-08 was copied from dev: `region = "us-central1"`, image `us-central1-docker.pkg.dev/.../replay-worker:latest`, and a networking mock pointing at a us-central1 connector. The real connector, Redis instance and registry are in us-east1, and the UAT backend trigger deploys with `_REGION = us-east1`.
+UAT moved to us-east1 on 2026-03-10 (ce7549e). The replay worker unit added on 2026-09-08 was copied from dev: `region = "us-central1"`, image `us-central1-docker.pkg.dev/.../replay-worker:latest`, and a networking mock pointing at a us-central1 connector. The real connector, Redis instance and registry are in us-east1, and the UAT backend trigger deploys with `_REGION = us-east1`.
 
 **Why it matters**
 

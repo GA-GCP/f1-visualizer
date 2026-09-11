@@ -20,7 +20,7 @@ resource "google_redis_instance" "f1v_cache" {
 
   # REDIS_7_2, which is what Memorystore offers as newest. The value this held
   # for two days, REDIS_7_X, is not one the API accepts (it takes REDIS_6_X,
-  # REDIS_7_0 and REDIS_7_2), so the first apply after 24cda2a would have
+  # REDIS_7_0 and REDIS_7_2), so the first apply after d901495 would have
   # failed. On an instance still on 6.x this is an in-place upgrade: a restart
   # on BASIC, a failover on STANDARD_HA, and not reversible — the API has no
   # downgrade.

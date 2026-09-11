@@ -5,7 +5,7 @@ An end-to-end read of the four microservices and ten commons modules under `back
 | | |
 |---|---|
 | **Reviewed** | 2026-09-08 |
-| **Commit** | `1c55a59` on `main` |
+| **Commit** | `626176d` on `main` |
 | **Scope** | `backend/` plus the Terraform, Cloud Build and gateway config that shapes it |
 | **Method** | Full source read, Maven dependency analysis, verified test run |
 

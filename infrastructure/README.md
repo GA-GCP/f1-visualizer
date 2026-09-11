@@ -39,23 +39,30 @@ one-time, out-of-band step for a project that does not exist yet.
 
        cd environments/<env>/iam-and-secrets && terragrunt apply
 
-4. **Create the Cloud Build GitHub connection** in the console and authorise the
-   repository. The triggers use the first-generation `github {}` block, whose
-   connection is not a Terraform resource (CPLX-8).
+4. **Connect the repository to Cloud Build.** By default the triggers use the
+   first-generation `github {}` block, whose connection is made once in the
+   console and is not a Terraform resource (CPLX-8). The second-generation path
+   is declared: set `github_app_installation_id` and `github_token_secret_version`
+   on the platform unit to have it create the connection and repository link,
+   then point each environment's `cloudbuild_repository_id` at the
+   `cloudbuild_repository_id` output and the triggers switch to
+   `repository_event_config`.
 
 5. **Add the OpenF1 credential values.** SEC-6 declares the two containers in
-   `modules/secrets`; the values are added out of band so they never enter state:
+   the platform layer (`google_secret_manager_secret.shared`, keyed by secret
+   id, in `modules/platform`) — once for the project, not per environment; the
+   values are added out of band so they never enter state:
 
        printf '%s' "$OPENF1_EMAIL"    | gcloud secrets versions add f1v-api-openf1-login-user-email    --data-file=-
        printf '%s' "$OPENF1_PASSWORD" | gcloud secrets versions add f1v-api-openf1-login-user-password --data-file=-
 
    **On an existing project the containers already exist**, created by hand
-   before they were declared. Import them once, per environment, or the first
-   apply of the `secrets` unit fails with `already exists`:
+   before they were declared. Import them once, from the platform directory, or
+   the first apply of the platform unit fails with `already exists`:
 
-       cd environments/<env>/secrets
-       terragrunt import google_secret_manager_secret.openf1_username projects/<project>/secrets/f1v-api-openf1-login-user-email
-       terragrunt import google_secret_manager_secret.openf1_password projects/<project>/secrets/f1v-api-openf1-login-user-password
+       cd platform
+       terragrunt import 'google_secret_manager_secret.shared["f1v-api-openf1-login-user-email"]'    projects/<project>/secrets/f1v-api-openf1-login-user-email
+       terragrunt import 'google_secret_manager_secret.shared["f1v-api-openf1-login-user-password"]' projects/<project>/secrets/f1v-api-openf1-login-user-password
 
 6. **Point DNS at the load balancers.** A Google-managed certificate stays in
    PROVISIONING until the domain resolves to the forwarding rule's address, so
@@ -73,7 +80,7 @@ one-time, out-of-band step for a project that does not exist yet.
    the remaining APIs, creates the registries and the DNS zone, and turns on Data
    Access audit logging.
 
-8. **Apply the environment.** `terragrunt run --all apply` from
+8. **Apply the environment.** `terragrunt run --all -- apply` from
    `environments/<env>`.
 
 ## Identities

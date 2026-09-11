@@ -24,12 +24,19 @@ terraform {
   source = "../modules/platform"
 }
 
+locals {
+  project_id = read_terragrunt_config(find_in_parent_folders("project.hcl")).locals.project_id
+  # Every runtime and CI identity is <name>-<env>@<project>; the two lists
+  # below used to spell all eleven out by hand.
+  sa = "${local.project_id}.iam.gserviceaccount.com"
+}
+
 inputs = {
-  project_id = "f1-visualizer-488201"
+  project_id = local.project_id
 
   # SEC-7: the bucket root.hcl already writes state into. Import it before the
   # first apply — this resource describes the bucket it is stored in.
-  state_bucket          = "f1-visualizer-488201-tfstate"
+  state_bucket          = "${local.project_id}-tfstate"
   state_bucket_location = "us-central1"
 
   # CPLX-2: dev and prod share us-central1, uat is in us-east1. Two repositories,
@@ -39,17 +46,12 @@ inputs = {
 
   registries = {
     us-central1 = {
-      location = "us-central1"
-      writer_members = [
-        "serviceAccount:sa-f1v-deploy-dev@f1-visualizer-488201.iam.gserviceaccount.com",
-        "serviceAccount:sa-f1v-deploy-prod@f1-visualizer-488201.iam.gserviceaccount.com",
-      ]
+      location       = "us-central1"
+      writer_members = [for env in ["dev", "prod"] : "serviceAccount:sa-f1v-deploy-${env}@${local.sa}"]
     }
     us-east1 = {
-      location = "us-east1"
-      writer_members = [
-        "serviceAccount:sa-f1v-deploy-uat@f1-visualizer-488201.iam.gserviceaccount.com",
-      ]
+      location       = "us-east1"
+      writer_members = ["serviceAccount:sa-f1v-deploy-uat@${local.sa}"]
     }
   }
 
@@ -64,14 +66,11 @@ inputs = {
     "f1v-api-openf1-login-user-password",
   ]
 
-  shared_secret_accessors = [
-    "serviceAccount:sa-f1v-data-ingestion-dev@f1-visualizer-488201.iam.gserviceaccount.com",
-    "serviceAccount:sa-f1v-data-ingestion-uat@f1-visualizer-488201.iam.gserviceaccount.com",
-    "serviceAccount:sa-f1v-data-ingestion-prod@f1-visualizer-488201.iam.gserviceaccount.com",
-    "serviceAccount:sa-f1v-replay-worker-dev@f1-visualizer-488201.iam.gserviceaccount.com",
-    "serviceAccount:sa-f1v-replay-worker-uat@f1-visualizer-488201.iam.gserviceaccount.com",
-    "serviceAccount:sa-f1v-replay-worker-prod@f1-visualizer-488201.iam.gserviceaccount.com",
-  ]
+  shared_secret_accessors = flatten([
+    for env in ["dev", "uat", "prod"] : [
+      for svc in ["data-ingestion", "replay-worker"] : "serviceAccount:sa-f1v-${svc}-${env}@${local.sa}"
+    ]
+  ])
 
   # OPS-3: the zone the managed certificates have always silently depended on.
   # The records live with the load balancers that own the addresses.

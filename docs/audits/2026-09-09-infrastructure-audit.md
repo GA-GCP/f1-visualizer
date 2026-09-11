@@ -71,7 +71,7 @@ Add `service_account_email` to the frontend module (required, no default), add a
 
 **Verify**
 
-Whether the default compute account still holds Editor depends on org policy; check `gcloud projects get-iam-policy f1-visualizer-488201`.
+Whether the default compute account still holds Editor depends on org policy; check `gcloud projects get-iam-policy f1v-example-project`.
 
 #### SEC-3 · High · effort M — Project-wide data and secret roles let every environment's runtime identity reach every other environment's data
 
@@ -94,7 +94,7 @@ Environment boundaries exist in naming only. A bug or compromise in dev has prod
 
 - Secrets: `google_secret_manager_secret_iam_member` on each secret for the one or two accounts that consume it.
 - BigQuery: `google_bigquery_dataset_iam_member` on the dataset, after CPLX-2 gives each environment its own dataset.
-- Firestore: an IAM condition on the binding (`resource.name` matching `projects/f1-visualizer-488201/databases/f1v-db-<env>`), or per-environment projects.
+- Firestore: an IAM condition on the binding (`resource.name` matching `projects/f1v-example-project/databases/f1v-db-<env>`), or per-environment projects.
 - Keep `roles/bigquery.jobUser` at project level; it is the one role that genuinely is project-scoped.
 
 #### SEC-4 · Medium · effort M — No Cloud Armor policy on either load balancer
@@ -172,7 +172,7 @@ Declare the secret containers in IaC (a `secrets` module or the platform layer),
 
 **Evidence**
 
-`google_redis_instance.auth_string` and `google_secret_manager_secret_version.secret_data` both land in `environments/<env>/redis/terraform.tfstate`. The bucket `f1-visualizer-488201-tfstate` is created outside IaC; its versioning, uniform bucket-level access, public-access prevention, retention and IAM are unknown from the repository.
+`google_redis_instance.auth_string` and `google_secret_manager_secret_version.secret_data` both land in `environments/<env>/redis/terraform.tfstate`. The bucket `f1v-example-project-tfstate` is created outside IaC; its versioning, uniform bucket-level access, public-access prevention, retention and IAM are unknown from the repository.
 
 **Why it matters**
 
@@ -184,7 +184,7 @@ A bootstrap unit that owns the bucket: versioning on, uniform bucket-level acces
 
 **Verify**
 
-Bucket settings can be checked with `gcloud storage buckets describe gs://f1-visualizer-488201-tfstate`.
+Bucket settings can be checked with `gcloud storage buckets describe gs://f1v-example-project-tfstate`.
 
 #### SEC-8 · Low · effort S — Dead Pub/Sub grants and an over-broad builder role
 
@@ -356,7 +356,7 @@ Grant the infra identity (after SEC-1) `roles/compute.securityAdmin`, `roles/sec
 
 **Verify**
 
-Compare with the live policy: `gcloud projects get-iam-policy f1-visualizer-488201 --flatten=bindings --filter='bindings.members:sa-f1v-cloudbuild'`.
+Compare with the live policy: `gcloud projects get-iam-policy f1v-example-project --flatten=bindings --filter='bindings.members:sa-f1v-cloudbuild'`.
 
 #### REL-5 · High · effort S — Prod applies with no approval and no plan-apply separation, contrary to the README
 

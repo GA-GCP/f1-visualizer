@@ -9,7 +9,8 @@ spring:
   cloud:
     gcp:
       firestore:
-        project-id: f1-visualizer-488201
+        # Your own project, from the environment; the default is a placeholder.
+        project-id: ${GOOGLE_CLOUD_PROJECT:f1v-example-project}
         database-id: f1v-db-dev
   security:
     oauth2:

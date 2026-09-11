@@ -17,7 +17,7 @@ terraform {
 dependency "iam" {
   config_path = "../iam-and-secrets"
   mock_outputs = {
-    sa_replay_worker_email = "sa-f1v-replay-worker-${local.env.environment}@f1-visualizer-488201.iam.gserviceaccount.com"
+    sa_replay_worker_email = "sa-f1v-replay-worker-${local.env.environment}@${local.env.project_id}.iam.gserviceaccount.com"
   }
 
   # REL-7: mocks are for planning, never for applying.

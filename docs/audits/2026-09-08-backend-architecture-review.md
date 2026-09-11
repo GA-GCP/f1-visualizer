@@ -155,7 +155,7 @@ ReplayEngine.tick()   →   progress message         →   live_location,       
 #### S6 · Medium · Credential handling in the OpenF1 client
 
 - **Where:** `commons-api-openf1 · config/SecretManagerConfig.java`, `commons-api-openf1 · service/OpenF1AuthService.java`, `commons-api-openf1 · client/OpenF1Client.java`
-- **Found:** The project id defaults to a hardcoded `f1-visualizer-488201`; secrets are read at version `latest` with a hand-rolled Secret Manager client that brings the client, protobuf and gRPC stack into every ingestion image; the bearer token is a non-volatile `String` read from HTTP, scheduler and MQTT threads; when authentication has failed, requests still go out with the literal header `Bearer null` and the resulting 401 is swallowed as "no data" (see R5).
+- **Found:** The project id defaults to a hardcoded `f1v-example-project`; secrets are read at version `latest` with a hand-rolled Secret Manager client that brings the client, protobuf and gRPC stack into every ingestion image; the bearer token is a non-volatile `String` read from HTTP, scheduler and MQTT threads; when authentication has failed, requests still go out with the literal header `Bearer null` and the resulting 401 is swallowed as "no data" (see R5).
 - **Do:** Mount the two secrets as environment variables with Cloud Run `--set-secrets` (versions pinned in Terraform) and drop the Secret Manager dependency; hold the token in an `AtomicReference`; refresh from `expires_in`; throw when no token is available instead of sending the request.
 - **Effort:** S
 

@@ -72,7 +72,7 @@ class AnalysisControllerTest {
         when(raceAnalysisService.getSessionLapTimes(9165L))
                 .thenThrow(
                         new RuntimeException(
-                                "BigQuery connection failed for project f1-visualizer-488201"));
+                                "BigQuery connection failed for project example-project-123"));
 
         mockMvc.perform(
                         get("/api/v1/analysis/session/9165/laps")

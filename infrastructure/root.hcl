@@ -15,13 +15,17 @@
 terraform_binary = "tofu"
 
 locals {
-  # The second argument is the fallback when the file is not found, and the try()
-  # covers a Terragrunt version that raises instead. `platform/` has no env.hcl
-  # above it and must still resolve.
-  env_file = try(find_in_parent_folders("env.hcl", ""), "")
-  env      = local.env_file == "" ? {} : read_terragrunt_config(local.env_file).locals
+  # `platform/` has no env.hcl above it and must still resolve.
+  #
+  # try(), not a conditional on an empty path: HCL evaluates both arms of a
+  # conditional to unify their types, so `"" == "" ? {} : read_terragrunt_config("")`
+  # still called read_terragrunt_config with an empty path in the platform unit,
+  # which resolves to the unit's own terragrunt.hcl, which includes this file —
+  # an include loop that Terragrunt spun on silently. The platform unit could
+  # never be parsed, let alone applied.
+  env = try(read_terragrunt_config(find_in_parent_folders("env.hcl")).locals, {})
 
-  project_id = try(local.env.project_id, "f1-visualizer-488201")
+  project_id = read_terragrunt_config(find_in_parent_folders("project.hcl")).locals.project_id
   region     = try(local.env.region, "us-central1")
 
   # `platform` is not an environment, but it is a legible label for the
@@ -55,7 +59,7 @@ remote_state {
     # SEC-7: this bucket is declared in infrastructure/platform. It has to exist
     # before any unit can store state, including the one that declares it, so it
     # is created by hand and imported once — see MIGRATIONS.md.
-    bucket   = "f1-visualizer-488201-tfstate"
+    bucket   = "${local.project_id}-tfstate"
     prefix   = "${path_relative_to_include()}/terraform.tfstate"
     project  = local.project_id
     location = "us-central1"

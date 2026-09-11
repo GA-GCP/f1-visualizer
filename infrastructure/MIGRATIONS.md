@@ -16,10 +16,10 @@ the first apply fails with `already exists` until it is imported.
 
 ```bash
 cd infrastructure/platform
-P=f1-visualizer-488201
+P=f1v-example-project   # project_id from project.hcl
 
 # The bucket this unit's own state is stored in (SEC-7).
-terragrunt import 'google_storage_bucket.tfstate' "$P/f1-visualizer-488201-tfstate"
+terragrunt import 'google_storage_bucket.tfstate' "$P/$P-tfstate"
 
 # The two Artifact Registry repositories, previously declared in environments/.
 terragrunt import 'google_artifact_registry_repository.repo["us-central1"]' \
@@ -54,8 +54,8 @@ rather than destroyed. Delete them from the bucket once the platform apply is
 confirmed:
 
 ```bash
-gsutil rm -r gs://f1-visualizer-488201-tfstate/dev/artifact-registry
-gsutil rm -r gs://f1-visualizer-488201-tfstate/uat/artifact-registry
+gsutil rm -r gs://$P-tfstate/dev/artifact-registry
+gsutil rm -r gs://$P-tfstate/uat/artifact-registry
 ```
 
 ---
@@ -76,7 +76,7 @@ have to be copied. Do this with prod ingestion paused — a load in flight would
 write into the old dataset after the copy starts.
 
 ```bash
-P=f1-visualizer-488201
+P=f1v-example-project   # project_id from project.hcl
 
 # 1. Apply the three bigquery units so the empty datasets and tables exist.
 #    (dev first, then uat, then prod, in the normal promotion order.)
@@ -131,7 +131,7 @@ zone, while the classic one keeps serving. Nothing switches until the flag does.
 ```bash
 # 1. After applying an environment, wait for the certificate to go ACTIVE.
 gcloud certificate-manager certificates describe f1v-frontend-dev-cert-managed \
-  --location=global --project=f1-visualizer-488201 --format='value(managed.state)'
+  --location=global --project="$P" --format='value(managed.state)'
 
 # 2. Only when it reports ACTIVE, set use_certificate_manager = true in that
 #    environment's lb-frontend and lb-api units, and apply.
@@ -152,7 +152,7 @@ that nothing in this repository records, and a new project cannot reproduce it.
 block while `cloudbuild_repository_id` is empty, which it is.
 
 ```bash
-P=f1-visualizer-488201
+P=f1v-example-project   # project_id from project.hcl
 
 # 1. Install the Cloud Build GitHub App on the repository and note the
 #    installation id from the URL of the app's settings page.

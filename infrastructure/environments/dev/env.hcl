@@ -11,7 +11,7 @@
 
 locals {
   environment = "dev"
-  project_id  = "f1-visualizer-488201"
+  project_id  = read_terragrunt_config(find_in_parent_folders("project.hcl")).locals.project_id
   region      = "us-central1"
 
   # REL-8 / CPLX-3: one flag, rather than deletion_protection, delete_protection
@@ -30,7 +30,7 @@ locals {
   # REL-1: the tag carries the environment, so dev, uat and prod stop sharing
   # one `:latest` in the registries they share.
   registry_host = "us-central1-docker.pkg.dev"
-  repository    = "f1-visualizer-488201/f1v-repo"
+  repository    = "${local.project_id}/f1v-repo"
   image_tag     = "latest-dev"
 
   # --- Edge -----------------------------------------------------------------
@@ -51,7 +51,7 @@ locals {
   # --- Identities (SEC-1) ---------------------------------------------------
   # Named by convention where a cross-layer reference is needed; every
   # same-environment reference goes through a dependency output.
-  deploy_service_account = "sa-f1v-deploy-dev@f1-visualizer-488201.iam.gserviceaccount.com"
+  deploy_service_account = "sa-f1v-deploy-${local.environment}@${local.project_id}.iam.gserviceaccount.com"
 
   # --- Sizing (PERF-4) -------------------------------------------------------
   # Always-on compute in dev and uat cost about as much as prod: roughly $400 a

@@ -80,6 +80,11 @@ environment through the same flag, so a production bundle is produced by:
 yarn build --mode prod
 ```
 
+The committed values are the real tenants' domains and SPA client IDs. That is deliberate: a
+single-page application authenticates with PKCE and holds no secret, so its client ID is a public
+identifier by design, and the callback URLs it may return to are pinned on the Auth0 side. Nothing
+that could be used against the tenants lives in this repository.
+
 `VITE_API_BASE_URL` is only consulted in built bundles; during `yarn dev` the proxy table above
 takes over instead. The WebSocket URL is derived from the same origin (`wss://<api host>/ws/websocket`),
 so there is no separate setting for it.
@@ -100,6 +105,7 @@ so there is no separate setting for it.
 | `yarn test:coverage` | The same run with V8 coverage and the thresholds applied — what the PR runs    |
 | `yarn test:e2e`      | Playwright: builds with `--mode e2e`, serves it, runs both viewport projects   |
 | `yarn test:e2e:ui`   | The same suite in Playwright's UI mode                                         |
+| `yarn screenshots`   | Captures `docs/screenshots/` from the built bundle through the e2e stubs       |
 | `yarn size`          | size-limit against the gzipped bundle budgets in `.size-limit.js`              |
 
 For a watch-mode test loop during development, run `yarn vitest` directly.
@@ -241,6 +247,12 @@ deep link, a live circuit trace fed by mocked STOMP frames through `routeWebSock
 re-scaling on a viewport change, and axe accessibility scans of the landing page and the
 authenticated shell. It is the only layer that exercises the redirect, real STOMP frames and a
 real canvas resize.
+
+**Screenshots.** `yarn screenshots` runs `e2e/screenshots.capture.ts` under its own config
+(`playwright.screenshots.config.ts`), so the default suite never runs it. It signs in through the
+same stubs, starts a simulation, selects a session and two drivers, and writes the README's images
+to `docs/screenshots/` — a desktop project at 1440×1000, a 1280×640 project framed on the circuit
+trace for the repository's social preview, and the Pixel 7 project for the mobile layout.
 
 **Bundle budget.** `yarn size` measures the gzipped first load of the public landing route
 (250 kB) and the total across all chunks (415 kB). Each raise of a limit is recorded in

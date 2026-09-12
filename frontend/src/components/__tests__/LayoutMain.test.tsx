@@ -67,9 +67,25 @@ describe('LayoutMain', () => {
             </MemoryRouter>,
         );
 
-        // "VISUALIZER" is a separate span, clipped away below the sm breakpoint,
-        // so the title is one string only as the banner's text content.
-        expect(screen.getByRole('banner')).toHaveTextContent('F1 VISUALIZER');
+        // One text node: the name is clipped away below the sm breakpoint as a
+        // whole, never split so that one half of it can show on its own.
+        expect(screen.getByText('F1 VISUALIZER')).toBeInTheDocument();
+    });
+
+    it('never renders the bare mark as the brand', () => {
+        // "F1" on its own is Formula One Licensing's trade mark, not this
+        // project's name (see the disclaimer at the end of the README). The
+        // app bar once split the wordmark so "VISUALIZER" could be clipped away
+        // on phones, which left "F1" as the bar's own text at every width below
+        // sm. getByText matches an element's own text nodes, so this is exactly
+        // the markup that regression produced.
+        render(
+            <MemoryRouter initialEntries={['/']}>
+                <LayoutMain />
+            </MemoryRouter>,
+        );
+
+        expect(screen.queryByText(/^F1$/)).not.toBeInTheDocument();
     });
 
     it('renders the mocked UserSettingsModal', () => {

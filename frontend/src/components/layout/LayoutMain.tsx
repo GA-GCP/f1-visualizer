@@ -31,7 +31,7 @@ import type { Breakpoint, SxProps, Theme } from '@mui/material';
  * and read by assistive technology at every width — rendering it twice, once
  * per breakpoint, would have put two copies in the accessibility tree. Nowrap
  * throughout: a 1px box must not reflow its text into a stack of lines, and
- * nothing this wraps — a nav label, half of the wordmark — may wrap once shown.
+ * nothing this wraps — a nav label, the wordmark — may wrap once shown.
  */
 const visuallyHiddenBelow = (from: Breakpoint): SxProps<Theme> => ({
     position: { xs: 'absolute', [from]: 'static' },
@@ -108,18 +108,23 @@ const LayoutMain: React.FC = () => {
                 <Container maxWidth="xl">
                     <Toolbar disableGutters sx={{ height: 64 }}>
                         <SpeedIcon sx={{ mr: 1, color: 'primary.main', fontSize: 32 }} />
-                        {/* The bar has to hold the brand, three 44px nav targets
-                            and two icon buttons; on a 412px phone that left the
-                            wordmark 84px, so it wrapped "F1" above "VISUALIZER"
-                            and still pushed the logout button off the right edge.
-                            Below sm the brand is the icon plus "F1"; nowrap so it
-                            can never stack again. */}
+                        {/* Below sm the brand is the icon alone. The bar also
+                            holds three 44px nav targets and two icon buttons,
+                            which leaves the wordmark 126px on a 412px phone and
+                            34px at the 320px reflow width; the name is 137px at
+                            h5, xs is one rule for every phone, and at 320px no
+                            legible size fits. So the name is shown whole or not
+                            at all: "F1" by itself is Formula One Licensing's
+                            mark, not this project's name — see the disclaimer at
+                            the end of the README — and is never displayed on its
+                            own. Hidden rather than removed, so the banner still
+                            reads "F1 VISUALIZER" to assistive technology; the div
+                            stays in flow as the spacer between brand and nav. */}
                         <Typography
                             variant="h5"
                             component="div"
                             sx={{
                                 flexGrow: 1,
-                                whiteSpace: 'nowrap',
                                 fontWeight: 900,
                                 fontStyle: 'italic',
                                 letterSpacing: '-0.02em',
@@ -128,10 +133,8 @@ const LayoutMain: React.FC = () => {
                                 WebkitTextFillColor: 'transparent',
                             }}
                         >
-                            F1
                             <Box component="span" sx={visuallyHiddenBelow('sm')}>
-                                {' '}
-                                VISUALIZER
+                                F1 VISUALIZER
                             </Box>
                         </Typography>
 

@@ -32,8 +32,8 @@ rules:
       from either file.
     paths:
       exclude:
-        - "backend/f1v-commons-web/**"
-        - "backend/f1v-commons-messaging/**"
+        - "**/backend/f1v-commons-web/**"
+        - "**/backend/f1v-commons-messaging/**"
         - "**/src/test/**"
     pattern: $X.permitAll(...)
 

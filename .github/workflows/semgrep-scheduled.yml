@@ -51,6 +51,11 @@ jobs:
       # No --error: a full scan reports, it does not gate. Nobody is mid-change
       # when this runs, so failing the job would only produce a red mark on a
       # schedule with no PR to attach it to.
+      #
+      # --text is the job log; --json-output writes a copy of the JSON for the
+      # report step. The format flags (--text, --json, --sarif, …) are a single
+      # setting and the last one given wins, so `--json --output=FILE --text` is
+      # a text run whose text rendering is saved to FILE — never JSON.
       - name: Scan
         run: |
           set -uo pipefail
@@ -64,8 +69,8 @@ jobs:
             --config=p/dockerfile \
             --exclude-rule=package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown \
             --metrics=off \
-            --json --output=semgrep-full.json \
-            --text
+            --text \
+            --json-output=semgrep-full.json
 
       - name: Report
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -77,8 +82,8 @@ jobs:
             let results = [];
             try {
               results = JSON.parse(fs.readFileSync('semgrep-full.json', 'utf8')).results ?? [];
-            } catch {
-              core.setFailed('Semgrep produced no output — see the scan step.');
+            } catch (e) {
+              core.setFailed(`Could not read semgrep-full.json as JSON (${e.message}) — see the scan step.`);
               return;
             }
 

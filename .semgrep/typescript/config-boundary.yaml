@@ -12,8 +12,8 @@ rules:
       absence is a supported state.
     paths:
       exclude:
-        - "frontend/src/config/env.ts"
-        - "frontend/src/vite-env.d.ts"
+        - "**/frontend/src/config/env.ts"
+        - "**/frontend/src/vite-env.d.ts"
         - "**/__tests__/**"
         - "**/*.test.ts"
     pattern-regex: 'import\.meta\.env\.VITE_(AUTH0_[A-Z_]+|API_BASE_URL)'

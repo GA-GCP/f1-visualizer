@@ -686,8 +686,15 @@ jobs:
       - name: Test the rules
         run: semgrep --test --metrics=off .semgrep
 
+      # --error is the gate: semgrep exits 1 on a new finding and that is the
+      # step's exit code. The comment and upload steps below run on always(), so
+      # a failed step still gets its findings onto the PR.
+      #
+      # --text is the job log; --json-output writes a copy of the JSON for the
+      # comment step. The format flags (--text, --json, --sarif, …) are a single
+      # setting and the last one given wins, so `--json --output=FILE --text` is
+      # a text run whose text rendering is saved to FILE — never JSON.
       - name: Scan
-        id: scan
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           # --metrics=off: the default sends usage telemetry to semgrep.dev when
@@ -708,9 +715,8 @@ jobs:
             --baseline-commit="$BASE_SHA" \
             --metrics=off \
             --error \
-            --json --output=semgrep.json \
-            --text
-          echo "exit=$?" >> "$GITHUB_OUTPUT"
+            --text \
+            --json-output=semgrep.json
 
       - name: Comment the findings
         if: ${{ always() }}

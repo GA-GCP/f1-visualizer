@@ -62,7 +62,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Not managed by the Boot parent. -->
-        <spring-cloud-gcp.version>8.1.1</spring-cloud-gcp.version>
+        <spring-cloud-gcp.version>8.2.1</spring-cloud-gcp.version>
         <testcontainers.version>2.0.5</testcontainers.version>
         <springdoc.version>3.1.1</springdoc.version>
         <!-- BigQuery and Firestore request different versions of this; without a

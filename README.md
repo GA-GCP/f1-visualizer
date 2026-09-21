@@ -330,14 +330,14 @@ The real-time pipeline is the core of the platform — a four-hop event-driven c
 | | Cloud Monitoring | — | Uptime checks, alert policies and a per-environment budget |
 | | Artifact Registry | — | Docker image repository with layer caching |
 | **IaC** | OpenTofu | 1.12.6 | Infrastructure as Code (Terraform-compatible, open-source) |
-| | Terragrunt | 1.1.4 | DRY configuration wrapper with dependency orchestration |
+| | Terragrunt | 1.1.6 | DRY configuration wrapper with dependency orchestration |
 | | Google provider | 8.2 | Lock-file pinned in every module |
 | **CI/CD** | Cloud Build | — | 7 path-filtered triggers over 3 pipeline definitions (build, scan, deploy) |
 | | GitHub Actions | — | PR quality gates: 8 jobs (lint, test, e2e, validate, plan, Semgrep, workflow lint) |
 | | Dependabot | — | Weekly updates across npm, Maven, Docker (×2), GitHub Actions and Terraform |
 | | Cloud Build Docker builder | — | Layer-cached image builds (replaced Kaniko, archived upstream) |
 | | Trivy | 0.74 | Container filesystem scanning and IaC static analysis (replaced tfsec, retired upstream) |
-| | Conftest / OPA | 0.69 | Policy checks against the rendered plan |
+| | Conftest / OPA | 0.70 | Policy checks against the rendered plan |
 | | Semgrep | — | Project-specific rules for Java, TypeScript and Terraform, tested against their own fixtures |
 | | tflint | 0.64 | Terraform linting with the Google ruleset (0.39) |
 | **Container** | Distroless | Java 25, Debian 13 | Minimal backend runtime (no shell, no package manager) |
@@ -895,7 +895,7 @@ A backend deploy is a plain `gcloud run services update --image=<sha>` and is re
 The infrastructure pipeline plans to a file and applies that file:
 
 ```
-1. Install Tools            OpenTofu 1.12.6 + Terragrunt 1.1.4, each verified
+1. Install Tools            OpenTofu 1.12.6 + Terragrunt 1.1.6, each verified
          |                  against the SHA256SUMS published with its release
 2. Trivy IaC Scan           trivy config over infrastructure/ (fast first pass)
          |

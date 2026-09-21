@@ -409,7 +409,7 @@ jobs:
       # use to the steps below.
       - name: Install Terragrunt
         env:
-          TG_VERSION: '1.1.4'
+          TG_VERSION: '1.1.6'
         run: |
           set -euo pipefail
           cd /tmp
@@ -547,7 +547,7 @@ jobs:
       # use to the steps below.
       - name: Install Terragrunt
         env:
-          TG_VERSION: '1.1.4'
+          TG_VERSION: '1.1.6'
         run: |
           set -euo pipefail
           cd /tmp

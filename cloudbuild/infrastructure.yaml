@@ -16,7 +16,7 @@ substitutions:
   _ENV: 'dev'
   _SHORT_SHA: 'manual-build'
   _TOFU_VERSION: '1.12.6'
-  _TERRAGRUNT_VERSION: '1.1.4'
+  _TERRAGRUNT_VERSION: '1.1.6'
   # DLV-2: step images pinned by digest, the way cloudbuild/frontend.yaml has
   # pinned its four since 28c004b. `alpine:3.24` and `aquasec/trivy:0.74.0` were
   # tag-pinned only, so a moved tag would execute under the most privileged

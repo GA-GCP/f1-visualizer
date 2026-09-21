@@ -22,7 +22,7 @@ substitutions:
   # tag-pinned only, so a moved tag would execute under the most privileged
   # identity in the project and two runs of the same commit could differ.
   # The tag is kept beside the digest for readability; the digest resolves.
-  _ALPINE_IMAGE: 'alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b'
+  _ALPINE_IMAGE: 'alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6'
   _TRIVY_IMAGE: 'aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969'
   # conftest was the one step image still tag-pinned, and at v0.60.0 it had
   # fallen nine releases behind because nothing watched it: not Dependabot,

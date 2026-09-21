@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { apiClient, setAuthHandlers } from '../api/apiClient';
 import { createLogger } from '../lib/logger';
+import { requireAccessToken } from './accessToken';
 import { claimLoginRedirect } from './loginRedirectGuard';
 
 const log = createLogger('auth');
@@ -37,7 +38,8 @@ export const AxiosAuthInterceptor: React.FC = () => {
         setAuthHandlers({
             // cacheMode 'off' forces a new token rather than returning the
             // cached one the server has just rejected.
-            refreshAccessToken: () => getAccessTokenSilently({ cacheMode: 'off' }),
+            refreshAccessToken: () =>
+                requireAccessToken(getAccessTokenSilently({ cacheMode: 'off' })),
             onAuthExpired: reauthenticate,
         });
 
@@ -45,7 +47,7 @@ export const AxiosAuthInterceptor: React.FC = () => {
             if (!isAuthenticated) return config;
 
             try {
-                const token = await getAccessTokenSilently();
+                const token = await requireAccessToken(getAccessTokenSilently());
                 config.headers.Authorization = `Bearer ${token}`;
                 return config;
             } catch (error) {

@@ -1,6 +1,7 @@
 import { useAuth0 } from '@auth0/auth0-react';
 import { useEffect } from 'react';
 import { activateStomp, setStompTokenProvider, stompClient } from '../api/stompClient';
+import { requireAccessToken } from './accessToken';
 
 // Delay before the first STOMP activation after login (ms).
 // On login, several REST calls fire concurrently (fetchDrivers, fetchSessions,
@@ -23,7 +24,7 @@ export const StompAuthHandler: React.FC = () => {
     useEffect(() => {
         if (!isAuthenticated) return;
 
-        setStompTokenProvider(() => getAccessTokenSilently());
+        setStompTokenProvider(() => requireAccessToken(getAccessTokenSilently()));
 
         const tid = setTimeout(activateStomp, ACTIVATION_DELAY_MS);
 

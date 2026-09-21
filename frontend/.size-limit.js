@@ -16,9 +16,12 @@ function firstLoadChunks() {
 
 export default [
   {
+    // 250 -> 255 kB  @auth0/auth0-react 2.25.0; the auth0 chunk is a
+    //                first-load chunk, so the +2.8 kB gz recorded under the
+    //                total budget below lands here too (250.2 kB in CI).
     name: 'first load — public landing route',
     path: firstLoadChunks(),
-    limit: '250 kB',
+    limit: '255 kB',
     gzip: true,
   },
   {
@@ -37,6 +40,17 @@ export default [
     //                  Fragment refs and browser() landing in react-dom).
     //                  Every other chunk is byte-identical. First load moved
     //                  237.6 -> 246.2 kB and stays under its own budget.
+    //   415 -> 425 kB  @auth0/auth0-react 2.25.0 (the frontend-prod
+    //                  Dependabot group). Its ESM bundle inlines its own
+    //                  copy of auth0-spa-js — the app never imports spa-js
+    //                  directly, so the lockfile's newer spa-js is installed
+    //                  but never bundled — and the re-bundled 2.25 client is
+    //                  +2.8 kB gz (published bundle 67.0 -> 69.8 kB; here it
+    //                  is the 61.2 kB auth0 chunk after rolldown). It is
+    //                  methods on the one exported client class, so nothing
+    //                  tree-shakes. The other five bumps in the group are
+    //                  patch/minor and net out within the remainder: the
+    //                  total landed at 417.9 kB in CI (416.8 locally).
     //
     // This is the total across *all* chunks, most of which are lazy route
     // chunks behind the login. The number a first-time visitor actually
@@ -44,7 +58,7 @@ export default [
     // 3.1 kB, not 14.7.
     name: 'total JS shipped (all chunks)',
     path: 'dist/assets/*.js',
-    limit: '415 kB',
+    limit: '425 kB',
     gzip: true,
   },
 ];

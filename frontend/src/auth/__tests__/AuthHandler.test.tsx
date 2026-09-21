@@ -118,6 +118,22 @@ describe('AxiosAuthInterceptor', () => {
             expect(consoleSpy).toHaveBeenCalled();
             consoleSpy.mockRestore();
         });
+
+        it('treats a resolved-but-missing token as a failure, not as a bearer', async () => {
+            // auth0-react 2.25 types getAccessTokenSilently() as string | undefined.
+            // Nothing here uses cacheMode 'cache-only', so undefined is a fault,
+            // and the request must not go out as `Bearer undefined`.
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            mockGetAccessTokenSilently.mockResolvedValue(undefined);
+            mockAuth0(true);
+
+            renderAt();
+            await expect(registeredInterceptor()({ headers: {} })).rejects.toThrow();
+
+            expect(mockLoginWithRedirect).not.toHaveBeenCalled();
+            expect(consoleSpy).toHaveBeenCalled();
+            consoleSpy.mockRestore();
+        });
     });
 
     it('gives apiClient a cache-bypassing refresher for its 401 retry', async () => {
@@ -130,6 +146,18 @@ describe('AxiosAuthInterceptor', () => {
         await expect(handlers.refreshAccessToken!()).resolves.toBe('fresh-token');
         // 'off' is the point: the cached token is the one the server rejected.
         expect(mockGetAccessTokenSilently).toHaveBeenCalledWith({ cacheMode: 'off' });
+    });
+
+    it('makes the refresher reject when Auth0 resolves with no token', async () => {
+        // A rejected refresher is what apiClient falls through to
+        // re-authentication on; an undefined token must take the same path.
+        mockGetAccessTokenSilently.mockResolvedValue(undefined);
+        mockAuth0(true);
+
+        renderAt();
+
+        const handlers = vi.mocked(setAuthHandlers).mock.calls[0][0];
+        await expect(handlers.refreshAccessToken!()).rejects.toThrow();
     });
 
     it('ejects the interceptor and clears the handlers on unmount', () => {

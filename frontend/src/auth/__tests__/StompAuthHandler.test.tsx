@@ -85,6 +85,20 @@ describe('StompAuthHandler', () => {
         expect(mockGetAccessTokenSilently).toHaveBeenCalledTimes(2);
     });
 
+    it('makes the provider reject when Auth0 resolves with no token', async () => {
+        // beforeConnect treats a rejected provider as "stop reconnecting"; an
+        // undefined token must take that path rather than reach it as a bearer.
+        mockGetAccessTokenSilently.mockResolvedValueOnce(undefined);
+        mockUseAuth0(true);
+
+        render(<StompAuthHandler />);
+
+        const provider = (setStompTokenProvider as unknown as ReturnType<typeof vi.fn>).mock
+            .calls[0][0] as () => Promise<string>;
+
+        await expect(provider()).rejects.toThrow('Auth0 returned no access token');
+    });
+
     it('clears the provider and deactivates STOMP on unmount when active', () => {
         Object.defineProperty(stompClient, 'active', {
             value: true,

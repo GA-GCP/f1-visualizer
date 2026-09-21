@@ -28,7 +28,7 @@ substitutions:
   # fallen nine releases behind because nothing watched it: not Dependabot,
   # which does not parse Cloud Build step images, and not pinned-versions.yml,
   # which only compared digests. It now does both (see that workflow).
-  _CONFTEST_IMAGE: 'openpolicyagent/conftest:v0.70.0@sha256:1d5b939a6310fbc18a66165f436f763c57a568822bfe449cb0b9d89a70a0334b'
+  _CONFTEST_IMAGE: 'openpolicyagent/conftest:v0.70.1@sha256:82f23e0e1f3faf2f3798f4b1974676c1aed96b05c6656ec6820435c31867c532'
 
 options:
   logging: CLOUD_LOGGING_ONLY

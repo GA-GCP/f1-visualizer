@@ -337,7 +337,7 @@ The real-time pipeline is the core of the platform — a four-hop event-driven c
 | | Dependabot | — | Weekly updates across npm, Maven, Docker (×2), GitHub Actions and Terraform |
 | | Cloud Build Docker builder | — | Layer-cached image builds (replaced Kaniko, archived upstream) |
 | | Trivy | 0.74 | Container filesystem scanning and IaC static analysis (replaced tfsec, retired upstream) |
-| | Conftest / OPA | 0.69 | Policy checks against the rendered plan |
+| | Conftest / OPA | 0.70 | Policy checks against the rendered plan |
 | | Semgrep | — | Project-specific rules for Java, TypeScript and Terraform, tested against their own fixtures |
 | | tflint | 0.64 | Terraform linting with the Google ruleset (0.39) |
 | **Container** | Distroless | Java 25, Debian 13 | Minimal backend runtime (no shell, no package manager) |

@@ -77,7 +77,7 @@
           reason left and had silently drifted.
         -->
         <snakeyaml.version>2.6</snakeyaml.version>
-        <jackson2-bom.version>2.22.2</jackson2-bom.version>
+        <jackson2-bom.version>2.22.3</jackson2-bom.version>
 
         <!--
           Boot 4.1.1 manages Tomcat 11.0.24, which carries three CRITICAL

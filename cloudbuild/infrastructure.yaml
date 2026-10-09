@@ -15,7 +15,7 @@ timeout: 3600s
 substitutions:
   _ENV: 'dev'
   _SHORT_SHA: 'manual-build'
-  _TOFU_VERSION: '1.12.6'
+  _TOFU_VERSION: '1.13.1'
   _TERRAGRUNT_VERSION: '1.1.6'
   # DLV-2: step images pinned by digest, the way cloudbuild/frontend.yaml has
   # pinned its four since 28c004b. `alpine:3.24` and `aquasec/trivy:0.74.0` were
@@ -28,7 +28,7 @@ substitutions:
   # fallen nine releases behind because nothing watched it: not Dependabot,
   # which does not parse Cloud Build step images, and not pinned-versions.yml,
   # which only compared digests. It now does both (see that workflow).
-  _CONFTEST_IMAGE: 'openpolicyagent/conftest:v0.70.1@sha256:82f23e0e1f3faf2f3798f4b1974676c1aed96b05c6656ec6820435c31867c532'
+  _CONFTEST_IMAGE: 'openpolicyagent/conftest:v0.71.1@sha256:0e77cdf7c1fcde035f3c579e4aaa6664ee2a8be5777eaa9af9f520cdd02280c0'
 
 options:
   logging: CLOUD_LOGGING_ONLY

@@ -5,5 +5,5 @@
 #
 #   mise install
 [tools]
-opentofu = "1.12.6"
+opentofu = "1.13.1"
 terragrunt = "1.1.6"

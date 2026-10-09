@@ -1,4 +1,4 @@
-// jest-image-snapshot ships Jest-shaped types, so its matcher is not visible on
+// jest-image-snapshot's matcher (typed in jest-image-snapshot.d.ts) is not visible on
 // Vitest's assertion chain. Declare it against Vitest's `Matchers` extension point.
 import 'vitest';
 import type { MatchImageSnapshotOptions } from 'jest-image-snapshot';

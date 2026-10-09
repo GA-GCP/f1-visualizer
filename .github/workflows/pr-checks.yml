@@ -401,7 +401,7 @@ jobs:
       - name: Install OpenTofu
         uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
         with:
-          tofu_version: '1.12.6'
+          tofu_version: '1.13.1'
 
       # DLV-2/DLV-5: the same version cloudbuild/infrastructure.yaml pins, verified
       # against the checksums published with the release. gruntwork-io's action
@@ -532,7 +532,7 @@ jobs:
       - name: Install OpenTofu
         uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
         with:
-          tofu_version: '1.12.6'
+          tofu_version: '1.13.1'
 
       - id: auth
         name: Authenticate to Google Cloud

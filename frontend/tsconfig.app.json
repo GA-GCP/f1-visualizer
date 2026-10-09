@@ -8,7 +8,10 @@
     "useDefineForClassFields": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "types": ["vite/client", "vitest/globals"],
+    // node: the tests under src run in Node and use its globals (global, Buffer,
+    // Node's timers). @types/jest-image-snapshot loaded them implicitly through
+    // @types/pixelmatch; they are named here now that package is gone.
+    "types": ["vite/client", "vitest/globals", "node"],
     "skipLibCheck": true,
 
     /* Bundler mode */

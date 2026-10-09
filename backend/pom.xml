@@ -77,7 +77,21 @@
           reason left and had silently drifted.
         -->
         <snakeyaml.version>2.6</snakeyaml.version>
-        <jackson2-bom.version>2.22.2</jackson2-bom.version>
+        <jackson2-bom.version>2.22.3</jackson2-bom.version>
+
+        <!--
+          Boot 4.1.1 manages Jackson 3.1.5, which is inside five high advisories
+          published between 28 September and 1 October: GHSA-q4xh-88c3-wmh7,
+          GHSA-cxp5-3px4-pw24 and GHSA-wv8q-qhhj-9h54 (jackson-databind), and
+          GHSA-7hhh-6rmp-j9qf and GHSA-p6pp-m3f8-5c89 (jackson-core). 3.1.7 fixes
+          all five on the minor line Boot is built against, and without it the
+          Trivy dependency scan fails every backend PR. The Jackson 2 pin above
+          moved to 2.22.3 for the four of them that reach 2.22.2.
+
+          Like the Tomcat pin below, this goes as soon as a Boot patch manages
+          3.1.7 or later.
+        -->
+        <jackson-bom.version>3.1.7</jackson-bom.version>
 
         <!--
           Boot 4.1.1 manages Tomcat 11.0.24, which carries three CRITICAL

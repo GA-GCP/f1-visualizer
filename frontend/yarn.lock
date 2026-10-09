@@ -36,14 +36,14 @@
     jose "^6.0.8"
     openid-client "^6.8.0"
 
-"@auth0/auth0-react@^2.25.0":
-  version "2.25.0"
-  resolved "https://registry.yarnpkg.com/@auth0/auth0-react/-/auth0-react-2.25.0.tgz#6bf3ef020ab3ed3cb0eef5768d63dcd94007f491"
-  integrity sha512-f20PJ8oU9IN5IN9ArR4aeVrgDyYSPe1Cbe3dWHZReDWzvXqbP3x3XRscdj+LXjWjpOK0If4QplBSQvB4mbFFbg==
+"@auth0/auth0-react@^2.27.0":
+  version "2.27.0"
+  resolved "https://registry.yarnpkg.com/@auth0/auth0-react/-/auth0-react-2.27.0.tgz#9dafc3a36c7af4d085bc6527988f35304135520b"
+  integrity sha512-SVDiQM1Eatv+zLzy7qyxMdcETdbGVOqXR+zaBXbMyX32xUzTNIppgcHFoD0AFLqVQrBZgTHX4ujj9D9+sfCXsQ==
   dependencies:
-    "@auth0/auth0-spa-js" "^2.25.0"
+    "@auth0/auth0-spa-js" "^2.27.0"
 
-"@auth0/auth0-spa-js@^2.25.0":
+"@auth0/auth0-spa-js@^2.27.0":
   version "2.27.0"
   resolved "https://registry.yarnpkg.com/@auth0/auth0-spa-js/-/auth0-spa-js-2.27.0.tgz#37dc59e06ab2b0f6727c9763f7207b5348b2d4e1"
   integrity sha512-E9U4v9IiowT+z26PQYT55ZAU5J1feyEV9umVX+lvnaHl43E3GvGVsTrfukhPLLWnoCRItWa2TxVQ3Svj1S4qyA==
@@ -956,17 +956,17 @@
   resolved "https://registry.yarnpkg.com/@stomp/stompjs/-/stompjs-7.3.0.tgz#5655b93e086a0be684291424c5bc8c92949b33ee"
   integrity sha512-nKMLoFfJhrQAqkvvKd1vLq/cVBGCMwPRCD0LqW7UT1fecRx9C3GoKEIR2CYwVuErGeZu8w0kFkl2rlhPlqHVgQ==
 
-"@tanstack/query-core@5.103.1":
-  version "5.103.1"
-  resolved "https://registry.yarnpkg.com/@tanstack/query-core/-/query-core-5.103.1.tgz#57c1db20679b98e793a1fe8e4a55a0619d2d681f"
-  integrity sha512-rms8HqTGp6zA00dM+cUQ2eBcgzNJefuu5CAMB37i/6MiGT1zulPOytCFu2a0qjLqVR2n1jENPj9woqFQNuCzWA==
+"@tanstack/query-core@5.103.2":
+  version "5.103.2"
+  resolved "https://registry.yarnpkg.com/@tanstack/query-core/-/query-core-5.103.2.tgz#9dd1792b42046808c1e8e997807b83137012dedd"
+  integrity sha512-I8DkFXls5jXLqtm8+QpOhEmG07hIblhSZFzafg9wHsMSEvMzULy9hK17wU1T/ahfhMbtITJhbxutwwCoihkR7A==
 
-"@tanstack/react-query@^5.103.1":
-  version "5.103.1"
-  resolved "https://registry.yarnpkg.com/@tanstack/react-query/-/react-query-5.103.1.tgz#cf55c655afc3c7351d6b6cc572309af117f659bd"
-  integrity sha512-rmAPPApNEK17VXRJhtE1rja53n23VV5w30C0saCgJhhX+EpdUnVqMGV/s5nnzV43X75KTHKzuoiuxSzGTBIkag==
+"@tanstack/react-query@^5.103.2":
+  version "5.103.2"
+  resolved "https://registry.yarnpkg.com/@tanstack/react-query/-/react-query-5.103.2.tgz#1d063909424ecf259fd88f974a4ecafe32edcfed"
+  integrity sha512-B+fWiYZBc+0uUD5zDZAeLw9dKj7XEsdnuu6zRZ+no6LNKpeE3P3bJ+N6HINjcIlWR6fW3vUoTneEaGa2V6ehqw==
   dependencies:
-    "@tanstack/query-core" "5.103.1"
+    "@tanstack/query-core" "5.103.2"
 
 "@testing-library/dom@^10.4.2":
   version "10.4.2"
@@ -2982,12 +2982,12 @@ form-data@^4.0.6:
     hasown "^2.0.4"
     mime-types "^2.1.35"
 
-framer-motion@^13.4.0:
-  version "13.4.0"
-  resolved "https://registry.yarnpkg.com/framer-motion/-/framer-motion-13.4.0.tgz#2a7171731ce00028ea6c12527e8ee97427e26c86"
-  integrity sha512-HCpqKM9BTu6UYKtj0u6J1QNxojnnirNcghcSDZ+SkpiL3myxvtsgXPS3ZGEELC2eSma7YiA937rAEXtRyydSXQ==
+framer-motion@^13.4.1:
+  version "13.4.1"
+  resolved "https://registry.yarnpkg.com/framer-motion/-/framer-motion-13.4.1.tgz#cd0cb7ec7ec4ba125962fce4c8feffd2e3533499"
+  integrity sha512-6DsbU4hsNsokXkwSp3ezdMWMiv5yWzCcdjFgakkeUC6FVIK01Py8ToSzsXvBw8cYA5hff/oXFvZFU7ltbVyUYA==
   dependencies:
-    motion-dom "^13.3.0"
+    motion-dom "^13.4.1"
     motion-utils "^13.3.0"
     tslib "^2.4.0"
 
@@ -3917,10 +3917,10 @@ mkdirp-classic@^0.5.2, mkdirp-classic@^0.5.3:
   resolved "https://registry.yarnpkg.com/mkdirp-classic/-/mkdirp-classic-0.5.3.tgz#fa10c9115cc6d8865be221ba47ee9bed78601113"
   integrity sha512-gKLcREMhtuZRwRAfqP3RFW+TK4JqApVBtOIftVgjuABpAtpxhPGaDcfvbhNvD0B8iD1oUr/txX35NjcaY6Ns/A==
 
-motion-dom@^13.3.0:
-  version "13.3.0"
-  resolved "https://registry.yarnpkg.com/motion-dom/-/motion-dom-13.3.0.tgz#e74a9cf5cea598e6c007fbfe05d29fe25a394d6a"
-  integrity sha512-AmAnB6pHdZ1vHGzWzuzteG6Q3j1lHKeX/lbST6jGlgm0cjvLUgaCk1xhOuPMOy5SgovN6wnnUdwFrkcsus7Ftg==
+motion-dom@^13.4.1:
+  version "13.4.4"
+  resolved "https://registry.yarnpkg.com/motion-dom/-/motion-dom-13.4.4.tgz#2b0b4de8f39452cfa75ec40d084e5d65660da1ca"
+  integrity sha512-z2qN3RUABSci4G7cr5aHTFhqPNCWJsEMMfRlzxqtANQsSCIbVJmHvMV288m5x7doEQBTYbRTWbKdztmquCn4Sw==
   dependencies:
     motion-utils "^13.3.0"
 

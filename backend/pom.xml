@@ -62,7 +62,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Not managed by the Boot parent. -->
-        <spring-cloud-gcp.version>8.2.1</spring-cloud-gcp.version>
+        <spring-cloud-gcp.version>8.2.2</spring-cloud-gcp.version>
         <testcontainers.version>2.0.5</testcontainers.version>
         <springdoc.version>3.1.1</springdoc.version>
         <!-- BigQuery and Firestore request different versions of this; without a
@@ -78,6 +78,13 @@
         -->
         <snakeyaml.version>2.6</snakeyaml.version>
         <jackson2-bom.version>2.22.3</jackson2-bom.version>
+        <!--
+          Raised above Boot 4.1.1's 2.13.2 because spring-cloud-gcp 8.2.2 brings
+          BigQuery 2.73.0 and Firestore 3.49.0, which ask for 2.14.0, and
+          requireUpperBoundDeps would otherwise fail the build. Drop it once Boot
+          manages 2.14.0 or later.
+        -->
+        <gson.version>2.14.0</gson.version>
 
         <!--
           Boot 4.1.1 manages Jackson 3.1.5, which is inside five high advisories

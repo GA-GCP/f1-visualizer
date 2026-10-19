@@ -62,7 +62,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Not managed by the Boot parent. -->
-        <spring-cloud-gcp.version>8.2.2</spring-cloud-gcp.version>
+        <spring-cloud-gcp.version>8.2.4</spring-cloud-gcp.version>
         <testcontainers.version>2.0.5</testcontainers.version>
         <springdoc.version>3.1.1</springdoc.version>
         <!-- BigQuery and Firestore request different versions of this; without a
@@ -118,14 +118,14 @@
         <flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>
         <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
-        <spotless-maven-plugin.version>3.10.3</spotless-maven-plugin.version>
+        <spotless-maven-plugin.version>3.10.4</spotless-maven-plugin.version>
         <!-- 1.36+ understands JDK 26's javac internals; older releases fail
              with NoSuchMethodError on a developer machine running it. -->
         <google-java-format.version>1.36.1</google-java-format.version>
         <archunit.version>1.5.1</archunit.version>
-        <spotbugs-maven-plugin.version>4.10.4.1</spotbugs-maven-plugin.version>
+        <spotbugs-maven-plugin.version>4.10.5.0</spotbugs-maven-plugin.version>
         <findsecbugs.version>1.14.0</findsecbugs.version>
-        <spotbugs-annotations.version>4.10.4</spotbugs-annotations.version>
+        <spotbugs-annotations.version>4.10.5</spotbugs-annotations.version>
         <!--
           T3: today's coverage, to be ratcheted. A floor that starts where the
           suite already is cannot be argued with and cannot regress. Checked

@@ -837,7 +837,7 @@ jobs:
       # so neither pin goes stale unnoticed.
       - name: zizmor
         env:
-          ZIZMOR_VERSION: 1.30.1
+          ZIZMOR_VERSION: 1.31.1
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail

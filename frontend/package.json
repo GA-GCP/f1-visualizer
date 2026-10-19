@@ -27,10 +27,10 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@fontsource/titillium-web": "^5.3.0",
-    "@mui/icons-material": "^9.4.0",
-    "@mui/material": "^9.4.0",
-    "@stomp/stompjs": "^7.3.0",
-    "@tanstack/react-query": "^5.104.1",
+    "@mui/icons-material": "^9.5.0",
+    "@mui/material": "^9.5.0",
+    "@stomp/stompjs": "^7.4.0",
+    "@tanstack/react-query": "^5.104.2",
     "axios": "^1.20.0",
     "d3": "^7.9.0",
     "framer-motion": "^13.5.1",
@@ -38,7 +38,7 @@
     "react-dom": "^19.3.0",
     "react-router-dom": "^7.18.4",
     "web-vitals": "^6.2.3",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

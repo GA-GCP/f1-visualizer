@@ -19,13 +19,16 @@ export default [
     // 250 -> 255 kB  @auth0/auth0-react 2.25.0; the auth0 chunk is a
     //                first-load chunk, so the +2.8 kB gz recorded under the
     //                total budget below lands here too (250.2 kB in CI).
+    // 255 -> 260 kB  framer-motion 14.0.0 -> 14.5.0; the eager motion chunks
+    //                are first-load chunks, so the +3.7 kB gz recorded under
+    //                the total budget below lands here too (256.5 kB in CI).
     name: 'first load — public landing route',
     path: firstLoadChunks(),
-    limit: '255 kB',
+    limit: '260 kB',
     gzip: true,
   },
   {
-    // Raised twice, both times for a named and measured trade rather than to
+    // Raised five times, each time for a named and measured trade rather than to
     // make a failing gate pass. This budget exists to catch a stray
     // dependency, not to absorb one, so each raise records its reason:
     //
@@ -51,6 +54,15 @@ export default [
     //                  tree-shakes. The other five bumps in the group are
     //                  patch/minor and net out within the remainder: the
     //                  total landed at 417.9 kB in CI (416.8 locally).
+    //   425 -> 430 kB  framer-motion 14.0.0 -> 14.5.0 (the frontend-prod
+    //                  Dependabot group, #195). +4.2 kB gz, measured per
+    //                  chunk: the eager motion chunks +3.7, the lazy
+    //                  feature chunk +0.4. 14.1-14.5 grow the core
+    //                  component path (hardware-accelerated independent
+    //                  transforms, scoped animations, JS drag), which the
+    //                  motion component imports, so nothing tree-shakes.
+    //                  The other four bumps in the group net out to ~0.
+    //                  The total landed at 424.9 kB in CI (423.8 locally).
     //
     // This is the total across *all* chunks, most of which are lazy route
     // chunks behind the login. The number a first-time visitor actually
@@ -58,7 +70,7 @@ export default [
     // 3.1 kB, not 14.7.
     name: 'total JS shipped (all chunks)',
     path: 'dist/assets/*.js',
-    limit: '425 kB',
+    limit: '430 kB',
     gzip: true,
   },
 ];

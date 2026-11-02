@@ -403,6 +403,26 @@ jobs:
           # stays readable by every later step, including third-party ones.
           persist-credentials: false
 
+      # Dependabot bumps the base images in frontend/Dockerfile and Dockerfile.ci
+      # but cannot see cloudbuild/frontend.yaml, where _NODE_IMAGE pins the node
+      # image the production build runs on. Without this, a Dependabot node bump
+      # merges green and the local image and Cloud Build drift onto different
+      # releases. Any image pinned in more than one of these files must be pinned
+      # identically in all of them.
+      - name: Check the base-image pins agree
+        run: |
+          set -euo pipefail
+          refs="$(grep -ohE '[a-z0-9./-]+:[A-Za-z0-9._-]+@sha256:[0-9a-f]{64}' \
+            frontend/Dockerfile frontend/Dockerfile.ci cloudbuild/frontend.yaml | sort -u)"
+          dupes="$(cut -d: -f1 <<< "$refs" | uniq -d)"
+          if [ -n "$dupes" ]; then
+            while IFS= read -r repo; do
+              echo "::error::${repo} is pinned differently across frontend/Dockerfile, frontend/Dockerfile.ci and cloudbuild/frontend.yaml:"
+              awk -F: -v r="$repo" '$1 == r { print "  " $0 }' <<< "$refs"
+            done <<< "$dupes"
+            exit 1
+          fi
+
       # Read from cloudbuild/frontend.yaml rather than restated here, so a change
       # to that file is tested as written: every step on _NODE_IMAGE, in order,
       # each in a fresh container with the checkout at /workspace and only

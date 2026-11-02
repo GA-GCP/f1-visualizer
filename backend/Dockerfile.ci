@@ -8,13 +8,13 @@
 #
 # For local development builds, use the standard Dockerfile.
 # ==========================================
-# Pinned by digest, and must stay identical to RUNTIME_IMAGE in Dockerfile: this
-# is the image that actually serves production, and an unpinned tag silently
-# moves across JDK patches and Debian releases between two builds of the same
-# commit. The :nonroot variant runs as uid 65532 (S8).
-ARG RUNTIME_IMAGE=gcr.io/distroless/java25-debian13:nonroot@sha256:5d3177252775d4b01603470fe21c015393019089904f68724bd37242e4bc6e6d
-
-FROM ${RUNTIME_IMAGE}
+# Pinned by digest, and must stay identical to the runtime FROM line in
+# Dockerfile: this is the image that actually serves production, and an unpinned
+# tag silently moves across JDK patches and Debian releases between two builds
+# of the same commit. The :nonroot variant runs as uid 65532 (S8). Written into
+# the FROM line rather than an ARG so that Dependabot can see it (see
+# Dockerfile).
+FROM gcr.io/distroless/java25-debian13:nonroot@sha256:5d3177252775d4b01603470fe21c015393019089904f68724bd37242e4bc6e6d
 
 WORKDIR /app
 

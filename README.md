@@ -839,7 +839,7 @@ Every pull request targeting `main` runs the jobs whose paths changed:
 | **Backend** | `./mvnw -B clean verify`, Trivy filesystem scan, SBOM upload | The whole reactor through `verify`, which is the phase every check binds to — `package` stops short of all of them |
 | **Frontend** | `yarn audit`, `format:check`, `lint`, `typecheck`, `test:coverage`, `build`, `size` | Lint, types, coverage thresholds and a gzipped bundle budget |
 | **Frontend E2E** | Playwright, desktop and mobile viewports, axe at both | The only layer exercising the Auth0 redirect, real STOMP frames and canvas resize |
-| **Frontend images** | The node steps of `cloudbuild/frontend.yaml` replayed in their own image, then `Dockerfile.ci` built, smoke-tested and Trivy-scanned, then the local `Dockerfile` built | The other frontend jobs bring their own Node, so only this one sees the image Cloud Build runs in — which is how a node image without yarn once broke every deploy while PRs stayed green |
+| **Frontend images** | The base-image pins checked to agree across both Dockerfiles and `cloudbuild/frontend.yaml`, the node steps of `cloudbuild/frontend.yaml` replayed in their own image, then `Dockerfile.ci` built, smoke-tested and Trivy-scanned, then the local `Dockerfile` built | The other frontend jobs bring their own Node, so only this one sees the image Cloud Build runs in — which is how a node image without yarn once broke every deploy while PRs stayed green |
 | **Infrastructure static checks** | `tofu fmt`, `terragrunt hcl fmt`, module validate with `-lockfile=readonly`, `terragrunt hcl validate --inputs --strict`, `tflint`, Trivy | Formatting, undeclared inputs and provider drift, all of which used to reach `main` green |
 | **Infrastructure plan** | `terragrunt run --all -- plan` per environment, posted as a PR comment | The plan a reviewer approves. It runs through Workload Identity Federation as a read-only planner — no service-account key, and it cannot apply |
 | **Semgrep** | `semgrep --test .semgrep`, then `semgrep scan --config=.semgrep` | Invariants no off-the-shelf linter knows — BigQuery query guardrails, Spring boundary rules, the frontend config boundary, React XSS sinks, IAM and image rules in Terraform — each rule shipped with the fixture it must flag |
@@ -1042,7 +1042,7 @@ Tests execute at two stages in the delivery pipeline:
    - Backend: `./mvnw -B clean verify` (the whole reactor through the phase the checks bind to), Trivy filesystem scan, SBOM upload
    - Frontend: audit, format, lint, typecheck, coverage, build, bundle budget
    - Frontend E2E: Playwright across a desktop and a mobile viewport, axe at both
-   - Frontend images: Cloud Build's node steps replayed as written, the production image built, smoke-tested and scanned, the local image built
+   - Frontend images: the base-image pins checked to agree, Cloud Build's node steps replayed as written, the production image built, smoke-tested and scanned, the local image built
    - Infrastructure static checks: formatting, module and input validation, tflint, Trivy
    - Infrastructure plan: a real `terragrunt plan` per environment, commented on the PR
    - Semgrep: the project's own rules, after their fixtures prove each rule still fires

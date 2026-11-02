@@ -7,15 +7,18 @@
 # patch and run on a different base. The tag is kept beside the digest for
 # readability; the digest is what resolves (S8).
 #
-# Dockerfile.ci pins the same RUNTIME_IMAGE and the two must move together —
+# Dockerfile.ci pins the same runtime image and the two must move together —
 # that is the image production actually runs.
-ARG BUILD_IMAGE=eclipse-temurin:25.0.4_7-jdk@sha256:e787e08ef76f4c16866108cd7f9fcd96a68eef3ac6cc76866897d4d02d5a2262
-ARG RUNTIME_IMAGE=gcr.io/distroless/java25-debian13:nonroot@sha256:5d3177252775d4b01603470fe21c015393019089904f68724bd37242e4bc6e6d
+#
+# The pins sit in the FROM lines themselves rather than in an `ARG X=...` above
+# a `FROM ${X}`. Dependabot reads FROM lines as written and does not expand
+# ARGs, so behind ARGs it found no base images at all and never proposed an
+# update. Nothing passed those ARGs with --build-arg.
 
 # ==========================================
 # STAGE 1: Build & Layer Extraction
 # ==========================================
-FROM ${BUILD_IMAGE} AS builder
+FROM eclipse-temurin:25.0.4_7-jdk@sha256:e787e08ef76f4c16866108cd7f9fcd96a68eef3ac6cc76866897d4d02d5a2262 AS builder
 
 WORKDIR /app
 
@@ -57,7 +60,7 @@ RUN java -Djarmode=tools -jar target/*.jar extract --layers --launcher --destina
 # ==========================================
 # The :nonroot variant runs as uid 65532 instead of root. Nothing here writes to
 # the filesystem, so there is no reason for the runtime to be able to (S8).
-FROM ${RUNTIME_IMAGE}
+FROM gcr.io/distroless/java25-debian13:nonroot@sha256:5d3177252775d4b01603470fe21c015393019089904f68724bd37242e4bc6e6d
 
 WORKDIR /app
 

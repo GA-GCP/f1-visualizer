@@ -61,11 +61,24 @@ updates:
   # ---------------------------------------------------------------------------
   # Base images in frontend/Dockerfile and frontend/Dockerfile.ci.
   # ---------------------------------------------------------------------------
+  # Dependabot reads the image from each FROM line as written and does not
+  # expand ARGs. This entry arrived in the same commit that named both bases as
+  # `ARG X=image` + `FROM ${X}`, so until the pins moved into the FROM lines it
+  # found nothing to update and never opened a PR, and the nginx pin fell eight
+  # fixable HIGH/CRITICAL CVEs behind before a scan noticed. Keep the pins in
+  # the FROM lines.
+  #
   # KNOWN GAP: this does not cover cloudbuild/frontend.yaml. Dependabot's docker
   # ecosystem parses Dockerfiles, not Cloud Build step images, so the three
   # digests in the _NODE_IMAGE / _CLOUD_SDK_IMAGE / _DOCKER_IMAGE substitutions
   # have to be bumped by hand. They are declared once each precisely so that is
-  # a three-line change.
+  # a three-line change. _NODE_IMAGE pins the same node as the Dockerfile, so a
+  # node PR from here fails the Frontend Images check until _NODE_IMAGE is
+  # moved with it, in the same PR.
+  #
+  # Node majors are ignored: an odd major is never LTS, and an even one moves
+  # engines, CI's setup-node and Cloud Build together, which is a decision, not
+  # a bump.
   - package-ecosystem: docker
     directory: /frontend
     schedule:
@@ -76,6 +89,9 @@ updates:
     cooldown:
       default-days: 5
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
     commit-message:
       prefix: build
       include: scope
@@ -133,9 +149,14 @@ updates:
   # Base images in backend/Dockerfile and backend/Dockerfile.ci.
   # ---------------------------------------------------------------------------
   # Both are now digest-pinned; this is what keeps those digests from freezing at
-  # whatever they were on the day they were pinned. Same known gap as the
-  # frontend: the step images in cloudbuild/backend-*.yaml are not Dockerfiles
-  # and have to be bumped by hand.
+  # whatever they were on the day they were pinned. As in the frontend, the pins
+  # must stay in the FROM lines, where Dependabot can read them. Same known gap
+  # as the frontend: the step images in cloudbuild/backend-*.yaml are not
+  # Dockerfiles and have to be bumped by hand.
+  #
+  # Temurin majors are ignored for the same reason as node's: Java 25 is the
+  # LTS the whole reactor, CI and the distroless java25 runtime are built on,
+  # and moving off it is a decision, not a bump.
   - package-ecosystem: docker
     directory: /backend
     schedule:
@@ -146,6 +167,9 @@ updates:
     cooldown:
       default-days: 5
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: eclipse-temurin
+        update-types: ['version-update:semver-major']
     commit-message:
       prefix: build
       include: scope

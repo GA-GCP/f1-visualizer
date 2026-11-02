@@ -1,0 +1,18 @@
+{
+  "name": "minimatch-compat",
+  "version": "11.0.3",
+  "private": true,
+  "description": "minimatch 11 in the shapes that minimatch 3.x and 10.x consumers import. See README.md.",
+  "license": "MIT",
+  "main": "./index.cjs",
+  "exports": {
+    ".": {
+      "import": "./index.mjs",
+      "require": "./index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "minimatch-11": "npm:minimatch@^11.0.3"
+  }
+}

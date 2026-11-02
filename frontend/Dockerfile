@@ -32,7 +32,11 @@ ARG ENV_MODE=dev
 # So the documented local image build was either failing here or spending
 # minutes compiling Cairo bindings for an image that never runs a test.
 # vite and tsc need no install scripts.
+#
+# shims/ comes along because package.json resolutions install packages from it
+# (file:./shims/...), and the install fails without them.
 COPY package.json yarn.lock ./
+COPY shims ./shims
 RUN yarn install --frozen-lockfile --ignore-scripts
 
 # 2. Copy only what the build reads, rather than `COPY . .`

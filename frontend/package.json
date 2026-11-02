@@ -78,6 +78,12 @@
   },
   "resolutions": {
     "vite": "^8.3.5",
-    "**/micromatch/picomatch": "^2.3.2"
+    "**/micromatch/picomatch": "^2.3.2",
+    "**/eslint/minimatch": "^11.0.3",
+    "**/@eslint/config-array/minimatch": "^11.0.3",
+    "**/@typescript-eslint/typescript-estree/minimatch": "^11.0.3",
+    "**/eslint-plugin-import-x/minimatch": "file:./shims/minimatch-compat",
+    "**/eslint-plugin-jsx-a11y/minimatch": "file:./shims/minimatch-compat",
+    "**/eslint-plugin-react/minimatch": "file:./shims/minimatch-compat"
   }
 }

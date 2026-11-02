@@ -18,7 +18,7 @@
 # ==========================================
 # STAGE 1: Build & Layer Extraction
 # ==========================================
-FROM eclipse-temurin:25.0.4_7-jdk@sha256:e787e08ef76f4c16866108cd7f9fcd96a68eef3ac6cc76866897d4d02d5a2262 AS builder
+FROM eclipse-temurin:25.0.4.1_1-jdk@sha256:3ab7fc8d0b4ade8fef96903fb36767c1dbb4fd1535dcfad85b59c17afbbb5857 AS builder
 
 WORKDIR /app
 

@@ -341,7 +341,7 @@ The real-time pipeline is the core of the platform — a four-hop event-driven c
 | | Semgrep | — | Project-specific rules for Java, TypeScript and Terraform, tested against their own fixtures |
 | | tflint | 0.64 | Terraform linting with the Google ruleset (0.40) |
 | **Container** | Distroless | Java 25, Debian 13 | Minimal backend runtime (no shell, no package manager) |
-| | nginx-unprivileged | 1.31, Alpine | Lightweight frontend serving with SPA routing and security headers |
+| | nginx-unprivileged | 1.31, Alpine (slim) | Lightweight frontend serving with SPA routing and security headers |
 
 ---
 

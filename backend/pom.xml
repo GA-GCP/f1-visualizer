@@ -70,6 +70,16 @@
              only, so the choice is safe — it just has to be stated. -->
         <error-prone-annotations.version>2.51.0</error-prone-annotations.version>
         <!--
+          spring-cloud-gcp 8.3.0 (libraries-bom 26.90.0) manages Guava 33.6.0-jre,
+          which is inside CVE-2026-102554 (HIGH, denial of service through
+          unthrottled allocation during deserialization). 33.7.2 fixes it, and
+          without it the Trivy dependency scan fails every backend PR. 8.3.1
+          (libraries-bom 26.91.0) still manages 33.6.0-jre.
+
+          Drop it once a spring-cloud-gcp release manages 33.7.2 or later.
+        -->
+        <guava.version>33.7.2-jre</guava.version>
+        <!--
           Raised above what the Boot parent manages, because springdoc asks for
           them and requireUpperBoundDeps would otherwise fail the build. These
           two pins exist for a stated reason and should disappear the moment
@@ -124,6 +134,11 @@
                 <groupId>com.google.errorprone</groupId>
                 <artifactId>error_prone_annotations</artifactId>
                 <version>${error-prone-annotations.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.paho</groupId>

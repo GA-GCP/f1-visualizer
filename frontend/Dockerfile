@@ -23,6 +23,15 @@ WORKDIR /app
 # Accept the environment variable from Cloud Build
 ARG ENV_MODE=dev
 
+# 0. Install yarn itself
+#
+# The node:26 image ships neither yarn nor corepack, so every `yarn` below failed
+# with `yarn: not found`. This is the release package.json names in
+# packageManager, and the two must move together; cloudbuild/frontend.yaml
+# installs the same one. --ignore-scripts skips yarn's only script, a preinstall
+# that checks for a corepack this image does not have.
+RUN npm install --global --ignore-scripts yarn@1.22.22
+
 # 1. Install dependencies
 #
 # --ignore-scripts skips node-gyp, and with it the `canvas` native addon. canvas

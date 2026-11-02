@@ -333,7 +333,7 @@ The real-time pipeline is the core of the platform — a four-hop event-driven c
 | | Terragrunt | 1.2.1 | DRY configuration wrapper with dependency orchestration |
 | | Google provider | 8.2 | Lock-file pinned in every module |
 | **CI/CD** | Cloud Build | — | 7 path-filtered triggers over 3 pipeline definitions (build, scan, deploy) |
-| | GitHub Actions | — | PR quality gates: 8 jobs (lint, test, e2e, validate, plan, Semgrep, workflow lint) |
+| | GitHub Actions | — | PR quality gates: 9 jobs (lint, test, e2e, image build, validate, plan, Semgrep, workflow lint) |
 | | Dependabot | — | Weekly updates across npm, Maven, Docker (×2), GitHub Actions and Terraform |
 | | Cloud Build Docker builder | — | Layer-cached image builds (replaced Kaniko, archived upstream) |
 | | Trivy | 0.74 | Container filesystem scanning and IaC static analysis (replaced tfsec, retired upstream) |
@@ -341,7 +341,7 @@ The real-time pipeline is the core of the platform — a four-hop event-driven c
 | | Semgrep | — | Project-specific rules for Java, TypeScript and Terraform, tested against their own fixtures |
 | | tflint | 0.64 | Terraform linting with the Google ruleset (0.40) |
 | **Container** | Distroless | Java 25, Debian 13 | Minimal backend runtime (no shell, no package manager) |
-| | nginx-unprivileged | 1.31, Alpine | Lightweight frontend serving with SPA routing and security headers |
+| | nginx-unprivileged | 1.31, Alpine (slim) | Lightweight frontend serving with SPA routing and security headers |
 
 ---
 
@@ -452,7 +452,7 @@ f1-visualizer/
 |
 +-- .github/
 |   +-- workflows/
-|   |   +-- pr-checks.yml                       # 8 PR jobs, including a real plan, Semgrep and workflow lint
+|   |   +-- pr-checks.yml                       # 9 PR jobs, including a real plan, Semgrep and workflow lint
 |   |   +-- semgrep-scheduled.yml               # Weekly: full-repository Semgrep scan
 |   |   +-- pinned-versions.yml                 # Weekly: the pins no ecosystem watches
 |   +-- dependabot.yml                          # 6 ecosystems, weekly
@@ -812,12 +812,13 @@ The CI/CD system operates across two layers: **GitHub Actions** for fast PR vali
 Pull Request to main                        Promotion to env branch (dev/uat/prod)
     |                                             |
     v                                             v
-GitHub Actions (8 jobs)                     Cloud Build (7 path-filtered triggers,
+GitHub Actions (9 jobs)                     Cloud Build (7 path-filtered triggers,
     |                                        3 pipeline definitions)
     +-- Detect changed areas (gates the rest)     |
     +-- Backend                                   +-- backend-service.yaml  (x5,
     +-- Frontend                                  |   one trigger per service)
     +-- Frontend E2E (needs: frontend)            +-- frontend.yaml
+    +-- Frontend images (needs: frontend)         |
     +-- Infrastructure static checks              +-- infrastructure.yaml
     +-- Infrastructure plan (needs: above,
     |   one job per environment, WIF)
@@ -838,6 +839,7 @@ Every pull request targeting `main` runs the jobs whose paths changed:
 | **Backend** | `./mvnw -B clean verify`, Trivy filesystem scan, SBOM upload | The whole reactor through `verify`, which is the phase every check binds to — `package` stops short of all of them |
 | **Frontend** | `yarn audit`, `format:check`, `lint`, `typecheck`, `test:coverage`, `build`, `size` | Lint, types, coverage thresholds and a gzipped bundle budget |
 | **Frontend E2E** | Playwright, desktop and mobile viewports, axe at both | The only layer exercising the Auth0 redirect, real STOMP frames and canvas resize |
+| **Frontend images** | The node steps of `cloudbuild/frontend.yaml` replayed in their own image, then `Dockerfile.ci` built, smoke-tested and Trivy-scanned, then the local `Dockerfile` built | The other frontend jobs bring their own Node, so only this one sees the image Cloud Build runs in — which is how a node image without yarn once broke every deploy while PRs stayed green |
 | **Infrastructure static checks** | `tofu fmt`, `terragrunt hcl fmt`, module validate with `-lockfile=readonly`, `terragrunt hcl validate --inputs --strict`, `tflint`, Trivy | Formatting, undeclared inputs and provider drift, all of which used to reach `main` green |
 | **Infrastructure plan** | `terragrunt run --all -- plan` per environment, posted as a PR comment | The plan a reviewer approves. It runs through Workload Identity Federation as a read-only planner — no service-account key, and it cannot apply |
 | **Semgrep** | `semgrep --test .semgrep`, then `semgrep scan --config=.semgrep` | Invariants no off-the-shelf linter knows — BigQuery query guardrails, Spring boundary rules, the frontend config boundary, React XSS sinks, IAM and image rules in Terraform — each rule shipped with the fixture it must flag |
@@ -1036,10 +1038,11 @@ cd frontend && yarn vitest
 
 Tests execute at two stages in the delivery pipeline:
 
-1. **PR Quality Gate (GitHub Actions)** — Eight jobs, gated on which paths changed, run on every pull request to `main`:
+1. **PR Quality Gate (GitHub Actions)** — Nine jobs, gated on which paths changed, run on every pull request to `main`:
    - Backend: `./mvnw -B clean verify` (the whole reactor through the phase the checks bind to), Trivy filesystem scan, SBOM upload
    - Frontend: audit, format, lint, typecheck, coverage, build, bundle budget
    - Frontend E2E: Playwright across a desktop and a mobile viewport, axe at both
+   - Frontend images: Cloud Build's node steps replayed as written, the production image built, smoke-tested and scanned, the local image built
    - Infrastructure static checks: formatting, module and input validation, tflint, Trivy
    - Infrastructure plan: a real `terragrunt plan` per environment, commented on the PR
    - Semgrep: the project's own rules, after their fixtures prove each rule still fires

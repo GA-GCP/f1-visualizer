@@ -10,8 +10,14 @@
 # The tag is kept alongside the digest for readability; the digest is what
 # actually resolves. Dockerfile.ci pins the same NGINX_IMAGE and the two must
 # move together.
+#
+# -slim, because the full alpine variant adds njs, the image-filter, xslt and
+# geoip modules, and curl — none of which nginx.conf loads — and with them the
+# gd, tiff, libx11 and brotli libraries whose fixable HIGH and CRITICAL CVEs
+# failed the image scan. Slim is the same nginx, uid 101 and port 8080 without
+# them.
 ARG NODE_IMAGE=node:26.8.2-alpine3.24@sha256:ef24c5053d50fdc3e4e56eb4e7ddb7861874ab0fdc797046ba897581deb8e868
-ARG NGINX_IMAGE=nginxinc/nginx-unprivileged:1.31.5-alpine@sha256:2ddec616f1cb58bcac057aa388f28cb81e35137641ef4226d321714499329bd1
+ARG NGINX_IMAGE=nginxinc/nginx-unprivileged:1.31.7-alpine-slim@sha256:a8cb0f33d51fa107c96fd2bd3a71aaf564ec131e9d2bdf8700944f0ed8b170d7
 
 # ==========================================
 # STAGE 1: Build the React Application

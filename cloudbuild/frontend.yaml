@@ -60,6 +60,12 @@ steps:
   #    canvas (node-canvas) is a native C++ addon used by visual-regression
   #    tests. Alpine needs Python, a C++ toolchain, and Cairo/Pango libs
   #    for node-gyp to compile it.
+  #
+  #    The node:26 image ships neither yarn nor corepack, so yarn itself is
+  #    installed first: the release package.json names in packageManager, which
+  #    frontend/Dockerfile installs too. Each step is a fresh container and only
+  #    /workspace carries over, so it goes there and the steps below run it by
+  #    path. --ignore-scripts skips yarn's only script, a corepack check.
   - name: '${_NODE_IMAGE}'
     id: 'install'
     entrypoint: 'sh'
@@ -68,13 +74,15 @@ steps:
       - |
         apk add --no-cache python3 make g++ pkgconf \
           cairo-dev pango-dev libjpeg-turbo-dev giflib-dev librsvg-dev \
-        && yarn install --frozen-lockfile
+        && npm install --global --prefix /workspace/.yarn-global \
+          --ignore-scripts yarn@1.22.22 \
+        && /workspace/.yarn-global/bin/yarn install --frozen-lockfile
     dir: 'frontend'
 
   # 2. ESLint Check
   - name: '${_NODE_IMAGE}'
     id: 'lint'
-    entrypoint: 'yarn'
+    entrypoint: '/workspace/.yarn-global/bin/yarn'
     args: ['lint']
     dir: 'frontend'
 
@@ -88,7 +96,7 @@ steps:
       - '-c'
       - |
         apk add --no-cache cairo pango libjpeg-turbo giflib librsvg \
-        && yarn test:ci
+        && /workspace/.yarn-global/bin/yarn test:ci
     dir: 'frontend'
     # Without CI set, jest-image-snapshot silently WRITES a missing baseline
     # and passes, so a visual regression could never fail this pipeline.
@@ -97,7 +105,7 @@ steps:
   # 4. Production Build (produces dist/)
   - name: '${_NODE_IMAGE}'
     id: 'build'
-    entrypoint: 'yarn'
+    entrypoint: '/workspace/.yarn-global/bin/yarn'
     args: ['build', '--mode', '${_ENV}']
     dir: 'frontend'
     # Read by `define` in vite.config.ts. Without it the bundle reports

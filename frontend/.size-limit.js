@@ -22,13 +22,17 @@ export default [
     // 255 -> 260 kB  framer-motion 14.0.0 -> 14.5.0; the eager motion chunks
     //                are first-load chunks, so the +3.7 kB gz recorded under
     //                the total budget below lands here too (256.5 kB in CI).
+    // 260 -> 265 kB  the frontend-prod group (#201); axios, auth0 and the
+    //                eager motion chunks are all first-load chunks, so +4.3 kB
+    //                of the +4.6 kB gz recorded under the total budget below
+    //                lands here too (260.75 kB in CI).
     name: 'first load — public landing route',
     path: firstLoadChunks(),
-    limit: '260 kB',
+    limit: '265 kB',
     gzip: true,
   },
   {
-    // Raised five times, each time for a named and measured trade rather than to
+    // Raised six times, each time for a named and measured trade rather than to
     // make a failing gate pass. This budget exists to catch a stray
     // dependency, not to absorb one, so each raise records its reason:
     //
@@ -63,6 +67,14 @@ export default [
     //                  motion component imports, so nothing tree-shakes.
     //                  The other four bumps in the group net out to ~0.
     //                  The total landed at 424.9 kB in CI (423.8 locally).
+    //   430 -> 435 kB  the frontend-prod Dependabot group (#201). +4.6 kB
+    //                  gz, measured one bump at a time: axios 1.20.0 ->
+    //                  1.21.0 +2.5 (all in the entry chunk), @auth0/auth0-react
+    //                  2.28.2 -> 2.29.0 +1.0 (the auth0 chunk; 2.29 adds the
+    //                  passkey methods to useAuth0()), framer-motion 14.5.0 ->
+    //                  14.7.1 +1.1 (eager motion chunks +0.8, the lazy feature
+    //                  chunk +0.3). react-query and react-router-dom are ~0.
+    //                  The total landed at 429.4 kB in CI (428.4 locally).
     //
     // This is the total across *all* chunks, most of which are lazy route
     // chunks behind the login. The number a first-time visitor actually
@@ -70,7 +82,7 @@ export default [
     // 3.1 kB, not 14.7.
     name: 'total JS shipped (all chunks)',
     path: 'dist/assets/*.js',
-    limit: '430 kB',
+    limit: '435 kB',
     gzip: true,
   },
 ];

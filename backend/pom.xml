@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.1</version>
+        <version>4.1.2</version>
         <relativePath/>
     </parent>
 
@@ -62,13 +62,13 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Not managed by the Boot parent. -->
-        <spring-cloud-gcp.version>8.2.4</spring-cloud-gcp.version>
+        <spring-cloud-gcp.version>8.3.0</spring-cloud-gcp.version>
         <testcontainers.version>2.0.5</testcontainers.version>
-        <springdoc.version>3.1.1</springdoc.version>
+        <springdoc.version>3.2.0</springdoc.version>
         <!-- BigQuery and Firestore request different versions of this; without a
              pin the resolved one is below what Firestore asked for. Annotations
              only, so the choice is safe — it just has to be stated. -->
-        <error-prone-annotations.version>2.50.0</error-prone-annotations.version>
+        <error-prone-annotations.version>2.51.0</error-prone-annotations.version>
         <!--
           Raised above what the Boot parent manages, because springdoc asks for
           them and requireUpperBoundDeps would otherwise fail the build. These
@@ -114,10 +114,10 @@
         -->
         <tomcat.version>11.0.25</tomcat.version>
         <eclipse-paho-mqtt3-client.version>1.2.5</eclipse-paho-mqtt3-client.version>
-        <mockwebserver.version>5.5.0</mockwebserver.version>
+        <mockwebserver.version>5.5.1</mockwebserver.version>
         <flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>
-        <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
-        <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
+        <maven-enforcer-plugin.version>3.7.0</maven-enforcer-plugin.version>
+        <jacoco-maven-plugin.version>0.8.16</jacoco-maven-plugin.version>
         <spotless-maven-plugin.version>3.10.4</spotless-maven-plugin.version>
         <!-- 1.36+ understands JDK 26's javac internals; older releases fail
              with NoSuchMethodError on a developer machine running it. -->

@@ -86,33 +86,6 @@
         -->
         <gson.version>2.14.0</gson.version>
 
-        <!--
-          Boot 4.1.1 manages Jackson 3.1.5, which is inside five high advisories
-          published between 28 September and 1 October: GHSA-q4xh-88c3-wmh7,
-          GHSA-cxp5-3px4-pw24 and GHSA-wv8q-qhhj-9h54 (jackson-databind), and
-          GHSA-7hhh-6rmp-j9qf and GHSA-p6pp-m3f8-5c89 (jackson-core). 3.1.7 fixes
-          all five on the minor line Boot is built against, and without it the
-          Trivy dependency scan fails every backend PR. The Jackson 2 pin above
-          moved to 2.22.3 for the four of them that reach 2.22.2.
-
-          Like the Tomcat pin below, this goes as soon as a Boot patch manages
-          3.1.7 or later.
-        -->
-        <jackson-bom.version>3.1.7</jackson-bom.version>
-
-        <!--
-          Boot 4.1.1 manages Tomcat 11.0.24, which carries three CRITICAL
-          advisories — CVE-2026-65182 (security constraint bypass),
-          CVE-2026-65905 (authentication bypass) and CVE-2026-68525. All three
-          are fixed in 11.0.25. Every service here is a Tomcat-backed resource
-          server whose only protection is its security constraints, so a
-          constraint bypass is not theoretical for us.
-
-          This is the pin to drop first: the next Boot patch that ships 11.0.25
-          or later makes it redundant, and Dependabot's maven ecosystem (S8) is
-          what will say so.
-        -->
-        <tomcat.version>11.0.25</tomcat.version>
         <eclipse-paho-mqtt3-client.version>1.2.5</eclipse-paho-mqtt3-client.version>
         <mockwebserver.version>5.5.1</mockwebserver.version>
         <flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>

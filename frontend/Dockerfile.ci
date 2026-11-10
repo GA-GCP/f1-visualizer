@@ -3,7 +3,7 @@
 # ==========================================
 # This Dockerfile is used exclusively by Cloud Build pipelines.
 # It receives the pre-built dist/ directory from the build step
-# (via yarn build) and produces a minimal NGINX production image.
+# (via pnpm build) and produces a minimal NGINX production image.
 #
 # For local development builds, use the standard Dockerfile.
 # ==========================================

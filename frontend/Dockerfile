@@ -27,14 +27,34 @@ WORKDIR /app
 # Accept the environment variable from Cloud Build
 ARG ENV_MODE=dev
 
-# 0. Install yarn itself
+# 0. Install pnpm itself
 #
-# The node:26 image ships neither yarn nor corepack, so every `yarn` below failed
-# with `yarn: not found`. This is the release package.json names in
-# packageManager, and the two must move together; cloudbuild/frontend.yaml
-# installs the same one. --ignore-scripts skips yarn's only script, a preinstall
-# that checks for a corepack this image does not have.
-RUN npm install --global --ignore-scripts yarn@1.22.22
+# The node:26 image ships neither pnpm nor corepack. pnpm 12 is a native
+# program, published on the npm registry as one package per platform, so this
+# fetches the musl build for the CPU the image is built for and checks it
+# against a sha512 pinned here. Nothing is fetched when pnpm first runs.
+#
+# The version is the one package.json names in packageManager, and the hashes
+# are the integrity pnpm-lock.yaml records for @pnpm/exe.linux-*-musl at that
+# version; cloudbuild/frontend.yaml pins the x64 one too. All of them move
+# together, and the PR check fails when they disagree. TARGETARCH is set by
+# BuildKit; `uname -m` covers a builder without it.
+ARG TARGETARCH
+ARG PNPM_VERSION=12.18.0
+RUN set -eu; \
+    case "${TARGETARCH:-$(uname -m)}" in \
+      amd64|x86_64) pkg=linux-x64-musl; \
+        sum=523fafcdf210eb69033f5d31dfac876485d5b39a2174db623d8c27e458422e53527073e8d0e008f928460ed2e87e2057284eee9aeef52668e6ecdf1af3355c0f ;; \
+      arm64|aarch64) pkg=linux-arm64-musl; \
+        sum=569f9320c3cfc9a7245425e439d10a1ff466027febd3b11c232ae065840aed5ae492ca993a27b41a7588c7ef3998fa9e14460246d5c8640149f4be1c7939dd0e ;; \
+      *) echo "No pinned pnpm binary for ${TARGETARCH:-$(uname -m)}" >&2; exit 1 ;; \
+    esac; \
+    wget -qO /tmp/pnpm.tgz "https://registry.npmjs.org/@pnpm/exe.${pkg}/-/exe.${pkg}-${PNPM_VERSION}.tgz"; \
+    echo "${sum}  /tmp/pnpm.tgz" | sha512sum -c -; \
+    tar -xzf /tmp/pnpm.tgz -C /tmp package/pnpm; \
+    install -m 0755 /tmp/package/pnpm /usr/local/bin/pnpm; \
+    rm -rf /tmp/pnpm.tgz /tmp/package; \
+    pnpm --version
 
 # 1. Install dependencies
 #
@@ -46,11 +66,11 @@ RUN npm install --global --ignore-scripts yarn@1.22.22
 # minutes compiling Cairo bindings for an image that never runs a test.
 # vite and tsc need no install scripts.
 #
-# shims/ comes along because package.json resolutions install packages from it
-# (file:./shims/...), and the install fails without them.
-COPY package.json yarn.lock ./
+# shims/ comes along because the overrides in pnpm-workspace.yaml install a
+# package from it (file:./shims/...), and the install fails without it.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY shims ./shims
-RUN yarn install --frozen-lockfile --ignore-scripts
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # 2. Copy only what the build reads, rather than `COPY . .`
 #
@@ -58,7 +78,7 @@ RUN yarn install --frozen-lockfile --ignore-scripts
 # and busted this layer's cache on any file change anywhere in frontend/.
 #
 # e2e/ and the vitest.*.config.ts files are here not because the image needs
-# them but because `yarn build` runs `tsc -b`, which builds every referenced
+# them but because `pnpm build` runs `tsc -b`, which builds every referenced
 # project — tsconfig.e2e.json among them. Omitting them turns the build into a
 # type error about missing inputs.
 COPY index.html tsconfig*.json vite.config.ts vitest.e2e.config.ts vitest.screenshots.config.ts ./
@@ -66,7 +86,7 @@ COPY .env.* ./
 COPY public ./public
 COPY src ./src
 COPY e2e ./e2e
-RUN yarn build --mode ${ENV_MODE}
+RUN pnpm build --mode ${ENV_MODE}
 
 # ==========================================
 # STAGE 2: Serve with NGINX (Unprivileged)

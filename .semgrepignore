@@ -10,7 +10,7 @@ target/
 coverage/
 *.min.js
 *.lock
-yarn.lock
+pnpm-lock.yaml
 
 # The rule test fixtures under .semgrep/ contain deliberate violations — that is
 # what `semgrep --test` asserts against. Scanning them would report every rule

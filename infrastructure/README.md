@@ -96,7 +96,7 @@ SEC-1 split the single `sa-f1v-cloudbuild-<env>` account in two:
 | `sa-f1v-deploy-<env>` | `backend-service.yaml`, `frontend.yaml` | `run.developer`, `run.viewer`, `logging.logWriter`, `artifactregistry.writer` on the repository, `serviceAccountUser` per runtime account |
 | `sa-f1v-infra-<env>` | `infrastructure.yaml` | The resource-admin roles in `iam-and-secrets/main.tf`, plus `projectIamAdmin` conditioned to the roles this repository declares |
 
-The deploy account runs third-party build code (`./mvnw verify`, `yarn install`
+The deploy account runs third-party build code (`./mvnw verify`, `pnpm install`
 with lifecycle scripts) and therefore holds no IAM, network or data
 administration at all.
 

@@ -67,7 +67,7 @@ locals {
 # artifactregistry.writer and cloudbuild.builds.builder.
 #
 # The backend and frontend pipelines run third-party code on every push —
-# `./mvnw verify` and `yarn install` with lifecycle scripts. A single malicious
+# `./mvnw verify` and `pnpm install` with lifecycle scripts. A single malicious
 # dependency in a *dev* build could take the metadata-server token, grant itself
 # roles/owner, read every secret, and reach prod Firestore, Redis and BigQuery,
 # because all three environments share one project. That was the widest blast

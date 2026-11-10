@@ -3,7 +3,7 @@
 Six runtime service accounts, one per service, and two CI accounts.
 
 The CI split is the point (SEC-1): `sa-f1v-deploy-<env>` runs the application
-pipelines, which execute `./mvnw verify` and `yarn install` with lifecycle
+pipelines, which execute `./mvnw verify` and `pnpm install` with lifecycle
 scripts, and cannot change IAM. `sa-f1v-infra-<env>` runs only Terragrunt. Its
 `projectIamAdmin` grant carries an IAM condition restricting the roles it may
 hand out to the ones this repository declares, so it cannot grant itself Owner.

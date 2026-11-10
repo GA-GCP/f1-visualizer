@@ -159,8 +159,8 @@ export default defineConfig({
     css: false,
     restoreMocks: true,
     reporters: process.env.GITHUB_ACTIONS ? ['default', 'github-actions'] : ['default'],
-    // e2e/ is Playwright's; without this vitest would collect the specs and
-    // fail on an import of @playwright/test.
+    // e2e/ is the browser tests', under vitest.e2e.config.ts: they need the
+    // servers e2e/servers.ts starts and a Chrome, which this run has neither of.
     exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
     coverage: {
       provider: 'v8',
@@ -177,7 +177,7 @@ export default defineConfig({
         'src/test/**',
         'src/**/*.d.ts',
         // The composition root. It wires modules together and is exercised by
-        // the Playwright specs rather than by unit tests; counting it would
+        // the browser tests (e2e/) rather than by unit tests; counting it would
         // measure how much of createRoot is reachable from jsdom.
         'src/main.tsx',
         // Four lines re-exporting framer's feature bundle.

@@ -57,11 +57,11 @@ RUN yarn install --frozen-lockfile --ignore-scripts
 # `COPY . .` pulled in the host's dist/, the test suites and the image snapshots,
 # and busted this layer's cache on any file change anywhere in frontend/.
 #
-# e2e/ and playwright.config.ts are here not because the image needs them but
-# because `yarn build` runs `tsc -b`, which builds every referenced project —
-# tsconfig.e2e.json among them. Omitting them turns the build into a type error
-# about missing inputs.
-COPY index.html tsconfig*.json vite.config.ts playwright.config.ts ./
+# e2e/ and the vitest.*.config.ts files are here not because the image needs
+# them but because `yarn build` runs `tsc -b`, which builds every referenced
+# project — tsconfig.e2e.json among them. Omitting them turns the build into a
+# type error about missing inputs.
+COPY index.html tsconfig*.json vite.config.ts vitest.e2e.config.ts vitest.screenshots.config.ts ./
 COPY .env.* ./
 COPY public ./public
 COPY src ./src

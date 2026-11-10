@@ -1,5 +1,5 @@
 import { E2E_EMAIL, E2E_SUB } from './auth0';
-import type { Page } from '@playwright/test';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 
 /**
  * Fixture payloads.
@@ -105,6 +105,14 @@ export const LAPS = Array.from({ length: 12 }, (_, i) => ({
     isPitOutLap: false,
 }));
 
+/** The second driver's stint over the same laps, so a lap chart has two lines to set apart. */
+const LAPS_NOR = LAPS.map((lap, i) => ({
+    ...lap,
+    driverNumber: 4,
+    lapDuration: 92.9 + Math.cos(i / 2) * 0.6 - i * 0.03,
+    compound: i < 7 ? 'MEDIUM' : 'HARD',
+}));
+
 export const USER_PROFILE = {
     authSubId: E2E_SUB,
     email: E2E_EMAIL,
@@ -117,45 +125,37 @@ export const USER_PROFILE = {
     },
 };
 
+/** The answer the API gives `path`, or null where it has none. */
+function answerFor(path: string): unknown {
+    if (path.endsWith('/analysis/drivers')) return DRIVERS;
+    if (path.endsWith('/analysis/sessions')) return SESSIONS;
+    if (path.endsWith('/analysis/years')) return [2025, 2024];
+    if (/\/analysis\/sessions\/year\/\d+$/.test(path)) return SESSIONS;
+    if (/\/analysis\/sessions\/\d+\/drivers$/.test(path)) return SESSION_DRIVERS;
+    if (/\/analysis\/session\/\d+\/laps$/.test(path)) return [...LAPS, ...LAPS_NOR];
+    const stats = /\/analysis\/drivers\/(\d+)\/stats$/.exec(path);
+    if (stats)
+        return (DRIVERS.find((driver) => driver.id === Number(stats[1])) ?? DRIVERS[0]).stats;
+    if (path.endsWith('/users/me')) return USER_PROFILE;
+    if (path.endsWith('/users/me/preferences')) return USER_PROFILE.preferences;
+    if (path.includes('/ingestion/')) return { status: 'accepted' };
+    return null;
+}
+
 /**
- * Answers every REST call the app makes, matching on the path suffix.
+ * Answers every REST call the app makes under /api/v1, matching on the path,
+ * on the same origin as the app: .env.e2e leaves VITE_API_BASE_URL unset, so
+ * the app calls the relative /api/v1 exactly as it derives it in production.
+ * Each driver's stats are its own and the laps are both drivers', so the Data
+ * Vault and Head-to-Head screenshots have two drivers to compare.
  *
- * A single catch-all with an explicit table rather than one route per endpoint:
- * an unmatched call falls through to the 404 below and fails the test loudly,
- * instead of hanging until the spec times out with no indication of which
- * request was missing.
+ * A table rather than a route per endpoint: an unmatched call gets the 404
+ * below and fails the test loudly, instead of hanging until the test times out
+ * with no indication of which request was missing.
  */
-export async function stubApi(page: Page): Promise<void> {
-    await page.route('**/api/v1/**', async (route) => {
-        const path = new URL(route.request().url()).pathname;
-
-        const body = path.endsWith('/analysis/drivers')
-            ? DRIVERS
-            : path.endsWith('/analysis/sessions')
-              ? SESSIONS
-              : path.endsWith('/analysis/years')
-                ? [2025, 2024]
-                : /\/analysis\/sessions\/year\/\d+$/.test(path)
-                  ? SESSIONS
-                  : /\/analysis\/sessions\/\d+\/drivers$/.test(path)
-                    ? SESSION_DRIVERS
-                    : /\/analysis\/session\/\d+\/laps$/.test(path)
-                      ? LAPS
-                      : /\/analysis\/drivers\/\d+\/stats$/.test(path)
-                        ? DRIVERS[0].stats
-                        : path.endsWith('/users/me')
-                          ? USER_PROFILE
-                          : path.endsWith('/users/me/preferences')
-                            ? USER_PROFILE.preferences
-                            : path.includes('/ingestion/')
-                              ? { status: 'accepted' }
-                              : null;
-
-        if (body === null) {
-            await route.fulfill({ status: 404, json: { error: `no e2e stub for ${path}` } });
-            return;
-        }
-
-        await route.fulfill({ json: body });
-    });
+export function answerApi(request: IncomingMessage, response: ServerResponse): void {
+    const path = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
+    const body = answerFor(path);
+    response.writeHead(body === null ? 404 : 200, { 'content-type': 'application/json' });
+    response.end(JSON.stringify(body ?? { error: `no e2e stand-in for ${path}` }));
 }

@@ -1,7 +1,11 @@
-import type { Page } from '@playwright/test';
+import { WebSocketServer } from 'ws';
+import type { Server } from 'node:http';
 
 /** STOMP terminates every frame with a NULL octet. */
 const NUL = '\0';
+
+/** The path the app derives its socket from, under the same origin as the REST fallback. */
+const SOCKET_PATH = '/ws/websocket';
 
 /** A closed oval, so the trace draws a recognisable circuit rather than noise. */
 export function circuitPath(points = 240): { x: number; y: number }[] {
@@ -34,30 +38,40 @@ function parse(raw: string): { command: string; headers: Record<string, string> 
     return { command, headers };
 }
 
-export interface TelemetryOptions {
-    /** Points to replay on /topic/race-location. */
-    path?: { x: number; y: number }[];
-    sessionKey?: number;
-    driverNumber?: number;
-}
-
 /**
- * A STOMP broker, mocked at the socket.
- *
- * The audit suggested a separate Node `ws` fixture process plus a VITE_STOMP_URL
- * override. routeWebSocket does the same job without either: no second server to
- * start and tear down, and no production env var that exists only for tests —
- * the app connects to exactly the URL it derives in production.
+ * A STOMP broker on the app's own server, at the URL the app derives in
+ * production (ws://127.0.0.1:4173/ws/websocket for the e2e build), so there is
+ * no production env var that exists only for tests.
  *
  * Deliberately speaks real STOMP rather than stubbing @stomp/stompjs, because
  * the frame handling — CONNECT/CONNECTED negotiation, the Authorization header
  * carried on CONNECT, subscription ids — is part of what has only ever run in
- * production.
+ * production. Each connection replays the circuit for its own subscription, so
+ * tests running at once each get a whole trace.
  */
-export async function stubTelemetry(page: Page, options: TelemetryOptions = {}): Promise<void> {
-    const { path = circuitPath(), sessionKey = 9001, driverNumber = 1 } = options;
+export function telemetryStandIn(
+    server: Server,
+    sessionKey = 9001,
+    driverNumber = 1,
+): WebSocketServer {
+    const path = circuitPath();
+    // The STOMP versions the client offers as subprotocols; a broker picks one.
+    const sockets = new WebSocketServer({
+        noServer: true,
+        handleProtocols: (offered) => (offered.has('v12.stomp') ? 'v12.stomp' : false),
+    });
 
-    await page.routeWebSocket(/\/ws\/websocket$/, (ws) => {
+    server.on('upgrade', (request, socket, head) => {
+        if (new URL(request.url ?? '/', 'http://127.0.0.1').pathname !== SOCKET_PATH) {
+            socket.destroy();
+            return;
+        }
+        sockets.handleUpgrade(request, socket, head, (ws) =>
+            sockets.emit('connection', ws, request),
+        );
+    });
+
+    sockets.on('connection', (ws) => {
         // destination -> subscription id
         const subscriptions = new Map<string, string>();
         let messageId = 0;
@@ -81,13 +95,13 @@ export async function stubTelemetry(page: Page, options: TelemetryOptions = {}):
             );
         };
 
-        ws.onMessage((raw) => {
-            const parsed = parse(String(raw));
+        ws.on('message', (raw: Buffer) => {
+            const parsed = parse(raw.toString('utf8'));
             if (!parsed) return;
 
             if (parsed.command === 'CONNECT' || parsed.command === 'STOMP') {
                 // 0,0 disables heartbeats in both directions. The client asks
-                // for 10s out / 15s in; agreeing to none keeps the fixture from
+                // for 10s out / 15s in; agreeing to none keeps the stand-in from
                 // running a ticker, and the client accepts that per the spec.
                 ws.send(frame('CONNECTED', { version: '1.2', 'heart-beat': '0,0' }));
                 return;
@@ -136,6 +150,8 @@ export async function stubTelemetry(page: Page, options: TelemetryOptions = {}):
             }
         });
 
-        ws.onClose(() => clearInterval(timer));
+        ws.on('close', () => clearInterval(timer));
     });
+
+    return sockets;
 }

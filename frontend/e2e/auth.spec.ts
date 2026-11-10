@@ -1,5 +1,6 @@
-import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from './fixtures/test';
+import { describe } from 'vitest';
+import { accessibilityViolations, signIn } from './checks';
+import { expect, test, WEB } from './fixtures';
 
 /**
  * The login journey, end to end against the built bundle.
@@ -9,7 +10,7 @@ import { expect, test } from './fixtures/test';
  * post-login splash and the authenticated shell. Every unit test above the
  * component boundary mocks useAuth0, so none of it ran in CI before.
  */
-test.describe('authentication', () => {
+describe('authentication', () => {
     test('signs in through the real redirect handshake and reaches the dashboard', async ({
         page,
     }) => {
@@ -32,24 +33,22 @@ test.describe('authentication', () => {
     test('serves the app shell for a deep link rather than a 404', async ({ page }) => {
         // The SPA fallback lives in nginx.conf in production and in vite
         // preview here; either way an unauthenticated deep link must render the
-        // app and be redirected, not fail to load.
-        const response = await page.goto('/dashboard');
+        // app and be redirected, not fail to load. WebDriver reports no status,
+        // so the deep link is asked for as the browser asks for a page.
+        const answer = await fetch(`${WEB}/dashboard`, { headers: { accept: 'text/html' } });
+        expect(answer.status).toBe(200);
 
-        expect(response?.status()).toBe(200);
+        await page.goto('/dashboard');
         await expect(page.getByRole('button', { name: /login or sign up/i })).toBeVisible();
     });
 });
 
-test.describe('accessibility', () => {
+describe('accessibility', () => {
     test('the landing page has no axe violations', async ({ page }) => {
         await page.goto('/');
         await expect(page.getByRole('button', { name: /login or sign up/i })).toBeVisible();
 
-        const results = await new AxeBuilder({ page })
-            .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-            .analyze();
-
-        expect(results.violations).toEqual([]);
+        expect(await accessibilityViolations(page)).toEqual([]);
     });
 
     test('the authenticated shell has no axe violations', async ({ page }) => {
@@ -57,14 +56,8 @@ test.describe('accessibility', () => {
         // check of the assembled page: landmark uniqueness, heading order
         // across components, and contrast against the real painted background
         // are all properties of the whole document, not of one component.
-        await page.goto('/');
-        await page.getByRole('button', { name: /login or sign up/i }).click();
-        await expect(page.getByRole('main')).toBeVisible({ timeout: 20_000 });
+        await signIn(page);
 
-        const results = await new AxeBuilder({ page })
-            .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-            .analyze();
-
-        expect(results.violations).toEqual([]);
+        expect(await accessibilityViolations(page)).toEqual([]);
     });
 });

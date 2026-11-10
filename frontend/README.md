@@ -243,11 +243,12 @@ If a baseline needs to change because the rendering intentionally changed, delet
 PNG and re-run the suite to regenerate it. Review the regenerated image before committing; an
 accidentally accepted baseline silently disables the check.
 
-**End-to-end.** `yarn test:e2e` builds the bundle with `--mode e2e` and runs seven tests against
+**End-to-end.** `yarn test:e2e` builds the bundle with `--mode e2e` and runs eight tests against
 it under Vitest (`vitest.e2e.config.ts`), driving Chrome through Selenium WebDriver: once on a
 desktop and once on a Pixel 7 in Chrome's mobile emulation. They cover the real Auth0 redirect
-handshake, the SPA fallback for a deep link, a live circuit trace fed by real STOMP frames, canvas
-re-scaling on a viewport change, and axe accessibility scans of the landing page and the
+handshake, the SPA fallback for a deep link, a sign-in button shown whole and clear of the footer
+on short pages (a phone held sideways among them), a live circuit trace fed by real STOMP frames,
+canvas re-scaling on a viewport change, and axe accessibility scans of the landing page and the
 authenticated shell. It is the only layer that exercises the redirect, real STOMP frames and a
 real canvas resize.
 

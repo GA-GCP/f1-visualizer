@@ -986,7 +986,7 @@ cd backend && ./mvnw -B clean verify -pl f1v-service-data-analysis -am
 | **API Client Tests** | Vitest + `vi.stubEnv()` | Validates Axios instance configuration across deployment environments (dev, uat, prod) and STOMP client initialization with JWT authentication headers. |
 | **Auth Tests** | Vitest | Tests the Auth0 Axios interceptor (`AuthHandler`) for Bearer token injection and 401 response handling. |
 | **Error Boundary Tests** | React Testing Library | Validates the auto-retry error boundary's fallback rendering, retry attempts, and error recovery behavior. |
-| **End-to-End Tests** | Selenium WebDriver + axe, under Vitest | 7 tests over the built bundle, run on a desktop Chrome and again on a Pixel 7 in Chrome's mobile emulation: the real Auth0 redirect handshake against a stand-in tenant (`.env.e2e`), the SPA fallback for deep links, a live circuit trace fed by real STOMP frames from a stand-in broker, canvas re-scaling on viewport change, and axe accessibility scans of the landing page and the authenticated shell. |
+| **End-to-End Tests** | Selenium WebDriver + axe, under Vitest | 8 tests over the built bundle, run on a desktop Chrome and again on a Pixel 7 in Chrome's mobile emulation: the real Auth0 redirect handshake against a stand-in tenant (`.env.e2e`), the SPA fallback for deep links, a sign-in button shown whole and clear of the landing page's footer on short pages (a phone held sideways among them), a live circuit trace fed by real STOMP frames from a stand-in broker, canvas re-scaling on viewport change, and axe accessibility scans of the landing page and the authenticated shell. |
 
 **Mocking Patterns:**
 - **D3.js** — Complex fluent API chains mocked as chainable objects that track method calls (`textCalls`, `styleCalls`, `appendCallCount`) for assertion.
@@ -1033,7 +1033,7 @@ cd frontend && yarn vitest
 | Layer | Test Files | Test Framework | Test Types |
 |-------|-----------|---------------|------------|
 | **Backend** | 42 files, 251 tests | JUnit 6, Mockito, Spring Boot Test, ArchUnit, Testcontainers | Unit, controller, security, HTTP mock, serialization, parameterized, integration, architecture |
-| **Frontend** | 54 files, 352 tests + 14 e2e | Vitest, React Testing Library, Selenium WebDriver | Component, visual regression, hook, utility, API client, auth, end-to-end |
+| **Frontend** | 54 files, 352 tests + 16 e2e | Vitest, React Testing Library, Selenium WebDriver | Component, visual regression, hook, utility, API client, auth, end-to-end |
 | **Infrastructure** | 11 modules, 46 units | Trivy, Conftest, tflint, OpenTofu, Terragrunt | Plan-based security scanning, policy checks, linting, module and input validation |
 
 ### CI Test Integration

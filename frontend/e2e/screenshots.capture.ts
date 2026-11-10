@@ -55,12 +55,12 @@ async function streaming(page: Page): Promise<void> {
  * Nothing is deployed, so the pictures come from the same place the e2e suite
  * gets its confidence: the built bundle, the Auth0 stand-in, the fixture API
  * and a STOMP broker on the app's own origin. A file of its own, under its own
- * config (vitest.screenshots.config.ts), so `yarn test:e2e` never runs — or
+ * config (vitest.screenshots.config.ts), so `pnpm test:e2e` never runs — or
  * skips — a capture. The desktop's run takes every page; the phone's takes the
  * live console, which e2e/screenshots.compose.ts sets in front of the
  * desktop's.
  *
- *   yarn screenshots
+ *   pnpm screenshots
  */
 describe('screenshots', () => {
     test.runIf(desktop)('landing page', async ({ page }) => {

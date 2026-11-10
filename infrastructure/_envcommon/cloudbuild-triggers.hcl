@@ -31,7 +31,7 @@ inputs = {
   github_repo    = local.env.github_repo
   branch_pattern = local.env.branch_pattern
 
-  # SEC-1: two identities. The one that runs `./mvnw verify` and `yarn install`
+  # SEC-1: two identities. The one that runs `./mvnw verify` and `pnpm install`
   # cannot change IAM; the one that runs terragrunt does not run third-party code.
   deploy_service_account_email = dependency.iam.outputs.sa_deploy_email
   infra_service_account_email  = dependency.iam.outputs.sa_infra_email

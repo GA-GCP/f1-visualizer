@@ -32,6 +32,14 @@ substitutions:
   _TRIVY_IMAGE: 'aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969'
   # Digest only: this image is published without a meaningful version tag.
   _DOCKER_IMAGE: 'gcr.io/cloud-builders/docker@sha256:3d00b6c1a9b862621c30fc74d4f2abfc62bcbdee631ed3febd31e7edbdf6252c'
+  # pnpm for the node steps: the release package.json names in packageManager.
+  # The sha512s are those pnpm-lock.yaml records (in hex here; the lockfile has
+  # them in base64) for the `pnpm` package, which carries the node-gyp that
+  # compiles canvas, and for @pnpm/exe.linux-x64-musl, the native program
+  # itself. Install step below.
+  _PNPM_VERSION: '12.18.0'
+  _PNPM_PKG_SHA512: '9d7882d5dc82147ecfc4e062aa34834e0ad0296710a1837a1115ae012127d36b7109e321ac1598a1dd0a65597681b1e99917e12ed0d749eae91187943363beb3'
+  _PNPM_EXE_SHA512: '523fafcdf210eb69033f5d31dfac876485d5b39a2174db623d8c27e458422e53527073e8d0e008f928460ed2e87e2057284eee9aeef52668e6ecdf1af3355c0f'
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -61,28 +69,44 @@ steps:
   #    tests. Alpine needs Python, a C++ toolchain, and Cairo/Pango libs
   #    for node-gyp to compile it.
   #
-  #    The node:26 image ships neither yarn nor corepack, so yarn itself is
-  #    installed first: the release package.json names in packageManager, which
-  #    frontend/Dockerfile installs too. Each step is a fresh container and only
-  #    /workspace carries over, so it goes there and the steps below run it by
-  #    path. --ignore-scripts skips yarn's only script, a corepack check.
+  #    The node:26 image ships neither pnpm nor corepack, so pnpm itself is
+  #    installed first, from the release package.json names in packageManager.
+  #    pnpm 12 is a native program that runs scripts with the node-gyp shipped
+  #    in its `pnpm` package, and canvas compiles with node-gyp here (it has no
+  #    musl prebuild). So that package is unpacked and the linux-x64-musl
+  #    program put in place of its `pnpm` launcher, which is how pnpm's own
+  #    installer lays it out. Both downloads are checked against the sha512s
+  #    pinned above. frontend/Dockerfile pins the same release, and the PR check
+  #    fails when the pins disagree.
+  #
+  #    Each step is a fresh container and only /workspace carries over, so pnpm
+  #    and its store go there and the steps below run pnpm by path.
   - name: '${_NODE_IMAGE}'
     id: 'install'
     entrypoint: 'sh'
     args:
       - '-c'
       - |
+        set -eu
         apk add --no-cache python3 make g++ pkgconf \
-          cairo-dev pango-dev libjpeg-turbo-dev giflib-dev librsvg-dev \
-        && npm install --global --prefix /workspace/.yarn-global \
-          --ignore-scripts yarn@1.22.22 \
-        && /workspace/.yarn-global/bin/yarn install --frozen-lockfile
+          cairo-dev pango-dev libjpeg-turbo-dev giflib-dev librsvg-dev
+        wget -qO /tmp/pnpm.tgz \
+          https://registry.npmjs.org/pnpm/-/pnpm-${_PNPM_VERSION}.tgz
+        echo "${_PNPM_PKG_SHA512}  /tmp/pnpm.tgz" | sha512sum -c -
+        wget -qO /tmp/pnpm-exe.tgz \
+          https://registry.npmjs.org/@pnpm/exe.linux-x64-musl/-/exe.linux-x64-musl-${_PNPM_VERSION}.tgz
+        echo "${_PNPM_EXE_SHA512}  /tmp/pnpm-exe.tgz" | sha512sum -c -
+        mkdir -p /workspace/.pnpm
+        tar -xzf /tmp/pnpm.tgz -C /workspace/.pnpm --strip-components=1
+        tar -xzf /tmp/pnpm-exe.tgz -C /tmp package/pnpm
+        install -m 0755 /tmp/package/pnpm /workspace/.pnpm/pnpm
+        /workspace/.pnpm/pnpm install --frozen-lockfile --store-dir /workspace/.pnpm-store
     dir: 'frontend'
 
   # 2. ESLint Check
   - name: '${_NODE_IMAGE}'
     id: 'lint'
-    entrypoint: '/workspace/.yarn-global/bin/yarn'
+    entrypoint: '/workspace/.pnpm/pnpm'
     args: ['lint']
     dir: 'frontend'
 
@@ -96,7 +120,7 @@ steps:
       - '-c'
       - |
         apk add --no-cache cairo pango libjpeg-turbo giflib librsvg \
-        && /workspace/.yarn-global/bin/yarn test:ci
+        && /workspace/.pnpm/pnpm test:ci
     dir: 'frontend'
     # Without CI set, jest-image-snapshot silently WRITES a missing baseline
     # and passes, so a visual regression could never fail this pipeline.
@@ -105,7 +129,7 @@ steps:
   # 4. Production Build (produces dist/)
   - name: '${_NODE_IMAGE}'
     id: 'build'
-    entrypoint: '/workspace/.yarn-global/bin/yarn'
+    entrypoint: '/workspace/.pnpm/pnpm'
     args: ['build', '--mode', '${_ENV}']
     dir: 'frontend'
     # Read by `define` in vite.config.ts. Without it the bundle reports

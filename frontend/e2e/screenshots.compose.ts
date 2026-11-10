@@ -23,7 +23,7 @@ const dataUri = (name: string): string =>
  * the portfolio. The background is transparent, for GitHub's light and dark
  * themes alike.
  *
- *   yarn screenshots:compose
+ *   pnpm screenshots:compose
  */
 const PAGE = `<!doctype html>
 <style>

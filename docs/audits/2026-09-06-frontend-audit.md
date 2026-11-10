@@ -15,8 +15,8 @@
 - React 19.2.8 · react-dom 19.2.8 · react-router-dom 7.18.3 · TypeScript 6.0.3 · Vite 8.2.2 (rolldown-based) · @vitejs/plugin-react 6.1.1
 - MUI 9.4.0 (@mui/material, @mui/icons-material) + Emotion 11.14 · framer-motion 13.2.0 (motion-dom 13.2) · d3 7.9 (full package import, tree-shakes cleanly) · axios 1.20
 - @stomp/stompjs 7.3.0 over sockjs-client 1.6.1 · @auth0/auth0-react 2.24.1 (auth0-spa-js 2.24) · date-fns 4.4 (declared, never imported)
-- Dev: Vitest 5.0 + jsdom 30 + RTL 16 · jest-image-snapshot + node `canvas` (visual regression) · ESLint 10 flat config (js recommended + tseslint recommended + react-hooks 7 + react-refresh only) · Node 26.8 · Yarn 1.22 classic
-- Deploy: nginxinc/nginx-unprivileged:alpine on Cloud Run (port 8080, 1 CPU / 512 Mi, cpu_idle, startup boost) behind a global external managed LB (no Cloud CDN, no compression_mode). CI: GitHub PR checks run `yarn lint` + `yarn test:ci` only; Cloud Build runs install / lint / test / build / docker / deploy.
+- Dev: Vitest 5.0 + jsdom 30 + RTL 16 · jest-image-snapshot + node `canvas` (visual regression) · ESLint 10 flat config (js recommended + tseslint recommended + react-hooks 7 + react-refresh only) · Node 26.8 · pnpm 12
+- Deploy: nginxinc/nginx-unprivileged:alpine on Cloud Run (port 8080, 1 CPU / 512 Mi, cpu_idle, startup boost) behind a global external managed LB (no Cloud CDN, no compression_mode). CI: GitHub PR checks run `pnpm lint` + `pnpm test:ci` only; Cloud Build runs install / lint / test / build / docker / deploy.
 
 ### 1.2 Layout
 
@@ -58,11 +58,11 @@ frontend/vitest.config.ts      duplicates plugin/alias; jsdom; globals true
 
 | Check | Result |
 |---|---|
-| `yarn build --mode prod` | 1 chunk `dist/assets/index-*.js`: 1,146.9 kB minified / 358.4 kB gzip; index.html 0.54 kB; no CSS file (Emotion runtime); Vite warns chunk > 500 kB and `__dirname` in config |
+| `pnpm build --mode prod` | 1 chunk `dist/assets/index-*.js`: 1,146.9 kB minified / 358.4 kB gzip; index.html 0.54 kB; no CSS file (Emotion runtime); Vite warns chunk > 500 kB and `__dirname` in config |
 | Bundle composition (pre-minify source bytes, 3.66 MB) | @mui/material 23.0% · react-dom 14.9% · react-router 10.3% · motion-dom + framer-motion 13.8% · @auth0/auth0-react 6.7% · axios 4.6% · @mui/system+utils 5.7% · sockjs + stompjs 5.2% · d3 ≈ 4% (55.5 kB min / 19 kB gz after tree-shaking) · app code ≈ 6% |
-| `yarn lint` | clean |
-| `yarn test:ci` | 38 files / 188 tests pass in 6.7 s; jsdom created 38× (36% of wall time); 6 "Not implemented: scrollTo" warnings |
-| `yarn audit` | 0 vulnerabilities / 569 packages; `yarn outdated`: typescript 6.0.3 → 7.0.2 available |
+| `pnpm lint` | clean |
+| `pnpm test:ci` | 38 files / 188 tests pass in 6.7 s; jsdom created 38× (36% of wall time); 6 "Not implemented: scrollTo" warnings |
+| `pnpm audit` | 0 vulnerabilities / 569 packages; `pnpm outdated`: typescript 6.0.3 → 7.0.2 available |
 | Untested source files | 5 of 41: App.tsx (253 LOC), UserSettingsModal.tsx, main.tsx, two type files |
 | Lockfile duplicates (runtime) | react-is ×4 versions, @babel/runtime ×2 |
 | Code signals (src, excl. tests) | 41 console.* calls · 0 `any` · 13 non-null `!` · 0 dangerouslySetInnerHTML · 1 reduced-motion reference · 2 aria-* attrs · 2 useMemo · 3 useCallback · 0 memo() · 0 AbortController · 0 lazy()/Suspense · 32 setTimeout/setInterval · 14 requestAnimationFrame · 144 hard-coded hex colours (39 distinct) |
@@ -198,7 +198,7 @@ frontend/vitest.config.ts      duplicates plugin/alias; jsdom; globals true
 | F085 | Low | S2 | S | 3 | SplashCircuit drives the orbiting dot via getPointAtLength on every motion-value change and stacks two drop-shadow filters on a moving SVG circle — perpetual main-thread + filter repaint on the Landing page | `frontend/src/components/splash/SplashCircuit.tsx:79` |
 | F086 | Low | S1 | M | 3 | framer-motion is bundled eagerly as `motion` (130 kB); `LazyMotion` + `m` with `domMax` is available in 13.2 but unused | `frontend/src/App.tsx:5` |
 | F087 | Low | S3 | S | 3 | Dead dependency and dead code: date-fns is never imported, and several exports and state fields have no consumer | `frontend/package.json:22` |
-| F088 | Low | S3 | S | 3 | Toolchain and release hygiene: no engines or packageManager, no .nvmrc, five npm scripts, no versioning or changelog | `frontend/package.json:4` |
+| F088 | Low | S3 | S | 3 | Toolchain and release hygiene: no engines or packageManager, no .nvmrc, five package.json scripts, no versioning or changelog | `frontend/package.json:4` |
 | F089 | Low | S3 | S | 3 | Duplicated Vite and Vitest config with a __dirname deprecation warning; test globals leak into app types | `frontend/vite.config.ts:9` |
 | F090 | Low | S3 | M | 3 | Four independent copies of the cycling-status-message + shimmer-bar loading pattern (HeadToHeadLoader 610 LOC is presentational, not a fetch container) | `frontend/src/components/HeadToHeadLoader.tsx:64` |
 | F091 | Low | S3 | S | 3 | act() warnings on every run and sleep-based synchronisation; hook tests wait on real 500 ms intervals (~2.1 s of the 5.7 s suite) | `frontend/src/components/__tests__/RaceSimulator.test.tsx:56` |
@@ -269,16 +269,16 @@ Findings: F001, F005, F006, F012, F027, F047
 **No bundle-size budget or Lighthouse gate — a 1.15 MB single chunk can grow unnoticed in every PR**
 
 - Where: `frontend/.github/workflows/pr-checks.yml:63`
-- Evidence: pr-checks.yml:62-63 - name: Test run: yarn test:ci (no step after this; no size/perf check anywhere) vite.config.ts:5-13 (no build section) export default defineConfig({ plugins: [react()], resolve: { alias: { '@': path…
+- Evidence: pr-checks.yml:62-63 - name: Test run: pnpm test:ci (no step after this; no size/perf check anywhere) vite.config.ts:5-13 (no build section) export default defineConfig({ plugins: [react()], resolve: { alias: { '@': path…
 - Problem: The measured build is one 1,146.90 kB / 358.38 kB gzip chunk (CONTEXT baseline) and Vite already warns about it, but nothing in CI reads that warning or compares against a budget. Adding a second d3 sub-package, another MUI icon barrel import, or accidentally importing `framer-motion` in a util would add hundreds of kB with no signal. There is no Lighthouse CI either, even though `/` (Landing) is public and could be audited unauthenticated.
 - Impact: Time-to-interactive on the public landing page and the post-login dashboard regresses silently; with a 358 kB gzip payload already on a mobile connection, each unnoticed 10% growth is user-visible.
 - Fix:
 
-  Add `size-limit` with `@size-limit/file` (`yarn add -D size-limit @size-limit/file`) and `.size-limit.json`:
+  Add `size-limit` with `@size-limit/file` (`pnpm add -D size-limit @size-limit/file`) and `.size-limit.json`:
   ```json
   [{ "path": "dist/assets/*.js", "limit": "370 kB", "gzip": true }]
   ```
-  plus script `"size": "size-limit"` and a PR step `run: yarn size` after the build step (use `andresz1/size-limit-action@v1` for a PR comment with the delta). Set `build.chunkSizeWarningLimit` deliberately in vite.config.ts once code-splitting lands so the warning becomes meaningful. Optionally add `treosh/lighthouse-ci-action@v12` against `yarn preview --port 4173` for `/` with a `budget.json` (`resourceSizes: script 400kB`, `interactive 4000ms`).
+  plus script `"size": "size-limit"` and a PR step `run: pnpm size` after the build step (use `andresz1/size-limit-action@v1` for a PR comment with the delta). Set `build.chunkSizeWarningLimit` deliberately in vite.config.ts once code-splitting lands so the warning becomes meaningful. Optionally add `treosh/lighthouse-ci-action@v12` against `pnpm preview --port 4173` for `/` with a `budget.json` (`resourceSizes: script 400kB`, `interactive 4000ms`).
 
 - Verified: Confirmed: neither pipeline reads the chunk-size warning or enforces a budget. Lowered from high because it is a guard rather than a current defect.
 
@@ -287,7 +287,7 @@ Findings: F001, F005, F006, F012, F027, F047
 **No build/version stamp in the bundle and no production source maps; manual builds push a mutable image tag**
 
 - Where: `frontend/cloudbuild/frontend.yaml:57`
-- Evidence: cloudbuild/frontend.yaml:9-11 substitutions: _ENV: 'dev' _SHORT_SHA: 'manual-build' cloudbuild/frontend.yaml:54-58 - name: 'node:26-alpine' id: 'build' entrypoint: 'yarn' args: ['build', '--mode', '${_ENV}'] vite.config…
+- Evidence: cloudbuild/frontend.yaml:9-11 substitutions: _ENV: 'dev' _SHORT_SHA: 'manual-build' cloudbuild/frontend.yaml:54-58 - name: 'node:26-alpine' id: 'build' entrypoint: 'pnpm' args: ['build', '--mode', '${_ENV}'] vite.config…
 - Problem: Cloud Build knows `_SHORT_SHA` but does not pass it into the Vite build, so no commit id exists anywhere in the served page (no `<meta>`, no console banner, no footer, no header). Vite's default `build.sourcemap: false` means the single minified 1.15 MB chunk produces stack traces like `index-CHqy23WB.js:1:48213` that cannot be symbolicated. `_SHORT_SHA` defaults to the literal `manual-build`, so any manually triggered build overwrites the same `:manual-build` tag, breaking the immutability the deploy step relies on.
 - Impact: During an incident support cannot ask 'which build are you on?' and cannot map a reported error to a commit or a deploy time; every rollback decision is guesswork. Without hidden source maps an error-reporting tool (see the error-reporting finding) is of limited value.
 - Fix:
@@ -991,7 +991,7 @@ Findings: F018, F023, F030, F046, F045, F062, F061, F075, F077
 - Impact: The 1.15 MB single chunk and 7 s splash exist without any field evidence of their cost across devices; regressions in the 60 fps trace loop (the app's core value) are discovered by users, and the roadmap has no baseline to prove improvement against.
 - Fix:
 
-  `yarn add web-vitals` then in `main.tsx`:
+  `pnpm add web-vitals` then in `main.tsx`:
   ```ts
   import { onLCP, onINP, onCLS, onTTFB } from 'web-vitals';
   const send = (m: Metric) => navigator.sendBeacon('/api/v1/rum', JSON.stringify({ ...m, v: __APP_VERSION__, mode: import.meta.env.MODE }));
@@ -1150,7 +1150,7 @@ Findings: F024, F025, F051, F052, F053, F054, F067, F068, F069, F065, F070, F080
 - Evidence: eslint.config.js:12-17 extends: [ js.configs.recommended, tseslint.configs.recommended, reactHooks.configs.flat.recommended, reactRefresh.configs.vite, ], Grep across src tests: getByText/findByText/queryByText = 93; ge…
 - Problem: The one place a11y is asserted is the splash. The play/pause IconButton has no accessible name in tests (found via bare `getByRole('button')`), the shimmer bars and canvas are found by CSS selectors, and there is no axe pass on any page or the settings Dialog. Because ESLint lacks `jsx-a11y`, missing `aria-label`s on icon buttons or `<canvas>` elements are not flagged either.
 - Impact: Screen-reader users get 'button' for play/pause and an unlabeled canvas for the core visualisation; there is no gate to stop it getting worse. Tests keyed on visible text also break on copy changes rather than on behaviour.
-- Fix: `yarn add -D vitest-axe eslint-plugin-jsx-a11y`. In setup.ts: `import * as matchers from 'vitest-axe/matchers'; expect.extend(matchers);`. Add a `src/test/renderWithTheme.tsx` helper wrapping `ThemeProvider theme={broadcastTheme}` (export the theme from a `theme.ts`, not App.tsx) and add one `expect(await axe(container)).toHaveNoViolations()` per page test (Landing, Home, HistoricalData, VersusMode, UserSettingsModal open). eslint.config.js: `import jsxA11y from 'eslint-plugin-jsx-a11y'` and add `jsxA11y.flatConfigs.recommended` to `extends`. Refactor the flagged queries to `getByRole('button', { name: /pause/i })` after giving the IconButton an `aria-label`.
+- Fix: `pnpm add -D vitest-axe eslint-plugin-jsx-a11y`. In setup.ts: `import * as matchers from 'vitest-axe/matchers'; expect.extend(matchers);`. Add a `src/test/renderWithTheme.tsx` helper wrapping `ThemeProvider theme={broadcastTheme}` (export the theme from a `theme.ts`, not App.tsx) and add one `expect(await axe(container)).toHaveNoViolations()` per page test (Landing, Home, HistoricalData, VersusMode, UserSettingsModal open). eslint.config.js: `import jsxA11y from 'eslint-plugin-jsx-a11y'` and add `jsxA11y.flatConfigs.recommended` to `extends`. Refactor the flagged queries to `getByRole('button', { name: /pause/i })` after giving the IconButton an `aria-label`.
 - Verified: Confirmed: no axe assertions and no jsx-a11y lint; queries are mostly getByText.
 
 #### F080 · Low · S3 Enterprise · effort S · priority 3/10
@@ -1197,11 +1197,11 @@ Findings: F004, F026, F032, F033, F048, F049, F050, F055, F056, F066, F057, F058
 **The PR gate never typechecks or builds, so a type error merges green and fails in the deploy pipeline**
 
 - Where: `frontend/.github/workflows/pr-checks.yml:59`
-- Evidence: pr-checks.yml:59-63 - name: Lint run: yarn lint - name: Test run: yarn test:ci package.json:6-12 "build": "tsc -b && vite build", "lint": "eslint .", "preview": "vite preview", "test:ci": "vitest run" ../cloudbuild/fron…
+- Evidence: pr-checks.yml:59-63 - name: Lint run: pnpm lint - name: Test run: pnpm test:ci package.json:6-12 "build": "tsc -b && vite build", "lint": "eslint .", "preview": "vite preview", "test:ci": "vitest run" ../cloudbuild/fron…
 - Problem: `tsc -b` and `vite build` exist only inside the `build` script, and that script is executed solely by Cloud Build after a push to `main`. Vitest 5 transpiles with esbuild/oxc and does not type-check, ESLint (`tseslint.configs.recommended`, non-type-aware) does not either, so a PR with a TS error, an unresolved import that only the bundler sees, or a Vite config regression passes both PR steps. There is no `typecheck` script for developers or CI to call. Additionally `gh api .../branches/main/protection` returns 403 (private repo on a plan without branch protection), so even the lint/test jobs are advisory rather than required.
-- Impact: Broken main: the failure surfaces in the `f1v-frontend-dev` Cloud Build run, after merge, blocking every subsequent deploy until a fix PR lands. Reviewers cannot trust a green PR. The README (line 93-94) even admits `yarn build` is 'the fastest way to catch a type error' — yet CI never runs it before merge.
-- Fix: Add a typecheck script running tsc -b to package.json and run it in the PR job between lint and test; add a yarn build --mode dev step so a Vite or rolldown regression is also caught pre-merge; require the job in branch protection. This also makes the duplicated lint and test steps in cloudbuild/frontend.yaml removable.
-- Verified: Confirmed: pr-checks.yml runs only yarn lint and yarn test:ci; tsc -b runs solely inside yarn build, which only Cloud Build executes after merge. Production stays protected because Cloud Build typechecks before deploying, so the impact is a red main branch and wasted deploy cycles rather than a broken release. Severity lowered from critical.
+- Impact: Broken main: the failure surfaces in the `f1v-frontend-dev` Cloud Build run, after merge, blocking every subsequent deploy until a fix PR lands. Reviewers cannot trust a green PR. The README (line 93-94) even admits `pnpm build` is 'the fastest way to catch a type error' — yet CI never runs it before merge.
+- Fix: Add a typecheck script running tsc -b to package.json and run it in the PR job between lint and test; add a pnpm build --mode dev step so a Vite or rolldown regression is also caught pre-merge; require the job in branch protection. This also makes the duplicated lint and test steps in cloudbuild/frontend.yaml removable.
+- Verified: Confirmed: pr-checks.yml runs only pnpm lint and pnpm test:ci; tsc -b runs solely inside pnpm build, which only Cloud Build executes after merge. Production stays protected because Cloud Build typechecks before deploying, so the impact is a red main branch and wasted deploy cycles rather than a broken release. Severity lowered from critical.
 
 #### F026 · High · S3 Enterprise · effort M · priority 6/10
 
@@ -1210,7 +1210,7 @@ Findings: F004, F026, F032, F033, F048, F049, F050, F055, F056, F066, F057, F058
 - Where: `frontend/eslint.config.js:12`
 - Evidence: frontend/eslint.config.js:10-22: { files: ['**/*.{ts,tsx}'], extends: [ js.configs.recommended, tseslint.configs.recommended, reactHooks.configs.flat.recommended, reactRefresh.configs.vite, ], languageOptions: { ecmaVer…
 - Problem: This is the unmodified Vite `react-ts` template config. `tseslint.configs.recommended` is the syntactic tier: no `no-floating-promises`, `no-misused-promises`, `await-thenable`, `no-unnecessary-condition`, `restrict-template-expressions` — the rules that catch the async bugs typical of an Axios+STOMP+Auth0 app (unawaited `getAccessTokenSilently()`, promise-returning handlers passed to `onClick`). There is no `eslint-plugin-jsx-a11y` for an app whose core UI is a `<canvas>` plus MUI dialogs; no `eslint-plugin-react` (`jsx-key`, `no-array-index-key`, `self-closing-comp`, `jsx-no-leaked-render`); no `eslint-plugin-import-x` so there is no `import/order`, `no-cycle`, or `no-duplicates` — and the codebase already has 24 `@/` imports vs 111 relative imports plus 24 imports carrying a `.tsx` extension (measured), i.e. exactly the inconsistency an import-order rule would normalise. `ecmaVersion: 2020` contradicts the ES2022 compile target; with ESLint 10 the default is `latest`, so the explicit 2020 is a downgrade left over from the template. Note the codebase is in a good state to absorb stricter rules: 0 `any` casts and 3 `eslint-disable` comments in `src/`.
-- Impact: Lint passes (`yarn lint` exit 0) while providing little assurance beyond hooks discipline. Async correctness, accessibility regressions and dependency cycles are invisible at review time; for an enterprise adopter, the missing a11y layer is a compliance gap (WCAG expectations for MUI-based UIs) and the missing type-aware tier means the `strict` tsconfig is only enforced by `tsc`, which CI does not run (finding 1).
+- Impact: Lint passes (`pnpm lint` exit 0) while providing little assurance beyond hooks discipline. Async correctness, accessibility regressions and dependency cycles are invisible at review time; for an enterprise adopter, the missing a11y layer is a compliance gap (WCAG expectations for MUI-based UIs) and the missing type-aware tier means the `strict` tsconfig is only enforced by `tsc`, which CI does not run (finding 1).
 - Fix: Replace the `extends` block with: `tseslint.configs.recommendedTypeChecked, tseslint.configs.stylisticTypeChecked` plus `languageOptions: { ecmaVersion: 'latest', parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname }, globals: globals.browser }`; add `eslint-plugin-jsx-a11y` (`jsxA11y.flatConfigs.recommended`), `eslint-plugin-react` (`react.configs.flat.recommended` + `flat['jsx-runtime']`, settings.react.version 'detect'), and `eslint-plugin-import-x` with `'import-x/order': ['error', { groups: [...], pathGroups: [{ pattern: '@/**', group: 'internal' }], alphabetize: { order: 'asc' } }]`, `'import-x/no-cycle': 'error'`, `'import-x/no-duplicates': 'error'`, and `'import-x/extensions': ['error', 'never']` to retire the `.tsx` suffix imports. Add a second config object for `**/*.test.{ts,tsx}` and `src/test/**` that disables `no-unsafe-*` and enables `eslint-plugin-vitest` recommended. Keep `reactHooks.configs.flat.recommended` — it is already the v7 compiler-derived ruleset (see strengths). Run with `--max-warnings 0` in CI so `exhaustive-deps` warnings cannot accumulate.
 - Risk: Type-aware linting will surface existing warnings; land it with warnings allowed first, then enforce max-warnings 0.
 - Verified: Confirmed: eslint.config.js is the unmodified Vite template with the syntactic typescript-eslint tier, no jsx-a11y, no eslint-plugin-react, no import rules and ecmaVersion 2020 on an ES2022 target. Type-aware rules such as no-floating-promises would catch the class of async bug that this Axios plus STOMP plus Auth0 app is prone to.
@@ -1221,7 +1221,7 @@ Findings: F004, F026, F032, F033, F048, F049, F050, F055, F056, F066, F057, F058
 
 - Where: `frontend/Dockerfile:22`
 - Evidence: frontend/Dockerfile:4: FROM node:26-alpine AS builder frontend/Dockerfile:22: FROM nginxinc/nginx-unprivileged:alpine frontend/Dockerfile.ci:10: FROM nginxinc/nginx-unprivileged:alpine cloudbuild/frontend.yaml:22,34,43,…
-- Problem: Commit 4777360 claims reproducible deploys, but the image that actually serves production — `nginxinc/nginx-unprivileged:alpine` in both Dockerfiles — carries no nginx version and no Alpine version at all; it will silently move across nginx minors/majors and Alpine releases on every rebuild. `node:26-alpine` is a major-only tag that tracks every Node 26.x patch and every Alpine bump, so `yarn install --frozen-lockfile` reproducibility is undermined by an un-pinned native toolchain (this matters here because `canvas` is compiled from source against whatever musl/cairo Alpine ships that day, `cloudbuild/frontend.yaml:28-30`). Neither uses a `@sha256:` digest. The `--cache-from $IMAGE:latest-${_ENV}` layer cache (frontend.yaml:76) also cannot hit when the base image changes underneath it.
+- Problem: Commit 4777360 claims reproducible deploys, but the image that actually serves production — `nginxinc/nginx-unprivileged:alpine` in both Dockerfiles — carries no nginx version and no Alpine version at all; it will silently move across nginx minors/majors and Alpine releases on every rebuild. `node:26-alpine` is a major-only tag that tracks every Node 26.x patch and every Alpine bump, so `pnpm install --frozen-lockfile` reproducibility is undermined by an un-pinned native toolchain (this matters here because `canvas` is compiled from source against whatever musl/cairo Alpine ships that day, `cloudbuild/frontend.yaml:28-30`). Neither uses a `@sha256:` digest. The `--cache-from $IMAGE:latest-${_ENV}` layer cache (frontend.yaml:76) also cannot hit when the base image changes underneath it.
 - Impact: Two builds of the same commit can produce different nginx binaries and different `canvas` native builds; a broken upstream `:alpine` push (nginx has shipped regressions in minor releases) lands in prod with no diff in this repo to bisect. This is the first thing a supply-chain or SRE reviewer checks, and the commit message makes it a credibility issue.
 - Fix: Pin to full versions with digests: `FROM node:26.8.1-alpine3.22@sha256:<digest>` and `FROM nginxinc/nginx-unprivileged:1.29-alpine@sha256:<digest>` (same string in Dockerfile, Dockerfile.ci and the four Cloud Build `name:` entries — consider a `_NODE_IMAGE` substitution in cloudbuild/frontend.yaml so it is declared once). Add a `.github/dependabot.yml` with `package-ecosystem: docker` for `/frontend` (and `/cloudbuild` via `directories`) so the digests are bumped by PR rather than by drift. Since Dockerfile and Dockerfile.ci duplicate the nginx stage verbatim (nginx.conf COPY, dist COPY, EXPOSE, CMD), collapse them into one Dockerfile with `--target` stages (`builder`, `runtime`) and have Cloud Build pass `--target runtime` plus a `COPY --from` override, or at minimum declare the base in one shared `ARG NGINX_IMAGE` line.
 - Verified: Confirmed in both Dockerfiles and cloudbuild/frontend.yaml: node:26-alpine and nginxinc/nginx-unprivileged:alpine carry no digest, contradicting the intent of the pin-every-image commit. Lowered from high because the images are rebuilt rarely.
@@ -1231,8 +1231,8 @@ Findings: F004, F026, F032, F033, F048, F049, F050, F055, F056, F066, F057, F058
 **No automated dependency updates or supply-chain gates: no Dependabot config, no audit step, no image scan, actions pinned to majors**
 
 - Where: `frontend/.github/workflows/pr-checks.yml:59`
-- Evidence: .github/workflows/pr-checks.yml:59-66: `run: yarn install --frozen-lockfile` / `run: yarn lint` / `run: yarn test:ci` — no audit step .github/workflows/pr-checks.yml:82-88: Trivy runs with `scan-type: config` on `infras…
-- Problem: `--frozen-lockfile` guarantees reproducibility but not freshness or safety: nothing bumps sockjs-client/url-parse/axios/etc., nothing fails a PR on a newly published advisory, and the runtime image is rebuilt from whatever `nginx-unprivileged:alpine` resolves to at that moment. `yarn audit` currently reports 0 vulnerabilities, but that is a point-in-time observation with no process behind it. No SBOM is produced, so answering 'are we affected by CVE-X' requires a manual `yarn why`.
+- Evidence: .github/workflows/pr-checks.yml:59-66: `run: pnpm install --frozen-lockfile` / `run: pnpm lint` / `run: pnpm test:ci` — no audit step .github/workflows/pr-checks.yml:82-88: Trivy runs with `scan-type: config` on `infras…
+- Problem: `--frozen-lockfile` guarantees reproducibility but not freshness or safety: nothing bumps sockjs-client/url-parse/axios/etc., nothing fails a PR on a newly published advisory, and the runtime image is rebuilt from whatever `nginx-unprivileged:alpine` resolves to at that moment. `pnpm audit` currently reports 0 vulnerabilities, but that is a point-in-time observation with no process behind it. No SBOM is produced, so answering 'are we affected by CVE-X' requires a manual `pnpm why`.
 - Impact: A vulnerable transitive package (this stack has 569 packages incl. an abandoned SockJS chain) stays in prod until someone notices; a compromised or regressed base-image tag silently changes the runtime between two identical commits.
 - Fix:
 
@@ -1251,7 +1251,7 @@ Findings: F004, F026, F032, F033, F048, F049, F050, F055, F056, F066, F057, F058
       directory: /
       schedule: { interval: weekly }
   ```
-  2. In pr-checks.yml frontend job add `- run: yarn audit --level high || [ $? -lt 8 ]` (yarn 1 exit code is a bitmask; 8+ = high/critical).
+  2. In pr-checks.yml frontend job add `- run: pnpm audit --audit-level high` (pnpm exits 1 only for an advisory at or above that level).
   3. In cloudbuild/frontend.yaml insert an `aquasec/trivy image --exit-code 1 --severity HIGH,CRITICAL $$IMAGE:${_SHORT_SHA}` step between build and push, and `trivy image --format cyclonedx --output sbom.json` uploaded as a build artifact.
   4. Pin `FROM nginxinc/nginx-unprivileged:alpine@sha256:<digest>` and `node:26-alpine@sha256:<digest>` (Dependabot docker ecosystem will then keep the digests fresh).
 
@@ -1284,12 +1284,12 @@ Findings: F004, F026, F032, F033, F048, F049, F050, F055, F056, F066, F057, F058
 **No coverage provider, thresholds, or report — and the un-measured gaps are exactly the risky branches (ErrorBoundary retry, DriverSelector onChange, loader timers, CircuitTrace draw args)**
 
 - Where: `frontend/vitest.config.ts:16`
-- Evidence: vitest.config.ts:16-21 test: { globals: true, environment: 'jsdom', setupFiles: './src/test/setup.ts', include: ['src/**/*.{test,spec}.{ts,tsx}'], }, `yarn vitest run --coverage` -> " MISSING DEPENDENCY Cannot find depe…
+- Evidence: vitest.config.ts:16-21 test: { globals: true, environment: 'jsdom', setupFiles: './src/test/setup.ts', include: ['src/**/*.{test,spec}.{ts,tsx}'], }, `pnpm vitest run --coverage` -> " MISSING DEPENDENCY Cannot find depe…
 - Problem: 188 tests exist but nothing measures what they exercise, and reading them shows a pattern of 'renders without crashing' assertions: `toHaveBeenCalled()` without arguments, tests whose name promises a behaviour (team colour, axis labels) that the body never checks, and interactive components where the interaction is never triggered. Without `@vitest/coverage-v8` and thresholds, a PR that deletes a test or adds an untested 300-line component passes identically.
 - Impact: Regressions in retry/recovery UX (ErrorBoundary), driver selection (DriverSelector is used by UserSettingsModal and VersusMode), and the canvas colour/scale logic ship undetected; the team cannot see or trend coverage in PRs.
 - Fix:
 
-  `yarn add -D @vitest/coverage-v8@5` and in vitest.config.ts:
+  `pnpm add -D @vitest/coverage-v8@5` and in vitest.config.ts:
   ```ts
   coverage: {
     provider: 'v8',
@@ -1308,11 +1308,11 @@ Findings: F004, F026, F032, F033, F048, F049, F050, F055, F056, F066, F057, F058
 **The local Dockerfile compiles the test-only native canvas addon without its toolchain and copies stale files into the builder**
 
 - Where: `frontend/Dockerfile:13`
-- Evidence: frontend/Dockerfile:4 `FROM node:26-alpine AS builder` :13 `RUN yarn install --frozen-lockfile` :16 `COPY . .` :17 `RUN yarn build --mode ${ENV_MODE}`. cloudbuild/frontend.yaml:20-22 `# canvas (node-canvas) is a native …
-- Problem: The build stage needs only vite/tsc, but `yarn install` also compiles `canvas` (no musl prebuilt) — which the CI file explicitly says fails on Alpine without the listed packages that this Dockerfile never installs. The README-documented local image build is therefore either broken or, if it works, spends minutes compiling Cairo bindings for an image that never runs tests. `COPY . .` additionally copies the host's dist/ and busts the layer cache on every local build.
+- Evidence: frontend/Dockerfile:4 `FROM node:26-alpine AS builder` :13 `RUN pnpm install --frozen-lockfile` :16 `COPY . .` :17 `RUN pnpm build --mode ${ENV_MODE}`. cloudbuild/frontend.yaml:20-22 `# canvas (node-canvas) is a native …
+- Problem: The build stage needs only vite/tsc, but `pnpm install` also compiles `canvas` (no musl prebuilt) — which the CI file explicitly says fails on Alpine without the listed packages that this Dockerfile never installs. The README-documented local image build is therefore either broken or, if it works, spends minutes compiling Cairo bindings for an image that never runs tests. `COPY . .` additionally copies the host's dist/ and busts the layer cache on every local build.
 - Impact: Developers cannot reproduce the production image locally with the documented command, and the divergence between Dockerfile and Dockerfile.ci means the container that runs in prod is never the one built locally. Build-time only; no runtime bundle impact.
-- Fix: In Dockerfile: `RUN yarn install --frozen-lockfile --ignore-scripts` (skips the canvas node-gyp step; vite/tsc need no install scripts), and replace `COPY . .` with `COPY index.html tsconfig*.json vite.config.ts .env.* ./` + `COPY public ./public` + `COPY src ./src`. Longer term, move `canvas` and `jest-image-snapshot` to `optionalDependencies` and pass `--ignore-optional` in build-only contexts so Cloud Build's install step (cloudbuild/frontend.yaml:28-30) can also drop the apk toolchain from the lint/build steps.
-- Verified: Confirmed: the local Dockerfile runs a plain yarn install, which compiles the native canvas addon on Alpine without the toolchain that cloudbuild/frontend.yaml documents as required, and COPY . . pulls in tests, snapshots and any stale local dist.
+- Fix: In Dockerfile: `RUN pnpm install --frozen-lockfile --ignore-scripts` (skips the canvas node-gyp step; vite/tsc need no install scripts), and replace `COPY . .` with `COPY index.html tsconfig*.json vite.config.ts .env.* ./` + `COPY public ./public` + `COPY src ./src`. Longer term, move `canvas` and `jest-image-snapshot` to `optionalDependencies` and pass `--ignore-optional` in build-only contexts so Cloud Build's install step (cloudbuild/frontend.yaml:28-30) can also drop the apk toolchain from the lint/build steps.
+- Verified: Confirmed: the local Dockerfile runs a plain pnpm install, which compiles the native canvas addon on Alpine without the toolchain that cloudbuild/frontend.yaml documents as required, and COPY . . pulls in tests, snapshots and any stale local dist.
 
 #### F056 · Medium · S3 Enterprise · effort S · priority 4/10
 
@@ -1333,7 +1333,7 @@ Findings: F004, F026, F032, F033, F048, F049, F050, F055, F056, F066, F057, F058
 - Evidence: src/test/setup.ts:5-11 // ResizeObserver mock (jsdom doesn't support it) class ResizeObserverMock { observe() {} unobserve() {} disconnect() {} } src/components/CircuitTrace.tsx:96-101 (never fires in tests) const obser…
 - Problem: Everything above the component boundary is mocked: `useAuth0`, `stompClient`, `ResizeObserver` (no-op), `d3`, `canvas.getContext`. The pyramid therefore has a wide unit base and nothing on top — no test ever loads `index.html`, runs the real Vite build, connects the real SockJS/STOMP stack through the `define: { global: 'window' }` shim (vite.config.ts:11-13), or resizes a viewport to see the canvas re-scale. The nginx SPA fallback and CSP headers in nginx.conf are likewise unverified.
 - Impact: The classes of bug users actually hit — CSP blocking Auth0 or SockJS, a `global` shim regression breaking the WebSocket in the prod bundle only, the splash never dismissing — are invisible to CI.
-- Fix: Add `@playwright/test` with `playwright.config.ts` `webServer: { command: 'yarn vite preview --port 4173', port: 4173 }` and `projects: [{ name: 'chromium' }]`. Stub Auth0 with `page.route('**/authorize**')` + a seeded `storageState` (or an Auth0 test tenant with a service-user), stub REST via `page.route('**/api/v1/**')`, and add a `VITE_STOMP_URL` env so the e2e run points STOMP at a tiny Node `ws` fixture that replays a recorded `/topic/race-location` stream. Three smoke specs cover the value: (1) `/` -> Login -> `/dashboard` shows splash then LayoutMain; (2) start SIMULATION -> canvas draws (assert `toHaveScreenshot('circuit.png', {maxDiffPixels: 50})` inside the pinned `mcr.microsoft.com/playwright:v1.5x` image — this replaces the node-canvas approach); (3) resize viewport 1280 -> 600 and assert canvas `width` attribute changes. New GH job `frontend-e2e` (needs: frontend) uploading the Playwright report on failure. For a11y, add `@axe-core/playwright` to spec (1).
+- Fix: Add `@playwright/test` with `playwright.config.ts` `webServer: { command: 'pnpm vite preview --port 4173', port: 4173 }` and `projects: [{ name: 'chromium' }]`. Stub Auth0 with `page.route('**/authorize**')` + a seeded `storageState` (or an Auth0 test tenant with a service-user), stub REST via `page.route('**/api/v1/**')`, and add a `VITE_STOMP_URL` env so the e2e run points STOMP at a tiny Node `ws` fixture that replays a recorded `/topic/race-location` stream. Three smoke specs cover the value: (1) `/` -> Login -> `/dashboard` shows splash then LayoutMain; (2) start SIMULATION -> canvas draws (assert `toHaveScreenshot('circuit.png', {maxDiffPixels: 50})` inside the pinned `mcr.microsoft.com/playwright:v1.5x` image — this replaces the node-canvas approach); (3) resize viewport 1280 -> 600 and assert canvas `width` attribute changes. New GH job `frontend-e2e` (needs: frontend) uploading the Playwright report on failure. For a11y, add `@axe-core/playwright` to spec (1).
 - Verified: Confirmed: everything above the component boundary is mocked; nothing exercises the built app, the Auth0 redirect or the real STOMP stack.
 
 #### F057 · Medium · S3 Enterprise · effort L · priority 4/10
@@ -1364,7 +1364,7 @@ Findings: F004, F026, F032, F033, F048, F049, F050, F055, F056, F066, F057, F058
 
 - Where: `frontend/vitest.config.ts:18`
 - Evidence: vitest.config.ts:16-21 test: { globals: true, environment: 'jsdom', setupFiles: './src/test/setup.ts', include: ['src/**/*.{test,spec}.{ts,tsx}'], }, // no pool / isolate / css / reporters Measured on this machine (188 …
-- Problem: Every test file boots its own jsdom + re-imports MUI/Emotion/framer-motion (the 'import 36%' share). The suite is small enough (5.7 s) that sharding is unnecessary, but the per-file environment cost dominates and will scale linearly as tests are added. Nothing is cached between PR runs beyond the yarn cache (no `cacheDir` persisted, no vite `deps.optimizer` config).
+- Problem: Every test file boots its own jsdom + re-imports MUI/Emotion/framer-motion (the 'import 36%' share). The suite is small enough (5.7 s) that sharding is unnecessary, but the per-file environment cost dominates and will scale linearly as tests are added. Nothing is cached between PR runs beyond the pnpm store cache (no `cacheDir` persisted, no vite `deps.optimizer` config).
 - Impact: Developer watch-mode feedback and CI minutes; more importantly it sets the trajectory — at 100 files this becomes a 15 s+ suite for no reason.
 - Fix:
 
@@ -1418,24 +1418,24 @@ Findings: F004, F026, F032, F033, F048, F049, F050, F055, F056, F066, F057, F058
 
 #### F088 · Low · S3 Enterprise · effort S · priority 3/10
 
-**Toolchain and release hygiene: no engines or packageManager, no .nvmrc, five npm scripts, no versioning or changelog**
+**Toolchain and release hygiene: no engines or packageManager, no .nvmrc, five package.json scripts, no versioning or changelog**
 
 - Where: `frontend/package.json:4`
 - Evidence: frontend/package.json:4: "version": "0.0.0", git tag -> (empty); git log --oneline | wc -l -> 224 Last 60 commit subjects: 31 conventional (feat/fix/chore/docs/ci ...), 1 non-conventional ("Add HTTP security headers to …
 - Problem: The team already writes Conventional Commits (31 of the last 32 non-merge commits), which is the exact input `release-please`/`changesets`/`semantic-release` need, but nothing consumes them: no git tag has ever been cut, `version` is the template's `0.0.0`, and the only artifact identity is a Cloud Build short SHA that defaults to the literal string `manual-build`. The root README describes a dev -> uat -> prod promotion flow by PR but there is no CHANGELOG to say what a promotion contains, no PR template to enforce it, and no CODEOWNERS to route reviews. Significant architectural decisions that the code comments defend at length (STOMP-over-SockJS instead of raw WS, JWT in the CONNECT frame, canvas native in tests with Cairo on Alpine, committing `.env.*`, per-host CSP maps in nginx) live only in nginx.conf/README prose and commit messages, not in ADRs.
 - Impact: Support cannot map a user-reported issue to a release; a UAT promotion PR has no human-readable diff of behaviour; rollbacks require reading git history. Institutional knowledge about why the stack looks the way it does is spread across comments in `nginx.conf` and 64 KB of README and will not survive team turnover — a standard enterprise-readiness gap.
 - Fix: Adopt `release-please` (GitHub Action, `release-type: node`, `path: frontend`) — it turns the existing conventional commits into a CHANGELOG.md, bumps `package.json` version, and tags `frontend-v1.x.y`; make Cloud Build's image tag `${TAG_NAME}` on tag triggers and keep `${SHORT_SHA}` for dev. Expose the version in the bundle (`define: { __APP_VERSION__ }`) and in a `<meta name="version">` for support. Add `.github/CODEOWNERS` (`/frontend/ @frontend-owners`), `.github/pull_request_template.md` with a checklist (typecheck, tests, screenshots for UI, CHANGELOG-worthy?), and a `docs/adr/` folder using the MADR template, seeded by lifting the five decisions above out of comments. Fix `_SHORT_SHA: 'manual-build'` to fail loudly (`set -u` already exists in the docker step; make the substitution required via a trigger-level check).
-- Verified: Confirmed: version 0.0.0, no tags, no engines or packageManager field, no .nvmrc, and five npm scripts with no typecheck, coverage or format entry.
+- Verified: Confirmed: version 0.0.0, no tags, no engines or packageManager field, no .nvmrc, and five package.json scripts with no typecheck, coverage or format entry.
 
 #### F087 · Low · S3 Enterprise · effort S · priority 3/10
 
 **Dead dependency and dead code: date-fns is never imported, and several exports and state fields have no consumer**
 
 - Where: `frontend/package.json:22`
-- Evidence: frontend/package.json:22 `"date-fns": "^4.4.0",` — `grep -rn "date-fns" src` returns no matches; the built bundle contains 0 occurrences of `formatDistance`. yarn.lock resolves it (569 packages in the audit baseline).
-- Problem: Dead dependency. Tree-shaking means it costs nothing in the bundle, but it is installed on every CI run (cloudbuild/frontend.yaml:30) and in the Docker builder stage, and it widens the `yarn audit` and Dependabot surface for no benefit.
+- Evidence: frontend/package.json:22 `"date-fns": "^4.4.0",` — `grep -rn "date-fns" src` returns no matches; the built bundle contains 0 occurrences of `formatDistance`. pnpm-lock.yaml resolves it (569 packages in the audit baseline).
+- Problem: Dead dependency. Tree-shaking means it costs nothing in the bundle, but it is installed on every CI run (cloudbuild/frontend.yaml:30) and in the Docker builder stage, and it widens the `pnpm audit` and Dependabot surface for no benefit.
 - Impact: Install time and supply-chain surface only; no user-visible effect. Cheap hygiene that also stops reviewers assuming date formatting is centralised somewhere.
-- Fix: `yarn remove date-fns`. If lap/session timestamps later need formatting, prefer `Intl.DateTimeFormat` (zero bytes) or re-add `date-fns` with named submodule imports at that time.
+- Fix: `pnpm remove date-fns`. If lap/session timestamps later need formatting, prefer `Intl.DateTimeFormat` (zero bytes) or re-add `date-fns` with named submodule imports at that time.
 - Verified: Confirmed by grep: date-fns is never imported; searchSessions has no consumer; sessionLaps exists as state only to be mirrored into a ref.
 
 #### F073 · Low · S3 Enterprise · effort S · priority 3/10
@@ -1443,10 +1443,10 @@ Findings: F004, F026, F032, F033, F048, F049, F050, F055, F056, F066, F057, F058
 **Cloud Build re-runs lint+test after merge (duplicating the PR gate) and pays a C++ toolchain install on every deploy solely for the canvas test**
 
 - Where: `frontend/cloudbuild/frontend.yaml:30`
-- Evidence: ../cloudbuild/frontend.yaml:30-45 # 2. ESLint Check - name: 'node:26-alpine' id: 'lint' entrypoint: 'yarn' args: ['lint'] dir: 'frontend' # 3. Unit Tests ... apk add --no-cache cairo pango libjpeg-turbo giflib librsvg \…
+- Evidence: ../cloudbuild/frontend.yaml:30-45 # 2. ESLint Check - name: 'node:26-alpine' id: 'lint' entrypoint: 'pnpm' args: ['lint'] dir: 'frontend' # 3. Unit Tests ... apk add --no-cache cairo pango libjpeg-turbo giflib librsvg \…
 - Problem: The pipeline runs lint and tests a second time on the merged SHA (steps 2-3) while skipping the one check the PR lacks until the finding above is fixed (typecheck happens inside step 4 only). Steps 1 and 3 are also serialised, sequential `node:26-alpine` containers, each doing `apk add` — that is ~2 min of toolchain install plus a node-gyp compile of `canvas` every deploy, for a test that duplicates `circuitProjection.test.ts`. The duplication is currently the only *enforced* gate because branch protection is unavailable on this private repo (gh 403), which is worth recognising before removing it.
 - Impact: Slower deploys to dev/uat/prod and a native compile step that can break on an Alpine package bump independently of any app change; ambiguity over which pipeline is the source of truth.
-- Fix: Two-step plan. (1) Fix the PR gate first (typecheck + build + size findings) and enable branch protection requiring it. (2) Then slim frontend.yaml to: install (`yarn install --frozen-lockfile --ignore-scripts` once `canvas` is removed, no apk toolchain), `yarn build --mode ${_ENV}`, docker build/push, deploy — i.e. delete steps 2-3. If branch protection cannot be enabled, keep a single `yarn typecheck && yarn test:ci` step but drop the apk lines by removing node-canvas (visual finding). Also add `timeout: '900s'` and `options.machineType: 'E2_HIGHCPU_8'` so the build is not the slowest path, and consider `availableSecrets`-free `--mode` usage is fine since the .env.* files are public SPA values.
+- Fix: Two-step plan. (1) Fix the PR gate first (typecheck + build + size findings) and enable branch protection requiring it. (2) Then slim frontend.yaml to: install (`pnpm install --frozen-lockfile --ignore-scripts` once `canvas` is removed, no apk toolchain), `pnpm build --mode ${_ENV}`, docker build/push, deploy — i.e. delete steps 2-3. If branch protection cannot be enabled, keep a single `pnpm typecheck && pnpm test:ci` step but drop the apk lines by removing node-canvas (visual finding). Also add `timeout: '900s'` and `options.machineType: 'E2_HIGHCPU_8'` so the build is not the slowest path, and consider `availableSecrets`-free `--mode` usage is fine since the .env.* files are public SPA values.
 - Verified: Confirmed: Cloud Build repeats lint and test after merge and installs a C++ toolchain each deploy for the canvas addon.
 
 #### F074 · Low · S3 Enterprise · effort M · priority 3/10
@@ -1705,13 +1705,13 @@ Raw observations that did not become findings, kept for transparency:
 
 ```bash
 cd frontend
-yarn install --frozen-lockfile
-yarn lint
-yarn tsc -b                              # typecheck (not run by the PR gate today: F004)
-yarn test:ci
-yarn build --mode prod                   # baseline: 1 chunk, 1,146.9 kB / 358.4 kB gzip
-yarn vite build --mode prod --sourcemap --outDir /tmp/dist-sm   # for composition analysis via the source map
-yarn vite preview --port 4173            # serve dist/ locally
+pnpm install --frozen-lockfile
+pnpm lint
+pnpm tsc -b                              # typecheck (not run by the PR gate today: F004)
+pnpm test:ci
+pnpm build --mode prod                   # baseline: 1 chunk, 1,146.9 kB / 358.4 kB gzip
+pnpm vite build --mode prod --sourcemap --outDir /tmp/dist-sm   # for composition analysis via the source map
+pnpm vite preview --port 4173            # serve dist/ locally
 # Confirm compression on the deployed host (F001) — expect content-encoding: br or gzip after the fix:
 curl -sI -H 'Accept-Encoding: br, gzip' "https://f1visualizer.com$(curl -s https://f1visualizer.com/ | grep -oE '/assets/index-[A-Za-z0-9_-]+\.js' | head -1)" | grep -iE 'content-(encoding|length)|cache-control'
 # Confirm the shell cache policy (F005) — expect Cache-Control: no-cache after the fix:

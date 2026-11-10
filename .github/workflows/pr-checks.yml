@@ -233,48 +233,48 @@ jobs:
           # stays readable by every later step, including third-party ones.
           persist-credentials: false
 
+      # pnpm first: setup-node's pnpm cache asks pnpm where its store is. The
+      # version is the one package.json names in packageManager, so the PR
+      # check, a developer and the images run one pnpm.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: frontend/package.json
+
       - name: Set up Node 26
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '26'
-          cache: 'yarn'
-          cache-dependency-path: frontend/yarn.lock
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install Dependencies
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       # --frozen-lockfile guarantees reproducibility, not safety: nothing here
-      # failed on a newly published advisory. Currently 0 across 764 packages,
-      # so this gate goes on while it is free rather than after it is not.
+      # failed on a newly published advisory. There are none today, so this
+      # gate goes on while it is free rather than after it is not.
+      #
+      # Fails on high and critical advisories only, so a low-severity advisory
+      # in a dev dependency cannot block every PR. pnpm exits 1 only for an
+      # advisory at or above --audit-level.
       - name: Dependency audit
-        run: |
-          set +e
-          yarn audit --level high
-          code=$?
-          set -e
-          # yarn 1 exits with a bitmask of the severities it found:
-          # 1 INFO, 2 LOW, 4 MODERATE, 8 HIGH, 16 CRITICAL. Fail on high and
-          # critical (8|16 = 24) and let the rest through as a report, so a
-          # low-severity advisory in a dev dependency cannot block every PR.
-          if [ $((code & 24)) -ne 0 ]; then
-            echo "::error::High or critical advisories found - see the audit output above"
-            exit 1
-          fi
+        run: pnpm audit --audit-level high
 
       # Prettier and .editorconfig landed but nothing enforced them, so a
       # contributor whose editor does not pick up .prettierrc.json reintroduces
       # exactly the whitespace-noise diffs they were added to stop — and the
-      # first anyone notices is in review. `yarn format` fixes any failure here.
+      # first anyone notices is in review. `pnpm format` fixes any failure here.
       - name: Format check
-        run: yarn format:check
+        run: pnpm format:check
 
       - name: Lint
-        run: yarn lint
+        run: pnpm lint
 
       # A type error used to merge green and only fail later in the deploy
-      # pipeline, because `yarn lint` does not typecheck and nothing built.
+      # pipeline, because `pnpm lint` does not typecheck and nothing built.
       - name: Typecheck
-        run: yarn typecheck
+        run: pnpm typecheck
 
       # With coverage, so the thresholds in vite.config.ts actually gate a PR.
       # They existed but ran only locally — and they earn their keep: when
@@ -285,16 +285,16 @@ jobs:
       # Replaces `test:ci` rather than adding a step: this runs the same suite
       # with instrumentation, about 1.5s slower.
       - name: Test with coverage
-        run: yarn test:coverage
+        run: pnpm test:coverage
 
       # Catches Vite/rolldown regressions that neither lint nor tests see.
       - name: Build
-        run: yarn build --mode dev
+        run: pnpm build --mode dev
 
       # Bundle budget: fails the PR if the gzipped output grows past the limit
       # in frontend/.size-limit.js.
       - name: Bundle size budget
-        run: yarn size
+        run: pnpm size
 
   # -----------------------------------------
   # Frontend: end-to-end against the built bundle
@@ -327,15 +327,20 @@ jobs:
           # stays readable by every later step, including third-party ones.
           persist-credentials: false
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: frontend/package.json
+
       - name: Set up Node 26
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '26'
-          cache: 'yarn'
-          cache-dependency-path: frontend/yarn.lock
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install Dependencies
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       # Builds with `--mode e2e`, then runs the desktop's tests and the phone's
       # against that build, served by `vite preview` with stand-ins for the
@@ -343,7 +348,7 @@ jobs:
       # (frontend/e2e/servers.ts) — the real rolldown output, not the dev
       # server.
       - name: Run E2E tests
-        run: yarn test:e2e
+        run: pnpm test:e2e
 
       # Without it a red run says only which assertion failed. Each failed test
       # leaves a picture of where its page was.
@@ -361,9 +366,10 @@ jobs:
   # -----------------------------------------
   # Neither frontend image was built before merge, and nothing ran the node steps
   # of cloudbuild/frontend.yaml — so when the pinned node:26 image turned out to
-  # ship without yarn, frontend/Dockerfile and every frontend deploy failed with
-  # `yarn: not found`, and every PR stayed green. The jobs above install their own
-  # Node through setup-node, so they never see the image Cloud Build runs in.
+  # ship without the package manager they ran, frontend/Dockerfile and every
+  # frontend deploy failed with `not found`, and every PR stayed green. The jobs
+  # above install their own Node and pnpm, so they never see the image Cloud
+  # Build runs in.
   #
   # This runs those node steps as Cloud Build does, then builds, smoke-tests and
   # scans the image production serves from the dist/ they produced, and finally
@@ -405,6 +411,63 @@ jobs:
             done <<< "$dupes"
             exit 1
           fi
+
+      # pnpm is pinned in four places. package.json's packageManager is the one
+      # pnpm/action-setup and a developer's pnpm follow, and pnpm-lock.yaml
+      # records the integrity of every build of that release. frontend/Dockerfile
+      # and cloudbuild/frontend.yaml each pin a version and the sha512 of what
+      # they download. Dependabot moves none of the last two, so a
+      # pnpm bump that misses one fails here rather than in a deploy.
+      - name: Check the pnpm pins agree
+        run: |
+          python3 - <<'PY'
+          import base64, json, re, sys
+
+          def read(path):
+              with open(path, encoding="utf-8") as f:
+                  return f.read()
+
+          errors = []
+          manager = json.loads(read("frontend/package.json"))["packageManager"]
+          version = re.fullmatch(r"pnpm@(\d+\.\d+\.\d+)", manager)
+          if not version:
+              sys.exit(f"::error::frontend/package.json packageManager is {manager!r}, not pnpm@<version>")
+          version = version.group(1)
+
+          lock = read("frontend/pnpm-lock.yaml")
+          def locked(pkg):
+              # pkg None is the `pnpm` package; otherwise an @pnpm/exe build.
+              name = "pnpm" if pkg is None else f"'@pnpm/exe.{pkg}"
+              quote = "" if pkg is None else "'"
+              m = re.search(rf"^  {re.escape(name)}@{re.escape(version)}{quote}:\n\s+resolution: \{{integrity: sha512-([A-Za-z0-9+/=]+)\}}", lock, re.M)
+              if not m:
+                  errors.append(f"pnpm-lock.yaml records no {name.strip(quote)}@{version}")
+                  return None
+              return base64.b64decode(m.group(1)).hex()
+
+          docker = read("frontend/Dockerfile")
+          m = re.search(r"^ARG PNPM_VERSION=(\S+)$", docker, re.M)
+          if not m or m.group(1) != version:
+              errors.append(f"frontend/Dockerfile PNPM_VERSION is {m and m.group(1)}, package.json says {version}")
+          for pkg in ("linux-x64-musl", "linux-arm64-musl"):
+              m = re.search(rf"pkg={pkg}; \\\n\s+sum=([0-9a-f]+)", docker)
+              want = locked(pkg)
+              if not m or m.group(1) != want:
+                  errors.append(f"frontend/Dockerfile's {pkg} sha512 does not match pnpm-lock.yaml")
+
+          cloudbuild = read("cloudbuild/frontend.yaml")
+          pin = lambda key: (re.search(rf"^  {key}: '([^']+)'$", cloudbuild, re.M) or [None, None])[1]
+          if pin("_PNPM_VERSION") != version:
+              errors.append(f"cloudbuild/frontend.yaml _PNPM_VERSION is {pin('_PNPM_VERSION')}, package.json says {version}")
+          if pin("_PNPM_PKG_SHA512") != locked(None):
+              errors.append("cloudbuild/frontend.yaml _PNPM_PKG_SHA512 does not match pnpm-lock.yaml's pnpm")
+          if pin("_PNPM_EXE_SHA512") != locked("linux-x64-musl"):
+              errors.append("cloudbuild/frontend.yaml _PNPM_EXE_SHA512 does not match pnpm-lock.yaml's linux-x64-musl")
+
+          for e in errors:
+              print(f"::error::{e}")
+          sys.exit(1 if errors else 0)
+          PY
 
       # Read from cloudbuild/frontend.yaml rather than restated here, so a change
       # to that file is tested as written: every step on _NODE_IMAGE, in order,
@@ -489,7 +552,7 @@ jobs:
           scanners: vuln
 
       # frontend/Dockerfile, the documented local build. It does not ship, but it
-      # pins the same node image and installs yarn the same way, and it is what
+      # pins the same node image and installs pnpm the same way, and it is what
       # failed first.
       - name: Build the local image
         run: docker build --build-arg ENV_MODE=dev -t f1v-frontend-local:pr frontend

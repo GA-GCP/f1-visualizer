@@ -11,7 +11,7 @@ import { Options, ServiceBuilder } from 'selenium-webdriver/chrome.js';
 /**
  * The Chrome for Testing milestone the browser tests and the screenshots run
  * in, except on the PR check's runners, which drive the Chrome their image
- * installs (see `chromeHere`). Run as a script (`yarn e2e:chrome`), this file
+ * installs (see `chromeHere`). Run as a script (`pnpm e2e:chrome`), this file
  * has Selenium Manager fetch it and its chromedriver into its cache,
  * ~/.cache/selenium, from Chrome for Testing's own storage; what is there
  * already is used as it is. Each computer runs it once; the tests find it there
@@ -67,7 +67,7 @@ export function chromeFor(offline: boolean): { browser: string; driver: string }
     if (run.status !== 0 || code !== 0 || !browser || !driver) {
         throw new Error(
             `Chrome for Testing ${CHROME_MILESTONE} is not ready (${message}). ` +
-                '`yarn e2e:chrome` fetches it.',
+                '`pnpm e2e:chrome` fetches it.',
         );
     }
     return { browser, driver };

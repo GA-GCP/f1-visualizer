@@ -44,7 +44,7 @@
 **Not deployed.** This is a portfolio project: the code, pipelines and infrastructure are complete and
 exercised in CI on every pull request, but the Google Cloud estate the `infrastructure/` tree
 describes has been torn down and the domains in the environment table do not resolve. To see it,
-run it locally ([Quick Start](#quick-start-local-development)) or run `yarn test:e2e`, which
+run it locally ([Quick Start](#quick-start-local-development)) or run `pnpm test:e2e`, which
 drives the built bundle through a stand-in Auth0 tenant and a stand-in STOMP broker.
 The screenshots below were captured that way — nothing in them needed a server.
 
@@ -124,7 +124,7 @@ The project enforces enterprise-grade practices throughout: Zero-Trust security 
 
 ## Screenshots
 
-Captured from the built bundle by `yarn screenshots` in `frontend/`, through the same stand-ins
+Captured from the built bundle by `pnpm screenshots` in `frontend/`, through the same stand-ins
 the end-to-end suite uses: an Auth0 tenant, a fixture API and a STOMP broker, all on 127.0.0.1.
 The circuit is the fixture's 240-point oval, replayed at 40 Hz. The image at the top is composed
 from the desktop and Pixel 7 Live Console captures by the same run
@@ -144,7 +144,7 @@ from the desktop and Pixel 7 Live Console captures by the same run
 ### Prerequisites
 
 - **JDK 25** (Temurin recommended); Maven comes from the wrapper (`./mvnw`, 3.9.16)
-- **Node.js 26** with **Yarn** (classic, 1.x)
+- **Node.js 26** with **pnpm 12**, the release `frontend/package.json` pins in `packageManager`
 - **Redis** on `localhost:6379` for the live path (telemetry and replay worker); the `local` profile connects without TLS
 - **GCP credentials** configured via `gcloud auth application-default login` (for BigQuery/Firestore access)
 
@@ -167,8 +167,8 @@ The replay worker listens on `localhost:8084` for Actuator only — it takes its
 
 ```bash
 cd frontend
-yarn install
-yarn dev
+pnpm install
+pnpm dev
 ```
 
 Opens at `http://localhost:5173` with Hot Module Replacement.
@@ -711,7 +711,7 @@ monitoring
   keeps the replay worker and telemetry, which is what it exists to rehearse.
 
 - **Two CI identities** — the pipelines that run `./mvnw verify` and
-  `yarn install` execute third-party code, so they hold no IAM, network or data
+  `pnpm install` execute third-party code, so they hold no IAM, network or data
   administration at all. Only the infrastructure pipeline can change the estate,
   and its `projectIamAdmin` grant is conditioned to the roles this repository
   declares, so it cannot grant itself Owner.
@@ -839,9 +839,9 @@ Every pull request targeting `main` runs the jobs whose paths changed:
 |-----|-------|---------|
 | **Detect changed areas** | path filter over backend, frontend, infrastructure, workflows | Every other job is gated on its output, so a README change does not run a Maven build |
 | **Backend** | `./mvnw -B clean verify`, Trivy filesystem scan, SBOM upload | The whole reactor through `verify`, which is the phase every check binds to — `package` stops short of all of them |
-| **Frontend** | `yarn audit`, `format:check`, `lint`, `typecheck`, `test:coverage`, `build`, `size` | Lint, types, coverage thresholds and a gzipped bundle budget |
+| **Frontend** | `pnpm audit`, `format:check`, `lint`, `typecheck`, `test:coverage`, `build`, `size` | Lint, types, coverage thresholds and a gzipped bundle budget |
 | **Frontend E2E** | Selenium WebDriver in Chrome, desktop and Pixel 7, axe at both | The only layer exercising the Auth0 redirect, real STOMP frames and canvas resize |
-| **Frontend images** | The base-image pins checked to agree across both Dockerfiles and `cloudbuild/frontend.yaml`, the node steps of `cloudbuild/frontend.yaml` replayed in their own image, then `Dockerfile.ci` built, smoke-tested and Trivy-scanned, then the local `Dockerfile` built | The other frontend jobs bring their own Node, so only this one sees the image Cloud Build runs in — which is how a node image without yarn once broke every deploy while PRs stayed green |
+| **Frontend images** | The base-image pins and the pnpm pins checked to agree across `package.json`, the lockfile, both Dockerfiles and `cloudbuild/frontend.yaml`, the node steps of `cloudbuild/frontend.yaml` replayed in their own image, then `Dockerfile.ci` built, smoke-tested and Trivy-scanned, then the local `Dockerfile` built | The other frontend jobs bring their own Node, so only this one sees the image Cloud Build runs in — which is how a node image without the package manager the pipeline ran once broke every deploy while PRs stayed green |
 | **Infrastructure static checks** | `tofu fmt`, `terragrunt hcl fmt`, module validate with `-lockfile=readonly`, `terragrunt hcl validate --inputs --strict`, `tflint`, Trivy | Formatting, undeclared inputs and provider drift, all of which used to reach `main` green |
 | **Infrastructure plan** | `terragrunt run --all -- plan` per environment, posted as a PR comment | The plan a reviewer approves. It runs through Workload Identity Federation as a read-only planner — no service-account key, and it cannot apply |
 | **Semgrep** | `semgrep --test .semgrep`, then `semgrep scan --config=.semgrep` | Invariants no off-the-shelf linter knows — BigQuery query guardrails, Spring boundary rules, the frontend config boundary, React XSS sinks, IAM and image rules in Terraform — each rule shipped with the fixture it must flag |
@@ -872,13 +872,13 @@ The frontend pipeline extends this with lint and test gates, and deploys behind 
 ```
 1. Verify Version           the SHA in the checkout is the one the trigger was fired for
          |
-2. Install Dependencies     yarn install --frozen-lockfile (Node 26 Alpine + native canvas deps)
+2. Install Dependencies     pnpm install --frozen-lockfile (Node 26 Alpine + native canvas deps)
          |
-3. ESLint Check             yarn lint
+3. ESLint Check             pnpm lint
          |
-4. Unit + Visual Tests      yarn test:ci (Vitest + jest-image-snapshot)
+4. Unit + Visual Tests      pnpm test:ci (Vitest + jest-image-snapshot)
          |
-5. Production Build         yarn build --mode ${_ENV}, stamped with the commit
+5. Production Build         pnpm build --mode ${_ENV}, stamped with the commit
          |
 6. Archive Source Maps      hidden source maps to a bucket, out of the served image
          |
@@ -933,7 +933,7 @@ what has no variable in it. In prod, step 7 waits for manual approval.
 
 - **Apply the Plan That Was Reviewed** — The infrastructure pipeline writes each unit's plan to a file and applies that file, rather than running `apply -auto-approve`, which re-plans. The apply cannot differ from the plan in the log, and in prod it waits for manual approval first.
 
-- **Pinned, and Watched** — Step images are pinned by digest, tool downloads are verified against the checksums published with their release, and every action is pinned to a commit. Dependabot covers npm, Maven, both Docker directories, GitHub Actions and Terraform weekly; `pinned-versions.yml` opens an issue on Monday for what Dependabot cannot see — the OpenTofu, Terragrunt, tflint, Google-ruleset, conftest, actionlint and zizmor pins, and any step image whose digest has moved.
+- **Pinned, and Watched** — Step images are pinned by digest, tool downloads are verified against the checksums published with their release, and every action is pinned to a commit. Dependabot covers npm, Maven, both Docker directories, GitHub Actions and Terraform weekly; `pinned-versions.yml` opens an issue on Monday for what Dependabot cannot see — the OpenTofu, Terragrunt, tflint, Google-ruleset, conftest, actionlint, zizmor and pnpm pins, and any step image whose digest has moved.
 
 ---
 
@@ -1004,16 +1004,16 @@ cd backend && ./mvnw -B clean verify -pl f1v-service-data-analysis -am
 **Test Execution:**
 ```bash
 # Full frontend test suite (CI mode — single run, no watch)
-cd frontend && yarn test:ci
+cd frontend && pnpm test:ci
 
 # The same suite with the coverage thresholds applied — what the PR gate runs
-cd frontend && yarn test:coverage
+cd frontend && pnpm test:coverage
 
 # End-to-end (builds with --mode e2e and serves it on 127.0.0.1:4173)
-cd frontend && yarn test:e2e
+cd frontend && pnpm test:e2e
 
 # Watch mode for development
-cd frontend && yarn vitest
+cd frontend && pnpm vitest
 ```
 
 ### Infrastructure Testing
@@ -1072,7 +1072,7 @@ Security is enforced at every layer of the stack:
 | **Audit** | Data Access logs | Secret Manager, Firestore and BigQuery reads and writes are recorded, with 90-day retention |
 | **Secrets** | Secret Manager | Credentials are declared in IaC and their values added out of band, so they never enter state; each is granted to the one or two accounts that consume it |
 | **Container Hardening** | Distroless Images | No shell, no package manager — minimal attack surface; nginx runs unprivileged with CSP, HSTS, COOP/CORP and a Permissions-Policy |
-| **Supply Chain** | Pins and checksums | Step images pinned by digest, tool downloads checksum-verified, actions pinned to commits, `--frozen-lockfile`, a high/critical `yarn audit` gate, CycloneDX SBOMs, Dependabot weekly and a pin watcher for the rest |
+| **Supply Chain** | Pins and checksums | Step images pinned by digest, tool downloads checksum-verified, actions pinned to commits, `--frozen-lockfile`, a high/critical `pnpm audit` gate, CycloneDX SBOMs, Dependabot weekly and a pin watcher for the rest |
 | **IaC Scanning** | Trivy + Conftest | Scanned against the rendered plan, where the values are resolved, plus a policy layer encoding the rules from the [2026-09-09 audit](docs/audits/2026-09-09-infrastructure-audit.md) |
 | **Image Scanning** | Trivy | Filesystem vulnerability scan on every backend build |
 | **Session Policy** | Stateless | No server-side sessions; CSRF disabled (JWT-only auth) |

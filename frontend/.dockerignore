@@ -1,7 +1,5 @@
 # Dependencies (Crucial to ignore!)
 node_modules/
-.pnp
-.pnp.js
 
 # Build Output (dist/ intentionally NOT excluded — required by Dockerfile.ci
 # which receives pre-built assets from Cloud Build)
@@ -23,9 +21,7 @@ dist/**/*.map
 # Logs
 logs/
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+pnpm-debug.log*
 
 # Git
 .git/

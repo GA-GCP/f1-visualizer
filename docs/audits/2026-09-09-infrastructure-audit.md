@@ -9,7 +9,7 @@ Companion to the backend architecture review of 2026-09-08. Finding IDs here are
 ## Fix first
 
 1. **REL-1** (Critical) — A prod infrastructure apply can deploy a dev-built image to prod. One lifecycle block and an env-suffixed tag close it.
-2. **SEC-1** (Critical) — One identity with project IAM admin runs every pipeline, including the ones that execute npm and Maven scripts.
+2. **SEC-1** (Critical) — One identity with project IAM admin runs every pipeline, including the ones that execute pnpm and Maven scripts.
 3. **REL-3** (High) — Redis TLS is on but the services are never given Memorystore's CA; either they cannot connect or verification is off.
 4. **REL-2** (High) — The UAT replay worker is declared in the wrong region; it cannot be applied or deployed.
 5. **SEC-2** (High) — The public nginx container runs as the default compute service account.
@@ -36,7 +36,7 @@ Companion to the backend architecture review of 2026-09-08. Finding IDs here are
 
 **Evidence**
 
-`sa-f1v-cloudbuild-<env>` holds, at **project** level: `roles/resourcemanager.projectIamAdmin`, `roles/iam.serviceAccountUser`, `roles/run.admin`, `roles/bigquery.admin`, `roles/datastore.owner`, `roles/redis.admin`, `roles/compute.networkAdmin`, `roles/compute.loadBalancerAdmin`, `roles/vpcaccess.admin`, `roles/apigateway.admin`, `roles/artifactregistry.writer` and `roles/cloudbuild.builds.builder`. The same account is the `service_account` of all eight triggers, including the backend and frontend pipelines that execute third-party code on every push (`./mvnw verify`, `yarn install` with lifecycle scripts). Trivy flags the project-level `serviceAccountUser` grant as GCP-0011.
+`sa-f1v-cloudbuild-<env>` holds, at **project** level: `roles/resourcemanager.projectIamAdmin`, `roles/iam.serviceAccountUser`, `roles/run.admin`, `roles/bigquery.admin`, `roles/datastore.owner`, `roles/redis.admin`, `roles/compute.networkAdmin`, `roles/compute.loadBalancerAdmin`, `roles/vpcaccess.admin`, `roles/apigateway.admin`, `roles/artifactregistry.writer` and `roles/cloudbuild.builds.builder`. The same account is the `service_account` of all eight triggers, including the backend and frontend pipelines that execute third-party code on every push (`./mvnw verify`, `pnpm install` with lifecycle scripts). Trivy flags the project-level `serviceAccountUser` grant as GCP-0011.
 
 **Why it matters**
 

@@ -123,7 +123,7 @@ function standIns(): Plugin {
  * 127.0.0.1:4174 over HTTPS, with a certificate made for the run in a folder of
  * its own, removed with the servers.
  *
- * The build is `yarn build --mode e2e`, made before the run (`yarn test:e2e`
+ * The build is `pnpm build --mode e2e`, made before the run (`pnpm test:e2e`
  * makes it); any other build in dist/ stops the run. So does anything already
  * listening on either port: the tests would meet it instead.
  */
@@ -133,7 +133,7 @@ export default async function servers(project: TestProject): Promise<() => Promi
             throw new Error(`something already listens on 127.0.0.1:${port}`);
     }
     if (!(await e2eBuild())) {
-        throw new Error('dist/ is not the e2e build: `yarn build --mode e2e` makes it');
+        throw new Error('dist/ is not the e2e build: `pnpm build --mode e2e` makes it');
     }
 
     const folder = await mkdtemp(join(tmpdir(), 'f1v-e2e-tls-'));

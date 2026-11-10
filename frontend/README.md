@@ -29,7 +29,7 @@ the infrastructure, see the [root README](../README.md).
 | End-to-end tests    | Selenium WebDriver + axe, under Vitest   | 4.52        |
 
 TypeScript 7 is released; 6.0 is the newest release `typescript-eslint` accepts (`<6.1`), so the
-pin is `~6.0`. Node 26 and Yarn 1.x (classic). The CI image and the production `Dockerfile` both
+pin is `~6.0`. Node 26 and pnpm 12 (`packageManager` in `package.json` pins the release). The CI image and the production `Dockerfile` both
 build on `node:26-alpine`, pinned by digest.
 
 ---
@@ -37,13 +37,13 @@ build on `node:26-alpine`, pinned by digest.
 ## Getting started
 
 ```bash
-yarn install
-yarn dev
+pnpm install
+pnpm dev
 ```
 
 The dev server listens on `http://localhost:5173` with hot module replacement.
 
-`yarn dev` expects the backend services to be running locally. Vite proxies API and WebSocket
+`pnpm dev` expects the backend services to be running locally. Vite proxies API and WebSocket
 traffic to them, so no CORS configuration or base-URL override is needed in development:
 
 | Path prefix         | Proxied to       | Service                                                |
@@ -77,7 +77,7 @@ Select one at build time with Vite's `--mode` flag. The Cloud Build pipeline pas
 environment through the same flag, so a production bundle is produced by:
 
 ```bash
-yarn build --mode prod
+pnpm build --mode prod
 ```
 
 The committed values are the real tenants' domains and SPA client IDs. That is deliberate: a
@@ -85,7 +85,7 @@ single-page application authenticates with PKCE and holds no secret, so its clie
 identifier by design, and the callback URLs it may return to are pinned on the Auth0 side. Nothing
 that could be used against the tenants lives in this repository.
 
-`VITE_API_BASE_URL` is only consulted in built bundles; during `yarn dev` the proxy table above
+`VITE_API_BASE_URL` is only consulted in built bundles; during `pnpm dev` the proxy table above
 takes over instead. The WebSocket URL is derived from the same origin (`wss://<api host>/ws/websocket`),
 so there is no separate setting for it.
 
@@ -95,28 +95,28 @@ so there is no separate setting for it.
 
 | Script                     | Does                                                                           |
 | -------------------------- | ------------------------------------------------------------------------------ |
-| `yarn dev`                 | Vite dev server on port 5173 with HMR                                          |
-| `yarn build`               | `tsc -b` project-references typecheck, then a Vite production build to `dist/` |
-| `yarn preview`             | Serve a built `dist/` locally to sanity-check a production bundle              |
-| `yarn typecheck`           | `tsc -b` alone                                                                 |
-| `yarn lint`                | ESLint across the project (flat config, `eslint.config.js`), zero warnings     |
-| `yarn format`              | Prettier, writing; `yarn format:check` is the read-only form CI runs           |
-| `yarn test:ci`             | Vitest single-pass run, no watch                                               |
-| `yarn test:coverage`       | The same run with V8 coverage and the thresholds applied — what the PR runs    |
-| `yarn test:e2e`            | Builds with `--mode e2e`, then runs the browser tests on the desktop and phone |
-| `yarn test:e2e:desktop`    | The desktop's browser tests alone, against the e2e build already in `dist/`    |
-| `yarn test:e2e:mobile`     | The same on the Pixel 7                                                        |
-| `yarn e2e:chrome`          | Fetches Chrome for Testing and its chromedriver, once per machine              |
-| `yarn screenshots`         | Captures `docs/screenshots/` from the built bundle through the e2e stand-ins   |
-| `yarn screenshots:compose` | Recomposes the README's lead image from the captures already there             |
-| `yarn size`                | size-limit against the gzipped bundle budgets in `.size-limit.js`              |
+| `pnpm dev`                 | Vite dev server on port 5173 with HMR                                          |
+| `pnpm build`               | `tsc -b` project-references typecheck, then a Vite production build to `dist/` |
+| `pnpm preview`             | Serve a built `dist/` locally to sanity-check a production bundle              |
+| `pnpm typecheck`           | `tsc -b` alone                                                                 |
+| `pnpm lint`                | ESLint across the project (flat config, `eslint.config.js`), zero warnings     |
+| `pnpm format`              | Prettier, writing; `pnpm format:check` is the read-only form CI runs           |
+| `pnpm test:ci`             | Vitest single-pass run, no watch                                               |
+| `pnpm test:coverage`       | The same run with V8 coverage and the thresholds applied — what the PR runs    |
+| `pnpm test:e2e`            | Builds with `--mode e2e`, then runs the browser tests on the desktop and phone |
+| `pnpm test:e2e:desktop`    | The desktop's browser tests alone, against the e2e build already in `dist/`    |
+| `pnpm test:e2e:mobile`     | The same on the Pixel 7                                                        |
+| `pnpm e2e:chrome`          | Fetches Chrome for Testing and its chromedriver, once per machine              |
+| `pnpm screenshots`         | Captures `docs/screenshots/` from the built bundle through the e2e stand-ins   |
+| `pnpm screenshots:compose` | Recomposes the README's lead image from the captures already there             |
+| `pnpm size`                | size-limit against the gzipped bundle budgets in `.size-limit.js`              |
 
-For a watch-mode test loop during development, run `yarn vitest` directly.
+For a watch-mode test loop during development, run `pnpm vitest` directly.
 
-Note that `yarn build` typechecks before bundling, so it is the fastest way to catch a type error
-across the whole project — `yarn dev` will happily run code that does not typecheck.
+Note that `pnpm build` typechecks before bundling, so it is the fastest way to catch a type error
+across the whole project — `pnpm dev` will happily run code that does not typecheck.
 
-The PR check runs, in order: `yarn audit --level high`, `format:check`, `lint`, `typecheck`,
+The PR check runs, in order: `pnpm audit --audit-level high`, `format:check`, `lint`, `typecheck`,
 `test:coverage`, `build --mode dev`, `size`, and then the e2e suite in its own job.
 
 ---
@@ -225,12 +225,12 @@ per frame — React owns the surrounding UI, and the render loop owns the pixels
 ## Testing
 
 ```bash
-yarn test:ci
+pnpm test:ci
 ```
 
 54 test files, 352 tests. The suite covers components with React Testing Library, custom hooks
 via `renderHook`, pure utilities, the Axios and STOMP clients, and the Auth0 interceptors.
-`yarn test:coverage` runs the same suite instrumented and fails below 89% statements, 76% branches,
+`pnpm test:coverage` runs the same suite instrumented and fails below 89% statements, 76% branches,
 77% functions and 89% lines — the thresholds in `vite.config.ts`, which the PR check enforces.
 
 **Visual regression.** `CircuitTrace` is rendered to a Node canvas via `node-canvas` and compared
@@ -243,7 +243,7 @@ If a baseline needs to change because the rendering intentionally changed, delet
 PNG and re-run the suite to regenerate it. Review the regenerated image before committing; an
 accidentally accepted baseline silently disables the check.
 
-**End-to-end.** `yarn test:e2e` builds the bundle with `--mode e2e` and runs eight tests against
+**End-to-end.** `pnpm test:e2e` builds the bundle with `--mode e2e` and runs eight tests against
 it under Vitest (`vitest.e2e.config.ts`), driving Chrome through Selenium WebDriver: once on a
 desktop and once on a Pixel 7 in Chrome's mobile emulation. They cover the real Auth0 redirect
 handshake, the SPA fallback for a deep link, a sign-in button shown whole and clear of the footer
@@ -258,17 +258,17 @@ preview` on `127.0.0.1:4173`, with the REST API and a STOMP broker answered on t
 `auth.e2e.test` to that tenant and to accept its certificate, made for the run, by its public key
 alone. Each test file opens one Chrome, cleared for each test, and a failed test leaves a picture
 of its page in `e2e-results/`. On the PR check the runner image's own Chrome is used; elsewhere it
-is Chrome for Testing at the milestone `e2e/chrome.ts` names, fetched once by `yarn e2e:chrome`.
+is Chrome for Testing at the milestone `e2e/chrome.ts` names, fetched once by `pnpm e2e:chrome`.
 
-**Screenshots.** `yarn screenshots` runs `e2e/screenshots.capture.ts` under its own config
+**Screenshots.** `pnpm screenshots` runs `e2e/screenshots.capture.ts` under its own config
 (`vitest.screenshots.config.ts`), so the default suite never runs it. It signs in through the
 same stand-ins, starts a simulation, selects a session and two drivers, and writes the README's
 images to `docs/screenshots/`: the desktop at 1440×1000, a 1280×640 frame on the circuit trace for
 the repository's social preview, and the Pixel 7 for the mobile layout. `e2e/screenshots.compose.ts`
 then sets the Pixel 7 capture in front of the desktop's for the README's lead image;
-`yarn screenshots:compose` reruns that step alone.
+`pnpm screenshots:compose` reruns that step alone.
 
-**Bundle budget.** `yarn size` measures the gzipped first load of the public landing route
+**Bundle budget.** `pnpm size` measures the gzipped first load of the public landing route
 (250 kB) and the total across all chunks (415 kB). Each raise of a limit is recorded in
 `.size-limit.js` with the measurement behind it.
 

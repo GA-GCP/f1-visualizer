@@ -79,20 +79,14 @@ terraform.rc
 # ------------------------------------------
 # Dependencies
 **/node_modules/
-.pnp
-.pnp.js
 
 # Production builds
 **/dist/
 **/build/
 
 # Logs and Caches
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.npm
+pnpm-debug.log*
 .eslintcache
-.yarn-integrity
 
 # ------------------------------------------
 # 4. Backend (Java 25 / Spring Boot / Maven)

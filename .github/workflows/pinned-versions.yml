@@ -5,7 +5,8 @@
 # images, and nothing at all watches the _TOFU_VERSION / _TERRAGRUNT_VERSION
 # substitutions. dependabot.yml has recorded that gap in a comment since it was
 # written; a pin with no process behind it goes stale, which is worse than no pin
-# because it looks maintained.
+# because it looks maintained. The pnpm release the frontend pins is watched
+# here for the same reason.
 #
 # This does not open a pull request. It opens an issue saying what has moved,
 # because these bumps are three-line edits that want a human to decide when —
@@ -94,6 +95,16 @@ jobs:
             fi
           done
 
+          # pnpm. package.json's packageManager names it, and frontend/Dockerfile
+          # and cloudbuild/frontend.yaml pin the same release with the sha512 of
+          # its musl builds; Dependabot moves none of them. The PR check
+          # "Check the pnpm pins agree" says which hashes go with a new version.
+          have="$(grep -oE '"packageManager": "pnpm@[0-9.]+"' frontend/package.json | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
+          want="$(latest_release pnpm/pnpm)"
+          if [ -n "$have" ] && [ "$have" != "$want" ]; then
+            report="${report}- \`packageManager\` (pnpm): ${have} → **${want}** (pnpm/pnpm)"$'\n'
+          fi
+
           # The infrastructure linters. Dependabot sees none of them: tflint is a
           # setup-action input, its Google ruleset lives in .tflint.hcl, and
           # conftest is a step image whose digest the loop below compares but
@@ -142,8 +153,9 @@ jobs:
           script: |
             const title = 'Pinned tool and image versions have moved';
             const body = [
-              'The versions below are pinned in `cloudbuild/*.yaml`, `.github/workflows/pr-checks.yml`',
-              'or `infrastructure/.tflint.hcl` and are not covered by any Dependabot ecosystem (DLV-6).',
+              'The versions below are pinned in `cloudbuild/*.yaml`, `.github/workflows/pr-checks.yml`,',
+              '`infrastructure/.tflint.hcl` or `frontend/package.json` (with `frontend/Dockerfile`) and',
+              'are not covered by any Dependabot ecosystem (DLV-6).',
               'Each is a small, deliberate edit.',
               '',
               process.env.REPORT,

@@ -2,6 +2,8 @@ dist
 coverage
 e2e-results
 node_modules
+# pnpm writes its lockfile in its own layout; reformatting it is churn pnpm undoes.
+pnpm-lock.yaml
 # Image-snapshot baselines are binary and the audit markdown is generated.
 **/__image_snapshots__
 AUDIT-*.md

@@ -5,16 +5,16 @@ that no copy of minimatch below 11.0.1 is installed, which is the affected range
 [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) (denial of service
 through globparts amplification).
 
-## Why a shim rather than a resolution
+## Why a shim rather than an override
 
 Dependabot could not fix the alert, because every package that depends on minimatch caps its
-range below 11. Forcing 11 with a plain resolution works for some of them and breaks others:
+range below 11. Forcing 11 with a plain override works for some of them and breaks others:
 
 | Consumer                               | Range                 | On minimatch 11                    |
 | -------------------------------------- | --------------------- | ---------------------------------- |
-| `eslint`                               | `^10.2.5`             | works: plain resolution            |
-| `@eslint/config-array`                 | `^10.2.4`             | works: plain resolution            |
-| `@typescript-eslint/typescript-estree` | `^10.2.2`             | works: plain resolution            |
+| `eslint`                               | `^10.2.5`             | works: plain override              |
+| `@eslint/config-array`                 | `^10.2.4`             | works: plain override              |
+| `@typescript-eslint/typescript-estree` | `^10.2.2`             | works: plain override              |
 | `eslint-plugin-import-x`               | `^9.0.3 \|\| ^10.1.2` | **breaks**: imports `makeRe`       |
 | `eslint-plugin-react`                  | `^3.1.2`              | **breaks**: calls the module as fn |
 | `eslint-plugin-jsx-a11y`               | `^3.1.2`              | **breaks**: calls the module as fn |
@@ -23,7 +23,7 @@ minimatch 3.x exported the matcher function itself, and 11 exports a plain objec
 `require('minimatch')(path, pattern)` throws. 11 also removed `makeRe()`, and import-x's ESM
 rules import it by name, so ESLint fails to load the plugin at all.
 
-The three that break get this package instead, through `resolutions` in `../../package.json`:
+The three that break get this package instead, through `overrides` in `../../pnpm-workspace.yaml`:
 
 - `index.cjs` (`require`): a function that delegates to 11, with 11's API as properties.
 - `index.mjs` (`import`): 11's named exports, plus `makeRe` and a default export.
@@ -38,7 +38,7 @@ that rule is ever turned on, ESLint will report this error the first time it run
 
 ## What it changes in practice
 
-Traced over `yarn lint` on the whole tree:
+Traced over `pnpm lint` on the whole tree:
 
 - **react and jsx-a11y:** none of the rules this config turns on call minimatch, so the shim is
   loaded and never called.
@@ -48,16 +48,16 @@ Traced over `yarn lint` on the whole tree:
 
 ## Maintenance
 
-- `version` matches the minimatch it wraps. The lockfile records this package under the name
-  `minimatch` at that version, which is what anything reading `yarn.lock` sees, so a lower
-  number would read as a vulnerable minimatch.
-- yarn copies `file:` packages at install time. After editing this directory, run
-  `yarn install --force` locally, or the old copy stays in `node_modules`.
-- The Dockerfile copies `shims/` before `yarn install` for the same reason.
+- `version` matches the minimatch it wraps, so anything that reads the installed package as
+  `minimatch` sees 11.0.3 rather than a lower number that would read as vulnerable.
+  `pnpm-lock.yaml` records it by path, as `minimatch-compat@file:shims/minimatch-compat`.
+- pnpm copies `file:` packages into `node_modules` at install time. After editing this
+  directory, run `pnpm install --force` locally, or the old copy stays in `node_modules`.
+- The Dockerfile copies `shims/` before `pnpm install` for the same reason.
 
 ## Removing it
 
-Delete this directory and its three `file:` resolutions once eslint-plugin-react and
+Delete this directory and its three `file:` overrides once eslint-plugin-react and
 eslint-plugin-jsx-a11y accept minimatch 11 or drop it, and eslint-plugin-import-x accepts 11
 ([un-ts/eslint-plugin-import-x#570](https://github.com/un-ts/eslint-plugin-import-x/pull/570)).
-The three `^11.0.3` resolutions can go when those packages' own ranges include 11.
+The three `^11.0.3` overrides can go when those packages' own ranges include 11.

@@ -26,7 +26,7 @@ the infrastructure, see the [root README](../README.md).
 | HTTP                | Axios                                    | 1.20        |
 | Auth                | Auth0 React SDK (OAuth2 + PKCE)          | 2.24        |
 | Unit tests          | Vitest + React Testing Library + jsdom   | 5.0 / 30    |
-| End-to-end tests    | Playwright + axe                         | 1.63        |
+| End-to-end tests    | Selenium WebDriver + axe, under Vitest   | 4.52        |
 
 TypeScript 7 is released; 6.0 is the newest release `typescript-eslint` accepts (`<6.1`), so the
 pin is `~6.0`. Node 26 and Yarn 1.x (classic). The CI image and the production `Dockerfile` both
@@ -62,9 +62,9 @@ HTTP API to proxy; it is driven through the ingestion endpoints.
 ## Environment modes
 
 Auth0 credentials and the deployed API base URL come from Vite env files, one per environment:
-`.env.dev`, `.env.uat`, `.env.prod`, plus `.env.e2e` for the Playwright run (a stubbed tenant on a
-reserved `.test` domain, so a stub that stops matching fails on DNS rather than reaching a real
-tenant). Each defines:
+`.env.dev`, `.env.uat`, `.env.prod`, plus `.env.e2e` for the browser tests (a stand-in tenant on
+a reserved `.test` domain, which Chrome reaches only through the tests' host-resolver rule, so a
+browser without it fails on DNS rather than reaching a real tenant). Each defines:
 
 ```
 VITE_AUTH0_DOMAIN
@@ -93,20 +93,23 @@ so there is no separate setting for it.
 
 ## Scripts
 
-| Script               | Does                                                                           |
-| -------------------- | ------------------------------------------------------------------------------ |
-| `yarn dev`           | Vite dev server on port 5173 with HMR                                          |
-| `yarn build`         | `tsc -b` project-references typecheck, then a Vite production build to `dist/` |
-| `yarn preview`       | Serve a built `dist/` locally to sanity-check a production bundle              |
-| `yarn typecheck`     | `tsc -b` alone                                                                 |
-| `yarn lint`          | ESLint across the project (flat config, `eslint.config.js`), zero warnings     |
-| `yarn format`        | Prettier, writing; `yarn format:check` is the read-only form CI runs           |
-| `yarn test:ci`       | Vitest single-pass run, no watch                                               |
-| `yarn test:coverage` | The same run with V8 coverage and the thresholds applied — what the PR runs    |
-| `yarn test:e2e`      | Playwright: builds with `--mode e2e`, serves it, runs both viewport projects   |
-| `yarn test:e2e:ui`   | The same suite in Playwright's UI mode                                         |
-| `yarn screenshots`   | Captures `docs/screenshots/` from the built bundle through the e2e stubs       |
-| `yarn size`          | size-limit against the gzipped bundle budgets in `.size-limit.js`              |
+| Script                     | Does                                                                           |
+| -------------------------- | ------------------------------------------------------------------------------ |
+| `yarn dev`                 | Vite dev server on port 5173 with HMR                                          |
+| `yarn build`               | `tsc -b` project-references typecheck, then a Vite production build to `dist/` |
+| `yarn preview`             | Serve a built `dist/` locally to sanity-check a production bundle              |
+| `yarn typecheck`           | `tsc -b` alone                                                                 |
+| `yarn lint`                | ESLint across the project (flat config, `eslint.config.js`), zero warnings     |
+| `yarn format`              | Prettier, writing; `yarn format:check` is the read-only form CI runs           |
+| `yarn test:ci`             | Vitest single-pass run, no watch                                               |
+| `yarn test:coverage`       | The same run with V8 coverage and the thresholds applied — what the PR runs    |
+| `yarn test:e2e`            | Builds with `--mode e2e`, then runs the browser tests on the desktop and phone |
+| `yarn test:e2e:desktop`    | The desktop's browser tests alone, against the e2e build already in `dist/`    |
+| `yarn test:e2e:mobile`     | The same on the Pixel 7                                                        |
+| `yarn e2e:chrome`          | Fetches Chrome for Testing and its chromedriver, once per machine              |
+| `yarn screenshots`         | Captures `docs/screenshots/` from the built bundle through the e2e stand-ins   |
+| `yarn screenshots:compose` | Recomposes the README's lead image from the captures already there             |
+| `yarn size`                | size-limit against the gzipped bundle budgets in `.size-limit.js`              |
 
 For a watch-mode test loop during development, run `yarn vitest` directly.
 
@@ -165,7 +168,7 @@ src/
 +-- types/                Shared telemetry and user types
 +-- utils/                Pure helpers — chart scales, circuit projection, radar geometry
 +-- test/                 Vitest setup and matcher augmentations
-e2e/                      Playwright specs and the Auth0 / API / WebSocket fixtures
+e2e/                      Browser tests, their Selenium harness, and the Auth0 / API / STOMP stand-ins
 ```
 
 `@` is aliased to `src/`, in both `vite.config.ts` and `tsconfig.app.json`, so
@@ -240,19 +243,29 @@ If a baseline needs to change because the rendering intentionally changed, delet
 PNG and re-run the suite to regenerate it. Review the regenerated image before committing; an
 accidentally accepted baseline silently disables the check.
 
-**End-to-end.** `yarn test:e2e` builds the bundle with `--mode e2e`, serves it on
-`127.0.0.1:4173`, and runs twelve Playwright tests on a desktop Chrome project and a Pixel 7
-project: the real Auth0 redirect handshake against the stubbed tenant, the SPA fallback for a
-deep link, a live circuit trace fed by mocked STOMP frames through `routeWebSocket`, canvas
+**End-to-end.** `yarn test:e2e` builds the bundle with `--mode e2e` and runs seven tests against
+it under Vitest (`vitest.e2e.config.ts`), driving Chrome through Selenium WebDriver: once on a
+desktop and once on a Pixel 7 in Chrome's mobile emulation. They cover the real Auth0 redirect
+handshake, the SPA fallback for a deep link, a live circuit trace fed by real STOMP frames, canvas
 re-scaling on a viewport change, and axe accessibility scans of the landing page and the
 authenticated shell. It is the only layer that exercises the redirect, real STOMP frames and a
 real canvas resize.
 
+Nothing is intercepted inside the browser. `e2e/servers.ts` starts, once for the run, `vite
+preview` on `127.0.0.1:4173`, with the REST API and a STOMP broker answered on the same origin
+(`e2e/stand-ins/`), and an Auth0 tenant on `127.0.0.1:4174` over HTTPS. Chrome is told to resolve
+`auth.e2e.test` to that tenant and to accept its certificate, made for the run, by its public key
+alone. Each test file opens one Chrome, cleared for each test, and a failed test leaves a picture
+of its page in `e2e-results/`. On the PR check the runner image's own Chrome is used; elsewhere it
+is Chrome for Testing at the milestone `e2e/chrome.ts` names, fetched once by `yarn e2e:chrome`.
+
 **Screenshots.** `yarn screenshots` runs `e2e/screenshots.capture.ts` under its own config
-(`playwright.screenshots.config.ts`), so the default suite never runs it. It signs in through the
-same stubs, starts a simulation, selects a session and two drivers, and writes the README's images
-to `docs/screenshots/` — a desktop project at 1440×1000, a 1280×640 project framed on the circuit
-trace for the repository's social preview, and the Pixel 7 project for the mobile layout.
+(`vitest.screenshots.config.ts`), so the default suite never runs it. It signs in through the
+same stand-ins, starts a simulation, selects a session and two drivers, and writes the README's
+images to `docs/screenshots/`: the desktop at 1440×1000, a 1280×640 frame on the circuit trace for
+the repository's social preview, and the Pixel 7 for the mobile layout. `e2e/screenshots.compose.ts`
+then sets the Pixel 7 capture in front of the desktop's for the README's lead image;
+`yarn screenshots:compose` reruns that step alone.
 
 **Bundle budget.** `yarn size` measures the gzipped first load of the public landing route
 (250 kB) and the total across all chunks (415 kB). Each raise of a limit is recorded in

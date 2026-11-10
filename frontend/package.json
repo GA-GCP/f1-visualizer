@@ -72,12 +72,12 @@
     "size-limit": "^14.3.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.1",
-    "vite": "^8.3.5",
+    "vite": "^8.3.6",
     "vitest": "^5.1.0",
     "vitest-axe": "^0.1.0"
   },
   "resolutions": {
-    "vite": "^8.3.5",
+    "vite": "^8.3.6",
     "**/micromatch/picomatch": "^2.3.2",
     "**/eslint/minimatch": "^11.0.3",
     "**/@eslint/config-array/minimatch": "^11.0.3",

@@ -24,7 +24,7 @@ there is no hosted target to test against.
 - `cloudbuild/` and `.github/` — the delivery pipelines
 
 Only `main` is maintained. Dependency advisories are handled by Dependabot
-and the `yarn audit`, Trivy and SBOM gates described in the README; there is no
+and the `pnpm audit`, Trivy and SBOM gates described in the README; there is no
 need to report a published CVE in a pinned dependency unless the gates missed
 it.
 

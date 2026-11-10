@@ -14,7 +14,7 @@ not duplicated here:
 | Java bugs and security | SpotBugs at `Max` effort + FindSecBugs |
 | Java formatting | Spotless |
 | TypeScript correctness | `tsc --noEmit`, ESLint `recommendedTypeChecked` |
-| Dependency CVEs | Trivy, `yarn audit`, Dependabot |
+| Dependency CVEs | Trivy, `pnpm audit`, Dependabot |
 | IaC posture | Trivy config, tflint, Conftest against a rendered plan |
 | Workflow security | actionlint + shellcheck, zizmor |
 

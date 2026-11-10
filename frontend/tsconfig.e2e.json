@@ -2,13 +2,16 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.e2e.tsbuildinfo",
     "target": "ES2023",
-    // The specs run in Node, but the callbacks passed to page.evaluate are
-    // typed against the browser they execute in — hence DOM alongside node.
-    "lib": ["ES2023", "DOM"],
+    // The tests run in Node. What they run in the page is passed to WebDriver
+    // as strings, so nothing here is typed against the browser's DOM.
+    "lib": ["ES2023"],
     "module": "ESNext",
     "types": ["node"],
     "skipLibCheck": true,
     "moduleResolution": "bundler",
+    // e2e/screenshots.compose.ts runs under Node as it is, which resolves no
+    // import without its extension.
+    "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
@@ -19,5 +22,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["e2e", "playwright.config.ts", "playwright.screenshots.config.ts"]
+  "include": ["e2e", "vitest.e2e.config.ts", "vitest.screenshots.config.ts"]
 }

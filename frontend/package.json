@@ -17,9 +17,12 @@
     "preview": "vite preview",
     "test:ci": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "screenshots": "playwright test --config playwright.screenshots.config.ts",
+    "test:e2e": "yarn build --mode e2e && yarn test:e2e:desktop && yarn test:e2e:mobile",
+    "test:e2e:desktop": "F1V_E2E_PLATFORM=desktop vitest run --config vitest.e2e.config.ts",
+    "test:e2e:mobile": "F1V_E2E_PLATFORM=mobile vitest run --config vitest.e2e.config.ts",
+    "e2e:chrome": "node e2e/chrome.ts",
+    "screenshots": "yarn build --mode e2e && F1V_E2E_PLATFORM=desktop vitest run --config vitest.screenshots.config.ts && F1V_E2E_PLATFORM=mobile vitest run --config vitest.screenshots.config.ts && yarn screenshots:compose",
+    "screenshots:compose": "node e2e/screenshots.compose.ts",
     "size": "size-limit"
   },
   "dependencies": {
@@ -41,9 +44,8 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.14.0",
+    "@axe-core/webdriverjs": "^4.14.0",
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.64.1",
     "@size-limit/file": "^14.3.0",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
@@ -52,6 +54,8 @@
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/selenium-webdriver": "^4.35.7",
+    "@types/ws": "^8.18.2",
     "@vitejs/plugin-react": "^6.2.1",
     "@vitest/coverage-v8": "^5.1.0",
     "@vitest/eslint-plugin": "^1.6.28",
@@ -69,12 +73,14 @@
     "jsdom": "^30.1.3",
     "oxc-transform-react": "^0.157.0",
     "prettier": "^3.9.10",
+    "selenium-webdriver": "^4.52.0",
     "size-limit": "^14.3.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.1",
     "vite": "^8.3.6",
     "vitest": "^5.1.0",
-    "vitest-axe": "^0.1.0"
+    "vitest-axe": "^0.1.0",
+    "ws": "^8.22.0"
   },
   "resolutions": {
     "vite": "^8.3.6",

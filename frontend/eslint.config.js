@@ -19,7 +19,7 @@ import { createRequire } from 'node:module';
 const reactVersion = createRequire(import.meta.url)('react/package.json').version;
 
 export default defineConfig([
-  globalIgnores(['dist', 'coverage', 'playwright-report', 'test-results', 'blob-report']),
+  globalIgnores(['dist', 'coverage', 'e2e-results']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -137,12 +137,13 @@ export default defineConfig([
     },
   },
   {
-    // Playwright specs run in Node and are not vitest, so they get the node
-    // globals and none of the vitest rules.
+    // The browser tests run in Node under Vitest, but drive Chrome through
+    // Selenium rather than rendering into jsdom, so they get the node globals
+    // and none of the unit suite's vitest rules.
     files: [
       'e2e/**/*.ts',
-      'playwright.config.ts',
-      'playwright.screenshots.config.ts',
+      'vitest.e2e.config.ts',
+      'vitest.screenshots.config.ts',
       'vite.config.ts',
       '.size-limit.js',
     ],

@@ -19,8 +19,8 @@
 !frontend/.env.prod
 # The contract itself, with placeholder values only.
 !frontend/.env.example
-# Fake tenant values for the Playwright run; the e2e specs intercept every
-# request to them, so nothing here is a credential and CI needs the file.
+# Fake tenant values for the browser tests; a stand-in answers every request
+# to them, so nothing here is a credential and CI needs the file.
 !frontend/.env.e2e
 *.pem
 *.key
@@ -158,9 +158,6 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 
-# Playwright run artifacts. The report and traces are only written when a spec
-# fails, and they contain full page snapshots — useful locally, not in git.
-frontend/test-results/
-frontend/playwright-report/
-frontend/blob-report/
-frontend/.playwright/
+# The browser tests' pictures of a failed test's page: useful locally and as the
+# PR check's artifact, not in git.
+frontend/e2e-results/

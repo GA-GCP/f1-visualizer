@@ -31,6 +31,12 @@ COPY .mvn .mvn
 # The POMs first, on their own layer: dependency resolution is then cached until
 # a POM actually changes, instead of re-downloading the world on every source
 # edit (O1). The BuildKit cache mount keeps ~/.m2 across builds as well.
+#
+# Every <module> in pom.xml needs its POM here, not only the ones MODULE builds:
+# Maven reads the whole reactor before `-pl` narrows it, and one missing POM
+# fails every build with "Child module ... does not exist". The replay worker
+# and f1v-coverage were added to the reactor without a line here, and this build
+# failed for every MODULE until they were.
 COPY pom.xml ./
 COPY f1v-commons-web/pom.xml f1v-commons-web/
 COPY f1v-commons-gcp/pom.xml f1v-commons-gcp/
@@ -38,8 +44,10 @@ COPY f1v-commons-messaging/pom.xml f1v-commons-messaging/
 COPY f1v-commons-openf1/pom.xml f1v-commons-openf1/
 COPY f1v-service-data-analysis/pom.xml f1v-service-data-analysis/
 COPY f1v-service-data-ingestion/pom.xml f1v-service-data-ingestion/
+COPY f1v-service-replay-worker/pom.xml f1v-service-replay-worker/
 COPY f1v-service-telemetry/pom.xml f1v-service-telemetry/
 COPY f1v-service-user/pom.xml f1v-service-user/
+COPY f1v-coverage/pom.xml f1v-coverage/
 
 ARG MODULE
 RUN --mount=type=cache,target=/root/.m2 \
@@ -52,8 +60,12 @@ RUN --mount=type=cache,target=/root/.m2 \
 
 # Extract the JAR layers
 # jarmode=tools, not layertools: Boot 4 removed the layertools jarmode.
-WORKDIR /app/${MODULE}
-RUN java -Djarmode=tools -jar target/*.jar extract --layers --launcher --destination .
+#
+# Into a folder of their own: the tools jarmode refuses a destination that is
+# not empty, and the module's folder holds its sources and target/. Extracting
+# there failed every build once the reactor above could be read at all. The PR
+# check's image build extracts into an empty staging folder for the same reason.
+RUN java -Djarmode=tools -jar ${MODULE}/target/*.jar extract --layers --launcher --destination /app/layers
 
 # ==========================================
 # STAGE 2: Run in Distroless (Production)
@@ -64,13 +76,11 @@ FROM gcr.io/distroless/java25-debian13:nonroot@sha256:8ac5525549d14b8ddd34562f9f
 
 WORKDIR /app
 
-ARG MODULE
-
 # 1. Copy the extracted layers
-COPY --from=builder /app/${MODULE}/dependencies/ ./
-COPY --from=builder /app/${MODULE}/spring-boot-loader/ ./
-COPY --from=builder /app/${MODULE}/snapshot-dependencies/ ./
-COPY --from=builder /app/${MODULE}/application/ ./
+COPY --from=builder /app/layers/dependencies/ ./
+COPY --from=builder /app/layers/spring-boot-loader/ ./
+COPY --from=builder /app/layers/snapshot-dependencies/ ./
+COPY --from=builder /app/layers/application/ ./
 
 # ==========================================
 # JVM options (P4)

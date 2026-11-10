@@ -45,7 +45,7 @@
 exercised in CI on every pull request, but the Google Cloud estate the `infrastructure/` tree
 describes has been torn down and the domains in the environment table do not resolve. To see it,
 run it locally ([Quick Start](#quick-start-local-development)) or run `yarn test:e2e`, which
-drives the built bundle through a stubbed Auth0 tenant and a STOMP broker mocked at the socket.
+drives the built bundle through a stand-in Auth0 tenant and a stand-in STOMP broker.
 The screenshots below were captured that way — nothing in them needed a server.
 
 Three end-to-end reviews — [frontend](docs/audits/2026-09-06-frontend-audit.md),
@@ -124,10 +124,10 @@ The project enforces enterprise-grade practices throughout: Zero-Trust security 
 
 ## Screenshots
 
-Captured from the built bundle by `yarn screenshots` in `frontend/`, through the same stubs the
-end-to-end suite uses: a stubbed Auth0 tenant, a fixture API and a STOMP broker mocked at the
-socket. The circuit is the fixture's 240-point oval, replayed at 40 Hz. The image at the top is
-composed from the desktop and Pixel 7 Live Console captures by the same run
+Captured from the built bundle by `yarn screenshots` in `frontend/`, through the same stand-ins
+the end-to-end suite uses: an Auth0 tenant, a fixture API and a STOMP broker, all on 127.0.0.1.
+The circuit is the fixture's 240-point oval, replayed at 40 Hz. The image at the top is composed
+from the desktop and Pixel 7 Live Console captures by the same run
 (`e2e/screenshots.compose.ts`).
 
 | | |
@@ -390,11 +390,11 @@ f1-visualizer/
 |   |   +-- theme/                              # MUI theme, tokens, motion variants
 |   |   +-- types/ + utils/                     # Shared types; D3 scales, projection, radar geometry
 |   |   +-- App.tsx / main.tsx                  # Auth0 provider, lazy routes, splash; Vite entry point
-|   +-- e2e/                                    # Playwright: Auth0 redirect, live trace, axe checks
+|   +-- e2e/                                    # Selenium: Auth0 redirect, live trace, axe checks
 |   +-- nginx.conf                              # SPA-aware nginx config with security headers
 |   +-- Dockerfile / Dockerfile.ci              # Multi-stage local build; lean CI image (dist -> nginx)
 |   +-- vite.config.ts                          # Dev proxy (3 REST services + /ws), Vitest, chunking
-|   +-- playwright.config.ts / .size-limit.js   # E2E projects (desktop, mobile); gzipped bundle budgets
+|   +-- vitest.e2e.config.ts / .size-limit.js   # E2E run (desktop, Pixel 7); gzipped bundle budgets
 |   +-- .env.dev / .env.uat / .env.prod / .env.e2e  # Per-mode Auth0 + API config (Vite build modes)
 |   +-- eslint.config.js / .prettierrc.json     # Flat ESLint config; Prettier
 |
@@ -450,7 +450,7 @@ f1-visualizer/
 |
 +-- docs/
 |   +-- audits/                                 # The three reviews whose finding IDs the code cites
-|   +-- screenshots/                            # Captured from the built bundle through the e2e stubs
+|   +-- screenshots/                            # Captured from the built bundle through the e2e stand-ins
 |
 +-- .github/
 |   +-- workflows/
@@ -840,7 +840,7 @@ Every pull request targeting `main` runs the jobs whose paths changed:
 | **Detect changed areas** | path filter over backend, frontend, infrastructure, workflows | Every other job is gated on its output, so a README change does not run a Maven build |
 | **Backend** | `./mvnw -B clean verify`, Trivy filesystem scan, SBOM upload | The whole reactor through `verify`, which is the phase every check binds to — `package` stops short of all of them |
 | **Frontend** | `yarn audit`, `format:check`, `lint`, `typecheck`, `test:coverage`, `build`, `size` | Lint, types, coverage thresholds and a gzipped bundle budget |
-| **Frontend E2E** | Playwright, desktop and mobile viewports, axe at both | The only layer exercising the Auth0 redirect, real STOMP frames and canvas resize |
+| **Frontend E2E** | Selenium WebDriver in Chrome, desktop and Pixel 7, axe at both | The only layer exercising the Auth0 redirect, real STOMP frames and canvas resize |
 | **Frontend images** | The base-image pins checked to agree across both Dockerfiles and `cloudbuild/frontend.yaml`, the node steps of `cloudbuild/frontend.yaml` replayed in their own image, then `Dockerfile.ci` built, smoke-tested and Trivy-scanned, then the local `Dockerfile` built | The other frontend jobs bring their own Node, so only this one sees the image Cloud Build runs in — which is how a node image without yarn once broke every deploy while PRs stayed green |
 | **Infrastructure static checks** | `tofu fmt`, `terragrunt hcl fmt`, module validate with `-lockfile=readonly`, `terragrunt hcl validate --inputs --strict`, `tflint`, Trivy | Formatting, undeclared inputs and provider drift, all of which used to reach `main` green |
 | **Infrastructure plan** | `terragrunt run --all -- plan` per environment, posted as a PR comment | The plan a reviewer approves. It runs through Workload Identity Federation as a read-only planner — no service-account key, and it cannot apply |
@@ -973,7 +973,7 @@ cd backend && ./mvnw -B clean verify -pl f1v-service-data-analysis -am
 
 ### Frontend Test Suite
 
-**Framework:** Vitest 5.0 with React Testing Library, jsdom 30, jest-image-snapshot; Playwright 1.63 for end-to-end
+**Framework:** Vitest 5.0 with React Testing Library, jsdom 30, jest-image-snapshot; Selenium WebDriver 4.52 for end-to-end
 
 **Configuration:** the `test` block in `vite.config.ts` — jsdom environment, global test APIs enabled, `@` path alias resolved from `tsconfig.app.json`, coverage thresholds (89% statements, 76% branches, 77% functions, 89% lines) that gate the PR, and a setup file (`src/test/setup.ts`) that polyfills `ResizeObserver`, `matchMedia`, `requestAnimationFrame`/`cancelAnimationFrame`, and configures automatic React Testing Library cleanup between tests.
 
@@ -986,7 +986,7 @@ cd backend && ./mvnw -B clean verify -pl f1v-service-data-analysis -am
 | **API Client Tests** | Vitest + `vi.stubEnv()` | Validates Axios instance configuration across deployment environments (dev, uat, prod) and STOMP client initialization with JWT authentication headers. |
 | **Auth Tests** | Vitest | Tests the Auth0 Axios interceptor (`AuthHandler`) for Bearer token injection and 401 response handling. |
 | **Error Boundary Tests** | React Testing Library | Validates the auto-retry error boundary's fallback rendering, retry attempts, and error recovery behavior. |
-| **End-to-End Tests** | Playwright + axe | 12 tests over the built bundle on a desktop Chrome and a Pixel 7 project: the real Auth0 redirect handshake against a stubbed tenant (`.env.e2e`), the SPA fallback for deep links, a live circuit trace fed by mocked STOMP frames over `routeWebSocket`, canvas re-scaling on viewport change, and axe accessibility scans of the landing page and the authenticated shell. |
+| **End-to-End Tests** | Selenium WebDriver + axe, under Vitest | 8 tests over the built bundle, run on a desktop Chrome and again on a Pixel 7 in Chrome's mobile emulation: the real Auth0 redirect handshake against a stand-in tenant (`.env.e2e`), the SPA fallback for deep links, a sign-in button shown whole and clear of the landing page's footer on short pages (a phone held sideways among them), a live circuit trace fed by real STOMP frames from a stand-in broker, canvas re-scaling on viewport change, and axe accessibility scans of the landing page and the authenticated shell. |
 
 **Mocking Patterns:**
 - **D3.js** — Complex fluent API chains mocked as chainable objects that track method calls (`textCalls`, `styleCalls`, `appendCallCount`) for assertion.
@@ -1033,7 +1033,7 @@ cd frontend && yarn vitest
 | Layer | Test Files | Test Framework | Test Types |
 |-------|-----------|---------------|------------|
 | **Backend** | 42 files, 251 tests | JUnit 6, Mockito, Spring Boot Test, ArchUnit, Testcontainers | Unit, controller, security, HTTP mock, serialization, parameterized, integration, architecture |
-| **Frontend** | 54 files, 352 tests + 12 e2e | Vitest, React Testing Library, Playwright | Component, visual regression, hook, utility, API client, auth, end-to-end |
+| **Frontend** | 54 files, 352 tests + 16 e2e | Vitest, React Testing Library, Selenium WebDriver | Component, visual regression, hook, utility, API client, auth, end-to-end |
 | **Infrastructure** | 11 modules, 46 units | Trivy, Conftest, tflint, OpenTofu, Terragrunt | Plan-based security scanning, policy checks, linting, module and input validation |
 
 ### CI Test Integration
@@ -1043,7 +1043,7 @@ Tests execute at two stages in the delivery pipeline:
 1. **PR Quality Gate (GitHub Actions)** — Nine jobs, gated on which paths changed, run on every pull request to `main`:
    - Backend: `./mvnw -B clean verify` (the whole reactor through the phase the checks bind to), Trivy filesystem scan, SBOM upload
    - Frontend: audit, format, lint, typecheck, coverage, build, bundle budget
-   - Frontend E2E: Playwright across a desktop and a mobile viewport, axe at both
+   - Frontend E2E: Selenium WebDriver across a desktop and a Pixel 7, axe at both
    - Frontend images: the base-image pins checked to agree, Cloud Build's node steps replayed as written, the production image built, smoke-tested and scanned, the local image built
    - Infrastructure static checks: formatting, module and input validation, tflint, Trivy
    - Infrastructure plan: a real `terragrunt plan` per environment, commented on the PR

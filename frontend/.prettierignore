@@ -1,8 +1,6 @@
 dist
 coverage
-playwright-report
-test-results
-blob-report
+e2e-results
 node_modules
 # Image-snapshot baselines are binary and the audit markdown is generated.
 **/__image_snapshots__

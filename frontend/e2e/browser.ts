@@ -7,7 +7,7 @@ import type { Driver as ChromeDriver } from 'selenium-webdriver/chrome';
  * Pixel 7 in Chrome's own mobile emulation. The audit's accessibility findings
  * included a text size that only fell below the minimum at a narrow width,
  * because it came from the *minimum* of a clamp(); a desktop-only run would not
- * have seen it. F1V_E2E_PLATFORM names one; `yarn test:e2e:desktop` and
+ * have seen it. F1V_E2E_PLATFORM names one; `pnpm test:e2e:desktop` and
  * `test:e2e:mobile` set it.
  */
 export type Platform = 'desktop' | 'mobile';

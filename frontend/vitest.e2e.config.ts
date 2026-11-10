@@ -16,10 +16,10 @@ import { defineConfig } from 'vitest/config';
  * regression only exists there. e2e/servers.ts starts it, with stand-ins for
  * the API, the STOMP broker and the Auth0 tenant, once for the run. Each file
  * opens one Chrome, cleared for each test (e2e/fixtures.ts), on the platform
- * F1V_E2E_PLATFORM names (e2e/browser.ts): `yarn test:e2e:desktop` or
- * `test:e2e:mobile` after `yarn build --mode e2e`, or `yarn test:e2e` for the
+ * F1V_E2E_PLATFORM names (e2e/browser.ts): `pnpm test:e2e:desktop` or
+ * `test:e2e:mobile` after `pnpm build --mode e2e`, or `pnpm test:e2e` for the
  * build and both. Chrome is the PR check runner's own, and elsewhere Chrome for
- * Testing, from `yarn e2e:chrome`.
+ * Testing, from `pnpm e2e:chrome`.
  *
  * A `.only` left in a test fails the run on CI (Vitest's allowOnly is off
  * there), so it can never narrow the suite to one test while reporting green.

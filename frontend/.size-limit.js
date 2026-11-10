@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from 'node:fs';
 function firstLoadChunks() {
   if (!existsSync('dist/index.html')) {
     throw new Error(
-      'Run a build first: yarn build --mode dev (a bare `yarn build` loads no .env and dead-codes Auth0 out).',
+      'Run a build first: pnpm build --mode dev (a bare `pnpm build` loads no .env and dead-codes Auth0 out).',
     );
   }
   const html = readFileSync('dist/index.html', 'utf8');

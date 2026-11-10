@@ -14,8 +14,8 @@
 
 ## Checklist
 
-- [ ] `yarn typecheck`, `yarn lint` and `yarn test:ci` pass locally
-- [ ] `yarn size` is within budget, or the budget change is justified in the diff
+- [ ] `pnpm typecheck`, `pnpm lint` and `pnpm test:ci` pass locally
+- [ ] `pnpm size` is within budget, or the budget change is justified in the diff
 - [ ] UI changes include a before/after screenshot
 - [ ] Commit messages are Conventional Commits — they become the CHANGELOG
 - [ ] Infrastructure changes: the plan CI posted has been read, and anything it

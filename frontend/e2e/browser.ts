@@ -46,7 +46,7 @@ declare module 'selenium-webdriver/chromium.js' {
 }
 
 /**
- * The desktop's window, and a Pixel 7's page and browser as Chrome describes
+ * The desktop's page, and a Pixel 7's page and browser as Chrome describes
  * them. The phone's touch screen is given through DevTools (`asPlatform`):
  * chromedriver's own would also turn the mouse's events into touches.
  */
@@ -92,12 +92,36 @@ export async function openBrowser(standInKey: string): Promise<WebDriver> {
     const driver = await openChrome(options);
     try {
         await driver.manage().setTimeouts({ implicit: 0, pageLoad: 30_000, script: 30_000 });
+        if (platform === 'desktop') await fitPage(driver);
         await asPlatform(driver);
     } catch (failure) {
         await driver.quit();
         throw failure;
     }
     return driver;
+}
+
+/**
+ * The desktop's window grown until the page inside it is DESKTOP.
+ *
+ * Headless Chrome keeps part of the window for the browser's bars, which it
+ * never draws, and how much differs by system: 200 px on macOS and 143 px on
+ * the PR check's Linux runner, as Chrome 156 does it. A 1280×720 window left a
+ * page 577 px tall on the runner, where the landing page's footer lay over the
+ * sign-in button and took its clicks. The gap is measured rather than assumed,
+ * as Brickfolio's harness does for Safari. Tabs opened later share the window.
+ */
+async function fitPage(driver: WebDriver): Promise<void> {
+    const [inner, outer] = await driver.executeScript<[[number, number], [number, number]]>(
+        'return [[innerWidth, innerHeight], [outerWidth, outerHeight]]',
+    );
+    await driver
+        .manage()
+        .window()
+        .setRect({
+            width: DESKTOP.width + outer[0] - inner[0],
+            height: DESKTOP.height + outer[1] - inner[1],
+        });
 }
 
 /**
@@ -114,16 +138,24 @@ export async function asPlatform(driver: WebDriver): Promise<void> {
     }
     // The phone's screen rather than its page: a blank tab has no viewport
     // meta, so a phone lays it out 980 px wide, as it would a desktop site.
+    // The desktop's page in both directions: a page short of DESKTOP's height
+    // went unnoticed while only its width was checked (`fitPage`).
     const wanted =
         platform === 'mobile'
-            ? { width: PIXEL_7.deviceMetrics.width, ratio: PIXEL_7.deviceMetrics.pixelRatio }
-            : { width: DESKTOP.width, ratio: 1 };
-    const [width, ratio] = await driver.executeScript<[number, number]>(
-        `return [${platform === 'mobile' ? 'screen.width' : 'innerWidth'}, devicePixelRatio]`,
+            ? {
+                  width: PIXEL_7.deviceMetrics.width,
+                  height: PIXEL_7.deviceMetrics.height,
+                  ratio: PIXEL_7.deviceMetrics.pixelRatio,
+              }
+            : { ...DESKTOP, ratio: 1 };
+    const [width, height, ratio] = await driver.executeScript<[number, number, number]>(
+        platform === 'mobile'
+            ? 'return [screen.width, screen.height, devicePixelRatio]'
+            : 'return [innerWidth, innerHeight, devicePixelRatio]',
     );
-    if (width !== wanted.width || ratio !== wanted.ratio) {
+    if (width !== wanted.width || height !== wanted.height || ratio !== wanted.ratio) {
         throw new Error(
-            `The tab is ${width} px wide at ${ratio} pixels each, not the ${platform}'s ${wanted.width} px at ${wanted.ratio}`,
+            `The tab is ${width}×${height} px at ${ratio} pixels each, not the ${platform}'s ${wanted.width}×${wanted.height} px at ${wanted.ratio}`,
         );
     }
 }

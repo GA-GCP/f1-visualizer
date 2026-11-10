@@ -17,6 +17,29 @@ allowBuilds:
   canvas: true
   unrs-resolver: false
 
+# pnpm refuses any version published less than a day ago (minimumReleaseAge),
+# lockfile or not. These are exempt by exact version only: rolldown 1.2.18
+# came in with the vite bump merged on 2026-11-10, while still under a day old.
+# Every other package, and any other rolldown version, stays covered. From
+# 2026-11-10T10:07Z this list does nothing and can go.
+minimumReleaseAgeExclude:
+  - rolldown@1.2.18
+  - '@rolldown/binding-android-arm-eabi@1.2.18'
+  - '@rolldown/binding-android-arm64@1.2.18'
+  - '@rolldown/binding-darwin-arm64@1.2.18'
+  - '@rolldown/binding-darwin-x64@1.2.18'
+  - '@rolldown/binding-freebsd-x64@1.2.18'
+  - '@rolldown/binding-linux-arm-gnueabihf@1.2.18'
+  - '@rolldown/binding-linux-arm64-gnu@1.2.18'
+  - '@rolldown/binding-linux-arm64-musl@1.2.18'
+  - '@rolldown/binding-linux-ppc64-gnu@1.2.18'
+  - '@rolldown/binding-linux-s390x-gnu@1.2.18'
+  - '@rolldown/binding-linux-x64-gnu@1.2.18'
+  - '@rolldown/binding-linux-x64-musl@1.2.18'
+  - '@rolldown/binding-openharmony-arm64@1.2.18'
+  - '@rolldown/binding-win32-arm64-msvc@1.2.18'
+  - '@rolldown/binding-win32-x64-msvc@1.2.18'
+
 # `parent>child` pins `child` only where `parent` depends on it.
 #
 # The minimatch entries keep every copy of minimatch at 11.0.1 or above, out of

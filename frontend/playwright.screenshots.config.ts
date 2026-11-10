@@ -30,5 +30,14 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 640 } },
     },
     { name: 'mobile', use: { ...devices['Pixel 7'] } },
+    {
+      // The README's lead image, composed from the two Live Console captures
+      // above, so it runs after them. `--project showcase --no-deps` recomposes
+      // it from the PNGs already in docs/screenshots without recapturing.
+      name: 'showcase',
+      testMatch: /screenshots\.compose\.ts$/,
+      dependencies: ['desktop', 'mobile'],
+      use: { ...devices['Desktop Chrome'], deviceScaleFactor: 2 },
+    },
   ],
 });

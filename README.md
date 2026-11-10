@@ -329,7 +329,7 @@ The real-time pipeline is the core of the platform — a four-hop event-driven c
 | | VPC | — | Private networking for Cloud Run to Redis, via direct VPC egress |
 | | Cloud Monitoring | — | Uptime checks, alert policies and a per-environment budget |
 | | Artifact Registry | — | Docker image repository with layer caching |
-| **IaC** | OpenTofu | 1.13.2 | Infrastructure as Code (Terraform-compatible, open-source) |
+| **IaC** | OpenTofu | 1.13.9 | Infrastructure as Code (Terraform-compatible, open-source) |
 | | Terragrunt | 1.2.1 | DRY configuration wrapper with dependency orchestration |
 | | Google provider | 8.2 | Lock-file pinned in every module |
 | **CI/CD** | Cloud Build | — | 7 path-filtered triggers over 3 pipeline definitions (build, scan, deploy) |
@@ -897,7 +897,7 @@ A backend deploy is a plain `gcloud run services update --image=<sha>` and is re
 The infrastructure pipeline plans to a file and applies that file:
 
 ```
-1. Install Tools            OpenTofu 1.13.2 + Terragrunt 1.2.1, each verified
+1. Install Tools            OpenTofu 1.13.9 + Terragrunt 1.2.1, each verified
          |                  against the SHA256SUMS published with its release
 2. Trivy IaC Scan           trivy config over infrastructure/ (fast first pass)
          |

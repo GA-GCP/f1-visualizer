@@ -78,6 +78,17 @@ RUN yarn build --mode ${ENV_MODE}
 # them.
 FROM nginxinc/nginx-unprivileged:1.31.7-alpine-slim@sha256:a8cb0f33d51fa107c96fd2bd3a71aaf564ec131e9d2bdf8700944f0ed8b170d7
 
+# Alpine's own packages, brought up to date over the pinned base. nginx-unprivileged
+# is rebuilt on its own schedule, not Alpine's: this digest is Alpine 3.24.2, and
+# the musl (CVE-2026-107891) and zlib (CVE-2026-85091) fixes Alpine has since
+# shipped failed the image scan with no newer digest to move to. Once the pinned
+# base carries current packages this is a no-op. Only Alpine's main and community
+# repositories are configured in the base, so nginx itself is not touched.
+# Dockerfile.ci carries the same lines; the two must stay identical.
+USER root
+RUN apk upgrade --no-cache
+USER 101
+
 # 1. Copy the custom Nginx config (SPA Routing)
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
@@ -89,7 +100,6 @@ EXPOSE 8080
 
 # 4. Start Nginx
 # The base is nginxinc/nginx-unprivileged, which runs as uid 101 and listens on
-# 8080 for exactly that reason. Semgrep cannot resolve a base image's default
-# USER; the unprivileged variant is the whole point of choosing it.
-# nosemgrep: dockerfile.security.missing-user.missing-user
+# 8080 for exactly that reason; the `USER 101` above hands the image back to
+# that user after the package upgrade.
 CMD ["nginx", "-g", "daemon off;"]

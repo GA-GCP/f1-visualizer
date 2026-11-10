@@ -54,6 +54,13 @@ const Landing: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
+            // Centred by the content's auto margins rather than by
+            // justify-content, and free to scroll. justify-content: center
+            // centred content taller than the page too, past both edges, where
+            // overflow: hidden cut off the title and the sign-in button with
+            // no way to scroll to them (a phone held sideways). Auto margins
+            // centre only into spare room; without any, the content starts at
+            // the top and the page scrolls.
             style={{
                 position: 'fixed',
                 inset: 0,
@@ -61,8 +68,8 @@ const Landing: React.FC = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'hidden',
+                overflowX: 'hidden',
+                overflowY: 'auto',
             }}
         >
             {/* Reuse the animated 4-layer background from the splash screen */}
@@ -79,6 +86,8 @@ const Landing: React.FC = () => {
                     gap: 2,
                     width: '100%',
                     px: 2,
+                    py: 2,
+                    my: 'auto',
                 }}
             >
                 {/* Per-letter title reveal.
@@ -161,8 +170,15 @@ const Landing: React.FC = () => {
                     </Typography>
                 </m.div>
 
-                {/* Circuit animation (continuous, perpetual) */}
-                <SplashCircuit continuous />
+                {/* Circuit animation (continuous, perpetual).
+
+                    The one part of the page that can give up height. The rest
+                    of the content and the footer's strip take about 400px, so
+                    the drawing gets what is left, down to 100px; at 720px and
+                    taller it is its full 500px-wide self. On a page of about
+                    600px it used to push the button down onto the footer, and
+                    a phone held sideways could not show the button at all. */}
+                <SplashCircuit continuous maxHeight="max(100px, 100dvh - 400px)" />
 
                 {/* Login button with pulsing glow.
 
@@ -224,7 +240,15 @@ const Landing: React.FC = () => {
                 </m.div>
             </Box>
 
-            {/* Footer */}
+            {/* Footer.
+
+                Pinned 32px from the bottom, so on a page shorter than about
+                600px (a short laptop window, a phone held sideways) it lands on
+                the sign-in button. It is decoration with nothing to click: it
+                takes no clicks, and it sits beneath the main content (zIndex 0
+                against the content's 1), so the button is drawn over it too.
+                Above the button it took the clicks aimed at the button's
+                middle. */}
             <Box
                 component="footer"
                 sx={{
@@ -232,7 +256,8 @@ const Landing: React.FC = () => {
                     bottom: 32,
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    zIndex: 1,
+                    zIndex: 0,
+                    pointerEvents: 'none',
                 }}
             >
                 <m.div

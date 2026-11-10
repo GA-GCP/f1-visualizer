@@ -1,4 +1,5 @@
 import { describe } from 'vitest';
+import { platform } from './browser';
 import { accessibilityViolations, signIn } from './checks';
 import { expect, test, WEB } from './fixtures';
 
@@ -40,6 +41,60 @@ describe('authentication', () => {
 
         await page.goto('/dashboard');
         await expect(page.getByRole('button', { name: /login or sign up/i })).toBeVisible();
+    });
+
+    test('the sign-in button is whole and takes its own clicks on short pages', async ({
+        page,
+    }) => {
+        // Two ways a short page used to fail the button. The footer, pinned
+        // near the bottom, took the clicks aimed at it: its middle on the
+        // desktop at 1280×577, the page GitHub's runner once gave it, and its
+        // lower edge on the phone at 412×500. And on the phone held sideways
+        // the content was taller than the page and cut off, the button's lower
+        // half below the edge at 839×412 and its middle at 915×412.
+        const sizes =
+            platform === 'mobile'
+                ? [
+                      { width: 412, height: 500 },
+                      { width: 839, height: 412 },
+                      { width: 915, height: 412 },
+                  ]
+                : [{ width: 1280, height: 577 }];
+        await page.goto('/');
+        const button = page.getByRole('button', { name: /login or sign up/i });
+        await expect(button).toBeVisible();
+
+        const strays: Record<string, string[]> = {};
+        for (const size of sizes) {
+            // Resized once the page is loaded, and checked: a resize sent
+            // before the first load did not hold.
+            await page.setViewportSize(size);
+            expect(await page.viewportSize()).toEqual(size);
+            await page.still();
+
+            // Every point of a grid across the button, edges inset by 2 px:
+            // what the page would hand a click there, by elementFromPoint,
+            // which finds nothing off the page. Nothing is scrolled first, so
+            // the whole button has to be on the page as it opens.
+            const missed = await button.evaluate<string[]>(`
+                const button = arguments[0];
+                const box = button.getBoundingClientRect();
+                const missed = [];
+                for (const fx of [0, 0.25, 0.5, 0.75, 1]) {
+                    for (const fy of [0, 0.5, 1]) {
+                        const x = box.left + 2 + fx * (box.width - 4);
+                        const y = box.top + 2 + fy * (box.height - 4);
+                        const hit = document.elementFromPoint(x, y);
+                        if (!button.contains(hit)) {
+                            missed.push(Math.round(x) + ',' + Math.round(y) + ' ' + (hit ? hit.outerHTML.slice(0, 60) : 'off the page'));
+                        }
+                    }
+                }
+                return missed;
+            `);
+            if (missed.length > 0) strays[`${size.width}×${size.height}`] = missed;
+        }
+        expect(strays).toEqual({});
     });
 });
 

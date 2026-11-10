@@ -32,9 +32,18 @@ interface SplashCircuitProps {
     phase?: SplashPhase;
     /** When true, animates immediately and perpetually without a phase controller. */
     continuous?: boolean;
+    /**
+     * The tallest the drawing may be, as a CSS length (`100dvh - 400px`, say).
+     * Its height follows its width, so the cap narrows it. Without one it is
+     * 60% of its container's width, up to 500px wide, whatever the height.
+     */
+    maxHeight?: string;
 }
 
-const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase, continuous }) => {
+/** The drawing's width over its height, from its viewBox. */
+const ASPECT = 580 / 300;
+
+const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase, continuous, maxHeight }) => {
     const measureRef = useRef<SVGPathElement>(null);
     const pathRef = useRef<SVGPathElement>(null);
     const [pathLength, setPathLength] = useState(0);
@@ -106,7 +115,7 @@ const SplashCircuit: React.FC<SplashCircuitProps> = ({ phase, continuous }) => {
             sx={{
                 position: 'relative',
                 width: '60%',
-                maxWidth: 500,
+                maxWidth: maxHeight ? `min(500px, calc((${maxHeight}) * ${ASPECT}))` : 500,
                 mx: 'auto',
             }}
         >

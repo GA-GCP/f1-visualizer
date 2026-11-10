@@ -64,9 +64,22 @@ async function bodyOf(request: IncomingMessage): Promise<URLSearchParams> {
  *
  * Each sign-in's nonce is kept under the code issued for it, so the browsers of
  * tests running at once never trade nonces.
+ *
+ * Like a tenant's Allowed Callback URLs and Allowed Logout URLs, it redirects
+ * only to `app`, the origin the e2e build is served from, and refuses any other
+ * redirect_uri or returnTo with a 400. The Location it sends is built from
+ * `app`, never copied from the request, so the stand-in cannot be made into an
+ * open redirect.
  */
-export function auth0StandIn(domain: string, tls: { cert: string; key: string }): Server {
+export function auth0StandIn(
+    domain: string,
+    tls: { cert: string; key: string },
+    app: string,
+): Server {
     const nonces = new Map<string, string>();
+    const refuse = (response: ServerResponse, what: string): void => {
+        response.writeHead(400, { 'content-type': 'text/plain' }).end(`${what} is not ${app}`);
+    };
 
     const answer = async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
         const url = new URL(request.url ?? '/', `https://${domain}`);
@@ -85,10 +98,15 @@ export function auth0StandIn(domain: string, tls: { cert: string; key: string })
 
         if (url.pathname === '/authorize') {
             // What a tenant does after a successful login: bounce back to the
-            // app with an authorization code and the state it was given.
+            // app with an authorization code and the state it was given. The
+            // app sends its origin as redirect_uri (src/App.tsx).
+            if (url.searchParams.get('redirect_uri') !== app) {
+                refuse(response, 'redirect_uri');
+                return;
+            }
             const code = randomBytes(16).toString('hex');
             nonces.set(code, url.searchParams.get('nonce') ?? '');
-            const back = new URL(url.searchParams.get('redirect_uri') ?? '/');
+            const back = new URL(app);
             back.searchParams.set('code', code);
             back.searchParams.set('state', url.searchParams.get('state') ?? '');
             response.writeHead(302, { location: back.href }).end();
@@ -117,7 +135,12 @@ export function auth0StandIn(domain: string, tls: { cert: string; key: string })
         }
 
         if (url.pathname === '/v2/logout') {
-            response.writeHead(302, { location: url.searchParams.get('returnTo') ?? '/' }).end();
+            // The app sends its origin as returnTo (LayoutMain.tsx).
+            if (url.searchParams.get('returnTo') !== app) {
+                refuse(response, 'returnTo');
+                return;
+            }
+            response.writeHead(302, { location: app }).end();
             return;
         }
 

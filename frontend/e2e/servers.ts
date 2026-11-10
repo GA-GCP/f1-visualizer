@@ -143,7 +143,7 @@ export default async function servers(project: TestProject): Promise<() => Promi
     };
     try {
         const tls = await certificate(folder);
-        const auth0 = auth0StandIn(AUTH0_DOMAIN, tls);
+        const auth0 = auth0StandIn(AUTH0_DOMAIN, tls, `http://127.0.0.1:${WEB_PORT}`);
         await new Promise<void>((resolve, reject) => {
             auth0.once('error', reject);
             auth0.listen(AUTH0_PORT, '127.0.0.1', resolve);

@@ -31,8 +31,11 @@ version: 2
 
 updates:
   # ---------------------------------------------------------------------------
-  # Frontend npm packages.
+  # Frontend packages, from the npm registry.
   # ---------------------------------------------------------------------------
+  # `npm` is Dependabot's name for the registry's ecosystem, whatever installs
+  # from it; it finds pnpm-lock.yaml and updates it with pnpm.
+  #
   # Grouped so a quiet week produces one or two PRs rather than fifteen. Majors
   # stay ungrouped and arrive individually, because those are the ones that need
   # reading rather than merging.

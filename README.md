@@ -56,7 +56,7 @@ cited in code comments and commit messages, so a comment that says *why* a line 
 followed back to the finding that put it there. See [`docs/audits/`](docs/audits/).
 
 <p align="center">
-  <img src="docs/screenshots/live-console.png" alt="The Live Console: a circuit trace drawn on Canvas from a streaming STOMP feed, with the race initialisation panel, simulation timeline and live telemetry readouts" width="900" />
+  <img src="docs/screenshots/live-console-showcase.png" alt="The Live Console on desktop, a circuit trace drawn on Canvas from a streaming STOMP feed beside the race initialisation panel, simulation timeline and live telemetry readouts, with the same console on a Pixel 7 in front of it" width="900" />
 </p>
 
 ---
@@ -126,14 +126,16 @@ The project enforces enterprise-grade practices throughout: Zero-Trust security 
 
 Captured from the built bundle by `yarn screenshots` in `frontend/`, through the same stubs the
 end-to-end suite uses: a stubbed Auth0 tenant, a fixture API and a STOMP broker mocked at the
-socket. The circuit is the fixture's 240-point oval, replayed at 40 Hz.
+socket. The circuit is the fixture's 240-point oval, replayed at 40 Hz. The image at the top is
+composed from the desktop and Pixel 7 Live Console captures by the same run
+(`e2e/screenshots.compose.ts`).
 
 | | |
 |:---:|:---:|
-| <img src="docs/screenshots/landing.png" alt="Landing page: animated title, circuit outline and the login call to action" width="440" /> | <img src="docs/screenshots/data-vault.png" alt="Data Vault: a D3 lap-time chart for two drivers over twelve laps of the 2025 Bahrain Grand Prix" width="440" /> |
-| Landing — letter-stagger title, circuit animation, login CTA | Data Vault — session search and the D3 lap-time chart |
-| <img src="docs/screenshots/head-to-head.png" alt="Head-to-Head: a five-axis radar chart and animated career-statistics bars comparing two drivers" width="440" /> | <img src="docs/screenshots/live-console-mobile.png" alt="The Live Console on a Pixel 7 viewport, with the circuit trace re-scaled to the narrow layout" width="200" /> |
-| Head-to-Head — radar chart and Framer Motion stat bars | Live Console on a Pixel 7 — the canvas re-scales with the viewport |
+| <img src="docs/screenshots/data-vault.png" alt="Data Vault: a D3 lap-time chart for two drivers over twelve laps of the 2025 Bahrain Grand Prix" width="440" /> | <img src="docs/screenshots/head-to-head.png" alt="Head-to-Head: a five-axis radar chart and animated career-statistics bars comparing two drivers" width="440" /> |
+| Data Vault — session search over BigQuery and the D3 lap-time chart | Head-to-Head — a D3 radar chart and Framer Motion career-statistics bars |
+| <img src="docs/screenshots/landing.png" alt="Landing page: animated title, circuit outline and the login call to action" width="440" /> | <img src="docs/screenshots/live-console.png" alt="The Live Console: a circuit trace drawn on Canvas from a streaming STOMP feed, with the race initialisation panel, simulation timeline and live telemetry readouts" width="440" /> |
+| Landing — letter-stagger title, circuit animation and the login call to action | Live Console — a Canvas circuit trace fed by a STOMP stream |
 
 ---
 

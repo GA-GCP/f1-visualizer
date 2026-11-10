@@ -3,8 +3,8 @@
 # ==========================================
 # Runs on every PR targeting main. A `changes` job decides which areas a PR
 # actually touches, and the rest gate on it — an infrastructure-only PR does not
-# spend two minutes downloading a Playwright browser, and a docs-only PR does not
-# build a Docker image.
+# spend minutes building and driving the frontend in a browser, and a docs-only
+# PR does not build a Docker image.
 #
 # Every action is pinned to a commit SHA, which is what stops a moved tag running
 # different code. Dependabot's github-actions ecosystem keeps them fresh.
@@ -301,8 +301,10 @@ jobs:
   # -----------------------------------------
   # The only layer that exercises the Auth0 redirect handshake, real STOMP frame
   # handling and canvas resize — everything above the component boundary is
-  # mocked in the unit suite. Twelve specs across a desktop and a mobile
-  # viewport, including axe at both widths.
+  # mocked in the unit suite. Seven tests on a desktop and again on a Pixel 7,
+  # axe among them, driven through Selenium WebDriver in the Chrome and
+  # chromedriver the runner's image already installs (CHROMEWEBDRIVER names its
+  # chromedriver; frontend/e2e/chrome.ts), so no browser is downloaded here.
   #
   # `needs: frontend` so it does not spend two minutes on a PR that already
   # fails lint, and so a red result here is unambiguous rather than one of
@@ -335,42 +337,23 @@ jobs:
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
 
-      # The browser download is ~94 MB and dominates this job. Keyed on the
-      # lockfile, so it re-downloads exactly when the Playwright version moves
-      # and not otherwise.
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/yarn.lock') }}
-
-      # Both projects are chromium (Desktop Chrome and Pixel 7), so one browser
-      # covers the whole matrix.
-      - name: Install Playwright browser
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
-
-      # The browsers restore from cache but the OS packages they link against
-      # do not, so those are installed either way.
-      - name: Install Playwright system dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
-
-      # playwright.config.ts builds with `--mode e2e` and serves it with
-      # `vite preview`, so this runs against the real rolldown output rather
-      # than the dev server.
-      - name: Run E2E specs
+      # Builds with `--mode e2e`, then runs the desktop's tests and the phone's
+      # against that build, served by `vite preview` with stand-ins for the
+      # API, the STOMP broker and the Auth0 tenant beside it
+      # (frontend/e2e/servers.ts) — the real rolldown output, not the dev
+      # server.
+      - name: Run E2E tests
         run: yarn test:e2e
 
-      # Without the report a red run says only that something failed. Traces
-      # are written on first retry, so a flake arrives with its full timeline.
-      - name: Upload Playwright report
+      # Without it a red run says only which assertion failed. Each failed test
+      # leaves a picture of where its page was.
+      - name: Upload failed tests' pages
         if: ${{ failure() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: playwright-report
-          path: frontend/playwright-report/
+          name: e2e-results
+          path: frontend/e2e-results/
+          if-no-files-found: ignore
           retention-days: 7
 
   # -----------------------------------------

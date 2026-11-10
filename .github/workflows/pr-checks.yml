@@ -539,7 +539,7 @@ jobs:
       - name: Install OpenTofu
         uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
         with:
-          tofu_version: '1.13.2'
+          tofu_version: '1.13.9'
 
       # DLV-2/DLV-5: the same version cloudbuild/infrastructure.yaml pins, verified
       # against the checksums published with the release. gruntwork-io's action
@@ -591,7 +591,7 @@ jobs:
       - name: tflint
         uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
         with:
-          tflint_version: v0.65.0
+          tflint_version: v0.66.0
           cache: true
           tflint_config_path: infrastructure/.tflint.hcl
 
@@ -670,7 +670,7 @@ jobs:
       - name: Install OpenTofu
         uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
         with:
-          tofu_version: '1.13.2'
+          tofu_version: '1.13.9'
 
       - id: auth
         name: Authenticate to Google Cloud
@@ -975,7 +975,7 @@ jobs:
       # so neither pin goes stale unnoticed.
       - name: zizmor
         env:
-          ZIZMOR_VERSION: 1.31.1
+          ZIZMOR_VERSION: 1.32.0
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail

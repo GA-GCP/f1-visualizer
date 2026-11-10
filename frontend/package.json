@@ -6,7 +6,7 @@
   "engines": {
     "node": ">=26.0.0"
   },
-  "packageManager": "yarn@1.22.22",
+  "packageManager": "pnpm@12.18.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -17,11 +17,11 @@
     "preview": "vite preview",
     "test:ci": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "yarn build --mode e2e && yarn test:e2e:desktop && yarn test:e2e:mobile",
+    "test:e2e": "pnpm build --mode e2e && pnpm test:e2e:desktop && pnpm test:e2e:mobile",
     "test:e2e:desktop": "F1V_E2E_PLATFORM=desktop vitest run --config vitest.e2e.config.ts",
     "test:e2e:mobile": "F1V_E2E_PLATFORM=mobile vitest run --config vitest.e2e.config.ts",
     "e2e:chrome": "node e2e/chrome.ts",
-    "screenshots": "yarn build --mode e2e && F1V_E2E_PLATFORM=desktop vitest run --config vitest.screenshots.config.ts && F1V_E2E_PLATFORM=mobile vitest run --config vitest.screenshots.config.ts && yarn screenshots:compose",
+    "screenshots": "pnpm build --mode e2e && F1V_E2E_PLATFORM=desktop vitest run --config vitest.screenshots.config.ts && F1V_E2E_PLATFORM=mobile vitest run --config vitest.screenshots.config.ts && pnpm screenshots:compose",
     "screenshots:compose": "node e2e/screenshots.compose.ts",
     "size": "size-limit"
   },
@@ -32,6 +32,7 @@
     "@fontsource/titillium-web": "^5.3.0",
     "@mui/icons-material": "^9.5.0",
     "@mui/material": "^9.5.0",
+    "@mui/utils": "^9.5.0",
     "@stomp/stompjs": "^7.5.0",
     "@tanstack/react-query": "^5.106.0",
     "axios": "^1.21.0",
@@ -81,15 +82,5 @@
     "vitest": "^5.1.0",
     "vitest-axe": "^0.1.0",
     "ws": "^8.22.0"
-  },
-  "resolutions": {
-    "vite": "^8.3.6",
-    "**/micromatch/picomatch": "^2.3.2",
-    "**/eslint/minimatch": "^11.0.3",
-    "**/@eslint/config-array/minimatch": "^11.0.3",
-    "**/@typescript-eslint/typescript-estree/minimatch": "^11.0.3",
-    "**/eslint-plugin-import-x/minimatch": "file:./shims/minimatch-compat",
-    "**/eslint-plugin-jsx-a11y/minimatch": "file:./shims/minimatch-compat",
-    "**/eslint-plugin-react/minimatch": "file:./shims/minimatch-compat"
   }
 }

@@ -60,7 +60,7 @@ RUN java -Djarmode=tools -jar target/*.jar extract --layers --launcher --destina
 # ==========================================
 # The :nonroot variant runs as uid 65532 instead of root. Nothing here writes to
 # the filesystem, so there is no reason for the runtime to be able to (S8).
-FROM gcr.io/distroless/java25-debian13:nonroot@sha256:a90a5fadd78dc37b643da72dca2f744ef67eba625eca7227a5b375b548e6b1c2
+FROM gcr.io/distroless/java25-debian13:nonroot@sha256:8ac5525549d14b8ddd34562f9fc8e6ba4840c995363a1507b17cadf8bb7ab57e
 
 WORKDIR /app
 

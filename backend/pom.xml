@@ -87,7 +87,7 @@
           reason left and had silently drifted.
         -->
         <snakeyaml.version>2.6</snakeyaml.version>
-        <jackson2-bom.version>2.22.4</jackson2-bom.version>
+        <jackson2-bom.version>2.23.0</jackson2-bom.version>
         <!--
           Raised above Boot 4.1.1's 2.13.2 because spring-cloud-gcp 8.2.2 brings
           BigQuery 2.73.0 and Firestore 3.49.0, which ask for 2.14.0, and
@@ -98,7 +98,7 @@
 
         <eclipse-paho-mqtt3-client.version>1.2.5</eclipse-paho-mqtt3-client.version>
         <mockwebserver.version>5.5.1</mockwebserver.version>
-        <flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>
+        <flatten-maven-plugin.version>1.9.0</flatten-maven-plugin.version>
         <maven-enforcer-plugin.version>3.7.0</maven-enforcer-plugin.version>
         <jacoco-maven-plugin.version>0.8.16</jacoco-maven-plugin.version>
         <spotless-maven-plugin.version>3.11.0</spotless-maven-plugin.version>

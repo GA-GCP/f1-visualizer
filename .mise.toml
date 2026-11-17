@@ -6,4 +6,4 @@
 #   mise install
 [tools]
 opentofu = "1.13.9"
-terragrunt = "1.2.1"
+terragrunt = "1.2.2"

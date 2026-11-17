@@ -40,13 +40,13 @@ ARG ENV_MODE=dev
 # together, and the PR check fails when they disagree. TARGETARCH is set by
 # BuildKit; `uname -m` covers a builder without it.
 ARG TARGETARCH
-ARG PNPM_VERSION=12.18.0
+ARG PNPM_VERSION=12.21.0
 RUN set -eu; \
     case "${TARGETARCH:-$(uname -m)}" in \
       amd64|x86_64) pkg=linux-x64-musl; \
-        sum=523fafcdf210eb69033f5d31dfac876485d5b39a2174db623d8c27e458422e53527073e8d0e008f928460ed2e87e2057284eee9aeef52668e6ecdf1af3355c0f ;; \
+        sum=3270b9be921762e6e10d90a00b095f24c83b0a0e87ba937622ea2e4fd803fed52639f55d418a9ec9871c59bb61ca8fc97ada3c75ed68425c5e44dd7ed479760d ;; \
       arm64|aarch64) pkg=linux-arm64-musl; \
-        sum=569f9320c3cfc9a7245425e439d10a1ff466027febd3b11c232ae065840aed5ae492ca993a27b41a7588c7ef3998fa9e14460246d5c8640149f4be1c7939dd0e ;; \
+        sum=09e8adf739f883966a089b71d5f57c78913ba7c69e5ccac667e0dcd35bd1a992c850d80d788f94af4aeecaac6db27271eab1800f25f3a21ba6c4f2c78da27901 ;; \
       *) echo "No pinned pnpm binary for ${TARGETARCH:-$(uname -m)}" >&2; exit 1 ;; \
     esac; \
     wget -qO /tmp/pnpm.tgz "https://registry.npmjs.org/@pnpm/exe.${pkg}/-/exe.${pkg}-${PNPM_VERSION}.tgz"; \

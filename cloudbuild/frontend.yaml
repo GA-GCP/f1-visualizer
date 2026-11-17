@@ -37,9 +37,9 @@ substitutions:
   # them in base64) for the `pnpm` package, which carries the node-gyp that
   # compiles canvas, and for @pnpm/exe.linux-x64-musl, the native program
   # itself. Install step below.
-  _PNPM_VERSION: '12.18.0'
-  _PNPM_PKG_SHA512: '9d7882d5dc82147ecfc4e062aa34834e0ad0296710a1837a1115ae012127d36b7109e321ac1598a1dd0a65597681b1e99917e12ed0d749eae91187943363beb3'
-  _PNPM_EXE_SHA512: '523fafcdf210eb69033f5d31dfac876485d5b39a2174db623d8c27e458422e53527073e8d0e008f928460ed2e87e2057284eee9aeef52668e6ecdf1af3355c0f'
+  _PNPM_VERSION: '12.21.0'
+  _PNPM_PKG_SHA512: '66fd8278ee28935ce951792d34367ff3af5c432a2756445823029533835b8da529bbe0be5130afd56ed0713fb8789e47bad82d93bd5ae2fe54b15562d6276ef0'
+  _PNPM_EXE_SHA512: '3270b9be921762e6e10d90a00b095f24c83b0a0e87ba937622ea2e4fd803fed52639f55d418a9ec9871c59bb61ca8fc97ada3c75ed68425c5e44dd7ed479760d'
 
 options:
   logging: CLOUD_LOGGING_ONLY

@@ -26,7 +26,7 @@ substitutions:
   # base moves underneath it.
   #
   # The tag is kept next to the digest for readability; the digest resolves.
-  _NODE_IMAGE: 'node:26.13.0-alpine3.24@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216'
+  _NODE_IMAGE: 'node:26.13.1-alpine3.24@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5'
   _CLOUD_SDK_IMAGE: 'gcr.io/google.com/cloudsdktool/cloud-sdk:584.0.0@sha256:bc341c1215dfd18be9cab1dcf1321d583865225fae3e37f4b1ac1a5fdb392262'
   # Scans the built image before any traffic reaches it. Pinned like the rest.
   _TRIVY_IMAGE: 'aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969'
